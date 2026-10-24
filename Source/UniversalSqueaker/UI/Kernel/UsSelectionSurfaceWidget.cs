@@ -55,7 +55,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// rows: one declared answer, no second derived fill, no threshold moved. Named ONCE so the
     /// widget and the palette lanes cannot disagree about what is painted.
     /// </summary>
-    public static Color SelectedFill(UiTheme theme)
+    public static UiColour SelectedFill(UiTheme theme)
     {
         return theme[UiPaletteRole.SelectedSurface];
     }
@@ -67,7 +67,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// rides the palette's own primary ink - the two are different tokens by design, and the theme lane
     /// measures the pair on the real draw.
     /// </summary>
-    public static Color SelectedRail(UiTheme theme)
+    public static UiColour SelectedRail(UiTheme theme)
     {
         return theme[UiPaletteRole.Foreground];
     }
@@ -75,13 +75,13 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// <summary>Source-over alpha compositing. ONE implementation of this rule on the product side: a
     /// contrast reading is about PERCEIVED pixels, and the lane must not carry a second copy of the
     /// arithmetic (this session already paid twice for one convention living in two places).</summary>
-    public static Color Composite(Color foreground, Color background)
+    public static UiColour Composite(UiColour foreground, UiColour background)
     {
-        float a = Mathf.Clamp01(foreground.a);
-        return new Color(
-            foreground.r * a + background.r * (1f - a),
-            foreground.g * a + background.g * (1f - a),
-            foreground.b * a + background.b * (1f - a),
+        float a = Mathf.Clamp01(foreground.Alpha);
+        return new UiColour(
+            foreground.Red * a + background.Red * (1f - a),
+            foreground.Green * a + background.Green * (1f - a),
+            foreground.Blue * a + background.Blue * (1f - a),
             1f);
     }
 
@@ -94,13 +94,13 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// window; under the authored surface the contrast is a property of the table itself, verified
     /// per table by the palette-contrast lane over these exact perceived colours.
     /// </summary>
-    public static Color PaintedFill(UiTheme theme)
+    public static UiColour PaintedFill(UiTheme theme)
     {
         return Composite(SelectedFill(theme), theme[UiPaletteRole.ControlSurface]);
     }
 
     /// <summary>The perceived rail: opaque, so compositing is the identity.</summary>
-    public static Color PaintedRail(UiTheme theme)
+    public static UiColour PaintedRail(UiTheme theme)
     {
         return SelectedRail(theme);
     }
@@ -111,11 +111,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsSelectionSurfaceWidget(),
-            new[] { "Id", "Kind", "Bind", "Height", "Tab", "Hidden", "Hover" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsSelectionSurfaceWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Bind", binding: UiBindingRole.Value), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean), new UiAttributeDefinition("Hover", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec value)
@@ -123,7 +119,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         spec = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         // The SELECTED state is a bound bool; the SA1.7 HOVER plate needs no binding (it reads the
         // pointer), so a surface that declares only Hover="true" validates nothing. A Bind, when
@@ -142,15 +138,15 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         return 0f;
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
         // TryGetBool, as a CONVENTION and NOT as a fix. An earlier revision of this comment claimed the read
         // failed because 'selected' is a READ-ONLY registration; that is wrong, and the correction is worth
         // keeping: BindReadOnly and BindValue land in the same values table and TryGet<T> reads that same
         // table, so read-only and writable behave identically there (audit read the chain: BindReadOnly ->
         // AddValue -> values.Add). What TryGetBool adds is only "answer false when the key is bound to
-        // ANOTHER type". The convention is kept because it is what the carrier's own SelectedKey resolution
+        // ANOTHER type". The convention is kept because it is what the carrier's own SelectedBind resolution
         // and DeclarativePacksLaneTests use, so every reader of this key fails soft the same way.
         //
         // The ORIGINAL CAUSE IS NOT REPRODUCED. The edit that introduced TryGetBool shipped in the same batch
@@ -168,8 +164,8 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
             // it >= 4.5, the drawn identity marks vs their adjacent ground >= 3.0. The Selected-vs-
             // Raised plane difference is deliberately NOT gated (PM ruling: <3 there is legal - the
             // identity rides the marks, not the background delta).
-            UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme[UiPaletteRole.Border]);
-            UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
+            UiThemeDraw.Surface(ctx.Drawing, rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme[UiPaletteRole.Border]);
+            UiThemeDraw.AccentRail(ctx.Drawing, rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
             return;
         }
 
@@ -181,9 +177,9 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         // row's own hit band stays the only click channel, so browse-vs-enable semantics are untouched.
         if (spec.TryGetAttribute("Hover", out string hover)
                 && string.Equals(hover, "true", StringComparison.OrdinalIgnoreCase)
-                && UiNative.IsMouseOver(rect))
+                && ctx.Controls.IsMouseOver(rect))
         {
-            UiThemeDraw.Surface(rect, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme[UiPaletteRole.StrongBorder]);
+            UiThemeDraw.Surface(ctx.Drawing, rect, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme[UiPaletteRole.StrongBorder]);
         }
     }
 

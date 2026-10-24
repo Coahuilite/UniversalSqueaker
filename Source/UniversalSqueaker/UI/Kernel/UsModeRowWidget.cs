@@ -28,11 +28,7 @@ public sealed class UsModeRowWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsModeRowWidget(),
-            new[] { "Id", "Kind", "Bind", "Tab", "Hidden" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsModeRowWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Bind", binding: UiBindingRole.Value), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec value)
@@ -40,7 +36,7 @@ public sealed class UsModeRowWidget : IUiWidget
         spec = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<SqueakVoicePackMode>(BindingKey(), elementPath);
     }
@@ -50,19 +46,19 @@ public sealed class UsModeRowWidget : IUiWidget
         return Height + Padding * 2f;
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
         string binding = BindingKey();
         ctx.Bindings.TryGet(binding, out SqueakVoicePackMode current);
-        float width = Math.Max(1f, (rect.width - Padding * 2f - Gap * (Options.Length - 1)) / Options.Length);
-        float x = rect.x + Padding;
+        float width = Math.Max(1f, (rect.Width - Padding * 2f - Gap * (Options.Length - 1)) / Options.Length);
+        float x = rect.X + Padding;
         for (int i = 0; i < Options.Length; i++)
         {
-            Rect optionRect = new(x, rect.y + Padding, width, Height);
+            UiLayoutRect optionRect = new(x, rect.Y + Padding, width, Height);
             UsKernelDraw.HelpHover(optionRect, ctx, Options[i].HelpRef);
-            if (UsKernelDraw.SelectionButton(optionRect, ctx, ctx.Translation.Translate(Options[i].LabelKey), ctx.Theme, Options[i].Mode == current))
+            if (UsKernelDraw.SelectionButton(optionRect, ctx, ctx.Translation.Translate(Options[i].LabelKey), ctx.Theme, Options[i].Mode == current, controlId: binding, itemKey: Options[i].Mode))
             {
                 ctx.Bindings.Set(binding, Options[i].Mode);
             }

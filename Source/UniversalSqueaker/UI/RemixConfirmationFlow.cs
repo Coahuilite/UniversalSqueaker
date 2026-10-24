@@ -108,7 +108,7 @@ public sealed class RemixConfirmationFlow
     /// <c>confirm-enable</c>) without a game WindowStack loop. It is the SAME table the UiPageWindow
     /// draws against; opening the dialog in production wires it to that window.
     /// </summary>
-    public IUiBindings DialogBindings => bindings;
+    public IUiBindingAccess DialogBindings => bindings;
 
     /// <summary>
     /// Takes a request to enter Remix and returns true when the flow owns it - the caller then writes

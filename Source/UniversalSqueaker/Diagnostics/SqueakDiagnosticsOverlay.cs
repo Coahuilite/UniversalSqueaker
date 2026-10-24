@@ -1,4 +1,5 @@
 using System;
+using FerriteLib.UiKit.Kernel;
 using System.Collections.Generic;
 using UnityEngine;
 using Verse;
@@ -32,7 +33,7 @@ public static class SqueakDiagnosticsOverlay
     /// not a destructive action).
     /// </summary>
     internal static readonly Color ReadyColor = new(.25f, .82f, .38f);
-    internal static readonly Color BlockedColor = UsAttention.Brush;
+    internal static readonly Color BlockedColor = VerseUiExecution.Colour(UsAttention.Brush);
     internal static readonly Color PendingColor = new(.35f, .66f, .95f);
 
     /// <summary>One cached structured snapshot per tracked pawn. Read-only for the pages; the driver mutates only during refresh.</summary>

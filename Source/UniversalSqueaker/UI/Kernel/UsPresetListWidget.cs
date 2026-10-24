@@ -55,14 +55,10 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            KindName,
-            () => new UsPresetListWidget(),
-            UsKernelWidgetRegistrar.SectionSchema);
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsPresetListWidget(), UsKernelWidgetRegistrar.SectionSchema));
     }
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<IReadOnlyList<BaselinePresetView>>("baseline-presets", elementPath);
         bindings.ValidateAction<string>("toggle-baseline-preset", elementPath);
@@ -115,48 +111,48 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     /// card reserves and the height the band occupies cannot disagree.
     /// </summary>
     private float ComposedRowHeight(
-        UiWidgetContext ctx, string key, int depth, string text, bool isChecked, Texture2D? image = null)
+        UiWidgetContext ctx, string key, int depth, string text, bool isChecked, UiImage image = default)
     {
         float textHeight = MeasuredRowHeight(
             text, Math.Max(1f, BodyWidth(ctx) - LeftPadding - 48f), ctx, UsKernelDraw.RowVisualHeight(ctx));
         return UiRowBand.Measure(BuildRow(key, depth, text, isChecked, image), ctx.Theme, textHeight);
     }
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         DrawCard(rect, ctx, body => DrawContent(body, ctx));
     }
 
-    private void DrawContent(Rect rect, UiWidgetContext ctx)
+    private void DrawContent(UiLayoutRect rect, UiWidgetContext ctx)
     {
         IReadOnlyList<BaselinePresetView> presets = ctx.Bindings.TryGet("baseline-presets", out IReadOnlyList<BaselinePresetView> p)
             ? p
             : Array.Empty<BaselinePresetView>();
         if (presets.Count == 0)
         {
-            UsKernelDraw.Label(
-                new Rect(rect.x, rect.y + TopPadding, rect.width, 48f),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(rect.X, rect.Y + TopPadding, rect.Width, 48f),
                 Tr(ctx, EmptyTextKey),
                 ctx.Theme,
                 ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Small,
-                TextAnchor.MiddleCenter);
+                UiTextAnchor.MiddleCenter);
             return;
         }
 
-        float innerWidth = rect.width;
-        float x = rect.x;
-        float y = rect.y + TopPadding;
+        float innerWidth = rect.Width;
+        float x = rect.X;
+        float y = rect.Y + TopPadding;
 
         float noteHeight = BaselineNoteHeight(ctx, innerWidth);
-        UsKernelDraw.Label(new Rect(x + LeftPadding, y, Math.Max(1f, innerWidth - LeftPadding * 2f), noteHeight),
-            Tr(ctx, BaselineNoteKey), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.UpperLeft);
+        UsKernelDraw.Label(ctx.Drawing, new UiLayoutRect(x + LeftPadding, y, Math.Max(1f, innerWidth - LeftPadding * 2f), noteHeight),
+            Tr(ctx, BaselineNoteKey), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.UpperLeft);
         y += noteHeight + RowGap;
 
         foreach (BaselinePresetView preset in presets)
         {
             (float headerTitle, float headerSummary, float headerTotal) = HeaderBands(ctx, preset, innerWidth);
-            DrawPresetHeader(new Rect(x, y, innerWidth, headerTotal), preset, headerTitle, headerSummary, ctx);
+            DrawPresetHeader(new UiLayoutRect(x, y, innerWidth, headerTotal), preset, headerTitle, headerSummary, ctx);
             y += headerTotal + RowGap;
 
             if (!preset.Expanded) continue;
@@ -164,20 +160,20 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             if (!string.IsNullOrEmpty(preset.Description))
             {
                 float descHeight = ctx.Metrics.MeasureText(preset.Description, UiFont.Tiny, Math.Max(1f, innerWidth - 16f)) + 6f;
-                UsKernelDraw.Label(
-                    new Rect(x + LeftPadding, y + 2f, Math.Max(1f, innerWidth - LeftPadding - 8f), descHeight - 4f),
+                UsKernelDraw.Label(ctx.Drawing,
+                    new UiLayoutRect(x + LeftPadding, y + 2f, Math.Max(1f, innerWidth - LeftPadding - 8f), descHeight - 4f),
                     preset.Description,
                     ctx.Theme,
                     ctx.Theme[UiPaletteRole.SecondaryForeground],
                     UiFont.Tiny,
-                    TextAnchor.UpperLeft);
+                    UiTextAnchor.UpperLeft);
                 y += descHeight + RowGap;
             }
 
             foreach (BaselineRaceView race in preset.Races)
             {
                 float raceRowHeight = ComposedRowHeight(ctx, preset.DefName + "|" + race.RaceDefName, 0, RaceLabel(ctx, race), race.Selected);
-                DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, ctx);
+                DrawRaceRow(new UiLayoutRect(x, y, innerWidth, raceRowHeight), preset.DefName, race, ctx);
                 y += raceRowHeight + RowGap;
 
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
@@ -185,7 +181,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
                     float xenoRowHeight = ComposedRowHeight(
                         ctx, preset.DefName + "|" + race.RaceDefName + "|" + xenotype.XenotypeDefName, 1, XenotypeLabel(ctx, xenotype),
                         xenotype.Selected, xenotype.Image);
-                    DrawXenotypeRow(new Rect(x, y, innerWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, ctx);
+                    DrawXenotypeRow(new UiLayoutRect(x, y, innerWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, ctx);
                     y += xenoRowHeight + RowGap;
                 }
             }
@@ -193,44 +189,44 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     }
 
     private void DrawPresetHeader(
-        Rect rect, BaselinePresetView preset, float titleBand, float summaryBand, UiWidgetContext ctx)
+        UiLayoutRect rect, BaselinePresetView preset, float titleBand, float summaryBand, UiWidgetContext ctx)
     {
         // The header claims the tree entry first; the import button re-claims below, so hovering
         // the button shows "Import" and anywhere else on the header shows the tree.
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, preset.Expanded ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowSurface(ctx.Drawing, rect, ctx.Theme, hovered, preset.Expanded ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
-        Rect importRect = new(rect.xMax - ImportButtonWidth - 8f, rect.y + (rect.height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
+        UiLayoutRect importRect = new(rect.XMax - ImportButtonWidth - 8f, rect.Y + (rect.Height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
         UsKernelDraw.HelpHover(importRect, ctx, "us/preset-list/import");
 
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y + HeaderTopPadding, Math.Max(1f, importRect.x - rect.x - LeftPadding - 8f), titleBand),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + LeftPadding, rect.Y + HeaderTopPadding, Math.Max(1f, importRect.X - rect.X - LeftPadding - 8f), titleBand),
             HeaderTitle(preset),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft);
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding + 4f, rect.y + HeaderTopPadding + titleBand + HeaderInnerGap, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), summaryBand),
+            UiTextAnchor.MiddleLeft);
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + LeftPadding + 4f, rect.Y + HeaderTopPadding + titleBand + HeaderInnerGap, Math.Max(1f, importRect.X - rect.X - LeftPadding - 16f), summaryBand),
             SummaryText(ctx, preset),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(importRect, ctx, Tr(ctx, ImportKey), ctx.Theme, selected: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(importRect, ctx, Tr(ctx, ImportKey), ctx.Theme, selected: true, font: UiFont.Tiny, controlId: "import-baseline", itemKey: preset.DefName))
         {
             ctx.Bindings.Invoke("import-baseline", preset.DefName);
         }
 
-        Rect expandRect = new(rect.x, rect.y, Math.Max(1f, importRect.x - rect.x - 8f), rect.height);
-        if (UiNative.Button(expandRect, ctx))
+        UiLayoutRect expandRect = new(rect.X, rect.Y, Math.Max(1f, importRect.X - rect.X - 8f), rect.Height);
+        if (ctx.Controls.Activation(expandRect, ctx, "toggle-baseline-preset", "header", preset.DefName).Request)
         {
             ctx.Bindings.Invoke("toggle-baseline-preset", preset.DefName);
         }
     }
 
-    private void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, UiWidgetContext ctx)
+    private void DrawRaceRow(UiLayoutRect rect, string presetDefName, BaselineRaceView race, UiWidgetContext ctx)
     {
         // R4-B: the band is composed by the library's shared primitive - the same call `container/tree` makes.
         // The card keeps what is its own: the hover plane, the list rule, and its right-aligned checkbox
@@ -242,9 +238,9 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             bindings => ToggleRace(presetDefName, race, bindings));
     }
 
-    private void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, UiWidgetContext ctx)
+    private void DrawXenotypeRow(UiLayoutRect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, UiWidgetContext ctx)
     {
-        // The native icon rides the row as data (resolved Verse-side); a null one is the band's own fallback.
+        // The icon rides the row as a window-owned neutral handle; an empty handle uses the band's fallback.
         DrawComposedRow(
             rect,
             ctx,
@@ -262,7 +258,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     /// The row data the shared band composes. The key is the stable business key (never an index); the
     /// callbacks below close over the row's own values, so nothing is parsed back out of it.
     /// </summary>
-    private static UiTreeRow BuildRow(string key, int depth, string text, bool isChecked, Texture2D? image = null)
+    private static UiTreeRow BuildRow(string key, int depth, string text, bool isChecked, UiImage image = default)
     {
         return new UiTreeRow(
             key,
@@ -279,17 +275,17 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     /// hand-drawn rows did, and either part (box or body) writes this row's own typed action.
     /// </summary>
     private static void DrawComposedRow(
-        Rect rect,
+        UiLayoutRect rect,
         UiWidgetContext ctx,
         UiTreeRow row,
-        Action<IUiBindings> toggle,
+        Action<IUiBindingAccess> toggle,
         UiEmphasis emphasis = UiEmphasis.Normal)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowSurface(ctx.Drawing, rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
         // The list convention the basic-tuning rows set: a single-line list row ends in one hairline in the
         // divider token, so a stack of rows reads as a list.
-        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
+        UsKernelDraw.RowBottomLine(ctx.Drawing, rect, ctx.Theme);
 
         bool toggled = false;
         var actions = new UiRowBandActions(
@@ -320,12 +316,12 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     /// </summary>
     private static float CheckboxRightInset => UsKernelDraw.ControlColumnRightInset;
 
-    private static void ToggleRace(string presetDefName, BaselineRaceView race, IUiBindings bindings)
+    private static void ToggleRace(string presetDefName, BaselineRaceView race, IUiBindingAccess bindings)
     {
         bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle(presetDefName, race.RaceDefName, !race.Selected));
     }
 
-    private static void ToggleXenotype(string presetDefName, string raceDefName, BaselineXenotypeView xenotype, IUiBindings bindings)
+    private static void ToggleXenotype(string presetDefName, string raceDefName, BaselineXenotypeView xenotype, IUiBindingAccess bindings)
     {
         bindings.Invoke(
             "toggle-baseline-xenotype",

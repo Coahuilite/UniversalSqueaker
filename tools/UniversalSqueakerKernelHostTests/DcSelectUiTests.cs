@@ -18,9 +18,9 @@ internal static class DcSelectUiTests
                     var source = new RecordingSettingsSource { RichData = true };
                     using var host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
                     host.Bindings.Invoke("set-tab", "Tuning");
-                    var layout = host.MeasureAndArrange(new Vector2(width, 1000));
+                    var layout = host.MeasureAndArrange(new UiLayoutPoint(width, 1000));
                     foreach (string name in new[] { "player", "awake", "not-downed" }) {
-                        Check(layout.RectById.TryGetValue("basic-select-" + name + "-choice", out var rect) && rect.width >= 100 && rect.height >= 26,
+                        Check(layout.RectById.TryGetValue("basic-select-" + name + "-choice", out var rect) && rect.Width >= 100 && rect.Height >= 26,
                             language + "/" + width + " usable qualification control " + name);
                         Console.WriteLine("DC Select UI " + language + "/" + width + " " + name + "=" + rect);
                     }
@@ -32,7 +32,7 @@ internal static class DcSelectUiTests
                     host.Bindings.Set("select-awake", "");
                     Check(host.Bindings.Get<string>("select-awake") == "" && host.Bindings.Get<string>("select-player-controlled") == "False"
                         && source.SelectRequireNotDowned == false, "Inherit clears only the selected qualification");
-                    host.DrawChecked(new Rect(0, 0, width, 1000));
+                    host.DrawChecked(new UiLayoutRect(0, 0, width, 1000));
                 }
             } finally { Program.SetTranslatorResolver(null); }
         }

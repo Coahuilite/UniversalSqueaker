@@ -4,7 +4,7 @@ name: Release
 #
 # US ships NO audio and NO copy of FerriteLib.UiKit.dll: it is a routing kernel that compiles
 # against the carrier mod (coahuilite.ferritelib) by a sibling relative path. So this pipeline
-# builds the carrier into the sibling path (same trick as ci.yml), builds US Release, and stages a
+# acquires the approved carrier into the sibling path (same trick as ci.yml), builds US Release, and stages a
 # package that must contain exactly UniversalSqueaker.dll and never a second carrier.
 #
 # Version identity is set in the repository, not injected here: the release commit must already
@@ -30,14 +30,22 @@ jobs:
         with:
           fetch-depth: 0   # the ancestry check below needs origin/main, not a depth-1 clone
 
-      # Pinned at the release tag - NEVER the default branch (same contract as ci.yml: the source tree
+      - name: Require approved FerriteLib 0.8 release coordinates
+        shell: pwsh
+        env:
+          FL_CARRIER_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
+          FL_CARRIER_TAG: ${{ vars.FERRITELIB_CARRIER_TAG }}
+          FL_CARRIER_COMMIT: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
+        run: ./scripts/require-ferritelib-ci-input.ps1
+
+      # Pinned at the approved full commit - NEVER the default branch (same contract as ci.yml: the source tree
       # carries the harness support and gate 6's pairing commit; the compile payload comes from the
       # Release asset acquired below).
-      - name: Checkout the FerriteLib carrier source at the pinned release tag
+      - name: Checkout the approved FerriteLib carrier commit
         uses: actions/checkout@v4
         with:
-          repository: Coahuilite/FerriteLib
-          ref: v0.7.0-rc1
+          repository: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
+          ref: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
           path: ci-ferritelib
 
       - name: Setup .NET
@@ -85,9 +93,13 @@ jobs:
       # sibling reads (licence + stub-coverage scanner) and the COMPILE PAYLOAD is the verified CI-built
       # release asset - never a second FerriteLib runtime build (single carrier). Step outputs carry the
       # pairing facts (tag, commit, DLL hash) into the release body below.
-      - name: Acquire the FerriteLib release carrier (v0.7.0-rc1)
+      - name: Acquire the FerriteLib release carrier (approved 0.8 coordinates)
         id: carrier
         shell: pwsh
+        env:
+          FL_CARRIER_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
+          FL_CARRIER_TAG: ${{ vars.FERRITELIB_CARRIER_TAG }}
+          FL_CARRIER_COMMIT: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
         run: |
           $ErrorActionPreference = 'Stop'
           $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
@@ -95,7 +107,9 @@ jobs:
           Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
             Where-Object { $_.Name -ne '.git' } |
             Copy-Item -Destination $sibling -Recurse -Force
-          ./scripts/acquire-ferritelib-carrier.ps1 -Repo 'Coahuilite/FerriteLib' -Tag 'v0.7.0-rc1' -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
+          $head = (git -C ci-ferritelib rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $head -cne $env:FL_CARRIER_COMMIT) { throw 'Pinned FerriteLib checkout identity differs.' }
+          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
           # US never authors or builds the carrier: nothing in this workflow writes into ci-ferritelib/.
 
       - name: Restore
@@ -115,12 +129,12 @@ jobs:
 
       - name: Pack-readiness with release metadata (version axis + non-placeholder description)
         shell: pwsh
-        run: ./scripts/check-pack-readiness.ps1 -SkipVerify -RequireReleaseMetadata
+        run: ./scripts/check-pack-readiness.ps1 -SkipVerify -RequireReleaseMetadata -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
       - name: Build the release payload
         shell: pwsh
         # Build the final Release input; staging independently checks its configuration and identity.
-        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental --nologo
+        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental --nologo '-p:FerriteLibArtifactPath=../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
       - name: Stage the release asset
         id: pack
@@ -155,6 +169,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           ASSET_SHA256: ${{ steps.pack.outputs.sha256 }}
           ASSET_COMMIT: ${{ steps.pack.outputs.commit }}
+          FL_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
           FL_TAG: ${{ steps.carrier.outputs.fl-tag }}
           FL_COMMIT: ${{ steps.carrier.outputs.fl-commit }}
           FL_DLL_SHA256: ${{ steps.carrier.outputs.fl-dll-sha256 }}
@@ -171,11 +186,11 @@ jobs:
           $body = @"
           $trialNote
 
-          Universal Squeaker is a voice-pack routing kernel for RimWorld 1.6. It ships no audio of its own: it attaches third-party voice packs to pawns by race/xenotype domain, with layered tuning, distance attenuation, mood modulation, easter-egg gating and a camera indicator.
+          Universal Squeaker is a voice-pack routing kernel for RimWorld 1.6. It ships no audio of its own: it attaches third-party voice packs to pawns by race/xenotype domain, with declared behavior contracts, layered configuration, distance attenuation and a camera indicator.
 
           ## Installing
 
-          1. Install the paired prerequisite **FerriteLib** release ``$env:FL_TAG`` (``coahuilite.ferritelib``) from https://github.com/Coahuilite/FerriteLib/releases - this build is compiled against that carrier.
+          1. Install the paired prerequisite **FerriteLib** release ``$env:FL_TAG`` (``coahuilite.ferritelib``) from https://github.com/$env:FL_REPOSITORY/releases - this build is compiled against that carrier.
           2. Unzip this archive **directly into** ``RimWorld/Mods/`` (it contains a top-level ``UniversalSqueaker`` folder).
           3. Enable both in the mod list. Universal Squeaker ships no copy of ``FerriteLib.UiKit.dll``; exactly one carrier - FerriteLib itself - must be installed.
 
@@ -194,7 +209,7 @@ jobs:
           - This is a testing RC for **RimWorld 1.6**: UI/UX design and copy work continues, and this page does not claim complete compatibility coverage.
           - Uninstalling is save-safe: no permanent data is written into saves, and settings and profiles live in the RimWorld ``Config/`` folder.
           - The prerequisite pairing is exact: the rows above name the FerriteLib release, its commit and the carrier DLL's SHA-256 this build was compiled against.
-          - Testing status: the accepted native checks (seven interaction scenarios, the diagnostics checks and a quick kernel smoke) ran on the local paired Dev candidate; this archive is a fresh CI build of the Release configuration from the same accepted product source (plus release plumbing/docs) and has not been independently repeated in native gameplay.
+          - Testing status: CI/build checks apply to their recorded inputs. Historical native acceptance belongs to its original paired candidate; it does not establish native gameplay, Config, screen or audio acceptance of this refactored Release artifact.
 
           ## Changes
 

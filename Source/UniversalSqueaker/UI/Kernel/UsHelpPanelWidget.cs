@@ -36,11 +36,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsHelpPanelWidget(),
-            new[] { "Id", "Kind", "Tab", "Hidden" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsHelpPanelWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec spec)
@@ -48,7 +44,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<string>("help-section-ref", elementPath);
     }
@@ -132,42 +128,42 @@ public sealed class UsHelpPanelWidget : IUiWidget
         return Math.Max(1f, ctx.Metrics.MeasureText(text, font, textWidth));
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
-        UiThemeDraw.Panel(rect, ctx.Theme);
+        UiThemeDraw.Panel(ctx.Drawing, rect, ctx.Theme);
 
         HelpSection? section = CurrentSection(ctx);
         UsHelpPanelLogic.HelpPanelDisplay display = ResolveFrameDisplay(ctx, section);
 
-        float x = rect.x + Padding;
-        float y = rect.y + Padding;
-        float textWidth = Math.Max(1f, rect.width - Padding * 2f);
+        float x = rect.X + Padding;
+        float y = rect.Y + Padding;
+        float textWidth = Math.Max(1f, rect.Width - Padding * 2f);
 
         // Header, then the displayed entry's label and body. All three bands are the same
         // hover-invariant maxima Measure allocated, so the content below cannot shift.
         string header = HeaderText(ctx, display);
-        Rect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
-        UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
-        y += headerRect.height + TitleGap;
+        UiLayoutRect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
+        UiThemeDraw.SectionHeader(ctx.Drawing, headerRect, header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
+        y += headerRect.Height + TitleGap;
 
         y += ContentGap;
-        UsKernelDraw.Label(
-            new Rect(x, y, textWidth, MaxLabelBand(ctx, textWidth)),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(x, y, textWidth, MaxLabelBand(ctx, textWidth)),
             display.LabelText,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.UpperLeft);
+            UiTextAnchor.UpperLeft);
         y += MaxLabelBand(ctx, textWidth) + 2f;
-        UsKernelDraw.Label(
-            new Rect(x, y, textWidth, MaxBodyBand(ctx, textWidth)),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(x, y, textWidth, MaxBodyBand(ctx, textWidth)),
             display.BodyText,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
-            TextAnchor.UpperLeft);
+            UiTextAnchor.UpperLeft);
     }
 
     /// <summary>The section this panel is currently falling back to (null when none is active).</summary>
@@ -179,10 +175,10 @@ public sealed class UsHelpPanelWidget : IUiWidget
     }
 
     /// <summary>Reads the session's effective help reference, including its 15-pass grace.
-    /// HoverClaim is the fixed fc010bd API spelling, not a binding or a raw current-frame hit.</summary>
+    /// CurrentHelpRef is a catalog reference, not a binding or a raw current-frame hit.</summary>
     private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
     {
-        return UsHelpPanelLogic.Resolve(section, ctx.Session.HoverClaim ?? "", TranslationSeam(ctx));
+        return UsHelpPanelLogic.Resolve(section, ctx.Session.CurrentHelpRef ?? "", TranslationSeam(ctx));
     }
 
     /// <summary>

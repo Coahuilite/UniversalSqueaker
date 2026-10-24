@@ -33,9 +33,9 @@
 
        What deliberately did NOT change: every band stays 36x30 (a 36-wide band is what lets the 34x18 track
        render at its own size instead of being clamped), every control still names the same bool in `Bind` AND
-       `SelectedKey` (the engine's role resolution and the state the control paints must not be able to
+       `SelectedBind` (the engine's role resolution and the state the control paints must not be able to
        disagree), and `Appearance="switch"` is written out rather than left to the default so the intent is
-       declared on the element. Height is the kind's own schema attribute; Width/AlignY/HelpKey/SelectedKey
+       declared on the element. Height is the kind's own schema attribute; Width/AlignY/HelpRef/SelectedBind
        are the engine-wide common vocabulary, so the migration is a kind swap and nothing else. -->
   <!-- US-ESC1 (FL-IC2 CancelBind): the page root carries the help return layer - the bottom help panel
        is an explicitly cancellable local layer (§4.1), and as an ancestor of EVERY band (nav, content,
@@ -53,7 +53,7 @@
          It stays a ROW with one child rather than a bare widget: the frame lane asserts the three declared
          bands (header / body / footer) are bands of the same page, and the header's own geometry was
          measured as a Row. The Help switch moved with its stable machine identity - the widget, the
-         command binding, the TextKey and the catalog HelpKey all kept their names, because "exactly ONE
+         command binding, the TextKey and the catalog HelpRef all kept their names, because "exactly ONE
          element in this manifest may carry the help-toggle action binding" is asserted by counting the
          footer's declaration, not by renaming the control (this comment deliberately does not spell the
          literal: the help panel lane counts its occurrences in this file). -->
@@ -78,7 +78,7 @@
          width is 736 at the game's minimum screen (800 window - 2x20 shell chrome) and the Breakpoint 500
          keeps this a Row (nav 200 + centre). Only a synthetic 480/320 probe falls below it and resolves to a
          stacked Column; that probe is exercised by FrameGeometryLaneTests and is not real-screen evidence.
-         Help visibility is still driven DECLARATIVELY by the engine-level VisibleKey bound to this page's own
+         Help visibility is still driven DECLARATIVELY by the engine-level VisibleBind bound to this page's own
          help-open value binding, never by Tab: the panel stays in the definition while closed so its node and
          scroll position survive a close/open (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases
          a removed element's node with its scroll position). -->
@@ -101,15 +101,15 @@
              sentence over the two states the collapse switch drives; the collapsed arrival still offers
              the re-open affordance so the teaching is reachable without a hunt. -->
         <!-- CORRECTIONS-R1 topic 3: the collapsed teaching keeps ONLY a small right-pinned re-open
-             entry - no header band, no large padding (the header and body carry VisibleKey, and the
+             entry - no header band, no large padding (the header and body carry VisibleBind, and the
              re-open button anchors the column's right edge so it never drifts with any row's action
              column). The preference persists through the settings funnel (no audio runtime), default
              expanded. -->
         <Section Id="overview-intro" Tab="Overview" Padding="12" Gap="4">
-          <Widget Id="overview-intro-header" Kind="us/section-header" TitleKey="US.Section.Intro" Height="26" HelpKey="us/overview-intro" VisibleKey="intro-open" />
-          <Widget Id="overview-intro-body" Kind="text/wrapped" TextKey="US.Intro.Body" VisibleKey="intro-open" HelpKey="us/overview-intro" />
-          <Widget Id="overview-intro-collapse" Kind="input/button" TextKey="US.Intro.Collapse" ActionBind="toggle-intro" Width="150" Height="24" AlignX="Left" VisibleKey="intro-open" HelpKey="us/overview-intro/collapse" />
-          <Widget Id="overview-intro-reopen" Kind="input/button" TextKey="US.Intro.ReopenShort" ActionBind="toggle-intro" Width="110" Height="24" AlignX="Right" VisibleKey="intro-collapsed" HelpKey="us/overview-intro/collapse" />
+          <Widget Id="overview-intro-header" Kind="us/section-header" TitleKey="US.Section.Intro" Height="26" HelpRef="us/overview-intro" VisibleBind="intro-open" />
+          <Widget Id="overview-intro-body" Kind="text/wrapped" TextKey="US.Intro.Body" VisibleBind="intro-open" HelpRef="us/overview-intro" />
+          <Widget Id="overview-intro-collapse" Kind="input/button" TextKey="US.Intro.Collapse" ActionBind="toggle-intro" Width="150" Height="24" AlignX="Left" VisibleBind="intro-open" HelpRef="us/overview-intro/collapse" />
+          <Widget Id="overview-intro-reopen" Kind="input/button" TextKey="US.Intro.ReopenShort" ActionBind="toggle-intro" Width="110" Height="24" AlignX="Right" VisibleBind="intro-collapsed" HelpRef="us/overview-intro/collapse" />
         </Section>
         <!-- UIR-002: the all-loaded-race board. ONE read-only projection over every loaded ThingDef with
              race properties (NOT the pack-declared subset): per race it answers pack supply vs selection,
@@ -119,7 +119,7 @@
              the sound-source mode. Secondary output controls (volume + camera-height attenuation) stay
              below it: the board is the page state-first face. -->
         <Section Id="race-board" Tab="Overview" Padding="12" Gap="6">
-          <Widget Id="race-board-header" Kind="us/section-header" TitleKey="US.Section.RaceBoard" Height="26" HelpKey="us/race-board" />
+          <Widget Id="race-board-header" Kind="us/section-header" TitleKey="US.Section.RaceBoard" Height="26" HelpRef="us/race-board" />
           <Widget Id="race-board-summary" Kind="text/wrapped" Bind="race-board-summary" Emphasis="Muted" />
           <!-- OVT-002 (WO-US-OVERVIEW-THEMES-20261015): the compact browse band. Group tabs are the
                player's three views (default PLAYER RACES - HAR mod races first, vanilla humanlike and
@@ -129,24 +129,24 @@
                is larger. Everything here is display state - no write reaches settings, selection or
                the admission set. -->
           <Row Id="race-board-groups" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="race-board-group-player" Kind="input/button" TextKey="US.Board.Group.Player" ActionBind="board-group" PayloadKey="board-group-player" SelectedKey="board-group-is-player" Width="128" Height="24" AlignY="Middle" HelpKey="us/race-board/group" />
-            <Widget Id="race-board-group-creatures" Kind="input/button" TextKey="US.Board.Group.Creatures" ActionBind="board-group" PayloadKey="board-group-creatures" SelectedKey="board-group-is-creatures" Width="110" Height="24" AlignY="Middle" HelpKey="us/race-board/group" />
-            <Widget Id="race-board-group-all" Kind="input/button" TextKey="US.Board.Group.All" ActionBind="board-group" PayloadKey="board-group-all" SelectedKey="board-group-is-all" Width="84" Height="24" AlignY="Middle" HelpKey="us/race-board/group" />
-            <Widget Id="race-board-xeno-toggle" Kind="input/button" TextKey="US.Board.XenoDir" ActionBind="board-xeno-toggle" Width="180" Height="24" AlignY="Middle" HelpKey="us/race-board/xenodir" />
-            <Widget Id="race-board-counts" Kind="text/wrapped" Bind="race-board-counts" Emphasis="Muted" HelpKey="us/race-board/counts" />
+            <Widget Id="race-board-group-player" Kind="input/button" TextKey="US.Board.Group.Player" ActionBind="board-group" PayloadBind="board-group-player" SelectedBind="board-group-is-player" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
+            <Widget Id="race-board-group-creatures" Kind="input/button" TextKey="US.Board.Group.Creatures" ActionBind="board-group" PayloadBind="board-group-creatures" SelectedBind="board-group-is-creatures" Width="110" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
+            <Widget Id="race-board-group-all" Kind="input/button" TextKey="US.Board.Group.All" ActionBind="board-group" PayloadBind="board-group-all" SelectedBind="board-group-is-all" Width="84" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
+            <Widget Id="race-board-xeno-toggle" Kind="input/button" TextKey="US.Board.XenoDir" ActionBind="board-xeno-toggle" Width="180" Height="24" AlignY="Middle" HelpRef="us/race-board/xenodir" />
+            <Widget Id="race-board-counts" Kind="text/wrapped" Bind="race-board-counts" Emphasis="Muted" HelpRef="us/race-board/counts" />
           </Row>
           <Row Id="race-board-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="race-board-filter-har" Kind="input/button" TextKey="US.Board.Filter.Har" ActionBind="board-filter" PayloadKey="board-filter-har" SelectedKey="board-filter-is-har" Width="84" Height="24" AlignY="Middle" HelpKey="us/race-board/filters" />
-            <Widget Id="race-board-filter-vanilla-races" Kind="input/button" TextKey="US.Board.Filter.VanillaRaces" ActionBind="board-filter" PayloadKey="board-filter-vanilla-races" SelectedKey="board-filter-is-vanilla-races" Width="128" Height="24" AlignY="Middle" HelpKey="us/race-board/filters" />
-            <Widget Id="race-board-filter-vanilla-creatures" Kind="input/button" TextKey="US.Board.Filter.VanillaCreatures" ActionBind="board-filter" PayloadKey="board-filter-vanilla-creatures" SelectedKey="board-filter-is-vanilla-creatures" Width="172" Height="24" AlignY="Middle" HelpKey="us/race-board/filters" />
-            <Widget Id="race-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Width="220" Height="24" AlignY="Middle" HelpKey="us/race-board/search" Live="true" />
+            <Widget Id="race-board-filter-har" Kind="input/button" TextKey="US.Board.Filter.Har" ActionBind="board-filter" PayloadBind="board-filter-har" SelectedBind="board-filter-is-har" Width="84" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
+            <Widget Id="race-board-filter-vanilla-races" Kind="input/button" TextKey="US.Board.Filter.VanillaRaces" ActionBind="board-filter" PayloadBind="board-filter-vanilla-races" SelectedBind="board-filter-is-vanilla-races" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
+            <Widget Id="race-board-filter-vanilla-creatures" Kind="input/button" TextKey="US.Board.Filter.VanillaCreatures" ActionBind="board-filter" PayloadBind="board-filter-vanilla-creatures" SelectedBind="board-filter-is-vanilla-creatures" Width="172" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
+            <Widget Id="race-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Width="220" Height="24" AlignY="Middle" HelpRef="us/race-board/search" Live="true" />
           </Row>
           <!-- CORRECTIONS-R1 topic 3: before the long all-race list, the two nearest output
                destinations ride the page's EXISTING scroll-to action (declared string payloads,
                no new vocabulary): the volume card and the attenuation card of this same Overview. -->
           <Row Id="race-board-shortcuts" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="race-board-jump-volume" Kind="input/button" TextKey="US.Board.JumpVolume" ActionBind="scroll-to" PayloadKey="scroll-target-volume" Width="150" Height="24" AlignY="Middle" HelpKey="us/race-board/summary" />
-            <Widget Id="race-board-jump-attenuation" Kind="input/button" TextKey="US.Board.JumpAttenuation" ActionBind="scroll-to" PayloadKey="scroll-target-attenuation" Width="200" Height="24" AlignY="Middle" HelpKey="us/race-board/summary" />
+            <Widget Id="race-board-jump-volume" Kind="input/button" TextKey="US.Board.JumpVolume" ActionBind="scroll-to" PayloadBind="scroll-target-volume" Width="150" Height="24" AlignY="Middle" HelpRef="us/race-board/summary" />
+            <Widget Id="race-board-jump-attenuation" Kind="input/button" TextKey="US.Board.JumpAttenuation" ActionBind="scroll-to" PayloadBind="scroll-target-attenuation" Width="200" Height="24" AlignY="Middle" HelpRef="us/race-board/summary" />
           </Row>
           <Widget Id="race-board-cards" Kind="us/race-board" TitleHidden="true" />
         </Section>
@@ -156,7 +156,7 @@
 
              Card chrome is the engine's Section container with the same explicit geometry the checklist
              card already declares (Padding 12 + header 26 + Gap 6 reproduces UsCardLayout.MeasureBody).
-             Section help sits on the us/section-header WIDGET, never on the container: HelpKey is refused
+             Section help sits on the us/section-header WIDGET, never on the container: HelpRef is refused
              on a container because only a widget is a hit surface. It is a US kind rather than the
              carrier's section/header because that one paints a bottom rule no attribute can move (S6-3).
 
@@ -174,74 +174,74 @@
              hit band the composites drew no longer exists - the checkbox band is the row's only hit
              surface (the same delta the checklist migration recorded).
 
-             The child of the eat-precision pair is gated by the engine's VisibleKey reading the parent's
+             The child of the eat-precision pair is gated by the engine's VisibleBind reading the parent's
              own bool binding, which is the declarative form of the rule the composite enforced in C#. -->
         <Section Id="global-volume" Tab="Overview" Padding="16" Gap="8">
-          <Widget Id="global-volume-header" Kind="us/section-header" TitleKey="US.Section.OutputLevel" Height="26" HelpKey="us/global-volume" />
+          <Widget Id="global-volume-header" Kind="us/section-header" TitleKey="US.Section.OutputLevel" Height="26" HelpRef="us/global-volume" />
           <!-- Responsive parameter rows keep label/control columns when roomy and stack the same
                elements when their own inner band is narrow, independently of the body breakpoint. -->
           <Row Id="global-volume-top" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
             <Column Id="global-volume-number-slot" Width="64" Padding="0" AlignY="Top">
-              <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" HelpKey="us/global-volume/number" AlignX="Left" Live="true" />
+              <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" HelpRef="us/global-volume/number" AlignX="Left" Live="true" />
             </Column>
           </Row>
-          <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
+          <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpRef="us/global-volume/slider" />
         </Section>
         <Section Id="basic-tuning" Tab="Tuning" Padding="12" Gap="8">
-          <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpKey="us/basic-tuning" />
+          <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpRef="us/basic-tuning" />
           <Column Id="basic-tuning-body" Gap="6" Padding="0">
             <Row Id="basic-egg-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Column Id="basic-egg-text" Gap="1" Padding="0">
-                <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpKey="us/basic-tuning/egg" />
-                <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleKey="easter-egg-on" />
-                <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleKey="easter-egg-off" />
+                <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpRef="us/basic-tuning/egg" />
+                <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleBind="easter-egg-on" />
+                <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleBind="easter-egg-off" />
               </Column>
               <Column Id="basic-egg-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" HelpKey="us/basic-tuning/egg" AlignX="Left" />
+                <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedBind="allow-eggs" Width="36" Height="30" HelpRef="us/basic-tuning/egg" AlignX="Left" />
               </Column>
             </Row>
 
             <Row Id="basic-talking-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
+              <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpRef="us/basic-tuning/scale-talking" />
               <Column Id="basic-talking-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" HelpKey="us/basic-tuning/scale-talking" AlignX="Left" />
+                <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedBind="scale-talking" Width="36" Height="30" HelpRef="us/basic-tuning/scale-talking" AlignX="Left" />
               </Column>
             </Row>
 
             <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPhase" HelpKey="us/basic-tuning/eat-phase" />
-              <Widget Id="basic-eat-choice" Kind="input/dropdown" Bind="eat-phase" OptionsBind="eat-phase-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-phase" />
+              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPhase" HelpRef="us/basic-tuning/eat-phase" />
+              <Widget Id="basic-eat-choice" Kind="input/dropdown" Bind="eat-phase" OptionsBind="eat-phase-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-phase" />
             </Row>
             <Row Id="basic-eat-nutrition-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-eat-nutrition-label" Kind="text/wrapped" TextKey="US.Tuning.EatNutrition" HelpKey="us/basic-tuning/eat-nutrition" />
-              <Widget Id="basic-eat-nutrition-choice" Kind="input/dropdown" Bind="eat-nutrition" OptionsBind="eat-nutrition-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-nutrition" />
+              <Widget Id="basic-eat-nutrition-label" Kind="text/wrapped" TextKey="US.Tuning.EatNutrition" HelpRef="us/basic-tuning/eat-nutrition" />
+              <Widget Id="basic-eat-nutrition-choice" Kind="input/dropdown" Bind="eat-nutrition" OptionsBind="eat-nutrition-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-nutrition" />
             </Row>
             <Row Id="basic-eat-drug-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-eat-drug-label" Kind="text/wrapped" TextKey="US.Tuning.EatDrug" HelpKey="us/basic-tuning/eat-drug" />
-              <Widget Id="basic-eat-drug-choice" Kind="input/dropdown" Bind="eat-drug" OptionsBind="eat-drug-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-drug" />
+              <Widget Id="basic-eat-drug-label" Kind="text/wrapped" TextKey="US.Tuning.EatDrug" HelpRef="us/basic-tuning/eat-drug" />
+              <Widget Id="basic-eat-drug-choice" Kind="input/dropdown" Bind="eat-drug" OptionsBind="eat-drug-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-drug" />
             </Row>
             <Row Id="basic-select-player-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-select-player-label" Kind="text/wrapped" TextKey="US.Select.PlayerControlled" HelpKey="us/basic-tuning/select" />
-              <Widget Id="basic-select-player-choice" Kind="input/dropdown" Bind="select-player-controlled" OptionsBind="select-qualification-options" Width="190" Height="30" HelpKey="us/basic-tuning/select" />
+              <Widget Id="basic-select-player-label" Kind="text/wrapped" TextKey="US.Select.PlayerControlled" HelpRef="us/basic-tuning/select" />
+              <Widget Id="basic-select-player-choice" Kind="input/dropdown" Bind="select-player-controlled" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
             </Row>
             <Row Id="basic-select-awake-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-select-awake-label" Kind="text/wrapped" TextKey="US.Select.Awake" HelpKey="us/basic-tuning/select" />
-              <Widget Id="basic-select-awake-choice" Kind="input/dropdown" Bind="select-awake" OptionsBind="select-qualification-options" Width="190" Height="30" HelpKey="us/basic-tuning/select" />
+              <Widget Id="basic-select-awake-label" Kind="text/wrapped" TextKey="US.Select.Awake" HelpRef="us/basic-tuning/select" />
+              <Widget Id="basic-select-awake-choice" Kind="input/dropdown" Bind="select-awake" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
             </Row>
             <Row Id="basic-select-not-downed-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-select-not-downed-label" Kind="text/wrapped" TextKey="US.Select.NotDowned" HelpKey="us/basic-tuning/select" />
-              <Widget Id="basic-select-not-downed-choice" Kind="input/dropdown" Bind="select-not-downed" OptionsBind="select-qualification-options" Width="190" Height="30" HelpKey="us/basic-tuning/select" />
+              <Widget Id="basic-select-not-downed-label" Kind="text/wrapped" TextKey="US.Select.NotDowned" HelpRef="us/basic-tuning/select" />
+              <Widget Id="basic-select-not-downed-choice" Kind="input/dropdown" Bind="select-not-downed" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
             </Row>
             <!-- Basics restores system playback controls and Pawn-profile Eat/Select parameters.
                  Race/Xeno parameters are owned by their exact action/layer restore. -->
-            <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+            <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpRef="us/reset-area/button" />
           </Column>
         </Section>
         <!-- Current Dev policy status; retired timing controls have no runtime consumer. -->
         <Section Id="timing" Tab="Tuning" Padding="12" Gap="8">
-          <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" HelpKey="us/timing/policy" />
-          <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
+          <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" HelpRef="us/timing/policy" />
+          <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpRef="us/timing" />
 
 
 
@@ -249,11 +249,11 @@
 
         </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8">
-          <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
+          <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpRef="us/camera-indicator" />
           <Row Id="camera-indicator-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
+            <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpRef="us/camera-indicator/toggle" />
             <Column Id="camera-indicator-check-slot" Width="36" Padding="0" AlignY="Middle">
-              <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" HelpKey="us/camera-indicator/toggle" AlignX="Left" />
+              <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedBind="camera-indicator" Width="36" Height="30" HelpRef="us/camera-indicator/toggle" AlignX="Left" />
             </Column>
           </Row>
         </Section>
@@ -263,7 +263,7 @@
              STRING value binding and takes its option values as manifest LITERALS (Value1..8), so adopting it
              would push a machine-token parse into the host; us/mode-row is hard-typed to SqueakVoicePackMode
              over a four-entry static table. The S4-3b shape is the one that exists: three input/button atoms,
-             each carrying its own PayloadKey (G2 string contract) and its own SelectedKey (B1 per-element
+             each carrying its own PayloadBind (G2 string contract) and its own SelectedBind (B1 per-element
              answer), over ONE string action whose enum parse stays on the host. The localize row is the page
              own square toggle over the same bool the composite wrote. The four us/diagnostics/* item help
              keys move from the retired widget C# onto these elements, because a catalog item claimed by
@@ -275,40 +275,40 @@
              The swatch names are US consumer content; FerriteLib keeps shipping its own templates and
              the author-custom document mechanism (this table never enters the library). -->
         <Section Id="theme-picker" Tab="Advanced" Padding="12" Gap="6">
-          <Widget Id="theme-picker-header" Kind="us/section-header" TitleKey="US.Section.Theme" Height="26" HelpKey="us/theme-picker" />
-          <Widget Id="theme-picker-note" Kind="text/wrapped" TextKey="US.Theme.Note" Emphasis="Muted" HelpKey="us/theme-picker" />
+          <Widget Id="theme-picker-header" Kind="us/section-header" TitleKey="US.Section.Theme" Height="26" HelpRef="us/theme-picker" />
+          <Widget Id="theme-picker-note" Kind="text/wrapped" TextKey="US.Theme.Note" Emphasis="Muted" HelpRef="us/theme-picker" />
           <Row Id="theme-picker-row-1" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="theme-core" Kind="input/button" TextKey="US.Theme.Core.Label" ActionBind="set-ui-swatch" PayloadKey="ui-swatch-core-value" SelectedKey="ui-swatch-core" Width="118" Height="24" HelpKey="us/theme-picker/switch" />
-            <Widget Id="theme-royalty" Kind="input/button" TextKey="US.Theme.Royalty.Label" ActionBind="set-ui-swatch" PayloadKey="ui-swatch-royalty-value" SelectedKey="ui-swatch-royalty" Width="118" Height="24" HelpKey="us/theme-picker/switch" />
-            <Widget Id="theme-ideology" Kind="input/button" TextKey="US.Theme.Ideology.Label" ActionBind="set-ui-swatch" PayloadKey="ui-swatch-ideology-value" SelectedKey="ui-swatch-ideology" Width="118" Height="24" HelpKey="us/theme-picker/switch" />
+            <Widget Id="theme-core" Kind="input/button" TextKey="US.Theme.Core.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-core-value" SelectedBind="ui-swatch-core" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
+            <Widget Id="theme-royalty" Kind="input/button" TextKey="US.Theme.Royalty.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-royalty-value" SelectedBind="ui-swatch-royalty" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
+            <Widget Id="theme-ideology" Kind="input/button" TextKey="US.Theme.Ideology.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-ideology-value" SelectedBind="ui-swatch-ideology" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
           </Row>
           <Row Id="theme-picker-row-2" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="theme-biotech" Kind="input/button" TextKey="US.Theme.Biotech.Label" ActionBind="set-ui-swatch" PayloadKey="ui-swatch-biotech-value" SelectedKey="ui-swatch-biotech" Width="118" Height="24" HelpKey="us/theme-picker/switch" />
-            <Widget Id="theme-anomaly" Kind="input/button" TextKey="US.Theme.Anomaly.Label" ActionBind="set-ui-swatch" PayloadKey="ui-swatch-anomaly-value" SelectedKey="ui-swatch-anomaly" Width="118" Height="24" HelpKey="us/theme-picker/switch" />
-            <Widget Id="theme-odyssey" Kind="input/button" TextKey="US.Theme.Odyssey.Label" ActionBind="set-ui-swatch" PayloadKey="ui-swatch-odyssey-value" SelectedKey="ui-swatch-odyssey" Width="118" Height="24" HelpKey="us/theme-picker/switch" />
+            <Widget Id="theme-biotech" Kind="input/button" TextKey="US.Theme.Biotech.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-biotech-value" SelectedBind="ui-swatch-biotech" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
+            <Widget Id="theme-anomaly" Kind="input/button" TextKey="US.Theme.Anomaly.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-anomaly-value" SelectedBind="ui-swatch-anomaly" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
+            <Widget Id="theme-odyssey" Kind="input/button" TextKey="US.Theme.Odyssey.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-odyssey-value" SelectedBind="ui-swatch-odyssey" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
           </Row>
-          <Widget Id="theme-picker-status" Kind="text/wrapped" Bind="ui-swatch-status" HelpKey="us/theme-picker" />
+          <Widget Id="theme-picker-status" Kind="text/wrapped" Bind="ui-swatch-status" HelpRef="us/theme-picker" />
           <Widget Id="theme-picker-note-author" Kind="text/wrapped" Bind="ui-swatch-author-note" Emphasis="Muted" />
         </Section>
         <Section Id="diagnostics" Tab="Advanced" Padding="12" Gap="8">
-          <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpKey="us/diagnostics" />
-          <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpKey="us/diagnostics" />
+          <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpRef="us/diagnostics" />
+          <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpRef="us/diagnostics" />
           <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
-            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedKey="dev-logging-auto" ActionBind="set-dev-logging" PayloadKey="dev-logging-auto-value" HelpKey="us/diagnostics/logging-auto" />
-            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedKey="dev-logging-enabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-enabled-value" HelpKey="us/diagnostics/logging-enabled" />
-            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedKey="dev-logging-disabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-disabled-value" HelpKey="us/diagnostics/logging-disabled" />
+            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedBind="dev-logging-auto" ActionBind="set-dev-logging" PayloadBind="dev-logging-auto-value" HelpRef="us/diagnostics/logging-auto" />
+            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedBind="dev-logging-enabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-enabled-value" HelpRef="us/diagnostics/logging-enabled" />
+            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedBind="dev-logging-disabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-disabled-value" HelpRef="us/diagnostics/logging-disabled" />
           </Row>
           <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpKey="us/diagnostics/localize-debug" />
+            <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpRef="us/diagnostics/localize-debug" />
             <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
-              <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" HelpKey="us/diagnostics/localize-debug" AlignX="Left" />
+              <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedBind="localize-debug-menu" Width="36" Height="30" HelpRef="us/diagnostics/localize-debug" AlignX="Left" />
             </Column>
           </Row>
           <!-- US-RESET1: the Diagnostics-area restore (log mode + localized debug menu). It sits
                right under the two persisted rows it restores, ABOVE the geometry heading: the
                layout-capture switches are per-window session state, not settings, and this
                restore never touches them. -->
-          <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+          <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" Height="24" AlignX="Left" HelpRef="us/reset-area/button" />
           <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches, the capture status sentence and
                the report answer, all bound to real commands the host dispatches:
                  layout-capture        - start/stop capturing every arranged node of THIS window's host
@@ -324,33 +324,33 @@
                Deliberately plain: no new widget kind, no second collector, no export service. The capture the
                report prints is the SAME per-host subscription capture the fit audit already drains. -->
           <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
-          <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpKey="us/diagnostics/layout-diagnosis" />
+          <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpRef="us/diagnostics/layout-diagnosis" />
           <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
             <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
               <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedKey="layout-capture" Width="36" Height="30" HelpKey="us/diagnostics/layout-capture" AlignX="Left" />
+                <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedBind="layout-capture" Width="36" Height="30" HelpRef="us/diagnostics/layout-capture" AlignX="Left" />
               </Column>
             </Row>
             <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
               <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedKey="layout-outline" Width="36" Height="30" HelpKey="us/diagnostics/layout-outline" AlignX="Left" />
+                <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedBind="layout-outline" Width="36" Height="30" HelpRef="us/diagnostics/layout-outline" AlignX="Left" />
               </Column>
             </Row>
-            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" />
+            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpRef="us/diagnostics/layout-report" />
             <!-- RPT1.1: the Report click's ANSWER, as the sibling immediately below the button. It is a
                  read-only bound sentence (like the capture sentence above) because the outcome is carrier
                  state the manifest has no expression for: the real reason a request was refused, the pass an
                  accepted request is waiting for, or the pass a report was written from. It shares the
                  button's help item on purpose - it explains the same action. -->
-            <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpKey="us/diagnostics/layout-report" />
+            <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpRef="us/diagnostics/layout-report" />
             <!-- DT1: the settings-window entry to the developer panel (the tool also answers from the
                  Debug Actions menu, but never without this window open). It sits AFTER the RPT1 status
                  sibling so the report button keeps its immediate answer line. -->
             <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
-              <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedKey="dev-panel-open" Width="172" Height="24" HelpKey="us/diagnostics/layout-diagnosis" />
+              <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedBind="dev-panel-open" Width="172" Height="24" HelpRef="us/diagnostics/layout-diagnosis" />
             </Row>
           </Column>
         </Section>
@@ -360,9 +360,9 @@
              sound mapping, author/Def content, schema/migration diagnostics). Cancel writes
              nothing; the staged action runs the effect key exactly once. -->
         <Section Id="restore-center" Tab="Advanced" Padding="12" Gap="8">
-          <Widget Id="restore-center-header" Kind="us/section-header" TitleKey="US.Section.RestoreDefaults" Height="26" HelpKey="us/reset-center" />
-          <Widget Id="restore-center-caption" Kind="text/wrapped" TextKey="US.Reset.RestoreAll.Caption" Emphasis="Muted" HelpKey="us/reset-center" />
-          <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" Height="24" AlignX="Left" HelpKey="us/reset-center/restore-all" />
+          <Widget Id="restore-center-header" Kind="us/section-header" TitleKey="US.Section.RestoreDefaults" Height="26" HelpRef="us/reset-center" />
+          <Widget Id="restore-center-caption" Kind="text/wrapped" TextKey="US.Reset.RestoreAll.Caption" Emphasis="Muted" HelpRef="us/reset-center" />
+          <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" Height="24" AlignX="Left" HelpRef="us/reset-center/restore-all" />
         </Section>
         <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
              same change. Card chrome is the engine's Section with the checklist card's explicit geometry.
@@ -374,7 +374,7 @@
              The status line is a read-only bound string for the same reason the timing caption is: the
              assembly of the preset name and the printed range is presentation data the manifest has no
              expression for, so the host builds ONE sentence and the atom paints it. The three presets are
-             input/button atoms whose selected state is a per-button read-only bool (SelectedKey), which is
+             input/button atoms whose selected state is a per-button read-only bool (SelectedBind), which is
              how a data-driven button says "the model is on me" without a Tone binding.
 
              NOT reproduced from the composite: its narrow branch (body < 200px, a one-line summary). The
@@ -384,36 +384,36 @@
              state; DeclarativeAttenuationLaneTests measures the card's shape at every accepted width
              instead, and its overflow assertions are what a genuinely too-narrow card would redden.
 
-             Each preset button declares PayloadKey, which opens input/button's STRING contract (G2: "with a
+             Each preset button declares PayloadBind, which opens input/button's STRING contract (G2: "with a
              payload the consumer binds BindAction<string>"), so each button's payload lives in its own
              read-only string binding rather than as a manifest literal. These three are static, so no item
-             scope is involved - the keys are plain page-level read-only strings. SelectedKey is what makes
+             scope is involved - the keys are plain page-level read-only strings. SelectedBind is what makes
              the current preset visible: the engine resolves the Active role for the one button whose bool
              answers true, so exactly one button is highlighted and the status sentence cannot disagree with
              it. -->
         <Section Id="attenuation-editor" Tab="Overview" Padding="12" Gap="6">
-          <Widget Id="attenuation-header" Kind="us/section-header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpKey="us/attenuation-editor" />
+          <Widget Id="attenuation-header" Kind="us/section-header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpRef="us/attenuation-editor" />
           <Column Id="attenuation-body" Gap="4" Padding="0">
-            <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpKey="us/attenuation-editor/chart" />
-            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point" Editable="true" EditablePoints="1,2" Height="64" HelpKey="us/attenuation-editor/chart" />
-            <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpKey="us/attenuation-editor/status" />
+            <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpRef="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point" Editable="true" EditablePoints="1,2" Height="64" HelpRef="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpRef="us/attenuation-editor/status" />
             <!-- No Height on the preset buttons on purpose: at the narrowest accepted band a third of the
                row is narrower than "Conservative"/"Balanced" need, and a declared 26px band would CLIP the
                caption while a fit audit reported the overflow. Without it the atom measures its own caption,
                so the label wraps and the button grows - the same rule WrappingTimingLabelGrowsTheCard pins
                for the timing card. The three cells stay equal thirds at every width. -->
           <Row Id="attenuation-presets" Gap="4" Padding="0">
-              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedKey="distance-preset-conservative" ActionBind="set-distance-preset" PayloadKey="distance-preset-conservative-value" HelpKey="us/attenuation-editor/presets" />
-              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedKey="distance-preset-balanced" ActionBind="set-distance-preset" PayloadKey="distance-preset-balanced-value" HelpKey="us/attenuation-editor/presets" />
-              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedKey="distance-preset-strong" ActionBind="set-distance-preset" PayloadKey="distance-preset-strong-value" HelpKey="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedBind="distance-preset-conservative" ActionBind="set-distance-preset" PayloadBind="distance-preset-conservative-value" HelpRef="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedBind="distance-preset-balanced" ActionBind="set-distance-preset" PayloadBind="distance-preset-balanced-value" HelpRef="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedBind="distance-preset-strong" ActionBind="set-distance-preset" PayloadBind="distance-preset-strong-value" HelpRef="us/attenuation-editor/presets" />
             </Row>
           <!-- US-RESET1: the two distance entries keep their distinct semantics (§4.3): the first
                restores ONLY the preset and the range, directly (a simple restore); the second is
                the Distance+volume AREA restore through the confirmation window - it names the
                output level among its fields, which the simple restore explicitly keeps. -->
           <Row Id="attenuation-restores" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="attenuation-reset-defaults" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="24" HelpKey="us/reset-area/button" />
-            <Widget Id="attenuation-reset-area" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Distance.Confirm" EffectKey="reset-normal-distance" Height="24" HelpKey="us/reset-area/button" />
+            <Widget Id="attenuation-reset-defaults" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="24" HelpRef="us/reset-area/button" />
+            <Widget Id="attenuation-reset-area" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Distance.Confirm" EffectKey="reset-normal-distance" Height="24" HelpRef="us/reset-area/button" />
           </Row>
           </Column>
         </Section>
@@ -427,14 +427,14 @@
              promise. The band keeps the V2 P1 card rhythm (Section + us/section-header + TitleHidden
              body widget). -->
         <Section Id="packs-filter" Tab="Packs" Padding="12" Gap="6">
-          <Widget Id="packs-filter-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpKey="us/filter-bar" />
-          <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="26" HelpKey="us/filter-bar/keyword" Live="true" />
+          <Widget Id="packs-filter-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpRef="us/filter-bar" />
+          <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="26" HelpRef="us/filter-bar/keyword" Live="true" />
           <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
           <Row Id="packs-domain-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="packs-race-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/race" />
-            <Widget Id="packs-xenotype-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/xenotype" />
+            <Widget Id="packs-race-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpRef="us/filter-bar/race" />
+            <Widget Id="packs-xenotype-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpRef="us/filter-bar/xenotype" />
           </Row>
-          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleKey="pack-filter-active" HelpKey="us/filter-bar/summary" />
+          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleBind="pack-filter-active" HelpRef="us/filter-bar/summary" />
         </Section>
         <!-- US-PACK1 + US-ESC1 (§4.1/§4.2): the page's ONE result body - pack cards. The cancel chain
              draws here as two REAL parent levels: the card's domain-row hit carries
@@ -450,12 +450,12 @@
              the SA1.7 gutter) is inherited from the retired templates unchanged - only the row KINDS
              are new. -->
         <Section Id="packs-results" Tab="Packs" Padding="12" Gap="6" CancelBind="cancel-pack-results">
-          <Widget Id="packs-results-header" Kind="us/section-header" TitleKey="US.Section.PackResults" Height="26" HelpKey="us/pack-cards" />
-          <Widget Id="packs-scope" Kind="text/wrapped" Bind="checklist-scope" Emphasis="Muted" VisibleKey="checklist-has-domain" />
-          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" VisibleKey="checklist-has-domain" />
+          <Widget Id="packs-results-header" Kind="us/section-header" TitleKey="US.Section.PackResults" Height="26" HelpRef="us/pack-cards" />
+          <Widget Id="packs-scope" Kind="text/wrapped" Bind="checklist-scope" Emphasis="Muted" VisibleBind="checklist-has-domain" />
+          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" VisibleBind="checklist-has-domain" />
           <Repeat Id="packs-card-rows" Items="pack-card-keys" Template="pack-card-row" Padding="0" Gap="2" CancelBind="cancel-domain-selection" />
-          <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleKey="pack-results-empty" />
-          <Widget Id="packs-none" Kind="state/empty" TextKey="US.Packs.Results.None" VisibleKey="pack-no-packs" />
+          <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleBind="pack-results-empty" />
+          <Widget Id="packs-none" Kind="state/empty" TextKey="US.Packs.Results.None" VisibleBind="pack-no-packs" />
         </Section>
         <!-- UIR-004 (WO-US-UI-REFACTOR-20261014): the FINAL fallback table editor migrated from the
              tuning tree to THIS page - the last audible answer belongs beside the packs it falls back
@@ -465,7 +465,7 @@
              ENTRY, the next releases the selected TABLE (the US-ESC1 visible-branch rules carried over
              from the tuning tree verbatim), and neither writes settings, routing or persistence. -->
         <Section Id="packs-fallback" Tab="Packs" Padding="12" Gap="6" CancelBind="cancel-fallback-table">
-          <Widget Id="packs-fallback-header" Kind="us/section-header" TitleKey="US.Section.FallbackTable" Height="26" HelpKey="us/fallback-editor" />
+          <Widget Id="packs-fallback-header" Kind="us/section-header" TitleKey="US.Section.FallbackTable" Height="26" HelpRef="us/fallback-editor" />
           <Widget Id="fallback-editor" Kind="us/fallback-editor" TitleHidden="true" />
         </Section>
         <!-- US-ESC1 review1 (PM observation 1): §4.1 "当前层域/区域 → 设置主层" is its own layer of the
@@ -474,9 +474,9 @@
              and the Tuning tab gate moves to the wrapper so the composite's node sits inside that
              CancelBind's subtree - no new kind, no FL API, no visual delta. -->
         <Column Id="tuning-context" Tab="Tuning" Gap="0" Padding="0" CancelBind="cancel-tuning-context">
-          <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" CancelBind="cancel-tuning-target" />
+          <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpRef="us/scope-tree" CancelBind="cancel-tuning-target" />
         </Column>
-        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
+        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpRef="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
       </Scroll>
     </Row>
     <!-- Bottom help panel (BH1). ONE declared presentation replaces the two the drawer had (the 320px
@@ -487,7 +487,7 @@
          to keep in sync, and no page box the presentation can disagree with. The duplicate narrow
          element (Id `help-band`, child `help-panel-narrow`) left with the second presentation.
 
-         Hidden through VisibleKey and never removed: the element stays in the definition, so its node, its
+         Hidden through VisibleBind and never removed: the element stays in the definition, so its node, its
          sub-tree and its scroll position survive a close/open, and the body row - which is now ALWAYS
          arranged - keeps its own nav and content scroll positions across the toggle.
 
@@ -497,7 +497,7 @@
          viewport are measured by HelpPanelLaneTests, which reads this number out of the manifest instead of
          re-declaring it, and the acceptance is printed there (help viewport, body viewport, fit findings,
          both languages). -->
-    <Scroll Id="help-scroll" Height="140" Padding="0" VisibleKey="help-open">
+    <Scroll Id="help-scroll" Height="140" Padding="0" VisibleBind="help-open">
       <Widget Id="help-panel" Kind="us/help-panel" />
     </Scroll>
     <!-- BH1: the footer band is the page's action strip as well as its status strip. It carries the
@@ -521,16 +521,16 @@
          inset, so the footer stays in by construction at both help states. -->
     <Row Id="footer-band" Padding="6" Gap="6">
       <Widget Id="footer" Kind="us/footer" />
-      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle" ActionBind="toggle-help-drawer" Width="128" Height="26" AlignY="Middle" HelpKey="us/page-title/help-drawer" />
+      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle" ActionBind="toggle-help-drawer" Width="128" Height="26" AlignY="Middle" HelpRef="us/page-title/help-drawer" />
     </Row>
   </Column>
-  <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
+  <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleBind/
        ActionBind inside a template are qualified per item by the engine (<Items>.<itemKey>.<declaredKey>),
-       which is what lets one declared subtree draw every row; HelpKey is deliberately NOT qualified, so
+       which is what lets one declared subtree draw every row; HelpRef is deliberately NOT qualified, so
        every row claims the same catalog entry exactly as the hand-drawn row loop did. -->
   <Templates>
     <!-- US-PACK1: ONE template draws TWO row kinds over the flat pack-card-keys list. The kind is
-         decided by per-item VisibleKey bools the projection registers (is-header / is-domain): a header
+         decided by per-item VisibleBind bools the projection registers (is-header / is-domain): a header
          row shows the pack identity and the Contents toggle; a domain row shows the owning card's
          domain, the operation-domain highlight and that domain's own enable switch for that pack.
          Hidden children are never materialized, so a header never resolves "enabled" and a domain row
@@ -545,25 +545,25 @@
          band begins. -->
     <Overlay Id="pack-card-row" Padding="0">
       <Widget Id="pack-card-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
-      <Row Id="pack-card-row-header" Gap="4" Padding="0" VisibleKey="is-header">
+      <Row Id="pack-card-row-header" Gap="4" Padding="0" VisibleBind="is-header">
         <Column Id="pack-card-row-header-gutter" Width="6" Gap="0" Padding="0" />
         <Column Id="pack-card-row-header-text" Gap="2" Padding="0">
-          <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/card" />
-          <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/pack-cards/card" />
-          <Widget Id="pack-card-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/pack-cards/card" />
+          <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/card" />
+          <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpRef="us/pack-cards/card" />
+          <Widget Id="pack-card-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpRef="us/pack-cards/card" />
         </Column>
-        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedKey="expanded" ActionBind="toggle-pack-card" PayloadKey="payload" Width="116" Height="26" AlignY="Middle" Emphasis="Muted" HelpKey="us/pack-cards/expand" />
+        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedBind="expanded" ActionBind="toggle-pack-card" PayloadBind="payload" Width="116" Height="26" AlignY="Middle" Emphasis="Muted" HelpRef="us/pack-cards/expand" />
       </Row>
-      <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleKey="is-domain">
+      <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleBind="is-domain">
         <Column Id="pack-card-row-domain-gutter" Width="18" Gap="0" Padding="0" />
         <Overlay Id="pack-card-row-domain-area" Padding="0">
-          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/pack-cards/row" />
+          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadBind="payload" HelpRef="us/pack-cards/row" />
           <Row Id="pack-card-row-domain-content" Gap="0" Padding="0">
             <Column Id="pack-card-row-domain-inner-gutter" Width="6" Gap="0" Padding="0" />
-            <Widget Id="pack-card-row-domain-text" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/row" />
+            <Widget Id="pack-card-row-domain-text" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/row" />
           </Row>
         </Overlay>
-        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled" Width="36" Height="30" AlignY="Middle" HelpKey="us/pack-cards/enable" />
+        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" AlignY="Middle" HelpRef="us/pack-cards/enable" />
       </Row>
     </Overlay>
   </Templates>

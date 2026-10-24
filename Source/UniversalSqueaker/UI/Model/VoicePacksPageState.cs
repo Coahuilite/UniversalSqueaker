@@ -8,7 +8,7 @@ namespace UniversalSqueaker.UI;
 /// The view model is rebuilt from settings/catalog each frame; this state only remembers what the
 /// user is looking at (selected domain, search text) and the baseline-preset import checkboxes.
 /// Neither scroll nor the help hover claim lives here: both moved to the session — scroll positions
-/// via <c>UiSession.ScrollPositions</c>, the hover claim via <c>UiSession.HoverClaim</c> (FL P3).
+/// via <c>UiSession.ScrollPositions</c>, the hover claim via <c>UiSession.CurrentHelpRef</c> (FL P3).
 /// </summary>
 public sealed class VoicePacksPageState
 {
@@ -57,7 +57,7 @@ public sealed class VoicePacksPageState
     /// <summary>
     /// Bottom help panel visibility (BH1). INDEPENDENT state on purpose: the engine's only
     /// binding-driven visibility switch is the <c>Tab</c> attribute compared against
-    /// <c>UiBindings.ActiveTabKey</c>, and help visibility must never follow workspace switching.
+    /// <c>UiBindings.ActiveTabBind</c>, and help visibility must never follow workspace switching.
     /// Defaults to false: the shipped window opens with the panel retracted above the footer, and
     /// expanding it neither widens nor moves the window - the body row just yields height.
     /// </summary>

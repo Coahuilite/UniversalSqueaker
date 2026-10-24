@@ -28,7 +28,7 @@ public static class Patch_GlobalControlsUtility_CameraIndicator
     private static void Postfix(float leftX, float width, ref float curBaseY)
     {
         if (!SqueakDebug.ShowCameraIndicator || Find.CurrentMap == null) return;
-        if (UiNative.IsLayoutEvent()) return;
+        if (Event.current?.type == EventType.Layout) return;
 
         if (UsCameraIndicatorOverlay.TryDraw(leftX, width, ref curBaseY)) return;
 

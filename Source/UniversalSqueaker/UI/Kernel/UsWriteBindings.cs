@@ -5,7 +5,7 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// The <see cref="IUiBindings"/> operation a registered write key came through.
+/// The <see cref="UiBindings"/> registration operation a registered write key came through.
 /// </summary>
 public enum UsWriteBindingKind
 {
@@ -38,7 +38,7 @@ public sealed class UsWriteBinding
     /// </summary>
     public string Key { get; }
 
-    /// <summary>Which <see cref="IUiBindings"/> operation registered the key.</summary>
+    /// <summary>Which <see cref="UiBindings"/> registration operation registered the key.</summary>
     public UsWriteBindingKind Kind { get; }
 
     /// <summary>True when <see cref="Key"/> is the template of a per-row family rather than a concrete key.</summary>
@@ -51,7 +51,7 @@ public sealed class UsWriteBinding
 /// The one funnel every write registration on the SETTINGS PAGE goes through, and the registry the
 /// D1/D6 contract lane enumerates.
 /// <para>
-/// Why it exists: <see cref="IUiBindings"/> exposes no "enumerate every write key" surface, so before this
+/// Why it exists: <see cref="UiBindings"/> exposes no "enumerate every write key" surface, so before this
 /// funnel the revision-clock lane hand-listed its keys - measured 2026-09-24 at 21 of the settings page's
 /// 45 write registrations, which is a coverage number nothing could keep honest. Registration now records
 /// itself, so "a new write key without a display-write probe" is a red lane instead of a silent gap.
@@ -77,17 +77,17 @@ public sealed class UsWriteBinding
 /// </summary>
 public sealed class UsWriteBindings
 {
-    private readonly IUiBindings bindings;
+    private readonly UiBindings bindings;
     private readonly List<UsWriteBinding> bound = new();
     private readonly HashSet<string> seen = new(StringComparer.Ordinal);
 
-    internal UsWriteBindings(IUiBindings bindings)
+    internal UsWriteBindings(UiBindings bindings)
     {
         this.bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
     }
 
     /// <summary>The bindings surface the page is built on - what <c>UiHost</c> is constructed with.</summary>
-    public IUiBindings Bindings => bindings;
+    public UiBindings Bindings => bindings;
 
     /// <summary>
     /// Every write key registered through this funnel, in registration order and one entry per key. An
@@ -139,11 +139,11 @@ public sealed class UsWriteBindings
         Record(ItemTemplate(itemsKey, leaf), UsWriteBindingKind.Action, true);
     }
 
-    /// <summary>The concrete key of one item-scoped write, e.g. <c>race-rows.human.select-domain</c>.</summary>
+    /// <summary>The encoded concrete key of one item-scoped write, produced by <see cref="UiBindingAddress"/>.</summary>
     public static string ItemKey(string itemsKey, string itemKey, string leaf)
-        => itemsKey + "." + itemKey + "." + leaf;
+        => new UiBindingAddress(itemsKey, itemKey, leaf).Key;
 
-    /// <summary>The template one item-scoped family is recorded under, e.g. <c>race-rows.&lt;item&gt;.select-domain</c>.</summary>
+    /// <summary>Display metadata for one item-scoped family, not its runtime address, e.g. <c>race-rows.&lt;item&gt;.select-domain</c>.</summary>
     public static string ItemTemplate(string itemsKey, string leaf)
         => itemsKey + ".<item>." + leaf;
 

@@ -23,6 +23,7 @@ public sealed class Event
 {
     public bool control { get; set; }
     public bool command { get; set; }
+    public bool shift { get; set; }
     public string commandName { get; set; } = "";
     public static Event? current { get; set; }
 
@@ -136,7 +137,11 @@ public static class GUIUtility
         }
 
         controlIdCounter++;
-        return controlIdCounter;
+        // Model both documented hint matching and allocation sequence. Ignoring the hint aliases
+        // unrelated owners; using the hint alone hides control-reorder capture bugs. This is not
+        // Unity's private numeric algorithm.
+        int id=unchecked(hint*397+controlIdCounter);
+        return id==0?int.MinValue:id;
     }
 }
 
@@ -177,17 +182,20 @@ public static class GUI
     }
 
     public static Color color { get; set; } = Color.white;
+    public static Color backgroundColor { get; set; } = Color.white;
+    public static Color contentColor { get; set; } = Color.white;
+    public static bool enabled { get; set; } = true;
+    public static string NextControlName = "";
+    private static string focusedControl = "";
 
-    public static void SetNextControlName(string name)
-    {
-    }
+    public static void SetNextControlName(string name) { NextControlName = name; }
 
     public static string GetNameOfFocusedControl()
     {
-        return "";
+        return focusedControl;
     }
 
-    public static void FocusControl(string? name) { }
+    public static void FocusControl(string? name) { focusedControl = name ?? ""; }
 
     private static readonly System.Collections.Generic.Stack<Vector2> groupOrigins = new();
     private static readonly System.Collections.Generic.Stack<Rect> groupClips = new();

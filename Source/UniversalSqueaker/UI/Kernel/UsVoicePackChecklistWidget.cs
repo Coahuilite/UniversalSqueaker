@@ -47,14 +47,10 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            KindName,
-            () => new UsVoicePackChecklistWidget(),
-            UsKernelWidgetRegistrar.SectionSchema);
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsVoicePackChecklistWidget(), UsKernelWidgetRegistrar.SectionSchema));
     }
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<VoicePackDomainView?>("selected-domain", elementPath);
         bindings.ValidateAction<UsDomainIdentity>("forget-unavailable", elementPath);
@@ -102,7 +98,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         return height;
     }
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (TitleHidden)
         {
@@ -114,13 +110,13 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         DrawCard(rect, ctx, body => DrawBands(body, ctx));
     }
 
-    private void DrawBands(Rect rect, UiWidgetContext ctx)
+    private void DrawBands(UiLayoutRect rect, UiWidgetContext ctx)
     {
         VoicePackDomainView? selected = SelectedDomain(ctx);
         if (!selected.HasValue) return;
 
         VoicePackDomainView domain = selected.Value;
-        float y = rect.y;
+        float y = rect.Y;
 
         if (domain.IsDormant)
         {
@@ -140,7 +136,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         if (domain.OrphanCount > 0)
         {
             DrawOrphanBanner(
-                new Rect(rect.x, y, rect.width, BannerBand(ctx, ctx.Translation.Translate(KeyOrphanBanner))),
+                new UiLayoutRect(rect.X, y, rect.Width, BannerBand(ctx, ctx.Translation.Translate(KeyOrphanBanner))),
                 domain,
                 ctx);
         }
@@ -160,18 +156,18 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         Unavailable
     }
 
-    private float DrawBanner(Rect outer, float y, string text, UiWidgetContext ctx, BannerRole role)
+    private float DrawBanner(UiLayoutRect outer, float y, string text, UiWidgetContext ctx, BannerRole role)
     {
         float band = BannerBand(ctx, text);
-        Rect bannerRect = new(outer.x, y, outer.width, band);
-        Color ink;
+        UiLayoutRect bannerRect = new(outer.X, y, outer.Width, band);
+        UiColour ink;
         if (role == BannerRole.Attention)
         {
             // Neutral panel fill plus the cyan border and thin edge: the ruling's default treatment for an
             // attention band, and deliberately not a new tinted surface token. The sentence stays primary
             // ink - a cyan-on-cyan label would fail the same substrate rule the filled badge is held to.
-            UsAttention.Band(bannerRect, ctx.Theme);
-            UsAttention.Rail(bannerRect, ctx.Theme);
+            UsAttention.Band(ctx.Drawing, bannerRect, ctx.Theme);
+            UsAttention.Rail(ctx.Drawing, bannerRect, ctx.Theme);
             ink = ctx.Theme[UiPaletteRole.Foreground];
         }
         else
@@ -179,40 +175,40 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             // "Biotech is not active" is neither attention nor destruction: the domain is unavailable, so
             // the band takes the kernel's disabled row treatment (neutral plane + hatch, the shape spec 1.4
             // gives an unavailable row) and its own sentence is the reason.
-            UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, UsKernelDraw.RowRail.Disabled);
+            UsKernelDraw.RowSurface(ctx.Drawing, bannerRect, ctx.Theme, hovered: false, UsKernelDraw.RowRail.Disabled);
             ink = ctx.Theme[UiPaletteRole.DisabledForeground];
         }
 
-        UsKernelDraw.Label(
-            new Rect(bannerRect.x + BannerTextInset, bannerRect.y, Math.Max(1f, bannerRect.width - BannerTextInset * 2f), band),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(bannerRect.X + BannerTextInset, bannerRect.Y, Math.Max(1f, bannerRect.Width - BannerTextInset * 2f), band),
             text,
             ctx.Theme,
             ink,
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
         return y + band + BannerGap;
     }
 
-    private void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, UiWidgetContext ctx)
+    private void DrawOrphanBanner(UiLayoutRect rect, VoicePackDomainView domain, UiWidgetContext ctx)
     {
         // "Selected pack keys are no longer installed" is an unresolved source: an attention condition,
         // not a destructive one. The band therefore takes the attention treatment and primary ink, while
         // the button keeps the danger family below - forgetting dangling keys has no undo.
-        UsAttention.Band(rect, ctx.Theme);
-        UsAttention.Rail(rect, ctx.Theme);
+        UsAttention.Band(ctx.Drawing, rect, ctx.Theme);
+        UsAttention.Rail(ctx.Drawing, rect, ctx.Theme);
 
-        Rect button = new(rect.xMax - 132f, rect.y + 5f, 124f, Math.Max(20f, rect.height - 10f));
+        UiLayoutRect button = new(rect.XMax - 132f, rect.Y + 5f, 124f, Math.Max(20f, rect.Height - 10f));
         UsKernelDraw.HelpHover(button, ctx, "us/voice-pack-checklist/forget");
-        Rect text = new(rect.x + 8f, rect.y + 5f, Math.Max(1f, button.x - rect.x - 16f), Math.Max(1f, rect.height - 10f));
-        UsKernelDraw.Label(
+        UiLayoutRect text = new(rect.X + 8f, rect.Y + 5f, Math.Max(1f, button.X - rect.X - 16f), Math.Max(1f, rect.Height - 10f));
+        UsKernelDraw.Label(ctx.Drawing,
             text,
             ctx.Translation.Translate(KeyOrphanBanner),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(button, ctx, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(button, ctx, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny, controlId: "forget-unavailable", itemKey: (domain.Scope, domain.RaceDefName, domain.TargetDefName)))
         {
             ctx.Bindings.Invoke(
                 "forget-unavailable",

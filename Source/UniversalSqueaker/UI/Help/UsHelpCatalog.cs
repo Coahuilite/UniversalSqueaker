@@ -87,7 +87,7 @@ internal static class UsHelpCatalog
                     "US.Help.PageTitle.Apply.Label",
                     "US.Help.PageTitle.Apply.Text"),
                 // The footer Help switch (BH1): the single control that shows/hides the bottom help panel.
-                // W1 wires the matching HelpHover claim through the declared element's HelpKey; without that
+                // W1 wires the matching HelpHover claim through the declared element's HelpRef; without that
                 // literal this entry is unclaimed and the claim<->catalog gate flags it.
                 new HelpItem(
                     "us/page-title/help-drawer",
@@ -227,7 +227,7 @@ internal static class UsHelpCatalog
                     "US.Diagnostics.LocalizeDebugMenu",
                     "US.Help.Diagnostics.LocalizeDebug.Text"),
                 // R3-B: the developer layout diagnosis controls. One entry per control, because the help
-                // gate is bidirectional - a manifest HelpKey with no catalog item is dead hover, and a
+                // gate is bidirectional - a manifest HelpRef with no catalog item is dead hover, and a
                 // catalog item no control claims is dead content.
                 new HelpItem(
                     "us/diagnostics/layout-diagnosis",
@@ -392,7 +392,7 @@ internal static class UsHelpCatalog
                     "us/race-board/summary",
                     "US.Help.RaceBoard.Summary.Label",
                     "US.Help.RaceBoard.Summary.Text"),
-                // OVT-002: the browse band items (claims ride the manifest HelpKey attributes and
+                // OVT-002: the browse band items (claims ride the manifest HelpRef attributes and
                 // the xenotype rows' hover; the bidirectional gate keeps both sides honest).
                 new HelpItem(
                     "us/race-board/group",

@@ -1,6 +1,6 @@
+using FerriteLib.UiKit.Kernel;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace UniversalSqueaker.UI;
 
@@ -541,9 +541,9 @@ public sealed class BaselineXenotypeView
     /// definition, no Biotech and a missing texture all land here - and the drawing side must fall back
     /// rather than paint a substitute glyph.
     /// </summary>
-    public readonly Texture2D? Image;
+    public readonly UiImage Image;
 
-    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int fieldCount, Texture2D? image = null)
+    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int fieldCount, UiImage image = default)
     {
         XenotypeDefName = xenotypeDefName ?? "";
         DisplayName = displayName ?? xenotypeDefName ?? "";

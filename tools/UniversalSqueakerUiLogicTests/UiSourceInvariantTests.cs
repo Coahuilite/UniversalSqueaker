@@ -22,7 +22,7 @@ namespace UniversalSqueaker.UiLogicTests;
 ///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the three
 ///      Schema2 manifests reference (both directions, parsed — not substring-guessed).
 ///   4. The only embedded UI manifests are the three Schema2 files (settings, overlay, SA1.3 dialog).
-///   5. The help catalog, the manifests' HelpKey attributes, the section help-key map and the
+///   5. The help catalog, the manifests' HelpRef attributes, the section help-key map and the
 ///      panel's item-count height formula agree with each other (no manifest/catalog drift in
 ///      either direction, no unreachable or empty catalog entries).
 ///   6. Localization contract: the two shipped Keyed tables carry the identical key set with
@@ -83,7 +83,7 @@ internal static class UiSourceInvariantTests
     }
 
     // 10. Write registrations go through the ONE funnel (adoption plan section 9 item 6 / P3-2a).
-    //     IUiBindings exposes no full write-key enumeration, so the settings page registers every write key
+    //     UiBindings exposes no full write-key enumeration, so the settings page registers every write key
     //     through UsWriteBindings, which records them and lets the kernel-host revision-clock lane
     //     enumerate the whole write set - as a hand-list that lane covered 21 of the 45 registration sites.
     //     This guard is the other half: a RAW .BindValue/.BindAction/.BindCommand under UI/ is the bypass
@@ -163,7 +163,7 @@ internal static class UiSourceInvariantTests
         // every later addition a deliberate act. The text-scan brittleness is recorded in MEMORY.md.
         int funnelCallSites = CountWriteRegistrations(File.ReadAllText(funnel));
         Assert(funnelCallSites == 6,
-            "the funnel file must contain exactly six raw IUiBindings write-registration CALL SITES (the "
+            "the funnel file must contain exactly six raw UiBindings write-registration CALL SITES (the "
             + "plain and vetoed Command forms, the two value forms and the two action forms), got "
             + funnelCallSites + " - re-cut this pin in the batch that changes the funnel's surface");
 
@@ -187,7 +187,7 @@ internal static class UiSourceInvariantTests
         }
 
         Assert(offenders.Count == 0,
-            "write registrations must go through UsWriteBindings: a raw IUiBindings write call is a write key "
+            "write registrations must go through UsWriteBindings: a raw UiBindings write call is a write key "
             + "no lane can enumerate, so the revision-clock contract would silently stop covering it. "
             + "Offenders: " + string.Join(", ", offenders));
     }
@@ -373,9 +373,10 @@ internal static class UiSourceInvariantTests
                 throw new InvalidOperationException("retired independent Palette implementation reappears: " + file);
             foreach (string forbidden in forbiddenTypes)
             {
-                // Word-boundary-ish check: "UiTextElement"/"PaletteToken" would also be a revival,
-                // so a plain ordinal hit is the correct (stricter) semantics here.
-                if (text.IndexOf(forbidden, StringComparison.Ordinal) >= 0)
+                // UiTextAnchor is the new neutral FL enum, not the retired UiText helper.
+                // Other old UiText-prefixed helpers remain rejected.
+                string scanned = forbidden == "UiText" ? text.Replace("UiTextAnchor", "") : text;
+                if (scanned.IndexOf(forbidden, StringComparison.Ordinal) >= 0)
                 {
                     throw new InvalidOperationException(
                         "deleted UiKit type '" + forbidden + "' reappears in production UI source: " + file);
@@ -570,7 +571,7 @@ internal static class UiSourceInvariantTests
 
         var manifestHelpKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (string key in EnumerateManifestAttributes(
-                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpKey"))
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpRef"))
         {
             manifestHelpKeys.Add(key);
         }
@@ -579,14 +580,14 @@ internal static class UiSourceInvariantTests
 
         foreach (string key in manifestHelpKeys)
         {
-            // A manifest HelpKey is a hover CLAIM identity, and the panel resolves a claim against the whole
+            // A manifest HelpRef is a hover CLAIM identity, and the panel resolves a claim against the whole
             // catalog: the item key first, then the active section's overview (UsHelpPanelLogic.Resolve ->
             // UsHelpCatalog.TryFindItem). Both shapes are therefore valid declarations - step B is the first
-            // manifest that carries ITEM keys, because the engine's element-level HelpKey is what let the
+            // manifest that carries ITEM keys, because the engine's element-level HelpRef is what let the
             // checklist's search field and row template keep their entries without a line of C#. What must
             // not happen is a key the catalog cannot answer at all, which is what would show an empty panel.
             Assert(UsHelpCatalog.TryFindItem(key, out _, out _) || UsHelpCatalog.TryGetSection(key, out _),
-                "manifest HelpKey '" + key + "' is neither a catalog item nor a catalog section "
+                "manifest HelpRef '" + key + "' is neither a catalog item nor a catalog section "
                 + "(hover would show an empty panel)");
         }
 
@@ -601,7 +602,7 @@ internal static class UiSourceInvariantTests
             Assert(manifestHelpKeys.Contains(key)
                 || manifestHelpKeys.Any(help => help.StartsWith(key + "/", StringComparison.Ordinal))
                 || mapKeys.Contains(key),
-                "catalog section '" + key + "' is unreachable: neither a manifest HelpKey (itself or one of "
+                "catalog section '" + key + "' is unreachable: neither a manifest HelpRef (itself or one of "
                 + "its items) nor a SectionHelpRefOf value (dead catalog content)");
         }
 
@@ -618,8 +619,8 @@ internal static class UiSourceInvariantTests
     // 5b. Panel: a pure read surface (D2 ruling - the index list and pinned selection are gone), and
     // since FL P3 the hover CLAIM is session state: the panel sizes its text band from the
     // hover-invariant catalog maxima, resolves through the pure logic seam, and reads
-    // UiSession.HoverClaim. Claims arrive only from the mid-column controls through the single outlet,
-    // UsKernelDraw.HelpHover -> Session.ClaimHover. The consumer-side grace machine that used to own
+    // UiSession.CurrentHelpRef. Claims arrive only from the mid-column controls through the single outlet,
+    // UsKernelDraw.HelpHover -> Session.PublishHelp. The consumer-side grace machine that used to own
     // this must stay deleted - re-growing it would put two owners on one clock.
     private static void VerifyHelpPanelWiringAndHeightFormula(string root)
     {
@@ -628,7 +629,7 @@ internal static class UiSourceInvariantTests
         {
             "ValidateValue<string>(\"help-section-ref\"",
             "MaxBodyBand(ctx, textWidth)",
-            "ctx.Session.HoverClaim ?? \"\"",
+            "ctx.Session.CurrentHelpRef ?? \"\"",
             "TranslationSeam(ctx)",
         },
         "the help panel must validate its one read key, size its text band from the hover-invariant "
@@ -641,7 +642,7 @@ internal static class UiSourceInvariantTests
 
         CheckSourceContains(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"),
-            new[] { "ctx.Session.ClaimHover(helpRef)" },
+            new[] { "ctx.Session.PublishHelp(helpRef)" },
             "HelpHover is the single claim outlet and it claims on the session, not through a binding");
         CheckSourceDoesNotContain(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsSectionWidgetBase.cs"),
@@ -680,7 +681,7 @@ internal static class UiSourceInvariantTests
         // registration must go through the funnel" half is owned by
         // VerifyWriteBindingsGoThroughTheRegistry, so the receiver is deliberately not pinned here.
         Assert(host.Contains("BindReadOnly<string>(\"help-section-ref\"")
-               && host.Contains("host.Session.HoverGraceFrames = HelpHoverGracePasses")
+               && host.Contains("host.Session.HelpGracePasses = HelpHoverGracePasses")
                && !host.Contains("set-help-hover")
                && host.Contains("Action<string>(\"scroll-to\""),
             "the Host owns help-section-ref/scroll-to wiring, sets the grace length on the session, "
@@ -719,12 +720,12 @@ internal static class UiSourceInvariantTests
         }
 
         // Step B widened the claim SOURCES, not the rule: since the engine claims a hovered element's
-        // HelpKey, a claim can be DECLARED in the manifest - that is the hook that let the checklist's
+        // HelpRef, a claim can be DECLARED in the manifest - that is the hook that let the checklist's
         // search field and row template drop their imperative UsKernelDraw.HelpHover sites without losing
-        // help coverage. A manifest HelpKey that names an item is therefore a claim like any other, and the
+        // help coverage. A manifest HelpRef that names an item is therefore a claim like any other, and the
         // bidirectionality below (every claim resolves, every item is claimed) covers both sources.
         foreach (string key in EnumerateManifestAttributes(
-                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpKey"))
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpRef"))
         {
             string[] parts = key.Split('/');
             if (parts.Length == 3 && parts[0] == "us" && parts[1].Length > 0 && parts[2].Length > 0)
@@ -924,9 +925,9 @@ internal static class UiSourceInvariantTests
 
     // 10. The bottom help panel (BH1) is INDEPENDENT state (brief: "Help visibility is independent
     //     state. Do not reuse active-tab"). The engine compares the Tab attribute against
-    //     UiBindings.ActiveTabKey - so a panel that rode active-tab would leak into workspace switching
+    //     UiBindings.ActiveTabBind - so a panel that rode active-tab would leak into workspace switching
     //     and leave a reserved band whenever the workspace happened to match. The declarative switch for
-    //     this page is VisibleKey="help-open": a bool value binding that is this page's own state, gating
+    //     this page is VisibleBind="help-open": a bool value binding that is this page's own state, gating
     //     the ONE presentation. BH1 retired the two derived presentation keys (help-open-wide /
     //     help-open-narrow) and body-visible together with the defensive band they selected, so the guard
     //     now has a second half: the retired keys must stay absent, and the body row must be
@@ -944,9 +945,9 @@ internal static class UiSourceInvariantTests
         Assert(!band!.HasAttribute("Tab"),
             "the help band must not carry a Tab attribute: Tab is the engine's active-tab switch, "
             + "and help visibility is independent state");
-        Assert(band.HasAttribute("VisibleKey")
-                && string.Equals(band.GetAttribute("VisibleKey"), "help-open", StringComparison.Ordinal),
-            "the help band must be hidden DECLARATIVELY through VisibleKey=\"help-open\" - the one key the"
+        Assert(band.HasAttribute("VisibleBind")
+                && string.Equals(band.GetAttribute("VisibleBind"), "help-open", StringComparison.Ordinal),
+            "the help band must be hidden DECLARATIVELY through VisibleBind=\"help-open\" - the one key the"
             + " player's footer switch writes");
         Assert(string.Equals(band.GetAttribute("Fill"), "true", StringComparison.Ordinal) == false,
             "the band must not ask to Fill: a Fill child that also pins a Height is refused the flexible"
@@ -963,12 +964,12 @@ internal static class UiSourceInvariantTests
         Assert(document.SelectSingleNode("//*[@Id='help-panel-narrow']") == null,
             "the second help panel instance must not come back with the retired band");
         XmlElement? bodyRow = document.SelectSingleNode("//*[@Id='body-row']") as XmlElement;
-        Assert(bodyRow != null && !bodyRow!.HasAttribute("VisibleKey"),
+        Assert(bodyRow != null && !bodyRow!.HasAttribute("VisibleBind"),
             "the body row must be unconditional again: BH1 removed the 'body-visible' swap so no help"
             + " state can replace the settings");
-        Assert(document.SelectNodes("//*[@VisibleKey='help-open-wide']").Count == 0
-                && document.SelectNodes("//*[@VisibleKey='help-open-narrow']").Count == 0
-                && document.SelectNodes("//*[@VisibleKey='body-visible']").Count == 0,
+        Assert(document.SelectNodes("//*[@VisibleBind='help-open-wide']").Count == 0
+                && document.SelectNodes("//*[@VisibleBind='help-open-narrow']").Count == 0
+                && document.SelectNodes("//*[@VisibleBind='body-visible']").Count == 0,
             "the derived presentation keys must be gone from the manifest: help-open is the only truth about"
             + " whether the panel is showing");
         Assert(document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count == 1,
@@ -1088,7 +1089,7 @@ internal static class UiSourceInvariantTests
             // PlaceholderKey joined the list with step B: the checklist's search hint moved from a C#
             // literal into the input/text-field element, and a key the scanner does not collect is a
             // reference that can never be asserted to exist.
-            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpKey", "PlaceholderKey" })
+            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpRef", "PlaceholderKey" })
             {
                 foreach (string value in EnumerateManifestAttributes(manifest, attribute))
                 {

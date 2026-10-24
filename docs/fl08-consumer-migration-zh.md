@@ -1,43 +1,61 @@
 # 使用固定 FL 0.8 构建当前 US
 
-当前 US 0.6 消费固定 FerriteLib 0.8：源码 `fc010bd1eab8ed434e03de6241fdae89e94b1283`，Dev DLL 568832 bytes，ProductVersion `0.8.0-dev+fc010bd1eab8ed434e03de6241fdae89e94b1283`。运行前提为 `[0.8.0,0.9.0)`；这个交付支持 1.6 adapter，原生1.6待验，未交付1.7 adapter。
+当前 US 0.6 消费固定 FerriteLib 源码 `7eb8073492a1380aa18c67cc30960d19645efbd1` 的 final 包：Dev DLL 587776 bytes，ProductVersion `0.8.0-dev+7eb8073492a1380aa18c67cc30960d19645efbd1`。运行范围为 `[0.8.0,0.9.0)`，生产 Reference 为 `Private=false`。该输入提供 1.6 adapter；原生 1.6 仍待验，未交付 1.7 adapter。
 
-A002只读补丁保持公开签名/合法读取条件；ResolvedMetrics/ResolvedColours为缓存只读view，仍随正常声明更新。US无cast写该view的调用；既有生产Host已编译并定向验证普通属性/几何及override→update→remove露出当前来源，不重迁旧编辑/主题矩阵。
+## 显式选择交付包
 
-## 显式选择交付包，不依赖邻库移动输出
-
-将 `$carrier` 指向依赖所有者交付的固定包中的 `1.6/Assemblies/FerriteLib.UiKit.dll`：
+将 `$carrier` 指向固定包的 `1.6/Assemblies/FerriteLib.UiKit.dll`，不追邻库移动输出：
 
 ```powershell
 $carrier = '<fixed-package>/1.6/Assemblies/FerriteLib.UiKit.dll'
 ./scripts/build-dev.ps1 -FerriteLibArtifactPath $carrier
-```
-
-直接构建和定向harness也传同一参数：
-
-```powershell
+# 直接构建同样选择这一个输入：
 dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev "-p:FerriteLibArtifactPath=$carrier"
 ```
 
-Directory.Build.props将显式输入传给生产、Host和嵌套构建，不再默认读旧0.7。脚本拒绝缺少输入、缺文件或范围外载体，不自动回退。生产Reference保持Private=false，编译收据和标准stage核对所选载体；只有FerriteLib发布runtime DLL，US载荷中不放第二份。测试输出会携FL及平台替身供独立运行，它们不是模组发布物。
+Directory.Build.props 将输入传给生产与 Host 工程。生产程序集记录实际编译引用，标准 stage 核对该收据和所选 DLL。US 包不带 FL DLL；测试输出里的 FL 和平台替身不是模组载荷。缺少输入、文件不存在或 API 范围不符时拒绝，不回退旧 0.7／fc010bd。
 
-远端CI/release的获取步骤仍指已发布`v0.7.0-rc1`。该输入不适用于当前源码，新的范围守门会明确拒绝；维护者须先安排真实可取得的0.8发布载体，再更新获取配置。本次没有猜测新tag/asset或修改远端。
+## 注册、访问和项身份分开
 
-## 保留现有页面、业务身份和写入时机
+- 注册者仍为真实 `UiBindings`；widget 校验、Host 和代理接完整 `IUiBindingAccess`。合法普通 getter 不必换成 tracked 属性。代理的 `BindingOwner / Value / Choices`、能力与读写必须随同一个 backing；已取得的旧 endpoint 仍归旧 registry。
+- 声明式下拉注册 `BindChoices<T>`，传 `UiChoice<T>`。不要把 choices 当普通 `BindOptions<UiChoice<T>>` 注册。自定义模型列表仍可用真正的 `BindOptions<T>`。
+- 动态重复项的运行时地址由 `new UiBindingAddress(itemsBind, itemKey, leaf).Key` 生成；US 的 `UsWriteBindings.ItemKey` 使用这个入口。点分模板只作声明元数据，不自行拼出运行地址，也不按列表序号寻找业务对象。
+- 自绘复合按钮通过同一 Host 的 `ctx.Controls.Activation`，分别给动作、part 和稳定业务项身份。US `SelectionButton` 的 `controlId / itemKey` 表达这些信息；显示标签和矩形位置不是身份。复合下拉／编辑器各用按 popupId／binding 创建的 `ctx.Child`，不让相邻控件取消或消费彼此的捕获和草稿。
 
-- 主设置、相机Overlay、Remix确认的三个嵌入Manifest继续使用原结构和kind；普通确认仍走UiPageWindow/UiWindowCatalog。音频包选择与启用是不同写通道，完整包/域身份、有效供音和Help入口保留。15包、退休链、Select三资格与Eat三参数不因UI载体改变。
-- 原颜色按语义映射到`theme.Palette[UiPaletteRole]`，直接绘制用平台颜色indexer。原24个色值不变；SelectedBorder显式取原Accent、SuccessBorder取原StrongBorder，SuccessForeground取原SelectedForeground，三个Warning角色显式保原Danger有效处理，总计30角色。没有旧空边框fallback或Warning别名双轨。
-- 切换主题只写Palette。不能对活跃bag重新整份ApplyTo颜色文档：0.8会同时撤销已有样式字体/度量。现路径保当前度量、几何、同Host/node、scroll、focus和draft；六方案的声明/绘制与旧有效颜色逐项对照。
-- 当前活动声明中的搜索、总音量数值及保留条件下的数值控件明确`Live="true"`，保持先前即时写入。原自定义native返回值入口仍按其已有合法条件工作；没有共享Bind-key草稿缓存。S4已退休的旧节奏/心情编辑区仍为退役说明，不因迁移重新启用。
-- 默认Button/Checkbox/Dropdown等在合格primary release请求；同值选择仍请求一次，Set先于ActionBind。Dropdown外按关闭会消费整个gesture，不把后续release送到底层命令。程序直接调用绑定不冒充该原生输入证据。
-- 普通业务getters和既有修订钟继续使用；未强制改为响应平台或给旧custom Measure增加纯性前提。Host是展示owner，业务settings/保存仍由原Source/事务持有。
+## 一个执行器对应一个原生所有者
 
-## 生命周期与验证入口
+widget 只接 `UiLayoutRect / UiLayoutPoint / UiColour / UiTextAnchor / UiImage`，通过 `ctx.Drawing / ctx.Controls` 绘制与输入。平台转换留在 Game/UI 原生边界，Core 不增加 Verse／Unity／RimWorld 引用。
 
-主窗口真实关闭释放Host/audit/Remix流；Overlay禁用或离图沿原路径Dispose，不把它改成隐藏缓存；确认窗口关闭释放自己的Host与捕获动作。Help折叠保声明身份和scroll。没有以失焦猜测隐藏，也没有新增定义热更/私表复制平台；实际需保留的隐藏Host可用SetDisplayDemand，隐藏/恢复保本地draft，外部模型变化在原通知边界Invalidate。
+窗口适配器已经持有 `VerseUiExecution`；通知条使用其 `Execution`，不每帧重建。直接 Overlay 自己持有一个执行器，每次捕获一份 frame 交给 `DrawFrame(viewport, frame, execution)`；禁用、离图、失败或 Dispose 都先关 Host 再释放执行器，重开创建新所有者。
 
-现有KernelHost `--lane`可运行`FL08 actual`、`DB Eat`、`DC Select`、`typed`、`pack-card result`、`overlay`、`confirmation`、`popup`、`live palette switch`、`US-ESC1/US-UI1`等目标。新增FL08实际页用native事件验证按下不写/释放一次、同值一次、外按不穿透、Live文本/数值、正常拒绝/规范化不重放、主题与隐藏恢复保稿、Cancel跟随当前模型及关闭订阅释放。模板按钮通过固定Dev载体的公开几何定位，再跑真实press/release，保Cancel主体，不再用逻辑ButtonOverride推断指针来源。
+Xenotype 图像由窗口的 `Execution.Images` 注册为 `UiImage`。无图像作用域的无屏 source 返回空 handle；窗口释放自己的 handle，不销毁 Def／内容提供者的纹理。设置原生壳的单一 opener 保留原批准的树外入口，不复制页内输入系统。
 
-Host和DefinitionDirectory使用独立0.8平台替身，来源见`tools/FerriteLib08.Stubs/README.md`；旧0.7冻结快照不修改。检查读取公开palette、Host/context和有界诊断，不反射FL运行时私表；输入注入仅用于目标原生字符编辑器，明确属于平台double。
+## 帮助的三种身份不混用
 
-生产settings/ExposeData/原子文件与Scribe替身往返的D-C证据仍适用：本迁移不改保存格式/字段或业务事务。纯Kernel、Eat事实/音频和普通政策未改，不重录golden。真实游戏Config/Scribe、IME/字体像素、窗口栈、音频与听感以及15包人审仍各自待验。页面重新设计由后续定稿设计任务负责。
+`目录 HelpRef → HelpItem.LabelKey/TextKey → Host 翻译 → 实际文字度量／绘制`
+
+XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / WidthKey / SelectedKey / PayloadKey / ActiveTabKey` 改为相应 `*Bind`；`TextKey / LabelKey` 仍是翻译 key，不机械更名。
+
+统一底部面板直接读 `Session.CurrentHelpRef`，不依赖 `HoveredOptionHelpOutputBind`。`PublishHelp(ref)` 归于当前实际发布节点，`CurrentHelpSource` 保留该归属；后发布覆盖先发布。首 gap reset 后保留 15 个 pass，再过期回到 section 概述，不是秒数，也不是每个原生渲染帧。
+
+四个 mode 明确给各自的 `UiChoice<T>.HelpRef`。空／省略的选项 ref 不发布，不猜 Value、Text、标签或 index；元素一般帮助仍在。未知条目回 section 概述，无 section 时保持原空面板规则。目录 ref 和译文 key 分开，同一译文入口用于测量与绘制。Help 开合不改变窗口宽度，正文与底部帮助各自滚动并保留节点状态。
+
+## 保留原页面和保存语义
+
+三个嵌入 Manifest、五工作区、音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持。主题使用原 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
+
+搜索和原即时数值控件保持显式 Live。合格 primary release 请求一次，确认取消零写；已有草稿在隐藏／恢复和外部模型冲突时仍由原 editor 持有。普通 Select／Eat／scope／response 立即发布，并由单一保存 owner 按 0.35 秒 realtime debounce 写盘；真正原子 TryCommit 仍 persist-first，Committed 后的发布修复不重复写文件。详见[公开合同](us-public-contracts-and-help-zh.md)。
+
+## 当前验证入口与边界
+
+`tools/UniversalSqueakerKernelHostTests` 当前入口为 `--fixed-fl`，或 `--lane=<分组关键词>`，例如 `--lane=preservation`、`--lane=confirmation`、`--lane=proxy`。调用时同时显式选择 `FerriteLibArtifactPath` 与已构建的 `UsProductArtifactPath`；`UsProductAlreadyBuilt=true` 避免覆写候选。
+
+当前 runner 使用真实产品 DLL、固定 FL DLL、嵌入 XML 和真实 `VerseUiExecution`；native 文字／鼠标／绘制由[来源明确的平台替身](../tools/FerriteLib08.Stubs/README.md)提供。覆盖实际确认取消／一次写入、Live／冲突／hide-show、typed choices／无 sink 帮助／15pass、独立滚动／主题几何、列表重排和第二项真实动作、fallback Cancel 和关闭清理、双语长文字／命中。旧根 Program 的私有 UiNative 钩子已不适用，保留源码但不计当前通过；未逐个迁回其 76 lane，不能以创建／layout 无 throw 代替各行为。诊断面板和预设的完整旧交互尚未在新执行链逐项复跑；当前只具有受改签名编译、现有图像／窗口链及明确交互子集证据。
+
+Core、完整十五合同、CoreWork、通知／四回执、稀疏配置、生产 settings／ExposeData／原子文件与 Scribe 替身往返的未变证据继续按原范围适用，不重录 golden。真实游戏 Config／Scribe、IME／字体像素、屏幕外观、窗口栈、音频／听感及逐包人工验收仍待验；当前迁移不预定新页面或普通政策。
+
+## 远端 CI 仍缺真实 0.8 发布载体
+
+两个 workflow 已移除旧 0.7 固定值，先要求维护者配置 `FERRITELIB_CARRIER_REPOSITORY / FERRITELIB_CARRIER_TAG / FERRITELIB_CARRIER_COMMIT`；空输入在 checkout 前拒绝，源码按完整 commit 获取。既有 acquire 流程仍检查明确 tag 对应的 `FerriteLib-<tag>.zip`、平台 digest、闭集、版本、Release 配置和源码配对，不从默认分支再造 runtime。
+
+实际可下载的 0.8 Release 资产及批准坐标尚未交付，因此本地 Dev 配对不等于远端 CI 已绿。US Release 只做技术构建／stage；不能称其与当前 Dev FL 构成可发布的 Release 配对。

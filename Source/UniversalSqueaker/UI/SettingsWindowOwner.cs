@@ -11,6 +11,7 @@ namespace UniversalSqueaker;
 /// <summary>Native window lifetime and shell. Per-window page/FL state remains in its original owner.</summary>
 internal sealed class SettingsWindowOwner
 {
+    private readonly VerseUiExecution shellExecution = new();
     private readonly SqueakerMod mod;
     private readonly GameSettingsPersistence persistence;
     private readonly HashSet<Window> settingsWindows = new();
@@ -56,37 +57,21 @@ internal sealed class SettingsWindowOwner
         Rect body = inRect.ContractedBy(18f);
         UiTheme theme = UsTheme.Surface();
         Rect box = new Rect(body.x, body.y, body.width, Mathf.Min(96f, Mathf.Max(0f, body.height)));
-        UiThemeDraw.Surface(box, theme, theme[UiPaletteRole.PanelSurface], theme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(shellExecution, VerseUiExecution.Rect(box), theme, theme[UiPaletteRole.PanelSurface], theme[UiPaletteRole.Border]);
 
         Rect inner = box.ContractedBy(12f);
-        UiThemeDraw.Label(
-            new Rect(inner.x, inner.y, inner.width, 20f),
-            "US.Settings.Shell.Title".Translate(),
-            theme,
-            theme[UiPaletteRole.Foreground],
-            UiFont.Small);
-        UiThemeDraw.Label(
-            new Rect(inner.x, inner.y + 22f, inner.width, 34f),
-            "US.Settings.Shell.Body".Translate(SqueakLabels.SettingsCategory),
-            theme,
-            theme[UiPaletteRole.SecondaryForeground],
-            UiFont.Tiny);
+        UiThemeDraw.Label(shellExecution, VerseUiExecution.Rect(new Rect(inner.x, inner.y, inner.width, 20f)), "US.Settings.Shell.Title".Translate(), theme, theme[UiPaletteRole.Foreground], UiFont.Small);
+        UiThemeDraw.Label(shellExecution, VerseUiExecution.Rect(new Rect(inner.x, inner.y + 22f, inner.width, 34f)), "US.Settings.Shell.Body".Translate(SqueakLabels.SettingsCategory), theme, theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny);
 
         Rect open = new Rect(inner.x, inner.yMax - 28f, 220f, 28f);
-        bool hovered = UiNative.IsMouseOver(open);
-        UiThemeDraw.Surface(open, theme, hovered ? theme[UiPaletteRole.HoverSurface] : theme[UiPaletteRole.ControlSurface], theme[UiPaletteRole.Border]);
-        UiThemeDraw.Label(
-            open,
-            "US.Settings.Shell.Open".Translate(),
-            theme,
-            hovered ? theme[UiPaletteRole.Foreground] : theme[UiPaletteRole.SecondaryForeground],
-            UiFont.Tiny,
-            TextAnchor.MiddleCenter);
+        bool hovered = VerseUiExecution.Rect(open).Contains(shellExecution.CaptureFrame().Pointer);
+        UiThemeDraw.Surface(shellExecution, VerseUiExecution.Rect(open), theme, hovered ? theme[UiPaletteRole.HoverSurface] : theme[UiPaletteRole.ControlSurface], theme[UiPaletteRole.Border]);
+        UiThemeDraw.Label(shellExecution, VerseUiExecution.Rect(open), "US.Settings.Shell.Open".Translate(), theme, hovered ? theme[UiPaletteRole.Foreground] : theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleCenter);
         // The context-free overload is deliberate here, and this is the only US call site left on it:
         // this button draws outside the kernel session (no UiWidgetContext exists for it), which is the
         // same exception FL documents for its own window chrome. Every in-tree control goes through
         // Button(rect, ctx) so an open popup can take the click.
-        if (UiNative.Button(open))
+        if (Widgets.ButtonInvisible(open))
         {
             OpenSettings();
         }

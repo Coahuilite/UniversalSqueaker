@@ -14,7 +14,7 @@ namespace UniversalSqueaker.UI;
 ///
 /// The window draws no chrome of its own. Background, accent rule, title, subtitle and the close
 /// affordance belong to the shell, and every pixel of them goes through <c>UiThemeDraw</c> and every
-/// hit test through <c>UiNative</c> — which is why this type is no longer an exemption in the UI
+/// hit test through <c>UiControls</c> — which is why this type is no longer an exemption in the UI
 /// boundary gate (verify-local gate 14): there is nothing left here to exempt.
 ///
 /// Closing disposes the host and its session (shell <see cref="UiWindowHost.PreClose"/>); reopening
@@ -120,7 +120,7 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     protected override UiHost CreateHost()
     {
-        source = new UsKernelSettingsSource(SqueakerMod.Settings);
+        source = new UsKernelSettingsSource(SqueakerMod.Settings, Execution.Images);
         // BH1: no page-width feed any more. The help panel's presentation does not depend on the box the
         // shell hands the page - there is exactly one presentation, and the engine hides it declaratively -
         // so the window has no width-shaped decision left to feed.
@@ -187,32 +187,20 @@ public sealed class GameSettingsWindow : UiWindowHost
     /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(Execution, VerseUiExecution.Rect(rect), WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(24f);
 
         // The library owns no strings, so the two notices are US's own vocabulary: the desync notice
         // names the prerequisite, the unavailable notice names the settings category to look under.
         if (notice == UiWindowNotice.Prerequisite)
         {
-            UiThemeDraw.Label(
-                new Rect(body.x, body.y, body.width, 30f),
-                "US.Settings.Prerequisite.Title".Translate(),
-                WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
-            UiThemeDraw.Label(
-                new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
-                "US.Settings.Prerequisite.Body".Translate(),
-                WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
+            UiThemeDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y, body.width, 30f)), "US.Settings.Prerequisite.Title".Translate(), WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
+            UiThemeDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f))), "US.Settings.Prerequisite.Body".Translate(), WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
             return;
         }
 
-        UiThemeDraw.Label(
-            new Rect(body.x, body.y, body.width, 30f),
-            "US.Settings.PageUnavailable.Title".Translate(),
-            WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
-        UiThemeDraw.Label(
-            new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
-            "US.Settings.PageUnavailable.Body".Translate(SqueakLabels.SettingsCategory),
-            WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
+        UiThemeDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y, body.width, 30f)), "US.Settings.PageUnavailable.Title".Translate(), WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
+        UiThemeDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f))), "US.Settings.PageUnavailable.Body".Translate(SqueakLabels.SettingsCategory), WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
     }
 
     /// <summary>The named diagnostics record for a failed pass; the notice itself is drawn by the shell.</summary>

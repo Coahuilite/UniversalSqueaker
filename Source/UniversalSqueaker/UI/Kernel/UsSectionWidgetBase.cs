@@ -9,7 +9,7 @@ namespace UniversalSqueaker.UI;
 /// Base for kernel-owned US section composites. It owns the three shared behaviors of every
 /// settings section:
 ///  - Tab visibility: a <c>Tab</c> attribute (Basic/Tuning/Packs) hides the section (Measure = 0 and
-///    no Draw) unless it matches the session <c>UiBindings.ActiveTabKey</c> value binding;
+///    no Draw) unless it matches the session <c>UiBindings.ActiveTabBind</c> value binding;
 ///  - card frame + title from <c>TitleKey</c>/<c>Title</c> + help-selection accent border;
 ///  - session-level fallback: Measure/Draw exceptions trip the session slot and draw a stable
 ///    fallback instead of corrupting the frame.
@@ -30,13 +30,13 @@ public abstract class UsSectionWidgetBase : IUiWidget
         this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
-    public abstract void Validate(IUiBindings bindings, string elementPath);
+    public abstract void Validate(IUiBindingAccess bindings, string elementPath);
 
     public float Measure(UiWidgetContext ctx)
     {
         if (!IsVisible(ctx)) return 0f;
         return UiSessionGuard.MeasureOrFallback(
-            ctx.Session,
+            ctx,
             spec.Id,
             Kind,
             ctx.ElementPath,
@@ -44,21 +44,21 @@ public abstract class UsSectionWidgetBase : IUiWidget
             () => TitleHidden ? Math.Max(0f, MeasureBody(ctx)) : CardHeight(MeasureBody(ctx)));
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
         if (!IsVisible(ctx)) return;
 
         string elementId = spec.Id;
         UiSessionGuard.DrawOrFallback(
-            ctx.Session,
+            ctx,
             elementId,
             Kind,
             ctx.ElementPath,
             rect,
             () => DrawBody(rect, ctx),
             fallback => DrawCard(fallback, ctx, body =>
-                UsKernelDraw.Label(body, FallbackNote(ctx), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny)));
+                UsKernelDraw.Label(ctx.Drawing, body, FallbackNote(ctx), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny)));
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
     protected bool IsVisible(UiWidgetContext ctx)
     {
         if (!spec.TryGetAttribute("Tab", out string tab) || tab.Trim().Length == 0) return true;
-        string active = ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string current) ? current : "";
+        string active = ctx.Bindings.TryGet(UiBindings.ActiveTabBind, out string current) ? current : "";
         return string.Equals(tab.Trim(), active, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -122,10 +122,10 @@ public abstract class UsSectionWidgetBase : IUiWidget
     /// </summary>
     protected bool IsHelpSelected(UiWidgetContext ctx)
     {
-        if (!spec.TryGetAttribute("HelpKey", out string helpKey) || helpKey.Trim().Length == 0) return false;
-        string hover = ctx.Session.HoverClaim ?? "";
+        if (!spec.TryGetAttribute("HelpRef", out string helpKey) || helpKey.Trim().Length == 0) return false;
+        string hover = ctx.Session.CurrentHelpRef ?? "";
         string section = helpKey.Trim();
-        // Two accepted shapes, and the second one is new with the engine-wide HelpKey contract: a control
+        // Two accepted shapes, and the second one is new with the engine-wide HelpRef contract: a control
         // inside the card claims a SUB-key ("us/pack-cards/row"), while the card's own widget can now be
         // claimed by the engine with the BARE key when the pointer is over the card and no inner element
         // claims first. StartsWith alone would leave the border dark for the bare case, which is the one the
@@ -164,13 +164,13 @@ public abstract class UsSectionWidgetBase : IUiWidget
     protected abstract float MeasureBody(UiWidgetContext ctx);
 
     /// <summary>Draws the section card; exceptions here are caught by the session guard.</summary>
-    protected abstract void DrawBody(Rect rect, UiWidgetContext ctx);
+    protected abstract void DrawBody(UiLayoutRect rect, UiWidgetContext ctx);
 
     /// <summary>Draws the card frame around a body draw callback (title + help border).</summary>
-    protected void DrawCard(Rect rect, UiWidgetContext ctx, Action<Rect> drawBody)
+    protected void DrawCard(UiLayoutRect rect, UiWidgetContext ctx, Action<UiLayoutRect> drawBody)
     {
-        UsKernelDraw.DrawHelpFocusBorder(rect, ctx.Theme, IsHelpSelected(ctx));
-        Rect bodyRect = UsKernelDraw.DrawCard(rect, SectionTitle(ctx), ctx.Theme);
+        UsKernelDraw.DrawHelpFocusBorder(ctx.Drawing, rect, ctx.Theme, IsHelpSelected(ctx));
+        UiLayoutRect bodyRect = UsKernelDraw.DrawCard(ctx.Drawing, rect, SectionTitle(ctx), ctx.Theme);
         drawBody(bodyRect);
     }
 }

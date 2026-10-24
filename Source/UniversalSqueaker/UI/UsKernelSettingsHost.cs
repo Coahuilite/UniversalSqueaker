@@ -24,10 +24,10 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class UsKernelSettingsHost
 {
-    private static IReadOnlyList<UiOption> EatOptions(Type type)
+    private static IReadOnlyList<UiChoice<string>> EatOptions(Type type)
     {
-        var options = new List<UiOption> { new("US.Eat.Inherit".Translate(), "") };
-        foreach (string value in Enum.GetNames(type)) options.Add(new UiOption(("US.Eat." + value).Translate(), value));
+        var options = new List<UiChoice<string>> { new("US.Eat.Inherit".Translate(), "") };
+        foreach (string value in Enum.GetNames(type)) options.Add(new UiChoice<string>(("US.Eat." + value).Translate(), value));
         return options;
     }
     private const int HelpHoverGracePasses = 15;
@@ -48,7 +48,6 @@ public static class UsKernelSettingsHost
     /// </summary>
     public static UiHost Create(IUsKernelSettingsSource source, RemixConfirmationFlow? remixFlow)
     {
-        UiNative.Trace = SqueakLog.PopupTrace;
         return Create(source, VerseFerriteTextMetrics.Instance, out _, remixFlow);
     }
 
@@ -92,7 +91,7 @@ public static class UsKernelSettingsHost
         UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
 
         // The bottom help panel (BH1) is DECLARATIVE: the manifest's help-scroll Scroll carries
-        // VisibleKey="help-open", so the element stays in the definition and the engine simply does not
+        // VisibleBind="help-open", so the element stays in the definition and the engine simply does not
         // arrange it while the panel is closed. Staying in the definition is the whole point - it is
         // what lets the Scroll keep its node AND its scroll position across a close/open. The pre-0.5
         // root-list VARIANT (a rebuilt root list with the help element omitted) relied on a removed
@@ -108,8 +107,9 @@ public static class UsKernelSettingsHost
             UsTheme.Surface(),
             metrics,
             translation);
+        host.Session.Controls.Trace = SqueakLog.PopupTrace;
         bumper.Attach(host);
-        // No first-frame reconciliation is needed any more: the manifest's VisibleKey is resolved
+        // No first-frame reconciliation is needed any more: the manifest's VisibleBind is resolved
         // through the "help-open" binding on every arrange, so the RETRACTED default in the page state
         // is what the very first frame already follows.
         // D10 (maintainer ruling 2026-09-06): a finished hover claim keeps explaining the panel for
@@ -117,7 +117,7 @@ public static class UsKernelSettingsHost
         // crosses the gap between two adjacent controls. The library owns the rule and ships no
         // default on purpose - the consumer that needed the grace picks its length. Counted in passes,
         // not seconds: the settings window opens with forcePause, where game time is frozen.
-        host.Session.HoverGraceFrames = HelpHoverGracePasses;
+        host.Session.HelpGracePasses = HelpHoverGracePasses;
         // The view cache must expire on the same clock as the layout cache, or a write landing in a
         // frame's popup pass arranges against the previous view while the next frame draws a fresh
         // view into the stale snapshot - the 2026-09-04 filter misalignment.
@@ -221,19 +221,19 @@ public static class UsKernelSettingsHost
             //
             // A null lookup means the element has not been arranged in this session yet, so there is
             // no scroll state to reset. Skipping is equivalent to the old write, not a silent
-            // behaviour change: UiSession.GetScrollPosition answers Vector2.zero for a node that
+            // behaviour change: UiSession.GetScrollPosition answers UiLayoutPoint.Zero for a node that
             // holds nothing, so "no entry" and "entry = zero" are indistinguishable to every reader,
             // and these two calls never wrote anything but zero.
             UiNode? contentNode = host.Session.GetNodeByElementId(ContentScrollId);
             if (contentNode != null)
             {
-                host.SetScrollPosition(ContentScrollId, Vector2.zero);
+                host.SetScrollPosition(ContentScrollId, UiLayoutPoint.Zero);
             }
 
             UiNode? helpNode = host.Session.GetNodeByElementId(HelpPanelScrollId);
             if (helpNode != null)
             {
-                host.SetScrollPosition(HelpPanelScrollId, Vector2.zero);
+                host.SetScrollPosition(HelpPanelScrollId, UiLayoutPoint.Zero);
             }
         }
 
@@ -275,21 +275,21 @@ public static class UsKernelSettingsHost
     private const float MultiplierFloor = 0f;
     private const float MultiplierCeil = 3f;
 
-    // S4-3b, the attenuation card. The three preset buttons carry SelectedKey bindings, so each needs its
+    // S4-3b, the attenuation card. The three preset buttons carry SelectedBind bindings, so each needs its
     // own read-only bool under the name the manifest declares.
     private const string PresetConservativeKey = "distance-preset-conservative";
     private const string PresetBalancedKey = "distance-preset-balanced";
     private const string PresetStrongKey = "distance-preset-strong";
 
-    // The three buttons' payloads: the same names the SelectedKey bindings compare against.
+    // The three buttons' payloads: the same names the SelectedBind bindings compare against.
     private const string PresetConservativeValueKey = "distance-preset-conservative-value";
     private const string PresetBalancedValueKey = "distance-preset-balanced-value";
     private const string PresetStrongValueKey = "distance-preset-strong-value";
 
     // T3-2, the diagnostics card. The retired us/diagnostics composite drew a segmented control and wrote the
     // typed mode through ONE value binding; the declarative shape is three input/button atoms, so each button
-    // carries its own read-only payload string (G2: a button with a PayloadKey opens the STRING action
-    // contract) and its own read-only selected answer (SelectedKey). One constant per element, so a renamed
+    // carries its own read-only payload string (G2: a button with a PayloadBind opens the STRING action
+    // contract) and its own read-only selected answer (SelectedBind). One constant per element, so a renamed
     // button and its binding cannot drift apart silently.
     private const string DevLoggingAutoKey = "dev-logging-auto";
     private const string DevLoggingEnabledKey = "dev-logging-enabled";
@@ -420,11 +420,11 @@ public static class UsKernelSettingsHost
         // Navigation / page chrome.
         // The engine's Tab gate reads this key, and the page's visible sections follow the value it
         // answers - so it IS a display write and it must move the same clock. Measured 2026-09-24: no
-        // current writer goes through this setter (the carrier never writes ActiveTabKey; the nav's
+        // current writer goes through this setter (the carrier never writes ActiveTabBind; the nav's
         // "set-tab" action is the writer and it bumps), so this is the one-line close of a stale-view
         // trap for the NEXT writer rather than a live defect. The dedicated lane
         // ActiveTabWriteAdvancesSharedRevision drives it through the binding and reddens if the bump goes.
-        writes.Value<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, value =>
+        writes.Value<string>(UiBindings.ActiveTabBind, () => state.ActiveTab, value =>
         {
             source.SetActiveTab(value);
             bump();
@@ -510,7 +510,7 @@ public static class UsKernelSettingsHost
         writes.Action<string>(
             "set-distance-preset",
             name => { source.SetDistancePreset(ParseDistancePreset(name)); bump(); });
-        bindings.BindReadOnly<IReadOnlyList<Vector2>>("attenuation-points", () => BuildAttenuationPoints(source.BuildView()));
+        bindings.BindReadOnly<IReadOnlyList<UiLayoutPoint>>("attenuation-points", () => BuildAttenuationPoints(source.BuildView()));
         bindings.BindReadOnly<string>("attenuation-axis-caption", () => string.Format(
             translation.Translate("US.Distance.AxisCaption"),
             AttenuationMath.MinDistance.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
@@ -518,7 +518,7 @@ public static class UsKernelSettingsHost
         // The status sentence is the same read-out the composite printed; the manifest has no format
         // expression, so the host builds the one string the atom paints and measures.
         bindings.BindReadOnly<string>("attenuation-status", () => AttenuationStatus(source, translation));
-        // Each button's own selected answer (SelectedKey). One read-only bool per preset, computed from the
+        // Each button's own selected answer (SelectedBind). One read-only bool per preset, computed from the
         // CURRENT preset through the same comparison the status line uses, so the highlighted button and the
         // sentence can never name two different presets.
         bindings.BindReadOnly<bool>(PresetConservativeKey, () => IsDistancePreset(source, SqueakDistancePreset.Conservative));
@@ -527,7 +527,7 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<string>("kernel-policy-note", () => translation.Translate(
             SqueakerRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive"));
         bindings.BindReadOnly<bool>(PresetStrongKey, () => IsDistancePreset(source, SqueakDistancePreset.Strong));
-        // Each button's own payload. A declarative input/button with a PayloadKey opens the STRING contract
+        // Each button's own payload. A declarative input/button with a PayloadBind opens the STRING contract
         // (G2), so each datum lives in a value binding rather than as a manifest literal - the same shape
         // the layer rows use, minus the repeater (these three are static, so the keys are plain read-only
         // strings and no item scope is involved).
@@ -540,7 +540,7 @@ public static class UsKernelSettingsHost
         // S4-1: these rows are declarative now, so the value binding IS the toggle - input/checkbox writes
         // the inverse of the bool it read through this setter, and the seven toggle-* action bindings the
         // composites invoked are retired with them (no second write channel onto one value). The egg row's
-        // two state sentences are gated by VisibleKey, so the manifest keeps their keys and the host only
+        // two state sentences are gated by VisibleBind, so the manifest keeps their keys and the host only
         // answers "which of the two is true".
         writes.Value<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, value => { source.SetEasterEggs(value); bump(); });
         bindings.BindReadOnly<bool>("easter-egg-on", () => source.BuildView().AllowEasterEggs);
@@ -551,19 +551,19 @@ public static class UsKernelSettingsHost
         writes.Value<string>("eat-phase", () => source.BuildView().EatPhase.ToString(), value => { source.SetEatParameter("phase", value); bump(); });
         writes.Value<string>("eat-nutrition", () => source.BuildView().EatNutritionScope.ToString(), value => { source.SetEatParameter("nutritionScope", value); bump(); });
         writes.Value<string>("eat-drug", () => source.BuildView().EatDrugScope.ToString(), value => { source.SetEatParameter("drugScope", value); bump(); });
-        bindings.BindOptions<UiOption>("eat-phase-options", () => EatOptions(typeof(EatPhase)));
-        bindings.BindOptions<UiOption>("eat-nutrition-options", () => EatOptions(typeof(EatNutritionScope)));
-        bindings.BindOptions<UiOption>("eat-drug-options", () => EatOptions(typeof(EatDrugScope)));
+        bindings.BindChoices<string>("eat-phase-options", () => EatOptions(typeof(EatPhase)));
+        bindings.BindChoices<string>("eat-nutrition-options", () => EatOptions(typeof(EatNutritionScope)));
+        bindings.BindChoices<string>("eat-drug-options", () => EatOptions(typeof(EatDrugScope)));
         writes.Value<string>("select-player-controlled", () => source.BuildView().SelectRequirePlayerControlled?.ToString() ?? "", value => { source.SetSelectParameter("playerControlled", value); bump(); });
         writes.Value<string>("select-awake", () => source.BuildView().SelectRequireAwake?.ToString() ?? "", value => { source.SetSelectParameter("awake", value); bump(); });
         writes.Value<string>("select-not-downed", () => source.BuildView().SelectRequireNotDowned?.ToString() ?? "", value => { source.SetSelectParameter("notDowned", value); bump(); });
-        bindings.BindOptions<UiOption>("select-qualification-options", () => new[] {
-            new UiOption("US.Select.Inherit".Translate(), ""), new UiOption("US.Select.Required".Translate(), "True"), new UiOption("US.Select.NotRequired".Translate(), "False") });
+        bindings.BindChoices<string>("select-qualification-options", () => new[] {
+            new UiChoice<string>("US.Select.Inherit".Translate(), ""), new UiChoice<string>("US.Select.Required".Translate(), "True"), new UiChoice<string>("US.Select.NotRequired".Translate(), "False") });
         // Diagnostics (T3-2: us/diagnostics is retired). The three-way logging choice is three declarative
         // buttons over ONE string action, so the enum parse lives here on the host side of the boundary - the
         // same split set-distance-preset uses. Each button's payload and its selected answer are READ-ONLY, so
         // the manifest carries no machine token as a literal and exactly one button can answer "the model is
-        // on me" (B1's per-element SelectedKey).
+        // on me" (B1's per-element SelectedBind).
         writes.Action<string>(
             "set-dev-logging",
             name => { source.SetDevLoggingMode(ParseDevLoggingMode(name)); bump(); });
@@ -574,7 +574,7 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<bool>(DevLoggingEnabledKey, () => source.BuildView().DevLoggingMode == SqueakDevLoggingMode.Enabled);
         bindings.BindReadOnly<bool>(DevLoggingDisabledKey, () => source.BuildView().DevLoggingMode == SqueakDevLoggingMode.Disabled);
         // The localize row is the page's own square toggle over the same writable bool the composite's
-        // checkbox wrote; the manifest names it in both Bind and SelectedKey, like the camera-indicator row.
+        // checkbox wrote; the manifest names it in both Bind and SelectedBind, like the camera-indicator row.
         writes.Value<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
 
         // Developer layout diagnosis (R3-B). Three REAL commands the manifest dispatches: capture on/off,
@@ -593,7 +593,7 @@ public static class UsKernelSettingsHost
         writes.Command("request-layout-report", () => { source.RequestLayoutReport(); bump(); });
         // DT1: the Overview diagnostics band is the settings-window entry to the developer panel -
         // the tool is reachable with the settings window by definition open, never standalone. The
-        // command IS a display write: the band button carries SelectedKey="dev-panel-open" (the panel's
+        // command IS a display write: the band button carries SelectedBind="dev-panel-open" (the panel's
         // live open state), so opening it changes what the page draws and the clock must follow. The
         // window seam goes through the source facade (the RequestLayoutReport precedent): production
         // opens the real panel, the harness records the call - Verse.Find is not stubbable here.
@@ -709,24 +709,24 @@ public static class UsKernelSettingsHost
         // defName in the trigger or the list. Authors are proper nouns: display == value.
         bindings.BindOptions<FilterOptionView>("race-filter-options", () => source.BuildView().RaceFilterOptions);
         bindings.BindOptions<FilterOptionView>("xenotype-filter-options", () => source.BuildView().XenotypeFilterOptions);
-        // D4: the declarative card-header dropdowns read UiOption pairs (the dropdown kind's options
+        // D4: the declarative card-header dropdowns read UiChoice<string> pairs (the dropdown kind's options
         // contract); the FilterOptionView bindings above stay for the composites that map them.
-        bindings.BindOptions<UiOption>("race-domain-options", () =>
+        bindings.BindChoices<string>("race-domain-options", () =>
         {
-            var list = new List<UiOption>();
+            var list = new List<UiChoice<string>>();
             foreach (FilterOptionView option in source.BuildView().RaceFilterOptions)
             {
-                list.Add(new UiOption(option.DisplayName, option.Value));
+                list.Add(new UiChoice<string>(option.DisplayName, option.Value));
             }
 
             return list;
         });
-        bindings.BindOptions<UiOption>("xenotype-domain-options", () =>
+        bindings.BindChoices<string>("xenotype-domain-options", () =>
         {
-            var list = new List<UiOption>();
+            var list = new List<UiChoice<string>>();
             foreach (FilterOptionView option in source.BuildView().XenotypeFilterOptions)
             {
-                list.Add(new UiOption(option.DisplayName, option.Value));
+                list.Add(new UiChoice<string>(option.DisplayName, option.Value));
             }
 
             return list;
@@ -758,7 +758,7 @@ public static class UsKernelSettingsHost
         // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
         // fallback stays a binding because it is business state; the hover claim does not - since FL
         // P3 the per-pass claim machine lives on the session (UsKernelDraw.HelpHover claims it, the
-        // panel and the accent border read ctx.Session.HoverClaim).
+        // panel and the accent border read ctx.Session.CurrentHelpRef).
         bindings.BindReadOnly<string>("help-section-ref", () => source.SectionHelpRef(state.ActiveSectionKey));
 
         // The retractable bottom help panel (BH1): INDEPENDENT per-window visibility state, never the
@@ -772,7 +772,7 @@ public static class UsKernelSettingsHost
             value => { source.SetHelpPanelOpen(value); bump(); });
 
         // A COMMAND, not an action with a payload: the manifest's footer button is a core
-        // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
+        // `input/button` with no PayloadBind, and ButtonWidget validates that shape with ValidateCommand
         // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was
         // discarded anyway, so this is the same write with the contract the declaring element actually has.
         // BH1 retired the two derived presentation keys (help-open-wide / help-open-narrow) and body-visible
@@ -858,7 +858,7 @@ public static class UsKernelSettingsHost
             () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) bump(); },
             () => source.CanResetTuningArea());
         // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board and the teaching toggle.
-        // The intro is a page-state bool like help-open, with the two complementary VisibleKeys the
+        // The intro is a page-state bool like help-open, with the two complementary VisibleBinds the
         // manifest's collapse/reopen buttons read. The board is READ-ONLY projection; its two exits
         // are display writes (both bump): open = navigation intent only (NO settings write), enable =
         // the exact-identity row-switch write through the SAME source method the Packs switch uses.
@@ -1063,7 +1063,7 @@ public static class UsKernelSettingsHost
     /// <para>
     /// The per-kind keys are registered for the kind ONLY: a header never resolves "enabled" and a domain
     /// row never resolves "toggle-pack-card", because the template's other-kind children hide behind
-    /// per-item VisibleKey bools and a hidden subtree is never materialized. The two VisibleKey bools
+    /// per-item VisibleBind bools and a hidden subtree is never materialized. The two VisibleBind bools
     /// themselves exist for both kinds, which is what lets one template draw both.
     /// </para>
     /// </summary>
@@ -1096,22 +1096,22 @@ public static class UsKernelSettingsHost
         {
             if (string.IsNullOrEmpty(key) || !registered.Add(key)) return;
 
-            string scope = PackCardKeysKey + "." + key + ".";
+            string Address(string field) => UsWriteBindings.ItemKey(PackCardKeysKey, key, field);
             bool isHeader = key.IndexOf(RowKeySeparator) < 0;
-            bindings.BindReadOnly<bool>(scope + "is-header", () => IsHeaderLive(key));
-            bindings.BindReadOnly<bool>(scope + "is-domain", () => !IsHeaderLive(key));
-            bindings.BindReadOnly<string>(scope + "payload", () => Payload(key));
-            bindings.BindReadOnly<string>(scope + "title", () => Title(key));
+            bindings.BindReadOnly<bool>(Address("is-header"), () => IsHeaderLive(key));
+            bindings.BindReadOnly<bool>(Address("is-domain"), () => !IsHeaderLive(key));
+            bindings.BindReadOnly<string>(Address("payload"), () => Payload(key));
+            bindings.BindReadOnly<string>(Address("title"), () => Title(key));
             // The selection-surface is drawn for BOTH kinds (it is the template's hover/selected plate),
             // so "selected" must resolve on a header too. IsRowSelected parses the key as a domain and
             // returns false for a header (no owning card for a separator-less key), which is exactly the
             // header's answer: only a domain row can be the operating-domain highlight.
-            bindings.BindReadOnly<bool>(scope + "selected", () => IsRowSelected(key));
+            bindings.BindReadOnly<bool>(Address("selected"), () => IsRowSelected(key));
             if (isHeader)
             {
-                bindings.BindReadOnly<string>(scope + "meta", () => Meta(key));
-                bindings.BindReadOnly<string>(scope + "coverage", () => FindCard(key)?.Coverage ?? "");
-                bindings.BindReadOnly<bool>(scope + "expanded", () => FindCard(key)?.Expanded ?? false);
+                bindings.BindReadOnly<string>(Address("meta"), () => Meta(key));
+                bindings.BindReadOnly<string>(Address("coverage"), () => FindCard(key)?.Coverage ?? "");
+                bindings.BindReadOnly<bool>(Address("expanded"), () => FindCard(key)?.Expanded ?? false);
                 writes.ItemAction<string>(PackCardKeysKey, key, "toggle-pack-card", _ =>
                 {
                     source.TogglePackCard(key);
@@ -1325,16 +1325,16 @@ public static class UsKernelSettingsHost
     }
 
     /// <summary>Four normalized attenuation points: start locked at 100%, end locked at 0%.</summary>
-    private static List<Vector2> BuildAttenuationPoints(VoicePacksViewState view)
+    private static List<UiLayoutPoint> BuildAttenuationPoints(VoicePacksViewState view)
     {
         float minNorm = InverseLerp(AttenuationMath.MinDistance, AttenuationMath.MaxDistance, view.DistanceRangeMin);
         float maxNorm = InverseLerp(AttenuationMath.MinDistance, AttenuationMath.MaxDistance, view.DistanceRangeMax);
-        return new List<Vector2>
+        return new List<UiLayoutPoint>
         {
-            new Vector2(0f, 1f),
-            new Vector2(Clamp01(minNorm), 1f),
-            new Vector2(Clamp01(maxNorm), 0f),
-            new Vector2(1f, 0f)
+            new UiLayoutPoint(0f, 1f),
+            new UiLayoutPoint(Clamp01(minNorm), 1f),
+            new UiLayoutPoint(Clamp01(maxNorm), 0f),
+            new UiLayoutPoint(1f, 0f)
         };
     }
 

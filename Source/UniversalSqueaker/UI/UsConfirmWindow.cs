@@ -142,7 +142,7 @@ public sealed class UsConfirmWindow
 
     /// <summary>The dialog page's own command table (the Remix flow's seam): lanes drive the exact
     /// commands the real buttons fire, on the SAME table the UiPageWindow draws against.</summary>
-    public IUiBindings DialogBindings => bindings;
+    public IUiBindingAccess DialogBindings => bindings;
     /// <summary>The live question slot while one is staged (set by Open, cleared when an answer or
     /// CloseCurrent retires it; an ESC teardown leaves the slot for the next Open to reuse). A lane
     /// that drives a CEREMONY through the real widget press (not through Open's own return value)

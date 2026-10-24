@@ -13,7 +13,7 @@ namespace UniversalSqueaker.UI;
 /// the current-summary + grouped gate-chain detail column, and the collapsed BAR that answers the three
 /// questions (what is this / is it on / what is it doing) instead of replaying a summary row.
 /// All widgets draw through <see cref="UsKernelDraw"/>/<see cref="UiThemeDraw"/> and hit-test through
-/// <see cref="UiNative"/> only: the family is written so the panel files can LEAVE the gate 14
+/// <see cref="UiControls"/> only: the family is written so the panel files can LEAVE the gate 14
 /// whitelist (raw backend hits: zero). Each widget wraps Measure/Draw in the session guard, so a
 /// throw becomes the engine's RecoveryBand row, never a corrupted frame.
 /// </summary>
@@ -30,19 +30,19 @@ public abstract class UsDiagWidgetBase : IUiWidget
         spec = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    public abstract void Validate(IUiBindings bindings, string elementPath);
+    public abstract void Validate(IUiBindingAccess bindings, string elementPath);
 
     public float Measure(UiWidgetContext ctx)
     {
         return UiSessionGuard.MeasureOrFallback(
-            ctx.Session, spec.Id, Kind, ctx.ElementPath, FallbackHeight(ctx), () => MeasureBody(ctx));
+            ctx, spec.Id, Kind, ctx.ElementPath, FallbackHeight(ctx), () => MeasureBody(ctx));
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
         UiSessionGuard.DrawOrFallback(
-            ctx.Session,
+            ctx,
             spec.Id,
             Kind,
             ctx.ElementPath,
@@ -52,12 +52,12 @@ public abstract class UsDiagWidgetBase : IUiWidget
     }
 
     protected abstract float MeasureBody(UiWidgetContext ctx);
-    protected abstract void DrawBody(Rect rect, UiWidgetContext ctx);
+    protected abstract void DrawBody(UiLayoutRect rect, UiWidgetContext ctx);
     protected virtual float FallbackHeight(UiWidgetContext ctx) => 24f;
 
-    protected virtual void DrawFallback(Rect rect, UiWidgetContext ctx)
+    protected virtual void DrawFallback(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        UsKernelDraw.Label(rect, "[" + Kind + "]", ctx, UiFont.Tiny, TextAnchor.MiddleCenter);
+        UsKernelDraw.Label(rect, "[" + Kind + "]", ctx, UiFont.Tiny, UiTextAnchor.MiddleCenter);
     }
 
     protected static bool IsCollapsed(UiWidgetContext ctx)
@@ -65,9 +65,9 @@ public abstract class UsDiagWidgetBase : IUiWidget
 
     protected string Scope => spec.TryGetAttribute("Scope", out string scope) ? scope : "main";
 
-    protected static bool GetBool(IUiBindings b, string key) => b.TryGet(key, out bool v) && v;
-    protected static int GetInt(IUiBindings b, string key) => b.TryGet(key, out int v) ? v : 0;
-    protected static string GetString(IUiBindings b, string key) => b.TryGet(key, out string v) ? v ?? string.Empty : string.Empty;
+    protected static bool GetBool(IUiBindingAccess b, string key) => b.TryGet(key, out bool v) && v;
+    protected static int GetInt(IUiBindingAccess b, string key) => b.TryGet(key, out int v) ? v : 0;
+    protected static string GetString(IUiBindingAccess b, string key) => b.TryGet(key, out string v) ? v ?? string.Empty : string.Empty;
 
 
     /// <summary>DX1.5: the honest wrapped height of a text block at this width - measured through the
@@ -91,7 +91,7 @@ public abstract class UsDiagWidgetBase : IUiWidget
 internal static class UsDiagPaint
 {
     /// <summary>Status cell: Block attention-cyan, Pass neutral (NOT Success green), Pending neutral (NOT Selected).</summary>
-    internal static Color Status(UiTheme theme, UsDiagGateState state) => state switch
+    internal static UiColour Status(UiTheme theme, UsDiagGateState state) => state switch
     {
         UsDiagGateState.Block => UsAttention.Brush,
         UsDiagGateState.Pass => theme[UiPaletteRole.Foreground],
@@ -100,11 +100,11 @@ internal static class UsDiagPaint
     };
 
     /// <summary>The value cell is always neutral: a blocked condition must not colour its evidence.</summary>
-    internal static Color Value(UiTheme theme, UsDiagGateState state)
+    internal static UiColour Value(UiTheme theme, UsDiagGateState state)
         => state == UsDiagGateState.NA ? theme[UiPaletteRole.SecondaryForeground] : theme[UiPaletteRole.Foreground];
 
     /// <summary>Pawn-row / bar activity dot. Blocked is the attention role; the rest is neutral ink.</summary>
-    internal static Color Dot(UiTheme theme, UsDiagDotTone tone) => tone switch
+    internal static UiColour Dot(UiTheme theme, UsDiagDotTone tone) => tone switch
     {
         UsDiagDotTone.Ready => theme[UiPaletteRole.SuccessSurface],
         UsDiagDotTone.Blocked => UsAttention.Brush,
@@ -153,11 +153,9 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagToolbarWidget(),
-        new[] { "Id", "Kind", "Height", "Scope" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagToolbarWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Scope"))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<bool>(UsDiagnosticsHost.KeySeconds, elementPath);
         bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyCollapsed, elementPath);
@@ -166,17 +164,17 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
 
     protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f : ButtonHeight + Gap;
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
 
         var b = ctx.Bindings;
-        float y = rect.y;
-        float x = rect.x;
+        float y = rect.Y;
+        float x = rect.X;
 
         bool seconds = GetBool(b, UsDiagnosticsHost.KeySeconds);
-        Rect secondsRect = new(x, y, 40f, ButtonHeight);
-        if (UsKernelDraw.SelectionButton(secondsRect, ctx, seconds ? "s" : "t", ctx.Theme, seconds))
+        UiLayoutRect secondsRect = new(x, y, 40f, ButtonHeight);
+        if (UsKernelDraw.SelectionButton(secondsRect, ctx, seconds ? "s" : "t", ctx.Theme, seconds, controlId: UsDiagnosticsHost.KeySeconds))
         {
             b.Set(UsDiagnosticsHost.KeySeconds, !seconds);
         }
@@ -184,8 +182,8 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
         x += 40f + Gap;
         if (Scope == "main" && GetBool(b, UsDiagnosticsHost.KeyCanLock))
         {
-            Rect lockRect = new(x, y, 56f, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(lockRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Lock"), ctx.Theme, false))
+            UiLayoutRect lockRect = new(x, y, 56f, ButtonHeight);
+            if (UsKernelDraw.SelectionButton(lockRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Lock"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyLock))
             {
                 b.Invoke(UsDiagnosticsHost.KeyLock, 0);
             }
@@ -193,9 +191,9 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
             x += 56f + Gap;
         }
 
-        float collapseWidth = Math.Max(1f, rect.xMax - x);
-        Rect collapseRect = new(x, y, collapseWidth, ButtonHeight);
-        if (UsKernelDraw.SelectionButton(collapseRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar"), ctx.Theme, false))
+        float collapseWidth = Math.Max(1f, rect.XMax - x);
+        UiLayoutRect collapseRect = new(x, y, collapseWidth, ButtonHeight);
+        if (UsKernelDraw.SelectionButton(collapseRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyCollapsed))
         {
             b.Set(UsDiagnosticsHost.KeyCollapsed, true);
         }
@@ -215,11 +213,9 @@ public sealed class UsDiagNavWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagNavWidget(),
-        new[] { "Id", "Kind", "Height", "Scope" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagNavWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Scope"))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<UsDiagNavView>(UsDiagnosticsHost.KeyNavView, elementPath);
         bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyShowBack, elementPath);
@@ -228,12 +224,12 @@ public sealed class UsDiagNavWidget : UsDiagWidgetBase
     protected override float MeasureBody(UiWidgetContext ctx)
         => IsCollapsed(ctx) || !ShowBack(ctx) ? 0f : RowHeight;
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx) || !ShowBack(ctx)) return;
 
         string label = UsDiagGlyphs.PrevText(ctx) + " " + UsKernelDraw.Keyed(ctx, "US.Diagnostics.Nav.Back");
-        if (UsKernelDraw.SelectionButton(new Rect(rect.x, rect.y, rect.width, RowHeight), ctx, label, ctx.Theme, false))
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(rect.X, rect.Y, rect.Width, RowHeight), ctx, label, ctx.Theme, false, controlId: UsDiagnosticsHost.KeyNavView))
         {
             ctx.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.List);
         }
@@ -261,11 +257,9 @@ public sealed class UsDiagNavBodyWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagNavBodyWidget(),
-        new[] { "Id", "Kind", "Height", "Scope" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagNavBodyWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Scope"))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         // The body composes two other widget families, so it restates their read/write contract: a
         // missing binding must fail at creation here, not half-draw inside a scroll.
@@ -281,7 +275,7 @@ public sealed class UsDiagNavBodyWidget : UsDiagWidgetBase
             ? UsDiagListWidget.BodyHeight(ctx) + UsDiagPagerWidget.BodyHeight
             : UsDiagDetailWidget.DetailHeight(ctx, ctx.ViewWidth);
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
         if (!IsListView(ctx))
@@ -290,9 +284,9 @@ public sealed class UsDiagNavBodyWidget : UsDiagWidgetBase
             return;
         }
 
-        UsDiagListWidget.DrawBodyCore(new Rect(rect.x, rect.y, rect.width, UsDiagListWidget.BodyHeight(ctx)), ctx);
+        UsDiagListWidget.DrawBodyCore(new UiLayoutRect(rect.X, rect.Y, rect.Width, UsDiagListWidget.BodyHeight(ctx)), ctx);
         UsDiagPagerWidget.DrawBodyCore(
-            new Rect(rect.x, rect.y + UsDiagListWidget.BodyHeight(ctx), rect.width, UsDiagPagerWidget.BodyHeight),
+            new UiLayoutRect(rect.X, rect.Y + UsDiagListWidget.BodyHeight(ctx), rect.Width, UsDiagPagerWidget.BodyHeight),
             ctx);
     }
 
@@ -335,11 +329,9 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagBarWidget(),
-        new[] { "Id", "Kind", "Height", "Scope" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagBarWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Scope"))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyCollapsed, elementPath);
         bindings.ValidateValue<UsDiagBarModel>(UsDiagnosticsHost.KeyBar, elementPath);
@@ -348,27 +340,27 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
 
     protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? BarHeight : 0f;
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (!IsCollapsed(ctx)) return;
 
         var b = ctx.Bindings;
         if (!b.TryGet(UsDiagnosticsHost.KeyBar, out UsDiagBarModel? bar) || bar == null) return;
 
-        bool hovered = UiNative.IsMouseOver(rect);
-        UiThemeDraw.Surface(rect, ctx.Theme, hovered ? ctx.Theme[UiPaletteRole.HoverSurface] : ctx.Theme[UiPaletteRole.PanelSurface], ctx.Theme[UiPaletteRole.Border]);
+        bool hovered = ctx.Controls.IsMouseOver(rect);
+        UiThemeDraw.Surface(ctx.Drawing, rect, ctx.Theme, hovered ? ctx.Theme[UiPaletteRole.HoverSurface] : ctx.Theme[UiPaletteRole.PanelSurface], ctx.Theme[UiPaletteRole.Border]);
 
         float expandWidth = MeasureAction(ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar.Expand"));
         float closeWidth = MeasureAction(ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar.Close"));
         float actionsWidth = expandWidth + closeWidth + ActionGap;
 
-        float innerLeft = rect.x + Padding;
-        float innerRight = rect.xMax - Padding;
-        float lineTop = rect.y + TopPad;
+        float innerLeft = rect.X + Padding;
+        float innerRight = rect.XMax - Padding;
+        float lineTop = rect.Y + TopPad;
 
         // Line 2 actions are laid out first: they are unconditional, the activity sentence is not.
-        Rect closeRect = new(innerRight - closeWidth, lineTop + TitleLineHeight, closeWidth, StripLineHeight);
-        Rect expandRect = new(closeRect.x - ActionGap - expandWidth, lineTop + TitleLineHeight, expandWidth, StripLineHeight);
+        UiLayoutRect closeRect = new(innerRight - closeWidth, lineTop + TitleLineHeight, closeWidth, StripLineHeight);
+        UiLayoutRect expandRect = new(closeRect.X - ActionGap - expandWidth, lineTop + TitleLineHeight, expandWidth, StripLineHeight);
 
         UsDiagBarLayout layout = UsDiagnosticsProjection.LayoutBar(
             bar,
@@ -381,35 +373,35 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
         float identityWidth = Math.Max(40f, innerRight - innerLeft - ctx.Metrics.MeasureWidth(bar.SwitchText, UiFont.Tiny) - Gap
             - (layout.ShowScale ? ctx.Metrics.MeasureWidth(bar.Scale, UiFont.Tiny) + Gap * 3f : 0f));
         string identity = UsKernelDraw.Ellipsized(bar.Identity, ctx, UiFont.Small, identityWidth);
-        UsKernelDraw.Label(new Rect(innerLeft, lineTop, identityWidth, TitleLineHeight), identity, ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(innerLeft, lineTop, identityWidth, TitleLineHeight), identity, ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small, UiTextAnchor.MiddleLeft, singleLine: true);
         float switchX = innerLeft + ctx.Metrics.MeasureWidth(identity, UiFont.Small) + Gap;
-        UsKernelDraw.Label(new Rect(switchX, lineTop, Math.Max(1f, innerRight - switchX), TitleLineHeight), bar.SwitchText, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(switchX, lineTop, Math.Max(1f, innerRight - switchX), TitleLineHeight), bar.SwitchText, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
         if (layout.ShowScale)
         {
             float scaleWidth = ctx.Metrics.MeasureWidth(bar.Scale, UiFont.Tiny);
-            UsKernelDraw.Label(new Rect(innerRight - scaleWidth, lineTop, scaleWidth, TitleLineHeight), bar.Scale, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+            UsKernelDraw.Label(new UiLayoutRect(innerRight - scaleWidth, lineTop, scaleWidth, TitleLineHeight), bar.Scale, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
         }
 
         // Line 2: the activity sentence (first to go when narrow) and the two actions.
         if (layout.ShowActivity)
         {
             string dot = UsDiagGlyphs.DotText(ctx, bar.ActivityTone);
-            Rect dotRect = new(innerLeft, lineTop + TitleLineHeight, DotWidth, StripLineHeight);
-            UsKernelDraw.Label(dotRect, dot, ctx, UsDiagPaint.Dot(ctx.Theme, bar.ActivityTone), UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-            float textX = dotRect.xMax;
-            float textWidth = Math.Max(1f, expandRect.x - Gap - textX);
+            UiLayoutRect dotRect = new(innerLeft, lineTop + TitleLineHeight, DotWidth, StripLineHeight);
+            UsKernelDraw.Label(dotRect, dot, ctx, UsDiagPaint.Dot(ctx.Theme, bar.ActivityTone), UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
+            float textX = dotRect.XMax;
+            float textWidth = Math.Max(1f, expandRect.X - Gap - textX);
             UsKernelDraw.Label(
-                new Rect(textX, lineTop + TitleLineHeight, textWidth, StripLineHeight),
+                new UiLayoutRect(textX, lineTop + TitleLineHeight, textWidth, StripLineHeight),
                 UsKernelDraw.Ellipsized(bar.Activity, ctx, UiFont.Tiny, textWidth),
-                ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+                ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
         }
 
-        if (UsKernelDraw.SelectionButton(expandRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar.Expand"), ctx.Theme, false))
+        if (UsKernelDraw.SelectionButton(expandRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar.Expand"), ctx.Theme, false, controlId: "bar-expand"))
         {
             b.Set(UsDiagnosticsHost.KeyCollapsed, false);
         }
 
-        if (UsKernelDraw.SelectionButton(closeRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar.Close"), ctx.Theme, false))
+        if (UsKernelDraw.SelectionButton(closeRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar.Close"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyClose))
         {
             // A command binding, invoked through its own overload: the typed overload would look for a
             // payload action and throw inside the draw pass.
@@ -417,7 +409,7 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
         }
 
         // The whole strip still expands; the two buttons above capture their own clicks first.
-        if (UiNative.Button(rect, ctx))
+        if (ctx.Controls.Activation(rect, ctx, "bar-expand", "strip").Request)
         {
             b.Set(UsDiagnosticsHost.KeyCollapsed, false);
         }
@@ -452,11 +444,9 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagListWidget(),
-        new[] { "Id", "Kind" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagListWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<string>(UsDiagnosticsHost.KeySearch, elementPath);
         bindings.ValidateAction<int>(UsDiagnosticsHost.KeyRowClick, elementPath);
@@ -480,28 +470,28 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     internal static float BodyHeight(UiWidgetContext ctx)
         => FieldHeightFor(ctx) + UsDiagnosticsProjection.RowsPerPage * RowHeightFor(ctx);
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
-        DrawBodyCore(new Rect(rect.x, rect.y, rect.width, BodyHeight(ctx)), ctx);
+        DrawBodyCore(new UiLayoutRect(rect.X, rect.Y, rect.Width, BodyHeight(ctx)), ctx);
     }
 
     /// <summary>
     /// The list's own content, reusable by the narrow navigation body (which stacks the pager under it).
     /// It draws the search field and one page of rows into exactly <see cref="BodyHeight(UiWidgetContext)"/> pixels.
     /// </summary>
-    internal static void DrawBodyCore(Rect rect, UiWidgetContext ctx)
+    internal static void DrawBodyCore(UiLayoutRect rect, UiWidgetContext ctx)
     {
         var b = ctx.Bindings;
-        string query = DrawSearchField(new Rect(rect.x, rect.y, rect.width, FieldHeightFor(ctx)), ctx);
-        float y = rect.y + FieldHeightFor(ctx);
+        string query = DrawSearchField(new UiLayoutRect(rect.X, rect.Y, rect.Width, FieldHeightFor(ctx)), ctx);
+        float y = rect.Y + FieldHeightFor(ctx);
 
         if (!b.TryGet(UsDiagnosticsHost.KeyRows, out IReadOnlyList<UsDiagRow>? rows) || rows == null || rows.Count == 0)
         {
             string note = query.Length > 0
                 ? UsKernelDraw.Keyed(ctx, "US.Diagnostics.Search.None")
                 : UsKernelDraw.Keyed(ctx, "US.Diagnostics.Panel.Empty");
-            UsKernelDraw.Label(new Rect(rect.x + 4f, y, Math.Max(1f, rect.width - 8f), RowHeight), note, ctx, UiFont.Tiny, TextAnchor.MiddleLeft);
+            UsKernelDraw.Label(new UiLayoutRect(rect.X + 4f, y, Math.Max(1f, rect.Width - 8f), RowHeight), note, ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft);
             return;
         }
 
@@ -522,54 +512,30 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
         for (int i = 0; i < rows.Count; i++)
         {
             UsDiagRow row = rows[i];
-            Rect rowRect = new(rect.x, y + i * RowHeightFor(ctx), rect.width, RowHeightFor(ctx));
-            bool hovered = UiNative.IsMouseOver(rowRect);
+            UiLayoutRect rowRect = new(rect.X, y + i * RowHeightFor(ctx), rect.Width, RowHeightFor(ctx));
+            bool hovered = ctx.Controls.IsMouseOver(rowRect);
             // A locked row is unavailable, not selected: it takes the disabled rail (hatch) so the hatch
             // and the selected plane can never be confused for one another.
-            UsKernelDraw.RowSurface(rowRect, ctx.Theme, hovered, row.Locked ? UsKernelDraw.RowRail.Disabled : UsKernelDraw.RowRail.None);
+            UsKernelDraw.RowSurface(ctx.Drawing, rowRect, ctx.Theme, hovered, row.Locked ? UsKernelDraw.RowRail.Disabled : UsKernelDraw.RowRail.None);
             UsDiagRowPainter.Paint(rowRect, row, ctx, cooldownWidth, audioWidth);
-            if (UiNative.Button(rowRect, ctx))
+            if (ctx.Controls.Activation(rowRect, ctx, UsDiagnosticsHost.KeyRowClick, "row", row.PawnId).Request)
             {
                 b.Invoke(UsDiagnosticsHost.KeyRowClick, row.PawnId);
             }
         }
     }
 
-    private static string DrawSearchField(Rect rect, UiWidgetContext ctx)
+    private static string DrawSearchField(UiLayoutRect rect, UiWidgetContext ctx)
     {
         var b = ctx.Bindings;
         string current = GetString(b, UsDiagnosticsHost.KeySearch);
-        UiThemeDraw.Surface(rect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(ctx.Drawing, rect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
 
-        UiValueState state = ctx.Session.GetOrCreateValueState(SearchStateId);
-        if (!state.Focused)
-        {
-            state.EditText = current;
-        }
-
-        Rect textRect = new(rect.x + 6f, rect.y + 2f, Math.Max(1f, rect.width - 12f), Math.Max(1f, rect.height - 4f));
-        string typed = UiNative.TextField(textRect, state.EditText);
-        if (!string.Equals(typed, state.EditText, StringComparison.Ordinal))
-        {
-            state.EditText = typed;
-            b.Set(UsDiagnosticsHost.KeySearch, typed);
-        }
-        else if (!state.Focused && current.Length == 0)
-        {
-            UsKernelDraw.Label(textRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Search.Placeholder"), ctx, UiFont.Small, TextAnchor.MiddleLeft);
-        }
-
-        if (UiNative.IsMouseDownOver(rect))
-        {
-            state.Focused = true;
-        }
-
-        if (state.Focused && (UiNative.IsEnterPressed() || UiNative.IsFocusLost(rect)))
-        {
-            state.Focused = false;
-        }
-
-        return state.Focused ? state.EditText : current;
+        UiLayoutRect textRect = new(rect.X + 6f, rect.Y + 2f, Math.Max(1f, rect.Width - 12f), Math.Max(1f, rect.Height - 4f));
+        UiEditSession<string> editor = UsKernelDraw.LiveTextField(textRect, ctx, UsDiagnosticsHost.KeySearch);
+        if (!editor.Focused && editor.Draft.Length == 0)
+            UsKernelDraw.Label(textRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Search.Placeholder"), ctx, UiFont.Small, UiTextAnchor.MiddleLeft);
+        return editor.Draft;
     }
 }
 
@@ -585,11 +551,9 @@ public sealed class UsDiagPagerWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagPagerWidget(),
-        new[] { "Id", "Kind", "Height" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagPagerWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Height", UiAttributeKind.Length))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<int>(UsDiagnosticsHost.KeyPage, elementPath);
     }
@@ -599,14 +563,14 @@ public sealed class UsDiagPagerWidget : UsDiagWidgetBase
 
     protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f : BodyHeight;
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
-        DrawBodyCore(new Rect(rect.x, rect.y, rect.width, BodyHeight), ctx);
+        DrawBodyCore(new UiLayoutRect(rect.X, rect.Y, rect.Width, BodyHeight), ctx);
     }
 
     /// <summary>The pager's content, reusable by the narrow navigation body.</summary>
-    internal static void DrawBodyCore(Rect rect, UiWidgetContext ctx)
+    internal static void DrawBodyCore(UiLayoutRect rect, UiWidgetContext ctx)
     {
         var b = ctx.Bindings;
         int page = GetInt(b, UsDiagnosticsHost.KeyPage);
@@ -618,22 +582,22 @@ public sealed class UsDiagPagerWidget : UsDiagWidgetBase
         float prevWidth = ctx.Metrics.MeasureWidth(prev, UiFont.Tiny) + ButtonPad * 2f;
         float nextWidth = ctx.Metrics.MeasureWidth(next, UiFont.Tiny) + ButtonPad * 2f;
 
-        if (page > 0 && UsKernelDraw.SelectionButton(new Rect(rect.x, rect.y, prevWidth, RowHeight), ctx, prev, ctx.Theme, false))
+        if (page > 0 && UsKernelDraw.SelectionButton(new UiLayoutRect(rect.X, rect.Y, prevWidth, RowHeight), ctx, prev, ctx.Theme, false, controlId: "page-previous", itemKey: page))
         {
             b.Set(UsDiagnosticsHost.KeyPage, page - 1);
         }
 
-        if (page < pages - 1 && UsKernelDraw.SelectionButton(new Rect(rect.xMax - nextWidth, rect.y, nextWidth, RowHeight), ctx, next, ctx.Theme, false))
+        if (page < pages - 1 && UsKernelDraw.SelectionButton(new UiLayoutRect(rect.XMax - nextWidth, rect.Y, nextWidth, RowHeight), ctx, next, ctx.Theme, false, controlId: "page-next", itemKey: page))
         {
             b.Set(UsDiagnosticsHost.KeyPage, page + 1);
         }
 
-        float textX = rect.x + prevWidth + 4f;
-        float textW = Math.Max(1f, rect.width - prevWidth - nextWidth - 8f);
+        float textX = rect.X + prevWidth + 4f;
+        float textW = Math.Max(1f, rect.Width - prevWidth - nextWidth - 8f);
         UsKernelDraw.Label(
-            new Rect(textX, rect.y, textW, RowHeight),
+            new UiLayoutRect(textX, rect.Y, textW, RowHeight),
             string.Format(UsKernelDraw.Keyed(ctx, "US.Diagnostics.Page.Format"), page + 1, pages, total),
-            ctx, UiFont.Tiny, TextAnchor.MiddleCenter);
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleCenter);
     }
 }
 
@@ -662,11 +626,9 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
 
     public override string Kind => KindName;
 
-    public static void Register() => UiWidgetRegistry.Register(
-        UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagDetailWidget(),
-        new[] { "Id", "Kind", "Scope" });
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagDetailWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Scope"))));
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         // Reads only (TryGet degrades); the lock action is validated by the toolbar that invokes it.
         bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyRawOpen, elementPath);
@@ -725,14 +687,14 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         return height + Gap;
     }
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
         DrawDetail(rect, ctx);
     }
 
     /// <summary>The detail content, reusable by the narrow navigation body.</summary>
-    internal static void DrawDetail(Rect rect, UiWidgetContext ctx)
+    internal static void DrawDetail(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (!ctx.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) || detail == null)
         {
@@ -744,40 +706,40 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         // re-measure instead of drawing into a stale band. The node's dirty flag is the engine's own
         // invalidation axis; the frame after the change gets the new geometry.
         float wanted = DetailHeight(ctx, ctx.ViewWidth);
-        if (Math.Abs(wanted - rect.height) > 0.5f)
+        if (Math.Abs(wanted - rect.Height) > 0.5f)
         {
             ctx.Node?.MarkDirty();
         }
 
-        float width = Math.Max(1f, rect.width);
+        float width = Math.Max(1f, rect.Width);
         float content = Math.Max(1f, width - Indent);
-        float y = rect.y;
+        float y = rect.Y;
 
         // 1. Identity + readiness. The badge is NEUTRAL for a ready pawn and attention-cyan for a
         // blocked one: a diagnostic block is not a destructive action and must not borrow the danger
         // family the carrier's Warning/Danger alias would give it.
-        Rect badgeRect = new(rect.xMax - BadgeWidth, y + 3f, BadgeWidth, HeaderHeight - 6f);
+        UiLayoutRect badgeRect = new(rect.XMax - BadgeWidth, y + 3f, BadgeWidth, HeaderHeight - 6f);
         if (detail.Ready)
         {
-            UiThemeDraw.Surface(badgeRect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
-            UsKernelDraw.Label(badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Ready"), ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, TextAnchor.MiddleCenter, singleLine: true);
+            UiThemeDraw.Surface(ctx.Drawing, badgeRect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
+            UsKernelDraw.Label(badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Ready"), ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleCenter, singleLine: true);
         }
         else
         {
-            UsAttention.Badge(badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Blocked"), ctx.Theme);
+            UsAttention.Badge(ctx.Drawing, badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Blocked"), ctx.Theme);
         }
 
-        float labelWidth = Math.Max(1f, badgeRect.x - rect.x - 8f);
+        float labelWidth = Math.Max(1f, badgeRect.X - rect.X - 8f);
         UsKernelDraw.Label(
-            new Rect(rect.x, y, labelWidth, HeaderHeight),
+            new UiLayoutRect(rect.X, y, labelWidth, HeaderHeight),
             UsKernelDraw.Ellipsized(detail.PawnText, ctx, UiFont.Small, labelWidth),
-            ctx, UiFont.Small, TextAnchor.MiddleLeft);
+            ctx, UiFont.Small, UiTextAnchor.MiddleLeft);
         if (detail.Locked)
         {
             UsKernelDraw.Label(
-                new Rect(badgeRect.x - 44f, y + 5f, 40f, 18f),
+                new UiLayoutRect(badgeRect.X - 44f, y + 5f, 40f, 18f),
                 UsKernelDraw.Keyed(ctx, "US.Diagnostics.LockedTag"),
-                ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleRight);
+                ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleRight);
         }
 
         y += HeaderHeight;
@@ -801,11 +763,11 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
 
         // 4. The conditions, grouped by side and split by clock basis inside a group.
         UsKernelDraw.Label(
-            new Rect(rect.x, y, rect.width, SectionHeight),
+            new UiLayoutRect(rect.X, y, rect.Width, SectionHeight),
             string.Format(UsKernelDraw.Keyed(ctx, "US.Diagnostics.Section.ChainCount"), detail.Gates.Count),
             ctx,
             UiFont.Tiny,
-            TextAnchor.MiddleLeft,
+            UiTextAnchor.MiddleLeft,
             singleLine: true);
         y += SectionHeight;
         int firstCurrentBlock = UsDiagnosticsProjection.FirstCurrentBlockIndex(detail.Gates);
@@ -826,8 +788,8 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
                 ? "[-] " + groupName + " · " + UsKernelDraw.Keyed(ctx,
                     basis == UsDiagBasis.CurrentObservation ? "US.Diagnostics.Basis.Current" : "US.Diagnostics.Basis.Previous")
                 : "[+] " + groupName;
-            Rect headingRect = new(rect.x, y, rect.width, GroupTitleHeight);
-            if (UsKernelDraw.SelectionButton(headingRect, ctx, heading, ctx.Theme, false))
+            UiLayoutRect headingRect = new(rect.X, y, rect.Width, GroupTitleHeight);
+            if (UsKernelDraw.SelectionButton(headingRect, ctx, heading, ctx.Theme, false, controlId: "group-toggle", itemKey: (group, basis)))
             {
                 // The ONLY writer of this switch: the developer's click. A value update cannot reach it.
                 ctx.Bindings.Set(UsDiagnosticsHost.GroupKey(group), !open);
@@ -846,8 +808,8 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
 
         // 5. Raw values: folded away by default - they are evidence, not the answer.
         bool rawOpen = GetBool(ctx.Bindings, UsDiagnosticsHost.KeyRawOpen);
-        Rect rawToggle = new(rect.x, y, rect.width, SectionHeight);
-        if (UsKernelDraw.SelectionButton(rawToggle, ctx, UsKernelDraw.Keyed(ctx, rawOpen ? "US.Diagnostics.Raw.Hide" : "US.Diagnostics.Raw.Show"), ctx.Theme, false))
+        UiLayoutRect rawToggle = new(rect.X, y, rect.Width, SectionHeight);
+        if (UsKernelDraw.SelectionButton(rawToggle, ctx, UsKernelDraw.Keyed(ctx, rawOpen ? "US.Diagnostics.Raw.Hide" : "US.Diagnostics.Raw.Show"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyRawOpen))
         {
             ctx.Bindings.Set(UsDiagnosticsHost.KeyRawOpen, !rawOpen);
         }
@@ -860,15 +822,15 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         }
     }
 
-    private static void DrawEmpty(Rect rect, UiWidgetContext ctx)
+    private static void DrawEmpty(UiLayoutRect rect, UiWidgetContext ctx)
     {
         // "Current state incomplete" is the honest headline when there is no subject at all; the second
         // line says what to do about it. Neither is a pass state and neither implies "not reached".
-        float y = rect.y + 8f;
-        UsKernelDraw.Label(new Rect(rect.x + 8f, y, Math.Max(1f, rect.width - 16f), LineHeight),
-            UsKernelDraw.Keyed(ctx, "US.Diagnostics.Summary.Incomplete"), ctx, UiFont.Small, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(rect.x + 8f, y + LineHeight, Math.Max(1f, rect.width - 16f), LineHeight),
-            UsKernelDraw.Keyed(ctx, "US.Diagnostics.Detail.Empty"), ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft);
+        float y = rect.Y + 8f;
+        UsKernelDraw.Label(new UiLayoutRect(rect.X + 8f, y, Math.Max(1f, rect.Width - 16f), LineHeight),
+            UsKernelDraw.Keyed(ctx, "US.Diagnostics.Summary.Incomplete"), ctx, UiFont.Small, UiTextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(rect.X + 8f, y + LineHeight, Math.Max(1f, rect.Width - 16f), LineHeight),
+            UsKernelDraw.Keyed(ctx, "US.Diagnostics.Detail.Empty"), ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
     }
 
     private static float EmptyHeight(UiWidgetContext ctx) => LineHeight * 2f + 16f;
@@ -894,33 +856,33 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
     private static bool IsGroupOpen(UiWidgetContext ctx, UsDiagGateGroup group)
         => !ctx.Bindings.TryGet(UsDiagnosticsHost.GroupKey(group), out bool open) || open;
 
-    private static float DrawSummary(float y, Rect rect, UiWidgetContext ctx, UsDiagCurrentSummary summary)
+    private static float DrawSummary(float y, UiLayoutRect rect, UiWidgetContext ctx, UsDiagCurrentSummary summary)
     {
-        float width = Math.Max(1f, rect.width - 12f);
+        float width = Math.Max(1f, rect.Width - 12f);
         float headlineHeight = MeasuredTextHeight(ctx, summary.Headline, width);
         if (summary.HasCurrentBlock)
         {
             // The primary finding gets the attention treatment: a neutral fill with a cyan border and a
             // cyan label. It is the ONE place the attention substrate is used as a band.
-            UsAttention.Band(new Rect(rect.x, y, rect.width, headlineHeight), ctx.Theme);
+            UsAttention.Band(ctx.Drawing, new UiLayoutRect(rect.X, y, rect.Width, headlineHeight), ctx.Theme);
             UsKernelDraw.Label(
-                new Rect(rect.x + 6f, y, Math.Max(1f, rect.width - 12f), headlineHeight),
+                new UiLayoutRect(rect.X + 6f, y, Math.Max(1f, rect.Width - 12f), headlineHeight),
                 summary.Headline,
                 ctx,
                 UsAttention.Brush,
                 UiFont.Tiny,
-                TextAnchor.MiddleLeft);
+                UiTextAnchor.MiddleLeft);
         }
         else
         {
-            UsKernelDraw.Label(new Rect(rect.x, y, width, headlineHeight), summary.Headline, ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, TextAnchor.MiddleLeft);
+            UsKernelDraw.Label(new UiLayoutRect(rect.X, y, width, headlineHeight), summary.Headline, ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
         }
 
         y += headlineHeight;
         if (summary.Detail.Length > 0)
         {
             float detailHeight = MeasuredTextHeight(ctx, summary.Detail, width);
-            UsKernelDraw.Label(new Rect(rect.x, y, width, detailHeight), summary.Detail, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft);
+            UsKernelDraw.Label(new UiLayoutRect(rect.X, y, width, detailHeight), summary.Detail, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
             y += detailHeight;
         }
 
@@ -933,7 +895,7 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
     /// a measured number of lines and keeps neutral ink; the status cell is the ONLY place the attention
     /// marker appears.
     /// </summary>
-    private static float DrawGate(float y, Rect rect, UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, bool firstCurrentBlock)
+    private static float DrawGate(float y, UiLayoutRect rect, UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, bool firstCurrentBlock)
     {
         Func<string, string> tr = key => UsKernelDraw.Keyed(ctx, key);
         float rowSpan = RowSpan(ctx, gate, contentWidth);
@@ -942,42 +904,42 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         float lineSpan = rowSpan;
         float nameWidth = Math.Max(1f, (contentWidth - StatusWidth - BasisWidth - CellGap * 3f) * NameShare);
         float valueWidth = Math.Max(1f, contentWidth - StatusWidth - BasisWidth - nameWidth - CellGap * 3f);
-        float x = rect.x + Indent;
-        float right = rect.x + Indent + contentWidth;
+        float x = rect.X + Indent;
+        float right = rect.X + Indent + contentWidth;
 
         // The rail: attention cyan on the first CURRENT block (the row the summary quotes), the plain
         // divider elsewhere. "First" is carried by this rail, never by repeating the status word.
         if (firstCurrentBlock)
         {
-            UsAttention.Rail(new Rect(rect.x, y, 2f, rowHeight), ctx.Theme);
+            UsAttention.Rail(ctx.Drawing, new UiLayoutRect(rect.X, y, 2f, rowHeight), ctx.Theme);
         }
         else
         {
-            UiThemeDraw.Solid(new Rect(rect.x, y, 2f, rowHeight), ctx.Theme[UiPaletteRole.Divider]);
+            UiThemeDraw.Solid(ctx.Drawing, new UiLayoutRect(rect.X, y, 2f, rowHeight), ctx.Theme[UiPaletteRole.Divider]);
         }
 
-        UsKernelDraw.Label(new Rect(x, y, StatusWidth, lineSpan), gate.Status, ctx, UsDiagPaint.Status(ctx.Theme, gate.State), UiFont.Tiny, TextAnchor.MiddleLeft);
-        UsKernelDraw.Label(new Rect(x + StatusWidth + CellGap, y, nameWidth, lineSpan), gate.Name, ctx, UiFont.Tiny, TextAnchor.MiddleLeft);
+        UsKernelDraw.Label(new UiLayoutRect(x, y, StatusWidth, lineSpan), gate.Status, ctx, UsDiagPaint.Status(ctx.Theme, gate.State), UiFont.Tiny, UiTextAnchor.MiddleLeft);
+        UsKernelDraw.Label(new UiLayoutRect(x + StatusWidth + CellGap, y, nameWidth, lineSpan), gate.Name, ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft);
         UsKernelDraw.Label(
-            new Rect(x + StatusWidth + CellGap + nameWidth + CellGap, y, valueWidth, lineSpan),
+            new UiLayoutRect(x + StatusWidth + CellGap + nameWidth + CellGap, y, valueWidth, lineSpan),
             gate.Value,
             ctx,
             UsDiagPaint.Value(ctx.Theme, gate.State),
             UiFont.Tiny,
-            TextAnchor.MiddleRight,
+            UiTextAnchor.MiddleRight,
             singleLine: false);
         UsKernelDraw.Label(
-            new Rect(right - BasisWidth, y, BasisWidth, lineSpan),
+            new UiLayoutRect(right - BasisWidth, y, BasisWidth, lineSpan),
             UsDiagnosticsProjection.BasisText(gate, tr),
-            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
 
         if (reasonSpan > 0f)
         {
             float reasonWidth = Math.Max(1f, contentWidth - 12f);
             UsKernelDraw.Label(
-                new Rect(x + 12f, y + lineSpan, reasonWidth, reasonSpan),
+                new UiLayoutRect(x + 12f, y + lineSpan, reasonWidth, reasonSpan),
                 UsDiagnosticsProjection.ReasonText(gate, tr),
-                ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: false);
+                ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: false);
         }
 
         return y + rowHeight;
@@ -1026,28 +988,28 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         _ => "US.Diagnostics.Gate.Group.Audio",
     };
 
-    private static float Section(float y, Rect rect, UiWidgetContext ctx, string key)
+    private static float Section(float y, UiLayoutRect rect, UiWidgetContext ctx, string key)
     {
-        UsKernelDraw.Label(new Rect(rect.x, y, rect.width, SectionHeight), UsKernelDraw.Keyed(ctx, key), ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(rect.X, y, rect.Width, SectionHeight), UsKernelDraw.Keyed(ctx, key), ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
         return y + SectionHeight;
     }
 
-    private static float Wrapped(float y, Rect rect, UiWidgetContext ctx, string text, Color color)
+    private static float Wrapped(float y, UiLayoutRect rect, UiWidgetContext ctx, string text, UiColour color)
     {
-        float width = Math.Max(1f, rect.width - Indent);
+        float width = Math.Max(1f, rect.Width - Indent);
         float height = MeasuredTextHeight(ctx, text, width);
-        UsKernelDraw.Label(new Rect(rect.x + Indent, y, width, height), text, ctx, color, UiFont.Tiny, TextAnchor.MiddleLeft);
+        UsKernelDraw.Label(new UiLayoutRect(rect.X + Indent, y, width, height), text, ctx, color, UiFont.Tiny, UiTextAnchor.MiddleLeft);
         return y + height;
     }
 
-    private static float FieldRow(float y, Rect rect, UiWidgetContext ctx, string labelKey, string value)
+    private static float FieldRow(float y, UiLayoutRect rect, UiWidgetContext ctx, string labelKey, string value)
     {
-        float nameWidth = rect.width * 0.38f - 4f;
-        float valueX = rect.x + nameWidth + 4f;
-        float valueWidth = Math.Max(1f, rect.width - nameWidth - 4f);
+        float nameWidth = rect.Width * 0.38f - 4f;
+        float valueX = rect.X + nameWidth + 4f;
+        float valueWidth = Math.Max(1f, rect.Width - nameWidth - 4f);
         float valueHeight = MeasuredTextHeight(ctx, value, valueWidth);
-        UsKernelDraw.Label(new Rect(rect.x, y, nameWidth, LineHeight), UsKernelDraw.Keyed(ctx, labelKey), ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(valueX, y, valueWidth, valueHeight), value, ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: false);
+        UsKernelDraw.Label(new UiLayoutRect(rect.X, y, nameWidth, LineHeight), UsKernelDraw.Keyed(ctx, labelKey), ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(valueX, y, valueWidth, valueHeight), value, ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: false);
         return y + Math.Max(LineHeight, valueHeight);
     }
 }
@@ -1072,43 +1034,43 @@ internal static class UsDiagRowPainter
     /// 232px defect had pawnWidth = max(1, negative) with the action column invading the dot.</summary>
     internal const float SingleLineMinimum = DotWidth + 80f + ActionWidth + CooldownWidth + AudioWidth + StatusWidth + 5f * CellGap;
 
-    internal static void Paint(Rect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth = 0f, float audioWidth = 0f)
+    internal static void Paint(UiLayoutRect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth = 0f, float audioWidth = 0f)
     {
-        if (rect.width < SingleLineMinimum)
+        if (rect.Width < SingleLineMinimum)
         {
             PaintTwoLine(rect, row, ctx, cooldownWidth, audioWidth);
             return;
         }
 
-        Color dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
-        float x = rect.x + 2f;
+        UiColour dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
+        float x = rect.X + 2f;
         // D7: the dot is a glyph until the font says it cannot draw one, then it is the state word.
         string dot = UsDiagGlyphs.DotText(ctx, row.Tone);
-        UsKernelDraw.Label(new Rect(x, rect.y, DotWidth, rect.height), dot, ctx, dotColor, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(x, rect.Y, DotWidth, rect.Height), dot, ctx, dotColor, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
         x += DotWidth;
 
-        float statusX = rect.xMax - StatusWidth;
+        float statusX = rect.XMax - StatusWidth;
         float audioX = statusX - AudioWidth - CellGap;
         float cooldownX = audioX - CooldownWidth - CellGap;
         float actionX = cooldownX - ActionWidth - CellGap;
         float pawnWidth = Math.Max(1f, actionX - x - CellGap);
 
         Func<string, float> measure = text => ctx.Metrics.MeasureWidth(text, UiFont.Tiny);
-        UsKernelDraw.Label(new Rect(x, rect.y, pawnWidth, rect.height),
+        UsKernelDraw.Label(new UiLayoutRect(x, rect.Y, pawnWidth, rect.Height),
             UsKernelDraw.Ellipsized(row.PawnText, ctx, UiFont.Tiny, pawnWidth),
-            ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(actionX, rect.y, ActionWidth, rect.height),
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(actionX, rect.Y, ActionWidth, rect.Height),
             UsKernelDraw.Ellipsized(row.ActionText, ctx, UiFont.Tiny, ActionWidth),
-            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(cooldownX, rect.y, CooldownWidth, rect.height),
+            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(cooldownX, rect.Y, CooldownWidth, rect.Height),
             UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.CooldownText, cooldownWidth, measure), ctx, UiFont.Tiny, CooldownWidth),
-            ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
-        UsKernelDraw.Label(new Rect(audioX, rect.y, AudioWidth, rect.height),
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(audioX, rect.Y, AudioWidth, rect.Height),
             UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.AudioText, audioWidth, measure), ctx, UiFont.Tiny, AudioWidth),
-            ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
-        UsKernelDraw.Label(new Rect(statusX, rect.y, StatusWidth, rect.height),
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(statusX, rect.Y, StatusWidth, rect.Height),
             UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
-            ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+            ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
     }
 
     /// <summary>DX1.3: below the single-line budget the row splits. Line one keeps the IDENTITY -
@@ -1116,39 +1078,39 @@ internal static class UsDiagRowPainter
     /// two carries the numbers on the SAME measured column budgets - action left, cooldown and audio
     /// right-aligned. Every cell clips through Ellipsized at exactly the width it measured, so values
     /// cannot bleed into each other and the caller's rowRect stays the one hit band.</summary>
-    private static void PaintTwoLine(Rect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth, float audioWidth)
+    private static void PaintTwoLine(UiLayoutRect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth, float audioWidth)
     {
-        Color dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
+        UiColour dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
         Func<string, float> measure = text => ctx.Metrics.MeasureWidth(text, UiFont.Tiny);
-        var first = new Rect(rect.x, rect.y, rect.width, TwoLineHeight);
-        var second = new Rect(rect.x, rect.y + TwoLineHeight, rect.width, Math.Max(1f, rect.height - TwoLineHeight));
+        var first = new UiLayoutRect(rect.X, rect.Y, rect.Width, TwoLineHeight);
+        var second = new UiLayoutRect(rect.X, rect.Y + TwoLineHeight, rect.Width, Math.Max(1f, rect.Height - TwoLineHeight));
 
-        float x = first.x + 2f;
+        float x = first.X + 2f;
         string dot = UsDiagGlyphs.DotText(ctx, row.Tone);
-        UsKernelDraw.Label(new Rect(x, first.y, DotWidth, first.height), dot, ctx, dotColor, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(x, first.Y, DotWidth, first.Height), dot, ctx, dotColor, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
         x += DotWidth;
 
-        float pawnWidth = Math.Max(1f, first.xMax - StatusWidth - CellGap - x);
-        UsKernelDraw.Label(new Rect(x, first.y, pawnWidth, first.height),
+        float pawnWidth = Math.Max(1f, first.XMax - StatusWidth - CellGap - x);
+        UsKernelDraw.Label(new UiLayoutRect(x, first.Y, pawnWidth, first.Height),
             UsKernelDraw.Ellipsized(row.PawnText, ctx, UiFont.Tiny, pawnWidth),
-            ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(first.xMax - StatusWidth, first.y, StatusWidth, first.height),
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(first.XMax - StatusWidth, first.Y, StatusWidth, first.Height),
             UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
-            ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+            ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
 
         float cw = Mathf.Clamp(cooldownWidth > 0f ? cooldownWidth : CooldownWidth, 24f, CooldownWidth);
         float aw = Mathf.Clamp(audioWidth > 0f ? audioWidth : AudioWidth, 20f, AudioWidth);
-        float audioX = second.xMax - aw;
+        float audioX = second.XMax - aw;
         float cooldownX = audioX - CellGap - cw;
-        float actionWidth = Math.Max(1f, cooldownX - CellGap - (second.x + 2f));
-        UsKernelDraw.Label(new Rect(second.x + 2f, second.y, actionWidth, second.height),
+        float actionWidth = Math.Max(1f, cooldownX - CellGap - (second.X + 2f));
+        UsKernelDraw.Label(new UiLayoutRect(second.X + 2f, second.Y, actionWidth, second.Height),
             UsKernelDraw.Ellipsized(row.ActionText, ctx, UiFont.Tiny, actionWidth),
-            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(cooldownX, second.y, cw, second.height),
+            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(cooldownX, second.Y, cw, second.Height),
             UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.CooldownText, cw, measure), ctx, UiFont.Tiny, cw),
-            ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
-        UsKernelDraw.Label(new Rect(audioX, second.y, aw, second.height),
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
+        UsKernelDraw.Label(new UiLayoutRect(audioX, second.Y, aw, second.Height),
             UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.AudioText, aw, measure), ctx, UiFont.Tiny, aw),
-            ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
     }
 }

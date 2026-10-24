@@ -55,7 +55,7 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
     /// The arranged content width the shell hands the page each pass, and the single input of
     /// <see cref="Narrow"/>. This setter itself does NOT bump; the flip's clock movement belongs to
     /// <see cref="UsDiagnosticsHost.ApplyContentWidth"/>, which is the production door for it - the
-    /// page's two presentations are swapped by a read-only <c>VisibleKey</c>, and a read-only binding
+    /// page's two presentations are swapped by a read-only <c>VisibleBind</c>, and a read-only binding
     /// announces no revision of its own. The engine's own <c>Breakpoint</c> evaluation reads the same
     /// coordinate space, because the shell feeds and arranges the same rect in one frame.
     /// </summary>

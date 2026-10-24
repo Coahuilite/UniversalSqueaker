@@ -20,7 +20,7 @@ namespace UniversalSqueaker.UI;
 /// Attributes: TextKey (the button caption), TitleKey/MessageKey (the question; the message lists the
 /// fields the restore writes and names what it keeps - display copy pinned to the backend's field set
 /// by the reset harness), EffectKey (the registered command the confirmed press invokes exactly once)
-/// and the usual Height/Width/HelpKey. Cancel closes the window and runs nothing; a second Open drops
+/// and the usual Height/Width/HelpRef. Cancel closes the window and runs nothing; a second Open drops
 /// the previous staged action, so no late answer can write after the player changed their mind.
 /// </para>
 /// </summary>
@@ -37,15 +37,7 @@ public sealed class UsResetEntryWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsResetEntryWidget(),
-            new[]
-            {
-                "Id", "Kind", "TextKey", "TitleKey", "MessageKey", "EffectKey",
-                "HelpKey", "Tab", "Hidden", "Height", "Width", "AlignX", "Emphasis",
-            });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsResetEntryWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("TextKey"), new UiAttributeDefinition("TitleKey"), new UiAttributeDefinition("MessageKey"), new UiAttributeDefinition("EffectKey"), new UiAttributeDefinition("HelpRef"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Width", UiAttributeKind.Length), new UiAttributeDefinition("AlignX"), new UiAttributeDefinition("Emphasis"))));
     }
 
     public void Configure(UiElementSpec spec)
@@ -53,7 +45,7 @@ public sealed class UsResetEntryWidget : IUiWidget
         this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         // The effect key is a per-element ATTRIBUTE, and Validate sees no spec - the same asymmetry
         // every keyed composite has. A wrong key cannot rot silently: the staged action runs through
@@ -70,16 +62,16 @@ public sealed class UsResetEntryWidget : IUiWidget
             : DefaultHeight;
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
         if (UsKernelDraw.SelectionButton(
                 rect, ctx,
                 UsKernelDraw.Keyed(ctx, Attribute("TextKey")),
                 ctx.Theme, false))
         {
-            IUiBindings editorBindings = ctx.Bindings;
+            IUiBindingAccess editorBindings = ctx.Bindings;
             string effectKey = Attribute("EffectKey");
             if (effectKey.Length == 0) return;
             UsConfirmWindow.Open(

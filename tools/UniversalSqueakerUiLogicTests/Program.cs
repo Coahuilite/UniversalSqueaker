@@ -300,7 +300,7 @@ internal static class Program
         // The baby-action opt-in adds its own help entry (46 -> 47).
         // R3-B adds four: the diagnosis status line and its capture, outline
         // and report controls (47 -> 51). The section overview is not an item. Each is claimed by a manifest
-        // HelpKey, which the bidirectional gate below checks in both directions.
+        // HelpRef, which the bidirectional gate below checks in both directions.
         // US-PACK1 re-cuts the Packs block: the two browse-layer sections retire (their row items leave),
         // the checklist keeps only its forget entry, the filter region gains keyword/race/xenotype/summary
         // and the new us/pack-cards section claims card/expand/row/enable (50 -> 54).

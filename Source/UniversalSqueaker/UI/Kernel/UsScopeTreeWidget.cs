@@ -115,14 +115,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            KindName,
-            () => new UsScopeTreeWidget(),
-            UsKernelWidgetRegistrar.SectionSchema);
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsScopeTreeWidget(), UsKernelWidgetRegistrar.SectionSchema));
     }
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<string>("response-details", elementPath);
         bindings.ValidateValue<int>("tuning-layer", elementPath);
@@ -217,21 +213,21 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         return bodyHeight + BottomPadding;
     }
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         DrawCard(rect, ctx, body => DrawContent(body, ctx));
     }
 
-    private void DrawContent(Rect rect, UiWidgetContext ctx)
+    private void DrawContent(UiLayoutRect rect, UiWidgetContext ctx)
     {
         int layer = ctx.Bindings.TryGet("tuning-layer", out int l) ? l : 0;
         IReadOnlyList<ActionScopeRowView> scopeRows = ctx.Bindings.TryGet("action-scopes", out IReadOnlyList<ActionScopeRowView> scopes)
             ? scopes
             : Array.Empty<ActionScopeRowView>();
 
-        float innerWidth = rect.width;
-        float x = rect.x;
-        float y = rect.y + TopPadding;
+        float innerWidth = rect.Width;
+        float x = rect.X;
+        float y = rect.Y + TopPadding;
 
         int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
 
@@ -246,29 +242,29 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         // UIR-004: the area gate retired - with the fallback editor moved to the Packs page the
         // layer/domain rows and the empty-target band are presented for BOTH remaining areas.
         float layerRowHeight = LayerRowHeightFor(innerWidth);
-        DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, ctx);
+        DrawLayerRow(new UiLayoutRect(x, y, innerWidth, layerRowHeight), layer, ctx);
         y += layerRowHeight + RowGap;
 
         if (layer > 0)
         {
-            DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), ctx);
+            DrawDomainRow(new UiLayoutRect(x, y, innerWidth, DomainRowHeight), ctx);
             y += DomainRowHeight + RowGap;
         }
 
         if (!submittable)
         {
             float reasonBand = EmptyTargetBandHeight(ctx, innerWidth);
-            UsKernelDraw.Label(
-                new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
                 EmptyTargetText(ctx),
                 ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground],
-                UiFont.Tiny, TextAnchor.MiddleLeft);
+                UiFont.Tiny, UiTextAnchor.MiddleLeft);
             y += reasonBand + RowGap;
         }
 
 
 
-        DrawAreaTabs(new Rect(x, y, innerWidth, AreaTabsHeight), area, ctx);
+        DrawAreaTabs(new UiLayoutRect(x, y, innerWidth, AreaTabsHeight), area, ctx);
         y += AreaTabsHeight + RowGap;
 
         if (area == 0)
@@ -280,15 +276,15 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             // staged action runs the effect key through the same bindings.
             bool canAreaReset = ctx.Bindings.CanExecute("reset-action-area");
             float areaResetWidth = 132f; // distinct from the measured scope-trigger band widths
-            UsKernelDraw.Label(
-                new Rect(x, y, Math.Max(1f, innerWidth - (canAreaReset ? areaResetWidth + RowGap : 0f)), RowHeight),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(x, y, Math.Max(1f, innerWidth - (canAreaReset ? areaResetWidth + RowGap : 0f)), RowHeight),
                 UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
                 ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small,
-                TextAnchor.MiddleLeft);
+                UiTextAnchor.MiddleLeft);
             if (canAreaReset
                 && UsKernelDraw.SelectionButton(
-                    new Rect(x + innerWidth - areaResetWidth, y, areaResetWidth, RowHeight), ctx,
-                    UsKernelDraw.Keyed(ctx, "US.Reset.Area"), ctx.Theme, false))
+                    new UiLayoutRect(x + innerWidth - areaResetWidth, y, areaResetWidth, RowHeight), ctx,
+                    UsKernelDraw.Keyed(ctx, "US.Reset.Area"), ctx.Theme, false, controlId: "reset-action-area", itemKey: TuningIdentityToken(ctx.Bindings)))
             {
                 // review1 item 3: the question names the layer/domain read at OPEN time, so the
                 // answer must act on exactly that identity. The effect command reads the page state
@@ -296,7 +292,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 // the captured one and refuses on drift (a late read of a different valid layer/
                 // domain restoring it is the failure the contract names). The modal absorb is not
                 // treated as an identity guarantee.
-                IUiBindings editorBindings = ctx.Bindings;
+                IUiBindingAccess editorBindings = ctx.Bindings;
                 string captured = TuningIdentityToken(editorBindings);
                 UsConfirmWindow.Open(
                     UsKernelDraw.Keyed(ctx, "US.Reset.Area"),
@@ -322,34 +318,34 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
                 if (groupRows.Count == 0) continue;
 
-                UsKernelDraw.Label(
-                    new Rect(x, y, innerWidth, RowHeight),
+                UsKernelDraw.Label(ctx.Drawing,
+                    new UiLayoutRect(x, y, innerWidth, RowHeight),
                     UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.PlayerTriggered ? GroupPlayerKey : GroupSystemKey),
                     ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny,
-                    TextAnchor.MiddleLeft);
+                    UiTextAnchor.MiddleLeft);
                 y += RowHeight + RowGap;
 
                 if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
                 {
-                    UsKernelDraw.Label(
-                        new Rect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
+                    UsKernelDraw.Label(ctx.Drawing,
+                        new UiLayoutRect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
                         UsKernelDraw.Keyed(ctx, DraftUndraftKey),
                         ctx.Theme, ctx.Theme[UiPaletteRole.Accent], UiFont.Tiny,
-                        TextAnchor.MiddleLeft);
+                        UiTextAnchor.MiddleLeft);
                     y += DraftHeadingHeight + RowGap;
                 }
 
                 for (int i = 0; i < groupRows.Count; i++)
                 {
                     float rowHeight = ScopeRowHeightFor(innerWidth, groupRows[i], ctx);
-                    DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), groupRows[i], ctx, submittable);
+                    DrawScopeRow(new UiLayoutRect(x, y, innerWidth, rowHeight), groupRows[i], ctx, submittable);
                     y += rowHeight + RowGap;
                 }
             }
 
             DrawActionRestore(y, x, innerWidth, scopeRows, ctx, submittable);
         }
-        else DrawResponseDetails(new Rect(x, y, innerWidth, ResponseDetailsHeight(ctx, innerWidth)), ctx);
+        else DrawResponseDetails(new UiLayoutRect(x, y, innerWidth, ResponseDetailsHeight(ctx, innerWidth)), ctx);
     }
 
     private static string ResponseDetailsText(UiWidgetContext ctx)
@@ -359,7 +355,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         return ctx.Metrics.MeasureText(ResponseDetailsText(ctx), UiFont.Small, Math.Max(1, width));
     }
 
-    private static void DrawResponseDetails(Rect rect, UiWidgetContext ctx)
+    private static void DrawResponseDetails(UiLayoutRect rect, UiWidgetContext ctx)
     {
         UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/response-details");
         UsKernelDraw.Label(rect, ResponseDetailsText(ctx), ctx, UiFont.Small);
@@ -378,13 +374,13 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         "US.Tuning.Area.Actions", "US.Tuning.Area.Mood",
     };
 
-    private void DrawAreaTabs(Rect rect, int area, UiWidgetContext ctx)
+    private void DrawAreaTabs(UiLayoutRect rect, int area, UiWidgetContext ctx)
     {
-        float tabWidth = Math.Max(1f, (rect.width - RowGap * 1f) / 2f);
+        float tabWidth = Math.Max(1f, (rect.Width - RowGap * 1f) / 2f);
         for (int i = 0; i < 2; i++)
         {
-            var tab = new Rect(rect.x + i * (tabWidth + RowGap), rect.y, tabWidth, AreaTabsHeight);
-            if (UsKernelDraw.SelectionButton(tab, ctx, UsKernelDraw.Keyed(ctx, AreaTabKeys[i]), ctx.Theme, area == i))
+            var tab = new UiLayoutRect(rect.X + i * (tabWidth + RowGap), rect.Y, tabWidth, AreaTabsHeight);
+            if (UsKernelDraw.SelectionButton(tab, ctx, UsKernelDraw.Keyed(ctx, AreaTabKeys[i]), ctx.Theme, area == i, controlId: "tuning-area", itemKey: i))
             {
                 ctx.Bindings.Set("tuning-area", i);
             }
@@ -429,7 +425,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// <summary>review1 item 3: the machine identity a staged area answer must still match at run
     /// time - the same three page-state halves the question text was composed from, read through
     /// the page's own value bindings so the comparison sees exactly what the effect command will.</summary>
-    private static string TuningIdentityToken(IUiBindings bindings)
+    private static string TuningIdentityToken(IUiBindingAccess bindings)
     {
         int layer = bindings.TryGet("tuning-layer", out int l) ? l : 0;
         string race = bindings.TryGet("tuning-race", out string r) ? r ?? "" : "";
@@ -461,48 +457,48 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         int resetCount = (canRowReset ? 1 : 0) + (canPresetReset ? 1 : 0);
         float dropdownWidth = Math.Max(1f, width - resetCount * (rowResetWidth + RowGap));
         UsKernelDraw.Dropdown(
-            new Rect(x, y, dropdownWidth, RowHeight), "scope-tree-action-select", ctx, current, pairs,
+            new UiLayoutRect(x, y, dropdownWidth, RowHeight), "scope-tree-action-select", ctx, current, pairs,
             selected => ctx.Bindings.Set("tuning-selected-action", selected));
-        if (canRowReset) UsKernelDraw.HelpHover(new Rect(x + dropdownWidth + RowGap, y, rowResetWidth, RowHeight), ctx, "us/scope-tree/reset-default");
-        if (canPresetReset) UsKernelDraw.HelpHover(new Rect(x + width - rowResetWidth, y, rowResetWidth, RowHeight), ctx, "us/scope-tree/reset-preset");
+        if (canRowReset) UsKernelDraw.HelpHover(new UiLayoutRect(x + dropdownWidth + RowGap, y, rowResetWidth, RowHeight), ctx, "us/scope-tree/reset-default");
+        if (canPresetReset) UsKernelDraw.HelpHover(new UiLayoutRect(x + width - rowResetWidth, y, rowResetWidth, RowHeight), ctx, "us/scope-tree/reset-preset");
         if (canRowReset
             && UsKernelDraw.SelectionButton(
-                new Rect(x + dropdownWidth + RowGap, y, rowResetWidth, RowHeight), ctx,
-                UsKernelDraw.Keyed(ctx, "US.Reset.Row"), ctx.Theme, false))
+                new UiLayoutRect(x + dropdownWidth + RowGap, y, rowResetWidth, RowHeight), ctx,
+                UsKernelDraw.Keyed(ctx, "US.Reset.Row"), ctx.Theme, false, controlId: "reset-action-row", itemKey: (TuningIdentityToken(ctx.Bindings), current)))
         {
             ctx.Bindings.Invoke("reset-action-row");
         }
         if (canPresetReset && UsKernelDraw.SelectionButton(
-            new Rect(x + width - rowResetWidth, y, rowResetWidth, RowHeight), ctx,
-            UsKernelDraw.Keyed(ctx, "US.Tuning.ResetToPreset"), ctx.Theme, false))
+            new UiLayoutRect(x + width - rowResetWidth, y, rowResetWidth, RowHeight), ctx,
+            UsKernelDraw.Keyed(ctx, "US.Tuning.ResetToPreset"), ctx.Theme, false, controlId: "reset-action-to-preset", itemKey: (TuningIdentityToken(ctx.Bindings), current)))
             ctx.Bindings.Invoke("reset-action-to-preset", selectedRow!.Value.ActionKey);
         y += RowHeight + RowGap;
 
         float noteHeight = ResponseDetailsHeight(ctx, width);
-        DrawResponseDetails(new Rect(x, y, width, noteHeight), ctx);
+        DrawResponseDetails(new UiLayoutRect(x, y, width, noteHeight), ctx);
         return y + noteHeight;
     }
 
 
-    private void DrawLayerRow(Rect rect, int layer, UiWidgetContext ctx)
+    private void DrawLayerRow(UiLayoutRect rect, int layer, UiWidgetContext ctx)
     {
         UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/layer");
-        if (UsesStackedLayerButtons(rect.width))
+        if (UsesStackedLayerButtons(rect.Width))
         {
-            UsKernelDraw.Label(
-                new Rect(rect.x + LeftPadding, rect.y, 120f, LayerRowLabelBandHeight),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(rect.X + LeftPadding, rect.Y, 120f, LayerRowLabelBandHeight),
                 UsKernelDraw.Keyed(ctx, LayerLabelKey),
                 ctx.Theme,
                 ctx.Theme[UiPaletteRole.Foreground],
                 UiFont.Small,
-                TextAnchor.MiddleLeft);
+                UiTextAnchor.MiddleLeft);
 
-            float stackedButtonWidth = Math.Max(1f, (rect.width - LeftPadding * 2f - RowGap * 2f) / 3f);
-            float y = rect.y + LayerRowLabelBandHeight;
+            float stackedButtonWidth = Math.Max(1f, (rect.Width - LeftPadding * 2f - RowGap * 2f) / 3f);
+            float y = rect.Y + LayerRowLabelBandHeight;
             for (int i = 0; i < LayerKeys.Length; i++)
             {
-                Rect buttonRect = new(rect.x + LeftPadding, y, stackedButtonWidth, ButtonHeight);
-                if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
+                UiLayoutRect buttonRect = new(rect.X + LeftPadding, y, stackedButtonWidth, ButtonHeight);
+                if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny, controlId: "set-tuning-layer", itemKey: i))
                 {
                     ctx.Bindings.Invoke("set-tuning-layer", i);
                 }
@@ -513,21 +509,21 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             return;
         }
 
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + LeftPadding, rect.Y, 120f, rect.Height),
             UsKernelDraw.Keyed(ctx, LayerLabelKey),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
 
-        float available = rect.width - LeftPadding * 2f - 120f - RowGap * 2f;
+        float available = rect.Width - LeftPadding * 2f - 120f - RowGap * 2f;
         float buttonWidth = Math.Max(1f, (available - RowGap * 2f) / 3f);
-        float buttonX = rect.x + rect.width - LeftPadding - buttonWidth * 3f - RowGap * 2f;
+        float buttonX = rect.X + rect.Width - LeftPadding - buttonWidth * 3f - RowGap * 2f;
         for (int i = 0; i < LayerKeys.Length; i++)
         {
-            Rect buttonRect = new(buttonX, rect.y + (rect.height - ButtonHeight) / 2f, buttonWidth, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
+            UiLayoutRect buttonRect = new(buttonX, rect.Y + (rect.Height - ButtonHeight) / 2f, buttonWidth, ButtonHeight);
+            if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny, controlId: "set-tuning-layer", itemKey: i))
             {
                 ctx.Bindings.Invoke("set-tuning-layer", i);
             }
@@ -536,7 +532,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
     }
 
-    private void DrawDomainRow(Rect rect, UiWidgetContext ctx)
+    private void DrawDomainRow(UiLayoutRect rect, UiWidgetContext ctx)
     {
         string race = ctx.Bindings.TryGet("tuning-race", out string r) ? r : "";
         string xeno = ctx.Bindings.TryGet("tuning-xeno", out string x) ? x : "";
@@ -545,17 +541,17 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             : Array.Empty<TuningDomainOptionView>();
 
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/domain");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
+        UsKernelDraw.RowSurface(ctx.Drawing, rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + LeftPadding, rect.Y, 120f, rect.Height),
             UsKernelDraw.Keyed(ctx, DomainLabelKey),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
 
-        float dropdownWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 160f));
-        Rect dropdownRect = new(rect.xMax - dropdownWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, dropdownWidth, ButtonHeight);
+        float dropdownWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.Width - 160f));
+        UiLayoutRect dropdownRect = new(rect.XMax - dropdownWidth - 8f, rect.Y + (rect.Height - ButtonHeight) / 2f, dropdownWidth, ButtonHeight);
 
         // R4-A / A2: the option value is the typed selection itself, so the commit no longer splits a
         // delimiter-joined token. Same labels, same trigger width, same popup.
@@ -576,38 +572,38 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             selection => ctx.Bindings.Invoke("set-tuning-domain", selection));
     }
 
-    private void DrawScopeRow(Rect rect, ActionScopeRowView row, UiWidgetContext ctx, bool submittable)
+    private void DrawScopeRow(UiLayoutRect rect, ActionScopeRowView row, UiWidgetContext ctx, bool submittable)
     {
         // A trigger that currently reads "Auto" claims the Auto/Clear entry instead of the generic
         // action-scope one, so the panel explains what the visible value means.
         bool hovered = UsKernelDraw.HelpHover(
             rect, ctx, row.HasOwnScope ? "us/scope-tree/action-scope" : "us/scope-tree/auto");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && submittable, UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowSurface(ctx.Drawing, rect, ctx.Theme, hovered && submittable, UsKernelDraw.RowRail.None);
 
-        ScopeRowLayout layout = ScopeRowLayoutFor(rect.width, row.DisplayName, HintTextFor(ctx, row), ctx.Metrics);
+        ScopeRowLayout layout = ScopeRowLayoutFor(rect.Width, row.DisplayName, HintTextFor(ctx, row), ctx.Metrics);
         float scopeButtonWidth = layout.DropdownWidth;
 
         // XG1.1: the row is drawn in the disabled ink while the layer has no target. The carrier dropdown has
         // no enabled flag this scope owns, so the ink plus the reason sentence above are how the state reads.
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y, layout.LabelWidth, layout.LabelLineHeight),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + LeftPadding, rect.Y, layout.LabelWidth, layout.LabelLineHeight),
             row.DisplayName,
             ctx.Theme,
             submittable ? ctx.Theme[UiPaletteRole.Foreground] : ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Small,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
 
         // V3 A1: the inheritance state is drawn at EVERY body width the real boxes produce - inline beside
         // the dropdown when it fits, on its own line under the name when it does not. Never suppressed.
         if (layout.HintText.Length > 0)
         {
-            UsKernelDraw.Label(
-                new Rect(rect.x + layout.HintX, rect.y + layout.HintY, layout.HintWidth, layout.HintBandHeight),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(rect.X + layout.HintX, rect.Y + layout.HintY, layout.HintWidth, layout.HintBandHeight),
                 layout.HintText,
                 ctx.Theme,
                 submittable ? ctx.Theme[UiPaletteRole.SecondaryForeground] : ctx.Theme[UiPaletteRole.DisabledForeground],
                 UiFont.Tiny,
-                TextAnchor.MiddleLeft);
+                UiTextAnchor.MiddleLeft);
         }
 
         // R4-A / A2: the option list carries the TYPED value, and the Auto entry carries a real null - the
@@ -622,12 +618,12 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         BehaviorScope? current = row.HasOwnScope ? row.Scope : null;
-        Rect dropdownRect = new(rect.xMax - scopeButtonWidth - ScopeDropdownGap, rect.y + (rect.height - ButtonHeight) * 0.5f, scopeButtonWidth, ButtonHeight);
+        UiLayoutRect dropdownRect = new(rect.XMax - scopeButtonWidth - ScopeDropdownGap, rect.Y + (rect.Height - ButtonHeight) * 0.5f, scopeButtonWidth, ButtonHeight);
         string elementId = "scope-tree-scope-" + Uri.EscapeDataString(row.ActionKey);
 
         // XG1.1 (r2): with no target the trigger is not CALLED at all - a static band is drawn in the trigger's
         // own rect instead. That is the difference between "the commit is gated" and "the interaction does not
-        // exist": no UiNative.DropdownButton call means no popup anchor, no element id to open and no popup
+        // exist": no ctx.Controls.DropdownButton call means no popup anchor, no element id to open and no popup
         // path whatever; the band still shows the scope this row holds, in the disabled ink.
         if (!submittable)
         {
@@ -650,7 +646,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// measuring seam for the same reason the real trigger is: a fixed-width band must not report an overflow
     /// for a scope name it would have truncated.
     /// </summary>
-    private static void DrawDisabledScopeBand(Rect rect, UiWidgetContext ctx, BehaviorScope? current, IReadOnlyList<UiChoice<BehaviorScope?>> options)
+    private static void DrawDisabledScopeBand(UiLayoutRect rect, UiWidgetContext ctx, BehaviorScope? current, IReadOnlyList<UiChoice<BehaviorScope?>> options)
     {
         string display = "";
         for (int i = 0; i < options.Count; i++)
@@ -662,15 +658,15 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             }
         }
 
-        UsKernelDraw.RowSurface(rect, ctx.Theme, false, UsKernelDraw.RowRail.None);
-        float textWidth = Mathf.Max(1f, rect.width - 12f);
-        UsKernelDraw.Label(
-            new Rect(rect.x + 6f, rect.y, textWidth, rect.height),
+        UsKernelDraw.RowSurface(ctx.Drawing, rect, ctx.Theme, false, UsKernelDraw.RowRail.None);
+        float textWidth = Mathf.Max(1f, rect.Width - 12f);
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + 6f, rect.Y, textWidth, rect.Height),
             UsKernelDraw.Ellipsized(display, ctx, UiFont.Tiny, textWidth),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
-            TextAnchor.MiddleLeft,
+            UiTextAnchor.MiddleLeft,
             singleLine: true);
     }
 

@@ -20,7 +20,7 @@ FerriteLib 负责通用 Host/session、布局、原生输入及控件；US 负�
 
 动作范围下拉使用 `UiChoice<BehaviorScope?>`；Auto 的值是真正的 `null`，不是空字符串。提交 `UsScopeWrite`，不把翻译标签或 `ToString()` 再解析成业务值。域下拉同样携带 `UsTuningDomainSelection`，不拼接后拆分域字符串。
 
-预设卡片的 Race/Xenotype 行复用 FerriteLib `UiRowBand.Measure/Draw`。正文点击与复选动作分别绑定自身对象；层级缩进只施加一次，测量与绘制使用相同行高。Xenotype 图标由 Verse 适配器解析，UI Kernel 只接收可空图像；缺 DLC/Def/图像时不制造替代身份。
+预设卡片的 Race/Xenotype 行复用 FerriteLib `UiRowBand.Measure/Draw`。正文点击与复选动作分别绑定自身对象；层级缩进只施加一次，测量与绘制使用相同行高。Xenotype 图标由 Verse 适配器解析，UI Kernel 只接收中立 `UiImage`；handle 归窗口执行器的 Images 作用域，原纹理仍归提供者；缺 DLC/Def/图像时不制造替代身份。
 
 ## 主题只有颜色权限
 
@@ -29,7 +29,7 @@ US 拥有完整角色色表，定义于 `Themes/UsSwatches.cs`；六组为 Core�
 - 更换 swatch 更新页面主题与公共 chrome，走 `ColourRevision`，不改变字体、密度或 `LayoutRevision`。
 - 滚动、焦点、弹层及编辑状态不是主题重置项。
 - attention 的语义颜色由 `UsAttention` 单独拥有，不随 swatch 改变。
-- `SelectedBorder` 保留未声明，使其遵守强调色回退；透明是显式颜色值，不能被当成缺失。
+- `SelectedBorder` 显式取原 Accent，保持迁移前有效颜色；透明是显式颜色值，不能被当成缺失。
 - 字体旧写法迁移由 FerriteLib 解析器负责，US 不维护重复迁移表。
 
 颜色角色表与主题测试源码是值的权威，本页不再复制一套 HEX 表。
@@ -54,4 +54,4 @@ Scope能力与默认值只由canonical BuiltInPawnContracts提供，UI表只持�
 
 ## 帮助目录、译文与binding分别命名
 
-目录`us/section/item`是Ref，`US.Help.*`是翻译资源key，`help-section-ref`是binding地址。目录TitleKey／OverviewKey／LabelKey／TextKey在同一Host译文入口解析后，才成为面板实际文字。四mode话题显式给ref；空选项ref不抹一般帮助，未知ref回section概述；当前session的15-pass grace不是离开立刻清空。完整[公开合同和新旧映射](us-public-contracts-and-help-zh.md)同时记录固定fc010bd旧FL签名与尚未放行的新库词汇，不提前替换Manifest。
+目录`us/section/item`是Ref，`US.Help.*`是翻译资源key，`help-section-ref`是binding地址。目录TitleKey／OverviewKey／LabelKey／TextKey在同一Host译文入口解析后，才成为面板实际文字。四mode话题显式给ref；空选项ref不抹一般帮助，未知ref回section概述；当前session的15-pass grace不是离开立刻清空。完整[公开合同和新旧映射](us-public-contracts-and-help-zh.md)与[固定消费者导读](fl08-consumer-migration-zh.md)记录实际7eb8073 API／XML和执行器迁移；不保旧FL词汇双轨。

@@ -28,6 +28,7 @@ public sealed class UsKernelOverlayController : IDisposable
 
     private readonly IUsKernelOverlaySource source;
     private UiHost? host;
+    private VerseUiExecution? execution;
     private bool creationFailed;
     private bool disposed;
 
@@ -71,7 +72,8 @@ public sealed class UsKernelOverlayController : IDisposable
     {
         Maintain();
         if (!IsActive) return false;
-        if (UiNative.IsLayoutEvent()) return false;
+        UiFrame frame = execution!.CaptureFrame();
+        if (frame.Phase == UiFramePhase.Layout) return false;
 
         try
         {
@@ -79,7 +81,7 @@ public sealed class UsKernelOverlayController : IDisposable
             // and the caller falls back to the legacy pure-Verse readout, curBaseY must remain
             // untouched so the fallback does not double-reserve the row height.
             float rowY = curBaseY - RowHeight;
-            host!.DrawFrame(new Rect(leftX, rowY, width, RowHeight));
+            host!.DrawFrame(new UiLayoutRect(leftX, rowY, width, RowHeight), frame, execution);
             curBaseY = rowY;
             return true;
         }
@@ -98,11 +100,13 @@ public sealed class UsKernelOverlayController : IDisposable
     {
         try
         {
+            execution = new VerseUiExecution();
             host = UsKernelOverlayHost.Create(source);
         }
         catch (Exception ex)
         {
             creationFailed = true;
+            Teardown();
             Log.Warning(
                 "[UniversalSqueaker] Camera indicator kernel overlay creation failed; legacy camera indicator will be used: "
                 + SqueakLogText.SanitizeExceptionMessage(ex.Message));
@@ -111,8 +115,12 @@ public sealed class UsKernelOverlayController : IDisposable
 
     private void Teardown()
     {
-        host?.Dispose();
+        UiHost? released = host;
+        VerseUiExecution? releasedExecution = execution;
         host = null;
+        execution = null;
+        try { released?.Dispose(); }
+        finally { releasedExecution?.Dispose(); }
     }
 
     public void Dispose()

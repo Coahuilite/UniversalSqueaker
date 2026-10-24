@@ -1,3 +1,4 @@
+using FerriteLib.UiKit.Kernel;
 using System;
 using UniversalSqueaker.Kernel;
 using System.Collections.Generic;
@@ -27,7 +28,7 @@ public static class VoicePacksPageModel
     /// the same precedent the text-metrics seam established; harnesses replace the seam wholesale.
     /// </summary>
     public static IUsRaceBoardFactsSource RaceBoardSource = VerseRaceBoardSource.Instance;
-    public static VoicePacksViewState BuildView(GameSettings settings, SqueakXenotypeCatalogSnapshot catalog, VoicePacksPageState state)
+    public static VoicePacksViewState BuildView(GameSettings settings, SqueakXenotypeCatalogSnapshot catalog, VoicePacksPageState state, Func<UnityEngine.Texture2D?, UiImage>? imageOf = null)
     {
         if (settings == null) settings = SqueakerMod.Settings ?? new GameSettings();
         if (catalog == null) catalog = SqueakXenotypeCatalog.Current;
@@ -115,7 +116,7 @@ public static class VoicePacksPageModel
         state.TuningXenotypeDefName = tuningXeno;
         IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
 
-        IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
+        IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state, imageOf);
         string buildIdentity = SqueakerMod.Instance != null ? SqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
         string saveStatus = SqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
         bool isDirty = SqueakerMod.Instance?.IsSettingsDirty ?? false;
@@ -463,7 +464,7 @@ public static class VoicePacksPageModel
     }
 
     /// <summary>Project the tuning-baseline preset Defs into a selectable tree for the import widget.</summary>
-    private static IReadOnlyList<BaselinePresetView> BuildBaselinePresets(VoicePacksPageState state)
+    private static IReadOnlyList<BaselinePresetView> BuildBaselinePresets(VoicePacksPageState state, Func<UnityEngine.Texture2D?, UiImage>? imageOf)
     {
         List<BaselinePresetView> result = new();
         foreach (UsBehaviorPresetDef preset in SqueakGameDefs.AllBaselines())
@@ -492,7 +493,7 @@ public static class VoicePacksPageModel
                         xenoSelected,
                         xenotype.actions.Count(t => t != null && t.ActionId != ""),
                         xenotype.actions.Sum(t => t.Values.PresentKeys().Count()),
-                        ResolveXenotypeIcon(xenotype.xenotypeDefName)));
+                        imageOf?.Invoke(ResolveXenotypeIcon(xenotype.xenotypeDefName)) ?? default));
                 }
 
                 bool raceSelected = selection.SelectedRaceDefNames.Contains(race.raceDefName);
@@ -1316,7 +1317,7 @@ public static class VoicePacksPageModel
 
 
     // The hover-claim machine (D10 grace) moved to UiSession with FL 0.3.0 P3: widgets claim through
-    // UsKernelDraw.HelpHover -> Session.ClaimHover, and the panel/border read Session.HoverClaim. The
+    // UsKernelDraw.HelpHover -> Session.PublishHelp, and the panel/border read Session.CurrentHelpRef. The
     // pinned-selection channel stays retired with the index list (D2 ruling, 2026-09-05) - hover is
     // still the only thing that changes what the help panel shows, it just has a session owner now.
 

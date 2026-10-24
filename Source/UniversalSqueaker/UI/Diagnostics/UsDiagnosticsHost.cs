@@ -24,7 +24,7 @@ public static class UsDiagnosticsHost
 
     /// <summary>
     /// Feeds the width the shell is about to arrange in, and moves the layout clock when that width
-    /// crossed the presentation threshold. The VisibleKey swap is read live by the arrange pass, but a
+    /// crossed the presentation threshold. The VisibleBind swap is read live by the arrange pass, but a
     /// read-only binding announces no revision of its own - so without this bump the swap would depend
     /// on the arrange size changing in the same frame (true of today's shell, false of any page that
     /// arranges at a fixed size) and the two presentations could both be on screen for a frame.
@@ -51,7 +51,6 @@ public static class UsDiagnosticsHost
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
 
-        UiNative.Trace = SqueakLog.PopupTrace;
         UsDiagnosticsWidgetRegistrar.EnsureRegistered();
 
         UiLayoutManifest manifest = UiLayoutManifest.Parse(pageXml);
@@ -64,6 +63,7 @@ public static class UsDiagnosticsHost
             UsTheme.Surface(),
             metrics,
             new UsKernelTranslation());
+        host.Session.Controls.Trace = SqueakLog.PopupTrace;
         bumper.Attach(host.Session);
         return host;
     }
@@ -90,7 +90,7 @@ public static class UsDiagnosticsHost
     /// <summary>
     /// The two mutually exclusive presentations of the main page, read-only: wide = master list +
     /// detail column, narrow = the single in-window navigation column. Each presentation's subtree
-    /// declares one of these as its VisibleKey, so exactly one of them is arranged (a hidden element
+    /// declares one of these as its VisibleBind, so exactly one of them is arranged (a hidden element
     /// owns no geometry at all - the supported replacement for the retired "an Auto column collapses
     /// to a 1px stub" idiom). The source owns the decision; the page never writes these.
     /// </summary>

@@ -110,7 +110,7 @@ internal static class UsKernelContractInvariantTests
         Assert(helpToggle != null
                 && helpToggle.GetAttribute("Kind") == "input/button"
                 && helpToggle.GetAttribute("ActionBind") == "toggle-help-drawer"
-                && helpToggle.GetAttribute("VisibleKey") == "",
+                && helpToggle.GetAttribute("VisibleBind") == "",
             "the band's switch is the carrier's own input/button bound to the panel command and gated by"
             + " nothing: the panel it opens is the page's other help state surface, and a second visibility"
             + " key would be a second truth about whether help is showing");
@@ -162,7 +162,7 @@ internal static class UsKernelContractInvariantTests
 
         Assert(helpBand != null && helpBand.GetAttribute("Height") == "140"
                 && !IsTrue(helpBand!.GetAttribute("Fill"))
-                && helpBand.GetAttribute("VisibleKey") == "help-open",
+                && helpBand.GetAttribute("VisibleBind") == "help-open",
             "page-root must declare the help band as a fixed-Height, non-Filling Scroll gated by the one"
             + " player intent (BH1.1's reservation: height out of the body, never a column beside it)");
 
@@ -232,7 +232,7 @@ internal static class UsKernelContractInvariantTests
             "the help panel has no write channel at all: claims arrive only from the controls via UsKernelDraw.HelpHover");
 
         string draw = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"));
-        Assert(draw.Contains("DropdownButton(rect, elementId, ctx);") && draw.Contains("OpenPopupAnchor"),
+        Assert(draw.Contains("DropdownButton(rect, popupId, ctx);") && draw.Contains("OpenPopupAnchor"),
             "UsKernelDraw dropdown trigger stores the Host window-space anchor and draws from it");
 
         // Re-cut 2026-09-24 (T3-1): the write-registration funnel renamed the raw `BindAction<...>` calls to
@@ -297,7 +297,7 @@ internal static class UsKernelContractInvariantTests
         foreach (string axis in new[] { "phase", "nutrition", "drug" })
         {
             var choice = card.SelectSingleNode(".//Widget[@Bind='eat-" + axis + "']") as XmlElement;
-            Assert(choice != null && choice.GetAttribute("Kind") == "input/dropdown" && !choice.HasAttribute("VisibleKey"),
+            Assert(choice != null && choice.GetAttribute("Kind") == "input/dropdown" && !choice.HasAttribute("VisibleBind"),
                 "DB three independent Eat selectors exist without parent/child visibility");
         }
         // The control lives in the Distance workspace and must not appear on this card. The assertion is

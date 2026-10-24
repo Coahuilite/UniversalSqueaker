@@ -76,7 +76,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         onlyDrawInDevMode = true;
         // draggable / one-instance / normal-size arrive through UiWindowOptions at the catalog door.
 
-        bindings.BindOptions<UiOption>("dev-target-options", () => source.Targets);
+        bindings.BindChoices<string>("dev-target-options", () => source.Targets);
         bindings.BindReadOnly<bool>("dev-capture", () => source.CaptureOn);
         bindings.BindReadOnly<bool>("dev-outline", () => source.OutlineOn);
         bindings.BindReadOnly<string>("dev-status", () => statusArg.Length > 0
@@ -154,15 +154,16 @@ internal sealed class UsDevPanelWindow : UiWindowHost
 
     protected override UiHost CreateHost()
     {
-        UiNative.Trace = SqueakLog.PopupTrace;
         UiLayoutManifest manifest = UiLayoutManifest.Parse(PageXml);
-        return new UiHost(
+        var host = new UiHost(
             Consumer,
             manifest,
             bindings,
             PanelTheme,
             VerseFerriteTextMetrics.Instance,
             new UsKernelTranslation());
+        host.Session.Controls.Trace = SqueakLog.PopupTrace;
+        return host;
     }
 
     protected override UiTheme Theme => PanelTheme;
@@ -180,17 +181,11 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     /// shape the settings window and the diagnostics panel draw.</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, PanelTheme, PanelTheme[UiPaletteRole.PanelSurface], PanelTheme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(Execution, VerseUiExecution.Rect(rect), PanelTheme, PanelTheme[UiPaletteRole.PanelSurface], PanelTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(16f);
         bool prerequisite = notice == UiWindowNotice.Prerequisite;
-        UsKernelDraw.Label(
-            new Rect(body.x, body.y, body.width, 24f),
-            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"),
-            PanelTheme, PanelTheme[UiPaletteRole.Foreground], UiFont.Small);
-        UsKernelDraw.Label(
-            new Rect(body.x, body.y + 28f, body.width, Mathf.Max(1f, body.height - 28f)),
-            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"),
-            PanelTheme, PanelTheme[UiPaletteRole.SecondaryForeground], UiFont.Tiny);
+        UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y, body.width, 24f)), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"), PanelTheme, PanelTheme[UiPaletteRole.Foreground], UiFont.Small);
+        UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y + 28f, body.width, Mathf.Max(1f, body.height - 28f))), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"), PanelTheme, PanelTheme[UiPaletteRole.SecondaryForeground], UiFont.Tiny);
     }
 
 
@@ -291,8 +286,8 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         + "    </Row>"
         + "    <Widget Id=\"dev-target\" Kind=\"input/dropdown\" Bind=\"dev-target\" OptionsBind=\"dev-target-options\" LabelKey=\"US.DevPanel.Target\" Height=\"26\" />"
         + "    <Row Id=\"dev-toggles\" Gap=\"8\" Padding=\"0\">"
-        + "      <Widget Id=\"dev-capture-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-capture-toggle\" SelectedKey=\"dev-capture\" LabelKey=\"US.DevPanel.Capture\" Width=\"Auto\" Height=\"30\" />"
-        + "      <Widget Id=\"dev-outline-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-outline-toggle\" SelectedKey=\"dev-outline\" LabelKey=\"US.DevPanel.Outline\" Width=\"Auto\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-capture-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-capture-toggle\" SelectedBind=\"dev-capture\" LabelKey=\"US.DevPanel.Capture\" Width=\"Auto\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-outline-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-outline-toggle\" SelectedBind=\"dev-outline\" LabelKey=\"US.DevPanel.Outline\" Width=\"Auto\" Height=\"30\" />"
         + "    </Row>"
         + "    <Row Id=\"dev-report-row\" Gap=\"8\" Padding=\"0\">"
         + "      <Widget Id=\"dev-report\" Kind=\"input/button\" TextKey=\"US.DevPanel.Report\" ActionBind=\"dev-report\" Width=\"120\" Height=\"26\" />"
@@ -308,11 +303,11 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     {
         public string TargetKey = "settings";
 
-        /// <summary>The dropdown kind's options contract is UiOption pairs (display, value).</summary>
-        public IReadOnlyList<UiOption> Targets => new[]
+        /// <summary>The dropdown kind's options contract is <c>UiChoice&lt;string&gt;</c> pairs (display, value).</summary>
+        public IReadOnlyList<UiChoice<string>> Targets => new[]
         {
-            new UiOption(Translator.Translate("US.DevPanel.Target.Settings"), "settings"),
-            new UiOption(Translator.Translate("US.DevPanel.Target.Dialog"), "dialog"),
+            new UiChoice<string>(Translator.Translate("US.DevPanel.Target.Settings"), "settings"),
+            new UiChoice<string>(Translator.Translate("US.DevPanel.Target.Dialog"), "dialog"),
         };
 
         public string TargetLabel => TargetKey == "dialog"
@@ -330,7 +325,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         {
             UiHost? settings = UsDevPanelTargets.SettingsHost;
             if (settings != null
-                && settings.Bindings.TryGet(UiBindings.ActiveTabKey, out string tab)
+                && settings.Bindings.TryGet(UiBindings.ActiveTabBind, out string tab)
                 && tab != null && tab.Length > 0)
             {
                 return tab;

@@ -63,6 +63,6 @@ US的统一底部面板保留当前话题与section概述，流程为：
 | `SectionHelpKeyOf`／`SectionHelpKey`／`help-section-key` | `SectionHelpRefOf`／`SectionHelpRef`／`help-section-ref` |
 | Resolve的`helpHoverKey` | `currentHelpRef`；包括session的有效grace，不是本帧原始命中 |
 
-本包仍使用固定FL **fc010bd/A002**。该包实际的XML `HelpKey`、`VisibleKey`等属性与 `HoverClaim / ClaimHover / HoverGraceFrames / BeginFrame`接口继续使用；尚未切到新FL词汇。其UiChoice只有Text/Value，不能在本包假装已经有新HelpRef字段或新省略语义。后续固定包放行时才迁 `HelpRef / CurrentHelpRef / CurrentHelpSource / PublishHelp / HelpGracePasses / BeginHelpPass / HoveredOptionHelpOutputBind / ActiveTabBind`等实际签名及Bind后缀；本次不建兼容双轨。
+本包实际消费固定 FL **7eb8073 final**。XML／API 已迁至 `HelpRef / CurrentHelpRef / CurrentHelpSource / PublishHelp / HelpGracePasses / BeginHelpPass / ActiveTabBind` 与真实 binding 的 `*Bind` 后缀。`UiChoice<T>.HelpRef` 为空时不发布专属帮助；统一面板直接读 session，不要求可选 `HoveredOptionHelpOutputBind`。注册仍由 `UiBindings` 完成，访问／代理使用完整 `IUiBindingAccess`。新中立执行器、typed choices、项地址和生命周期用法见[固定消费者导读](fl08-consumer-migration-zh.md)，不保旧签名双轨。
 
 这些更正不改变全部15合同、CoreWork清单、已裁Select／Eat参数、单主体owner或同步四回执；普通政策、真实Config/Scribe、原生图像／声音和逐包双人工关口保持原状态。

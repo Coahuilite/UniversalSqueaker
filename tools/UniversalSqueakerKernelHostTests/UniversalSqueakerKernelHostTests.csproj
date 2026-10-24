@@ -39,6 +39,11 @@
   </Target>
 
   <ItemGroup>
+    <!-- Root fixtures using fc010bd's removed private hooks are retained, not counted as current
+         coverage. Current/ migrates the affected capabilities through public Execution; DbEat/DC
+         Select retain their original assertions. See docs/fl08-consumer-migration-zh.md for limits. -->
+    <Compile Remove="*.cs" />
+    <Compile Include="RecordingSettingsSource.cs;RecordingOverlaySource.cs;DbEatUiTests.cs;DcSelectUiTests.cs" />
     <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
     <Reference Include="UniversalSqueaker">
       <HintPath>$(UsProductArtifactPath)</HintPath>

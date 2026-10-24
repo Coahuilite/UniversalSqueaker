@@ -15,7 +15,7 @@ namespace UniversalSqueaker.UI;
 /// moved into the manifest's fixed header band in step S3-2a (`header-band` holding `help-toggle`, an
 /// `input/button` with an `ActionBind`), and BH1 (2026-10-05) moved it ONCE MORE, into the footer band
 /// beside the status row it now opens space above. The toggle must not scroll away with the workspace
-/// content, and a declared element is where the engine-level `HelpKey` claims the catalog item
+/// content, and a declared element is where the engine-level `HelpRef` claims the catalog item
 /// `us/page-title/help-drawer` with no per-widget code at all - the claim moved with the control. This
 /// widget is a read/measure surface again: it resolves the heading and measures its two bands.
 /// </para>
@@ -33,22 +33,18 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsPageTitleWidget(),
-            new[] { "Id", "Kind", "Tab", "Hidden" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsPageTitleWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec spec)
     {
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         // The heading is resolved from the active workspace, so that binding must exist. The widget
         // writes nothing: the drawer's visibility belongs to the manifest's header button now.
-        bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
+        bindings.ValidateValue<string>(UiBindings.ActiveTabBind, elementPath);
     }
 
     /// <summary>
@@ -75,34 +71,34 @@ public sealed class UsPageTitleWidget : IUiWidget
         return worst;
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
         (string title, string caption) = ResolveHeading(ctx);
 
         // Measure and Draw share this ONE width. The fit audit compares the band Measure allocated
         // against the band Draw painted, so both lines must be shortened by exactly the same amount.
-        float textWidth = TextBandWidth(rect.width);
+        float textWidth = TextBandWidth(rect.Width);
         float titleHeight = TitleBand(textWidth, ctx, title);
-        float captionTop = rect.y + titleHeight + CaptionGap;
+        float captionTop = rect.Y + titleHeight + CaptionGap;
         float captionHeight = CaptionBand(textWidth, ctx, caption);
 
-        UiThemeDraw.SectionBand(rect, ctx.Theme);
-        UsKernelDraw.Label(
-            new Rect(rect.x + TextLeftInset, rect.y, textWidth, titleHeight),
+        UiThemeDraw.SectionBand(ctx.Drawing, rect, ctx.Theme);
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + TextLeftInset, rect.Y, textWidth, titleHeight),
             title,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Medium,
-            TextAnchor.MiddleLeft);
-        UsKernelDraw.Label(
-            new Rect(rect.x + TextLeftInset, captionTop, textWidth, captionHeight),
+            UiTextAnchor.MiddleLeft);
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + TextLeftInset, captionTop, textWidth, captionHeight),
             caption,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
-            TextAnchor.UpperLeft);
+            UiTextAnchor.UpperLeft);
     }
 
     /// <summary>The shared text band: the widget's width minus the left inset.</summary>
@@ -156,7 +152,7 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     private static (string Title, string Caption) ResolveHeading(UiWidgetContext ctx)
     {
-        ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
+        ctx.Bindings.TryGet(UiBindings.ActiveTabBind, out string activeTab);
         (string titleKey, string captionKey) = HeadingKeyFor(activeTab);
         return (ctx.Translation.Translate(titleKey), ctx.Translation.Translate(captionKey));
     }

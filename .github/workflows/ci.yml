@@ -3,7 +3,7 @@ name: CI
 # Push/PR check for Universal Squeaker on a clean checkout. US compiles against the FerriteLib
 # carrier (coahuilite.ferritelib) by a sibling relative path and never ships its copy, so the
 # runner must reproduce that sibling layout before the gates run. A green run here means US is
-# internally sound against a freshly built carrier, not that the carrier itself is sound (that is
+# internally sound against the selected published carrier, not that the carrier itself is sound (that is
 # the carrier repo's own CI).
 
 on:
@@ -30,15 +30,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The carrier source checkout, pinned at the release tag - NEVER the default branch. It provides
+      - name: Require approved FerriteLib 0.8 release coordinates
+        shell: pwsh
+        env:
+          FL_CARRIER_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
+          FL_CARRIER_TAG: ${{ vars.FERRITELIB_CARRIER_TAG }}
+          FL_CARRIER_COMMIT: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
+        run: ./scripts/require-ferritelib-ci-input.ps1
+
+      # The carrier source checkout, pinned at the approved full commit - NEVER the default branch. It provides
       # the harness support the sibling tree must carry (the stub-coverage scanner and the licence) and
       # the commit gate 6 pairs the payload against. The repository name is a build contract: it must
       # equal the carrier repo's real GitHub name, which the maintainer fixes when creating it.
-      - name: Checkout the FerriteLib carrier source at the pinned release tag
+      - name: Checkout the approved FerriteLib carrier commit
         uses: actions/checkout@v4
         with:
-          repository: Coahuilite/FerriteLib
-          ref: v0.7.0-rc1
+          repository: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
+          ref: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
           path: ci-ferritelib
 
       - name: Setup .NET
@@ -65,8 +73,12 @@ jobs:
       # commit paired against the pinned checkout) - a second FerriteLib runtime build would be a second
       # carrier that binds by load order through the game's global AssemblyResolve with no detector for the
       # loser. The helper stages the verified DLL exactly where HintPath looks.
-      - name: Acquire the FerriteLib release carrier (v0.7.0-rc1) and stage the sibling tree
+      - name: Acquire the FerriteLib release carrier (approved 0.8 coordinates) and stage the sibling tree
         shell: pwsh
+        env:
+          FL_CARRIER_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
+          FL_CARRIER_TAG: ${{ vars.FERRITELIB_CARRIER_TAG }}
+          FL_CARRIER_COMMIT: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
         run: |
           $ErrorActionPreference = 'Stop'
           $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
@@ -74,7 +86,9 @@ jobs:
           Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
             Where-Object { $_.Name -ne '.git' } |
             Copy-Item -Destination $sibling -Recurse -Force
-          ./scripts/acquire-ferritelib-carrier.ps1 -Repo 'Coahuilite/FerriteLib' -Tag 'v0.7.0-rc1' -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
+          $head = (git -C ci-ferritelib rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $head -cne $env:FL_CARRIER_COMMIT) { throw 'Pinned FerriteLib checkout identity differs.' }
+          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
           # US never authors or builds the carrier: nothing in this workflow writes into ci-ferritelib/.
 
       - name: Restore

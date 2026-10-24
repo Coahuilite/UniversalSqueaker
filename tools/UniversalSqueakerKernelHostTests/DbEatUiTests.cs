@@ -33,15 +33,15 @@ internal static class DbEatUiTests
                     var source = new RecordingSettingsSource { RichData = true };
                     using var host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
                     host.Bindings.Invoke("set-tab", "Tuning");
-                    var snapshot = host.MeasureAndArrange(new Vector2(width, 900));
+                    var snapshot = host.MeasureAndArrange(new UiLayoutPoint(width, 900));
                     foreach (string axis in new[] { "eat", "eat-nutrition", "eat-drug" })
                     {
-                        Check(snapshot.RectById.TryGetValue("basic-" + axis + "-choice", out var bounds) && bounds.width > 100 && bounds.height >= 26,
+                        Check(snapshot.RectById.TryGetValue("basic-" + axis + "-choice", out var bounds) && bounds.Width > 100 && bounds.Height >= 26,
                             language + "/" + width + " arranges usable independent dropdown " + axis);
                         Console.WriteLine("DB Eat UI " + language + "/" + width + " basic-" + axis + "-choice=" + bounds);
                     }
                     CheckBindings(host, source);
-                    host.DrawChecked(new Rect(0, 0, width, 900));
+                    host.DrawChecked(new UiLayoutRect(0, 0, width, 900));
                 }
             }
             finally { Program.SetTranslatorResolver(null); }

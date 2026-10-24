@@ -20,18 +20,14 @@ public sealed class UsCameraReadoutWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            KindName,
-            () => new UsCameraReadoutWidget(),
-            new[] { "Id", "Kind", "Hidden", "Tab" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsCameraReadoutWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean), new UiAttributeDefinition("Tab"))));
     }
 
     public void Configure(UiElementSpec spec)
     {
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<string>("camera-readout", elementPath);
     }
@@ -41,11 +37,11 @@ public sealed class UsCameraReadoutWidget : IUiWidget
         return RowHeight;
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
         if (!ctx.Bindings.TryGet("camera-readout", out string text) || text.Length == 0) return;
 
-        UsKernelDraw.Label(rect, text, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small, TextAnchor.UpperRight);
+        UsKernelDraw.Label(ctx.Drawing, rect, text, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small, UiTextAnchor.UpperRight);
     }
 }

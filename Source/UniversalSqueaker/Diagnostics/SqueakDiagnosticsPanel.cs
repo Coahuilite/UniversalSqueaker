@@ -155,10 +155,10 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         }
 
         // The responsive decision is fed BEFORE this pass's layout: the source derives the narrow
-        // presentation from the width the shell is about to arrange in, so the page's two VisibleKey
+        // presentation from the width the shell is about to arrange in, so the page's two VisibleBind
         // presentations and the engine's own Breakpoint evaluation read one coordinate space. The same
         // call moves the layout clock when the width crossed the presentation threshold, because a
-        // read-only VisibleKey binding announces no revision of its own. Host is null on the first
+        // read-only VisibleBind binding announces no revision of its own. Host is null on the first
         // pass (chrome draws before the shell creates one); the width is still recorded.
         UsDiagnosticsHost.ApplyContentWidth(source, Host, contentRect.width);
 
@@ -274,18 +274,12 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     /// <summary>Terminal notices in US's own vocabulary (the library ships zero strings).</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(Execution, VerseUiExecution.Rect(rect), WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(24f);
         bool prerequisite = notice == UiWindowNotice.Prerequisite;
 
-        UsKernelDraw.Label(
-            new Rect(body.x, body.y, body.width, 30f),
-            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"),
-            WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
-        UsKernelDraw.Label(
-            new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
-            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"),
-            WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
+        UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y, body.width, 30f)), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"), WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
+        UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f))), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"), WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
     }
 
     /// <summary>Plain log line, deliberately NOT a usdiag protocol event: the frozen vocabulary

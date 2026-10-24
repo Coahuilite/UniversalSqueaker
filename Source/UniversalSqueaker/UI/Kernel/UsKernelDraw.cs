@@ -8,12 +8,12 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Visual helpers for kernel-owned US composite widgets. These are drawing helpers only; input
-/// authority stays with native IMGUI controls through <see cref="UiNative"/>. All global GUI state
+/// authority stays with the Host interaction session through <see cref="UiControls"/>. Native GUI state
 /// (color/font/anchor) is restored before returning.
 ///
 /// Text contract: every <c>text</c>/<c>label</c>/<c>title</c> parameter here is already-resolved
-/// display text. Only <see cref="Dropdown"/> sees a <see cref="UiWidgetContext"/>, and even it
-/// resolves nothing — option pairs arrive as (display, value) with the display decided by the
+/// display text. Input helpers receive a <see cref="UiWidgetContext"/> and
+/// resolve nothing — option pairs arrive as (display, value) with the display decided by the
 /// caller. That is deliberate: the helpers carry no key knowledge, so a string is resolved exactly
 /// once at the site that owns it (see <see cref="Keyed"/>), never once for Measure and again for
 /// Draw.
@@ -59,9 +59,9 @@ public static class UsKernelDraw
 
     /// <summary>Compatibility overload for the call sites whose state is a plain selected flag. It maps
     /// onto RowRail.Selected and nothing else, so a caller that means the current object says so by name.</summary>
-    public static void RowSurface(Rect rect, UiTheme theme, bool hovered, bool selected, bool danger = false)
+    public static void RowSurface(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, bool hovered, bool selected, bool danger = false)
     {
-        RowSurface(rect, theme, hovered, selected ? RowRail.Selected : RowRail.None, danger);
+        RowSurface(drawing, rect, theme, hovered, selected ? RowRail.Selected : RowRail.None, danger);
     }
 
     /// <summary>
@@ -77,53 +77,53 @@ public static class UsKernelDraw
     /// mark in the status cell on a row that is also selected.
     /// </para>
     /// </summary>
-    public static void RowSurface(Rect rect, UiTheme theme, bool hovered, RowRail rail, bool danger = false)
+    public static void RowSurface(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, bool hovered, RowRail rail, bool danger = false)
     {
         bool selected = rail == RowRail.Selected || rail == RowRail.CurrentAndSelected;
         // theme.Danger, not theme.Warning: the two hold identical bytes today (Warning is the carrier's
         // pre-0.4 redirect onto Danger), and reading the destructive fill through the alias is how a
         // future Warning assignment would silently repaint every danger row. Same pixels, honest name.
-        Color fill = danger ? theme[UiPaletteRole.DangerSurface]
+        UiColour fill = danger ? theme[UiPaletteRole.DangerSurface]
             : selected ? theme[UiPaletteRole.SelectedSurface]
             : hovered ? theme[UiPaletteRole.HoverSurface]
             : theme[UiPaletteRole.ControlSurface];
 
-        Color border = danger ? theme[UiPaletteRole.DangerSurface] : theme[UiPaletteRole.Border];
-        UiThemeDraw.Surface(rect, theme, fill, border);
+        UiColour border = danger ? theme[UiPaletteRole.DangerSurface] : theme[UiPaletteRole.Border];
+        UiThemeDraw.Surface(drawing, rect, theme, fill, border);
 
         // The hatch ink is a plane token one step darker than the row (the spec's stripe is #1b1f27 over
         // #1f232c, which lands on s1 in this table) - never a new colour.
         if (rail == RowRail.Disabled)
         {
-            Hatch(rect, theme[UiPaletteRole.PanelSurface], RowHatchPitch);
+            Hatch(drawing, rect, theme[UiPaletteRole.PanelSurface], RowHatchPitch);
         }
 
         // Rails last, so the plane's edge cannot paint over them, and the dim rail before the accent one so
         // the accent stays the innermost mark in the dual state.
         if (rail == RowRail.CurrentAndSelected)
         {
-            UiThemeDraw.Solid(LeftRail(rect, CurrentAndSelectedOuterWidth), theme[UiPaletteRole.SecondaryForeground]);
-            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme[UiPaletteRole.Accent]);
+            UiThemeDraw.Solid(drawing, LeftRail(rect, CurrentAndSelectedOuterWidth), theme[UiPaletteRole.SecondaryForeground]);
+            UiThemeDraw.Solid(drawing, LeftRail(rect, RailWidth), theme[UiPaletteRole.Accent]);
         }
         else if (rail == RowRail.Selected)
         {
-            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme[UiPaletteRole.SecondaryForeground]);
+            UiThemeDraw.Solid(drawing, LeftRail(rect, RailWidth), theme[UiPaletteRole.SecondaryForeground]);
         }
         else if (rail == RowRail.Current)
         {
-            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme[UiPaletteRole.Accent]);
+            UiThemeDraw.Solid(drawing, LeftRail(rect, RailWidth), theme[UiPaletteRole.Accent]);
         }
         else if (rail == RowRail.Attention)
         {
             // Thinner than either location rail (2px against 3px) and cyan, so a grey-scale screenshot
             // still keeps attention apart from "selected" and "current"; the fill above stays neutral.
-            UsAttention.Rail(rect, theme);
+            UsAttention.Rail(drawing, rect, theme);
         }
     }
 
-    private static Rect LeftRail(Rect rect, float width)
+    private static UiLayoutRect LeftRail(UiLayoutRect rect, float width)
     {
-        return new Rect(rect.x, rect.y, Mathf.Max(1f, Mathf.Min(width, rect.width)), rect.height);
+        return new UiLayoutRect(rect.X, rect.Y, Mathf.Max(1f, Mathf.Min(width, rect.Width)), rect.Height);
     }
 
     /// <summary>Diagonal hatching as 1px dashes stepped along the diagonal. The lab uses
@@ -131,59 +131,59 @@ public static class UsKernelDraw
     /// one fill primitive - an axis-aligned rect (UiThemeDraw.Solid, deliberately, so the backend contact
     /// stays gateable) - and a gradient needs a texture asset. The staircase keeps the pitch, the 45-degree
     /// direction and the darker-than-the-plane relationship, which is what the grey-scale reading needs.</summary>
-    public static void Hatch(Rect rect, Color ink, float pitch)
+    public static void Hatch(IUiDrawing drawing, UiLayoutRect rect, UiColour ink, float pitch)
     {
-        if (rect.width <= 0f || rect.height <= 0f || pitch <= 0f) return;
+        if (rect.Width <= 0f || rect.Height <= 0f || pitch <= 0f) return;
         float step = Mathf.Max(2f, pitch);
-        for (float offset = -rect.height; offset < rect.width; offset += step * 2f)
+        for (float offset = -rect.Height; offset < rect.Width; offset += step * 2f)
         {
-            for (float y = 0f; y < rect.height; y += step)
+            for (float y = 0f; y < rect.Height; y += step)
             {
-                float start = rect.x + offset + y;
-                float left = Mathf.Max(rect.x, start);
-                float right = Mathf.Min(rect.xMax, start + step);
+                float start = rect.X + offset + y;
+                float left = Mathf.Max(rect.X, start);
+                float right = Mathf.Min(rect.XMax, start + step);
                 if (right - left <= 0f) continue;
-                UiThemeDraw.Solid(new Rect(left, rect.y + y, right - left, 1f), ink);
+                UiThemeDraw.Solid(drawing, new UiLayoutRect(left, rect.Y + y, right - left, 1f), ink);
             }
         }
     }
 
     /// <summary>One effect shape in a square cell (spec 1.6). Colour carries only "should I act"; the shape
     /// carries which state, which is what makes the four survive a grey-scale screenshot.</summary>
-    public static void DrawStateShape(Rect rect, UiTheme theme, StateShape shape)
+    public static void DrawStateShape(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, StateShape shape)
     {
         switch (shape)
         {
             case StateShape.InEffect:
-                Disc(rect, theme[UiPaletteRole.Foreground]);
+                Disc(drawing, rect, theme[UiPaletteRole.Foreground]);
                 break;
             case StateShape.Unavailable:
-                UiThemeDraw.Surface(rect, theme, Color.clear, theme[UiPaletteRole.SecondaryForeground]);
-                Hatch(
-                    new Rect(rect.x + 1f, rect.y + 1f, Mathf.Max(1f, rect.width - 2f), Mathf.Max(1f, rect.height - 2f)),
+                UiThemeDraw.Surface(drawing, rect, theme, default(UiColour), theme[UiPaletteRole.SecondaryForeground]);
+                Hatch(drawing,
+                    new UiLayoutRect(rect.X + 1f, rect.Y + 1f, Mathf.Max(1f, rect.Width - 2f), Mathf.Max(1f, rect.Height - 2f)),
                     theme[UiPaletteRole.PanelSurface],
                     ShapeHatchPitch);
                 break;
             case StateShape.Inherited:
-                DottedCircle(rect, theme[UiPaletteRole.Foreground]);
+                DottedCircle(drawing, rect, theme[UiPaletteRole.Foreground]);
                 break;
             case StateShape.Overridden:
-                Disc(rect, theme[UiPaletteRole.Foreground]);
-                Ring(rect, theme[UiPaletteRole.Accent], 2f);
+                Disc(drawing, rect, theme[UiPaletteRole.Foreground]);
+                Ring(drawing, rect, theme[UiPaletteRole.Accent], 2f);
                 break;
         }
     }
 
     /// <summary>Scanline disc: one rect per row, so the shape is exact at any cell size.</summary>
-    private static void Disc(Rect rect, Color ink)
+    private static void Disc(IUiDrawing drawing, UiLayoutRect rect, UiColour ink)
     {
-        float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
-        float centreX = rect.x + rect.width * 0.5f;
-        float centreY = rect.y + rect.height * 0.5f;
-        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.height));
+        float radius = Mathf.Min(rect.Width, rect.Height) * 0.5f;
+        float centreX = rect.X + rect.Width * 0.5f;
+        float centreY = rect.Y + rect.Height * 0.5f;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.Height));
         for (int i = 0; i < rows; i++)
         {
-            float y = rect.y + i;
+            float y = rect.Y + i;
             float dy = y + 0.5f - centreY;
             // System.Math rather than Mathf.Sqrt: the harness's Unity stub does not declare Mathf.Sqrt, and
             // the trip guard caught exactly that (2026-09-12) - a consumer-side call to a member the double
@@ -191,48 +191,48 @@ public static class UsKernelDraw
             // carrier instead of being papered over.
             float half = (float)Math.Sqrt(Mathf.Max(0f, radius * radius - dy * dy));
             if (half <= 0.05f) continue;
-            UiThemeDraw.Solid(new Rect(centreX - half, y, half * 2f, 1f), ink);
+            UiThemeDraw.Solid(drawing, new UiLayoutRect(centreX - half, y, half * 2f, 1f), ink);
         }
     }
 
     /// <summary>Outline ring of the requested thickness around the same disc.</summary>
-    private static void Ring(Rect rect, Color ink, float thickness)
+    private static void Ring(IUiDrawing drawing, UiLayoutRect rect, UiColour ink, float thickness)
     {
-        float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
+        float radius = Mathf.Min(rect.Width, rect.Height) * 0.5f;
         float inner = Mathf.Max(0f, radius - thickness);
-        float centreX = rect.x + rect.width * 0.5f;
-        float centreY = rect.y + rect.height * 0.5f;
-        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.height));
+        float centreX = rect.X + rect.Width * 0.5f;
+        float centreY = rect.Y + rect.Height * 0.5f;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.Height));
         for (int i = 0; i < rows; i++)
         {
-            float y = rect.y + i;
+            float y = rect.Y + i;
             float dy = y + 0.5f - centreY;
             float outerHalf = (float)Math.Sqrt(Mathf.Max(0f, radius * radius - dy * dy));
             if (outerHalf <= 0.05f) continue;
             float innerHalf = (float)Math.Sqrt(Mathf.Max(0f, inner * inner - dy * dy));
             float band = Mathf.Max(1f, outerHalf - innerHalf);
-            UiThemeDraw.Solid(new Rect(centreX - outerHalf, y, band, 1f), ink);
+            UiThemeDraw.Solid(drawing, new UiLayoutRect(centreX - outerHalf, y, band, 1f), ink);
             if (innerHalf > 0.05f)
             {
-                UiThemeDraw.Solid(new Rect(centreX + innerHalf, y, band, 1f), ink);
+                UiThemeDraw.Solid(drawing, new UiLayoutRect(centreX + innerHalf, y, band, 1f), ink);
             }
         }
     }
 
     /// <summary>A dotted circle outline: short marks around the perimeter with every other step skipped,
     /// which is the closest an axis-aligned fill gets to the spec's dashed ring at a 10px cell.</summary>
-    private static void DottedCircle(Rect rect, Color ink)
+    private static void DottedCircle(IUiDrawing drawing, UiLayoutRect rect, UiColour ink)
     {
-        float radius = Mathf.Max(0.5f, Mathf.Min(rect.width, rect.height) * 0.5f - 1f);
-        float centreX = rect.x + rect.width * 0.5f;
-        float centreY = rect.y + rect.height * 0.5f;
+        float radius = Mathf.Max(0.5f, Mathf.Min(rect.Width, rect.Height) * 0.5f - 1f);
+        float centreX = rect.X + rect.Width * 0.5f;
+        float centreY = rect.Y + rect.Height * 0.5f;
         const int Steps = 20;
         for (int i = 0; i < Steps; i += 2)
         {
             double angle = Math.PI * 2.0 * i / Steps;
             float x = centreX + (float)(Math.Cos(angle) * radius);
             float y = centreY + (float)(Math.Sin(angle) * radius);
-            UiThemeDraw.Solid(new Rect(x, y, 2f, 1f), ink);
+            UiThemeDraw.Solid(drawing, new UiLayoutRect(x, y, 2f, 1f), ink);
         }
     }
 
@@ -257,16 +257,16 @@ public static class UsKernelDraw
 
     /// <summary>
     /// The one placement rule for a checkbox in a row: the 18px visual box is the box the player sees, so
-    /// IT is what terminates on the shared control-column right edge (<see cref="ControlColumnRect(Rect)"/>)
+    /// IT is what terminates on the shared control-column right edge (<see cref="ControlColumnRect(UiLayoutRect)"/>)
     /// - a checkbox and the segmented control agree to the pixel. The 24px hit box is centred on the visual
     /// (3px of pointer slack per side) and is vertically centred in the row. Every call site goes through
     /// this, which is what replaced four different hand-picked vertical offsets.
     /// </summary>
-    public static Rect CheckboxSlot(Rect row)
+    public static UiLayoutRect CheckboxSlot(UiLayoutRect row)
     {
-        return new Rect(
-            row.xMax - CheckboxRightInset,
-            row.y + (row.height - CheckboxHit) * 0.5f,
+        return new UiLayoutRect(
+            row.XMax - CheckboxRightInset,
+            row.Y + (row.Height - CheckboxHit) * 0.5f,
             CheckboxHit,
             CheckboxHit);
     }
@@ -274,40 +274,40 @@ public static class UsKernelDraw
     /// <summary>
     /// Draws the checkbox and reports the click: <paramref name="hitRect"/> is the 24px slot from
     /// <see cref="CheckboxSlot"/>, the visual is drawn inset 3 inside it. The hit goes through
-    /// <see cref="UiNative.Button(Rect, UiWidgetContext)"/>, so an open popup keeps the click.
+    /// <see cref="UiControls"/>, so an open popup keeps the click.
     /// <para>
     /// The caller must take this hit band OUT of any row button behind it: two overlapping IMGUI buttons
     /// both report the same click, and one press would toggle twice.
     /// </para>
     /// </summary>
-    public static bool Checkbox(Rect hitRect, UiWidgetContext ctx, bool value)
+    public static bool Checkbox(UiLayoutRect hitRect, UiWidgetContext ctx, bool value)
     {
-        CheckboxSurface(
-            new Rect(hitRect.x + CheckboxInset, hitRect.y + CheckboxInset, CheckboxVisual, CheckboxVisual),
+        CheckboxSurface(ctx.Drawing,
+            new UiLayoutRect(hitRect.X + CheckboxInset, hitRect.Y + CheckboxInset, CheckboxVisual, CheckboxVisual),
             ctx.Theme,
             value);
-        return UiNative.Button(hitRect, ctx);
+        return ctx.Controls.Button(hitRect, ctx);
     }
 
     /// <summary>Draw-only checkbox, for read-only indicators (the camera indicator): no hit band, no click.</summary>
-    public static void Checkbox(Rect rect, UiTheme theme, bool value)
+    public static void Checkbox(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, bool value)
     {
-        CheckboxSurface(rect, theme, value);
+        CheckboxSurface(drawing, rect, theme, value);
     }
 
-    private static void CheckboxSurface(Rect rect, UiTheme theme, bool value)
+    private static void CheckboxSurface(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, bool value)
     {
-        UiThemeDraw.Surface(rect, theme, theme[UiPaletteRole.ControlSurface], theme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(drawing, rect, theme, theme[UiPaletteRole.ControlSurface], theme[UiPaletteRole.Border]);
 
         // Radius 2, expressed the only way this library can: the outline's four 2px corner cells are
         // repainted with the box's own plane, so the border stops short of each corner. A real rounded
         // corner needs a primitive the backend contact does not expose (UiThemeDraw has exactly one fill -
         // an axis-aligned rect - on purpose, so the contact stays gateable).
-        float cut = Mathf.Min(CheckboxCornerCut, Mathf.Min(rect.width, rect.height) * 0.25f);
-        UiThemeDraw.Solid(new Rect(rect.x, rect.y, cut, cut), theme[UiPaletteRole.ControlSurface]);
-        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.y, cut, cut), theme[UiPaletteRole.ControlSurface]);
-        UiThemeDraw.Solid(new Rect(rect.x, rect.yMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
-        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.yMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        float cut = Mathf.Min(CheckboxCornerCut, Mathf.Min(rect.Width, rect.Height) * 0.25f);
+        UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.X, rect.Y, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.XMax - cut, rect.Y, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.X, rect.YMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.XMax - cut, rect.YMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
 
         if (!value) return;
 
@@ -315,23 +315,23 @@ public static class UsKernelDraw
         // checked box is an ink-solid square with a check mark in the border colour, and the accent would
         // put a fourth accent on every screen that has a checkbox. The lane pins that this fill is the ink
         // token and that no accent colour is painted with it.
-        Rect ink = new Rect(rect.x + 3f, rect.y + 3f, Mathf.Max(1f, rect.width - 6f), Mathf.Max(1f, rect.height - 6f));
-        UiThemeDraw.Surface(ink, theme, theme[UiPaletteRole.Foreground], theme[UiPaletteRole.Foreground]);
-        CheckMark(new Rect(ink.x + 1f, ink.y + 1f, Mathf.Max(1f, ink.width - 2f), Mathf.Max(1f, ink.height - 2f)), theme[UiPaletteRole.Border]);
+        UiLayoutRect ink = new UiLayoutRect(rect.X + 3f, rect.Y + 3f, Mathf.Max(1f, rect.Width - 6f), Mathf.Max(1f, rect.Height - 6f));
+        UiThemeDraw.Surface(drawing, ink, theme, theme[UiPaletteRole.Foreground], theme[UiPaletteRole.Foreground]);
+        CheckMark(drawing, new UiLayoutRect(ink.X + 1f, ink.Y + 1f, Mathf.Max(1f, ink.Width - 2f), Mathf.Max(1f, ink.Height - 2f)), theme[UiPaletteRole.Border]);
     }
 
     /// <summary>The spec's border-coloured check mark. The library has no line primitive, so each stroke is
     /// a staircase of 2px cells - the same explicit-approximation口径 as <see cref="Hatch"/>: two straight
     /// strokes of different lengths at 45 degrees, not a curve.</summary>
-    private static void CheckMark(Rect box, Color ink)
+    private static void CheckMark(IUiDrawing drawing, UiLayoutRect box, UiColour ink)
     {
         const float cell = 2f;
-        float midX = box.x + box.width * 0.4f;
-        Stroke(box.x, box.y + box.height * 0.5f, midX, box.yMax, cell, ink);
-        Stroke(midX, box.yMax, box.xMax, box.y, cell, ink);
+        float midX = box.X + box.Width * 0.4f;
+        Stroke(drawing, box.X, box.Y + box.Height * 0.5f, midX, box.YMax, cell, ink);
+        Stroke(drawing, midX, box.YMax, box.XMax, box.Y, cell, ink);
     }
 
-    private static void Stroke(float x0, float y0, float x1, float y1, float cell, Color ink)
+    private static void Stroke(IUiDrawing drawing, float x0, float y0, float x1, float y1, float cell, UiColour ink)
     {
         float dx = x1 - x0;
         float dy = y1 - y0;
@@ -339,7 +339,7 @@ public static class UsKernelDraw
         for (int i = 0; i <= steps; i++)
         {
             float t = i / (float)steps;
-            UiThemeDraw.Solid(new Rect(x0 + dx * t, y0 + dy * t, cell, cell), ink);
+            UiThemeDraw.Solid(drawing, new UiLayoutRect(x0 + dx * t, y0 + dy * t, cell, cell), ink);
         }
     }
 
@@ -356,18 +356,18 @@ public static class UsKernelDraw
 
     /// <summary>The hit band of a row: the row is hit at 24px even when its visual is 20px (dense), so the
     /// band is centred on the visual row and may extend past it.</summary>
-    public static Rect RowHitRect(Rect row, UiWidgetContext ctx)
+    public static UiLayoutRect RowHitRect(UiLayoutRect row, UiWidgetContext ctx)
     {
         float hit = RowHitHeight(ctx);
-        return new Rect(row.x, row.y + (row.height - hit) * 0.5f, row.width, hit);
+        return new UiLayoutRect(row.X, row.Y + (row.Height - hit) * 0.5f, row.Width, hit);
     }
 
     /// <summary>The row's bottom rule: one hairline in the divider token, so a stack of rows reads as a
     /// list instead of a stack of boxes.</summary>
-    public static void RowBottomLine(Rect row, UiTheme theme)
+    public static void RowBottomLine(IUiDrawing drawing, UiLayoutRect row, UiTheme theme)
     {
         float hairline = Mathf.Max(1f, theme.Geometry.Hairline);
-        UiThemeDraw.Solid(new Rect(row.x, row.yMax - hairline, row.width, hairline), theme[UiPaletteRole.Divider]);
+        UiThemeDraw.Solid(drawing, new UiLayoutRect(row.X, row.YMax - hairline, row.Width, hairline), theme[UiPaletteRole.Divider]);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -410,11 +410,11 @@ public static class UsKernelDraw
     /// clamped to what the row can hold so no control is ever drawn outside its own row; the right edge
     /// never moves.
     /// </summary>
-    public static Rect ControlColumnRect(Rect row)
+    public static UiLayoutRect ControlColumnRect(UiLayoutRect row)
     {
-        float available = Mathf.Max(1f, row.width - RowLeftPadding - ControlColumnRightInset);
+        float available = Mathf.Max(1f, row.Width - RowLeftPadding - ControlColumnRightInset);
         float width = Mathf.Min(ControlColumnWidth, available);
-        return new Rect(row.xMax - ControlColumnRightInset - width, row.y, width, row.height);
+        return new UiLayoutRect(row.XMax - ControlColumnRightInset - width, row.Y, width, row.Height);
     }
 
     /// <summary>
@@ -428,12 +428,12 @@ public static class UsKernelDraw
         return Mathf.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset - column - ControlColumnLabelGap);
     }
 
-    public static float RowLabelWidth(Rect row) => RowLabelWidth(row.width);
+    public static float RowLabelWidth(UiLayoutRect row) => RowLabelWidth(row.Width);
 
     /// <summary>The row's label band: the remaining width, starting at the shared row text inset.</summary>
-    public static Rect RowLabelRect(Rect row, float height)
+    public static UiLayoutRect RowLabelRect(UiLayoutRect row, float height)
     {
-        return new Rect(row.x + RowLeftPadding, row.y, RowLabelWidth(row), height);
+        return new UiLayoutRect(row.X + RowLeftPadding, row.Y, RowLabelWidth(row), height);
     }
 
     /// <summary>
@@ -455,11 +455,11 @@ public static class UsKernelDraw
     }
 
     /// <summary>One equal-width segmented cell inside the control column.</summary>
-    public static Rect SegmentedCellRect(Rect column, int index, int count)
+    public static UiLayoutRect SegmentedCellRect(UiLayoutRect column, int index, int count)
     {
         if (count <= 0) return column;
-        float cell = SegmentedCellWidth(column.width, count);
-        return new Rect(column.x + index * (cell + SegmentedCellGap), column.y, cell, column.height);
+        float cell = SegmentedCellWidth(column.Width, count);
+        return new UiLayoutRect(column.X + index * (cell + SegmentedCellGap), column.Y, cell, column.Height);
     }
 
     /// <summary>Width of one equal segmented cell for a given column width.</summary>
@@ -484,7 +484,7 @@ public static class UsKernelDraw
     /// option index, or -1.
     /// </summary>
     public static int SegmentedRow(
-        Rect column,
+        UiLayoutRect column,
         UiWidgetContext ctx,
         IReadOnlyList<KeyValuePair<string, string>> options,
         int selectedIndex)
@@ -492,15 +492,15 @@ public static class UsKernelDraw
         if (options == null || options.Count == 0) return -1;
 
         int clicked = -1;
-        float labelWidth = SegmentedCellLabelWidth(column.width, options.Count);
+        float labelWidth = SegmentedCellLabelWidth(column.Width, options.Count);
         for (int i = 0; i < options.Count; i++)
         {
-            Rect cell = SegmentedCellRect(column, i, options.Count);
+            UiLayoutRect cell = SegmentedCellRect(column, i, options.Count);
             HelpHover(cell, ctx, options[i].Value);
             string display = labelWidth >= MinSegmentedLabelWidth
                 ? Ellipsized(options[i].Key ?? "", ctx, UiFont.Tiny, labelWidth)
                 : "";
-            if (SelectionButton(cell, ctx, display, ctx.Theme, i == selectedIndex))
+            if (SelectionButton(cell, ctx, display, ctx.Theme, i == selectedIndex, controlId: "segment", itemKey: options[i].Value))
             {
                 clicked = i;
             }
@@ -517,16 +517,16 @@ public static class UsKernelDraw
     /// Forwarded to the fitting audit. True for surfaces that must render on one line (dropdown trigger
     /// and option rows), where the real failure mode is a too-narrow rect rather than a too-short band.
     /// </param>
-    public static void Label(
-        Rect rect,
+    public static void Label(IUiDrawing drawing,
+        UiLayoutRect rect,
         string text,
         UiTheme theme,
-        Color? color = null,
+        UiColour? color = null,
         UiFont? font = null,
-        TextAnchor anchor = TextAnchor.MiddleLeft,
+        UiTextAnchor anchor = UiTextAnchor.MiddleLeft,
         bool singleLine = false)
     {
-        UiThemeDraw.Label(rect, text, theme, color ?? theme[UiPaletteRole.Foreground], font ?? UiFont.Small, anchor, singleLine);
+        UiThemeDraw.Label(drawing, rect, text, theme, color ?? theme[UiPaletteRole.Foreground], font ?? UiFont.Small, anchor, singleLine);
     }
 
     /// <summary>
@@ -543,60 +543,73 @@ public static class UsKernelDraw
 
     /// <summary>Context-bound overloads: widgets pass ctx once and the helper binds theme+seam.
     /// Same single outlet contract - the string arrives resolved, nothing is translated here.</summary>
-    public static void Label(Rect rect, string text, UiWidgetContext ctx, UiFont? font = null,
-        TextAnchor anchor = TextAnchor.MiddleLeft, bool singleLine = false)
-        => Label(rect, text, ctx.Theme, null, font, anchor, singleLine);
+    public static void Label(UiLayoutRect rect, string text, UiWidgetContext ctx, UiFont? font = null,
+        UiTextAnchor anchor = UiTextAnchor.MiddleLeft, bool singleLine = false)
+        => Label(ctx.Drawing, rect, text, ctx.Theme, null, font, anchor, singleLine);
 
-    public static void Label(Rect rect, string text, UiWidgetContext ctx, Color color, UiFont? font = null,
-        TextAnchor anchor = TextAnchor.MiddleLeft, bool singleLine = false)
-        => Label(rect, text, ctx.Theme, color, font, anchor, singleLine);
+    public static void Label(UiLayoutRect rect, string text, UiWidgetContext ctx, UiColour color, UiFont? font = null,
+        UiTextAnchor anchor = UiTextAnchor.MiddleLeft, bool singleLine = false)
+        => Label(ctx.Drawing, rect, text, ctx.Theme, color, font, anchor, singleLine);
+
+    /// <summary>A string search editor uses the same retained Live funnel as declarative text fields.</summary>
+    public static UiEditSession<string> LiveTextField(UiLayoutRect rect, UiWidgetContext ctx, string binding)
+    {
+        ctx = ctx.Child(binding); // One retained editor owner per declared binding.
+        string current = ctx.Bindings.Get<string>(binding) ?? "";
+        ctx.Controls.Edit(rect, ctx, binding, current, value => value, ParseText, live: true, multiline: false,
+            value => ctx.Bindings.Set(binding, value), () => ctx.Bindings.Get<string>(binding) ?? "");
+        return ctx.Controls.Editor<string>(ctx, binding, value => value, ParseText);
+    }
+
+    private static bool ParseText(string text, out string value) { value = text; return true; }
 
     /// <summary>
     /// The single outlet for claiming a control's help entry on hover (C+A model): while the pointer is
     /// over <paramref name="rect"/> the panel explains that entry; with no claim it falls back to the
     /// active section's overview. The claim is a per-pass transient owned by the session — FL P3's
-    /// <c>UiSession.ClaimHover</c>/<c>HoverClaim</c> machine runs its frame boundary inside
-    /// <c>DrawFrame</c> and holds a finished claim for <c>HoverGraceFrames</c> passes, so a control that
+    /// <c>UiSession.PublishHelp</c>/<c>CurrentHelpRef</c> machine runs its frame boundary inside
+    /// <c>DrawFrame</c> and holds a finished claim for <c>HelpGracePasses</c> passes, so a control that
     /// stops being hovered stops being shown without any cleanup of its own, and a pointer crossing the
     /// gap between two neighbours never flashes the overview. Widgets must call this from <c>Draw</c>
     /// with the rect they actually drew (scroll-local space is fine; the group translation stays honest
-    /// inside the pass because hover is read through <c>UiNative.IsMouseOver</c>).
+    /// inside the pass because hover is read through <c>ctx.Controls.IsMouseOver</c>).
     /// </summary>
     /// <returns>Whether the pointer is over the rect, so callers can reuse it for row highlighting.</returns>
-    public static bool HelpHover(Rect rect, UiWidgetContext ctx, string helpRef)
+    public static bool HelpHover(UiLayoutRect rect, UiWidgetContext ctx, string helpRef)
     {
-        bool hovered = UiNative.IsMouseOver(rect);
+        bool hovered = ctx.Controls.IsMouseOver(rect);
         if (hovered && !string.IsNullOrEmpty(helpRef))
         {
-            ctx.Session.ClaimHover(helpRef); // Fixed fc010bd spelling; a catalog reference, not translated text.
+            ctx.Session.PublishHelp(helpRef); // A catalog reference, not translated text.
         }
         return hovered;
     }
 
     /// <summary>
     /// Side inset of a selection button's label from its own rect. A caller that sizes a band for this
-    /// label must measure at <c>rect.width - SelectionButtonLabelInset * 2</c>, not at the rect width:
+    /// label must measure at <c>rect.Width - SelectionButtonLabelInset * 2</c>, not at the rect width:
     /// measuring the outer rect lets a label wrap at draw time inside a band sized for one line.
     /// </summary>
     public const float SelectionButtonLabelInset = 6f;
 
     /// <summary>
     /// Draws a selection-style button surface and returns whether it was clicked. The click goes through
-    /// <see cref="UiNative.Button(Rect, UiWidgetContext)"/>, so a control covered by an open popup yields
+    /// <see cref="UiControls"/>, so a control covered by an open popup yields
     /// the click to the popup instead of stealing it (FL api-tiers.md: the context-free overload is
-    /// outside the hit stack). Callers must hold a context; there is no reason to hand-roll the hit.
+    /// outside the hit stack). A composite with several controls must supply a stable action identity
+    /// and, where applicable, its business item key; labels and positions are not identities.
     /// </summary>
-    public static bool SelectionButton(Rect rect, UiWidgetContext ctx, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null)
+    public static bool SelectionButton(UiLayoutRect rect, UiWidgetContext ctx, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null, string controlId = "activation", object? itemKey = null)
     {
-        RowSurface(rect, theme, UiNative.IsMouseOver(rect), selected ? RowRail.Selected : RowRail.None, danger);
-        Label(
-            new Rect(rect.x + SelectionButtonLabelInset, rect.y, Mathf.Max(1f, rect.width - SelectionButtonLabelInset * 2f), rect.height),
+        RowSurface(ctx.Drawing, rect, theme, ctx.Controls.IsMouseOver(rect), selected ? RowRail.Selected : RowRail.None, danger);
+        Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + SelectionButtonLabelInset, rect.Y, Mathf.Max(1f, rect.Width - SelectionButtonLabelInset * 2f), rect.Height),
             label,
             theme,
             danger ? theme[UiPaletteRole.DangerForeground] : selected ? theme[UiPaletteRole.SelectedForeground] : theme[UiPaletteRole.Foreground],
             font ?? UiFont.Tiny,
-            TextAnchor.MiddleLeft);
-        return UiNative.Button(rect, ctx);
+            UiTextAnchor.MiddleLeft);
+        return ctx.Controls.Activation(rect, ctx, controlId, controlId, itemKey).Request;
     }
 
     /// <summary>
@@ -608,162 +621,60 @@ public static class UsKernelDraw
     /// </para>
     /// </summary>
     public static void Dropdown(
-        Rect rect,
-        string elementId,
-        UiWidgetContext ctx,
-        string current,
-        IReadOnlyList<KeyValuePair<string, string>> options,
-        Action<string> onSelected)
+        UiLayoutRect rect, string popupId, UiWidgetContext ctx, string current,
+        IReadOnlyList<KeyValuePair<string, string>> options, Action<string> onSelected)
     {
-        if (options.Count == 0) return;
-
-        // The display rule this form has always used: an option whose value OR label matches the current
-        // string shows that option's label. Preserved here rather than delegated, because the typed form
-        // deliberately matches by value only.
-        string display = current;
-        foreach (KeyValuePair<string, string> option in options)
-        {
-            if (string.Equals(option.Value, current, StringComparison.Ordinal)
-                || string.Equals(option.Key, current, StringComparison.Ordinal))
-            {
-                display = option.Key;
-                break;
-            }
-        }
-
-        DrawDropdownCore(rect, elementId, ctx, display, current, options, onSelected);
+        var choices = new UiChoice<string>[options.Count];
+        for (int i = 0; i < options.Count; i++)
+            choices[i] = new UiChoice<string>(options[i].Key, options[i].Value);
+        Dropdown(rect, popupId, ctx, current, choices, onSelected);
     }
 
-    /// <summary>
-    /// The TYPED form (R4-A): options carry the value itself, so <paramref name="onSelected"/> receives the
-    /// real instance and nothing in this path converts a value to or from a string. The trigger matches the
-    /// current value by its VALUE, never by its label, so the displayed label and the committed value stay
-    /// separate concerns.
-    /// </summary>
+    /// <summary>Actual values, labels and explicit topic references stay together through the popup.
+    /// Empty HelpRef means no option topic; it never guesses from value, label or row index.</summary>
     public static void Dropdown<T>(
-        Rect rect,
-        string elementId,
-        UiWidgetContext ctx,
-        T current,
-        IReadOnlyList<UiChoice<T>> choices,
-        Action<T> onSelected)
+        UiLayoutRect rect, string popupId, UiWidgetContext ctx, T current,
+        IReadOnlyList<UiChoice<T>> choices, Action<T> onSelected)
     {
         if (choices.Count == 0) return;
-
+        ctx = ctx.Child(popupId); // Distinct triggers must not share one interaction node.
         string display = "";
-        string currentIndex = "";
         for (int i = 0; i < choices.Count; i++)
-        {
             if (EqualityComparer<T>.Default.Equals(choices[i].Value, current))
             {
-                display = choices[i].Text;
-                currentIndex = i.ToString();
+                display = ChoiceText(choices[i], ctx);
                 break;
             }
-        }
-
-        // The row list FL draws is still string-payloaded, so the payload is the ROW INDEX: a row that is
-        // chosen maps straight back to its own choice. Matching by label instead would collapse two options
-        // that share a label, and the index is what makes "the chosen row" exact without a value round-trip.
-        var rows = new List<KeyValuePair<string, string>>(choices.Count);
+        bool open = ctx.Session.IsPopupOpen(popupId);
+        UiResolvedStyle style = ctx.Theme.Styles.Resolve(
+            open ? UiStatusTone.Active : UiStatusTone.Neutral, UiEmphasis.Normal, writable: true);
+        UiLayoutRect outlet = UiThemeDraw.SelectorTextOutlet(rect, ctx.Theme);
+        string trigger = EllipsizeToFit(display, Math.Max(1f, outlet.Width), ctx.Metrics, UiFont.Tiny);
+        UiThemeDraw.SelectorField(ctx.Drawing, rect, trigger, ctx.Theme, style, UiFont.Tiny);
+        ctx.Controls.DropdownButton(rect, popupId, ctx);
+        if (!ctx.Session.IsPopupOpen(popupId) || !ctx.Session.OpenPopupAnchor.HasValue) return;
+        UiLayoutRect anchor = ctx.Session.OpenPopupAnchor.Value;
+        float width = anchor.Width;
         for (int i = 0; i < choices.Count; i++)
+            width = Math.Max(width, ctx.Metrics.MeasureWidth(ChoiceText(choices[i], ctx), UiFont.Small) + 12f);
+        if (ctx.Session.HostViewport.Width > 0f) width = Math.Min(width, ctx.Session.HostViewport.Width);
+        anchor.Width = width;
+        UiLayoutRect popup = UiPopup.RectFor(anchor, choices.Count, ctx.Session.HostViewport);
+        ctx.Session.RegisterPopupDraw(() =>
         {
-            rows.Add(new KeyValuePair<string, string>(choices[i].Text, i.ToString()));
-        }
-
-        DrawDropdownCore(rect, elementId, ctx, display, currentIndex, rows, selected =>
-        {
-            if (!int.TryParse(selected, out int index) || index < 0 || index >= choices.Count) return;
-            onSelected(choices[index].Value);
+            UiFitAudit.BeginElement(ctx.ElementPath + "/popup");
+            try
+            {
+                int hovered = UiPopup.DrawChoices(popup, popupId, ctx, choices, current, onSelected);
+                if (hovered >= 0 && !string.IsNullOrEmpty(choices[hovered].HelpRef))
+                    ctx.Session.PublishHelp(choices[hovered].HelpRef);
+            }
+            finally { UiFitAudit.EndElement(); }
         });
     }
 
-    /// <summary>
-    /// The shared rendering the two public overloads feed: one trigger, one popup, one hit rule. It is the
-    /// only place in US that calls <see cref="UiPopup.DrawOptionList"/>, so the popup layer push, the
-    /// viewport clamp/flip and the owner-id hit behaviour exist once.
-    /// </summary>
-    private static void DrawDropdownCore(
-        Rect rect,
-        string elementId,
-        UiWidgetContext ctx,
-        string display,
-        string current,
-        IReadOnlyList<KeyValuePair<string, string>> options,
-        Action<string> onSelected)
-    {
-        // SA1.1 (user ruling 2026-10-05): every real dropdown entry in US - including this composite
-        // path, which owns its trigger because the option list is dynamic - paints the SAME selector
-        // plane as the core `input/dropdown Appearance="selector"` by calling the ONE shared carrier
-        // entry `UiThemeDraw.SelectorField`: plane + hairline, the 3px accent rail, the arrow zone
-        // behind its own divider, and the value text in what remains. The open state stays the Active
-        // rung of the status ladder (the same SelectedSurface the old hand-composed plane painted);
-        // closed is Neutral. The accent rail is the shape's own reserved line - the 05 §3.1 accent
-        // discipline already admits it (nav and section rails are the same 3px), and no help-button
-        // slot exists in either look (SR's question mark is not adopted).
-        bool open = ctx.Session.IsPopupOpen(elementId);
-        UiResolvedStyle fieldStyle = ctx.Theme.Styles.Resolve(
-            open ? UiStatusTone.Active : UiStatusTone.Neutral, UiEmphasis.Normal, writable: true);
-        // D9 (2026-09-06 in-game) stays: the trigger column is a fixed width, so a selected label that
-        // outgrows it (long author credits, pack names) is cut through the same metrics seam the fit
-        // audit measures with - now cut against the selector's OWN text outlet, not a hand-spelled 12px.
-        Rect textOutlet = UiThemeDraw.SelectorTextOutlet(rect, ctx.Theme);
-        string triggerDisplay = EllipsizeToFit(
-            display, Mathf.Max(1f, textOutlet.width), ctx.Metrics, UiFont.Tiny);
-        UiThemeDraw.SelectorField(rect, triggerDisplay, ctx.Theme, fieldStyle, UiFont.Tiny);
-
-        // The trigger click stores the popup anchor in Host window space (the engine translates
-        // draw rects inside scrolls/groups); the popup pass draws and hit-tests in that same
-        // stored space, so both share one anchor source.
-        UiNative.DropdownButton(rect, elementId, ctx);
-
-        if (ctx.Session.IsPopupOpen(elementId))
-        {
-            Rect? anchor = ctx.Session.OpenPopupAnchor;
-            if (anchor.HasValue)
-            {
-                // D9: the popup grows to the widest option label instead of inheriting the
-                // trigger's narrow column (UiPopup draws each row single-line Small with 6px side
-                // padding). Capped at the viewport width - RectFor still flips vertically and
-                // clamps x, and a label that survives the cap keeps overflowing loudly into the
-                // audit, which is honest: the window itself is too narrow.
-                float popupWidth = anchor.Value.width;
-                foreach (KeyValuePair<string, string> option in options)
-                {
-                    float needed = ctx.Metrics.MeasureWidth(option.Key, UiFont.Small) + 12f;
-                    if (needed > popupWidth) popupWidth = needed;
-                }
-                float viewportWidth = ctx.Session.HostViewport.width;
-                if (viewportWidth > 0f && popupWidth > viewportWidth) popupWidth = viewportWidth;
-                Rect popupAnchor = new Rect(anchor.Value.x, anchor.Value.y, popupWidth, anchor.Value.height);
-
-                // The popup pass draws after content and outside the layout engine's element scope, so a
-                // finding inside a popup row would be reported as "(unscoped)" - the exact reason the
-                // first in-game overflow was not actionable. Claim the owning element's path for the
-                // duration of the rows so every report from this draw carries a stable identity.
-                string capturedCurrent = current;
-                string popupPath = (ctx.ElementPath ?? "") + "/popup";
-                ctx.Session.RegisterPopupDraw(() =>
-                {
-                    UiFitAudit.BeginElement(popupPath);
-                    try
-                    {
-                        UiPopup.DrawOptionList(
-                            UiPopup.RectFor(popupAnchor, options.Count, ctx.Session.HostViewport),
-                            elementId,
-                            ctx,
-                            options,
-                            capturedCurrent,
-                            onSelected);
-                    }
-                    finally
-                    {
-                        UiFitAudit.EndElement();
-                    }
-                });
-            }
-        }
-    }
+    private static string ChoiceText<T>(UiChoice<T> choice, UiWidgetContext ctx)
+        => choice.TextKey.Length == 0 ? choice.Text : ctx.Translation.Translate(choice.TextKey);
 
     /// <summary>
     /// Shortens <paramref name="text"/> to the longest prefix that fits <paramref name="maxWidth"/>
@@ -828,34 +739,34 @@ public static class UsKernelDraw
     }
 
     /// <summary>Card frame with a title header; returns the inner body rect.</summary>
-    public static Rect DrawCard(Rect rect, string title, UiTheme theme)
+    public static UiLayoutRect DrawCard(IUiDrawing drawing, UiLayoutRect rect, string title, UiTheme theme)
     {
-        UiThemeDraw.Panel(rect, theme);
-        Label(
-            new Rect(rect.x + UsCardLayout.Padding, rect.y + 2f, Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f), 22f),
+        UiThemeDraw.Panel(drawing, rect, theme);
+        Label(drawing,
+            new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + 2f, Mathf.Max(1f, rect.Width - UsCardLayout.Padding * 2f), 22f),
             title,
             theme,
             theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft);
-        UiThemeDraw.Surface(
-            new Rect(rect.x + UsCardLayout.Padding, rect.y + UsCardLayout.HeaderHeight - 2f, Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f), 1f),
+            UiTextAnchor.MiddleLeft);
+        UiThemeDraw.Surface(drawing,
+            new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + UsCardLayout.HeaderHeight - 2f, Mathf.Max(1f, rect.Width - UsCardLayout.Padding * 2f), 1f),
             theme,
             theme[UiPaletteRole.Divider],
             theme[UiPaletteRole.Divider]);
-        return new Rect(
-            rect.x + UsCardLayout.Padding,
-            rect.y + UsCardLayout.HeaderHeight + UsCardLayout.HeaderGap,
-            Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f),
-            Mathf.Max(1f, rect.height - UsCardLayout.HeaderHeight - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2f));
+        return new UiLayoutRect(
+            rect.X + UsCardLayout.Padding,
+            rect.Y + UsCardLayout.HeaderHeight + UsCardLayout.HeaderGap,
+            Mathf.Max(1f, rect.Width - UsCardLayout.Padding * 2f),
+            Mathf.Max(1f, rect.Height - UsCardLayout.HeaderHeight - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2f));
     }
 
     /// <summary>Border drawn around the card the help panel is currently explaining (follows the live
     /// hover claim). Neutral BorderStrong rather than the accent: the help claim is not one of the
     /// accent's three uses (05 §3.1).</summary>
-    public static void DrawHelpFocusBorder(Rect rect, UiTheme theme, bool focused)
+    public static void DrawHelpFocusBorder(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, bool focused)
     {
         if (!focused) return;
-        UiThemeDraw.Surface(rect, theme, Color.clear, theme[UiPaletteRole.StrongBorder]);
+        UiThemeDraw.Surface(drawing, rect, theme, default(UiColour), theme[UiPaletteRole.StrongBorder]);
     }
 }

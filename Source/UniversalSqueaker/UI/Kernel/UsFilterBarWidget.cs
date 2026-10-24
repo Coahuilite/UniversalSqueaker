@@ -48,14 +48,10 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            KindName,
-            () => new UsFilterBarWidget(),
-            UsKernelWidgetRegistrar.SectionSchema);
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsFilterBarWidget(), UsKernelWidgetRegistrar.SectionSchema));
     }
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<string>("race-filter", elementPath);
         bindings.ValidateValue<string>("xenotype-filter", elementPath);
@@ -81,7 +77,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         return body;
     }
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (TitleHidden)
         {
@@ -94,14 +90,14 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         DrawCard(rect, ctx, body => DrawContent(body, ctx));
     }
 
-    private void DrawContent(Rect rect, UiWidgetContext ctx)
+    private void DrawContent(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        float domainHeight = DomainRowHeight(ctx, rect.width);
-        TraceLayout("draw", rect.width, rect.height, domainHeight);
-        DrawDomainRow(new Rect(rect.x, rect.y, rect.width, domainHeight), ctx);
+        float domainHeight = DomainRowHeight(ctx, rect.Width);
+        TraceLayout("draw", rect.Width, rect.Height, domainHeight);
+        DrawDomainRow(new UiLayoutRect(rect.X, rect.Y, rect.Width, domainHeight), ctx);
 
         // D4: one dropdown (Author) left in this bar - a single full-width row, no stack rule needed.
-        DrawFilterDropdownRow(new Rect(rect.x, rect.y + domainHeight, rect.width, RowHeight), ctx);
+        DrawFilterDropdownRow(new UiLayoutRect(rect.X, rect.Y + domainHeight, rect.Width, RowHeight), ctx);
     }
 
     /// <summary>
@@ -127,7 +123,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         return band;
     }
 
-    private void DrawDomainRow(Rect rect, UiWidgetContext ctx)
+    private void DrawDomainRow(UiLayoutRect rect, UiWidgetContext ctx)
     {
         UsKernelDraw.HelpHover(rect, ctx, "us/filter-bar/domain");
         UiDomainFilter domainFilter = ctx.Bindings.TryGet("domain-filter", out UiDomainFilter f) ? f : default;
@@ -137,36 +133,36 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         string searchText = ctx.Bindings.TryGet("search-text", out string search) ? search : "";
 
         const int count = 4;
-        float buttonWidth = Math.Max(1f, (rect.width - Gap * (count - 1)) / count);
-        float x = rect.x;
+        float buttonWidth = Math.Max(1f, (rect.Width - Gap * (count - 1)) / count);
+        float x = rect.X;
 
         bool allActive = !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly
             && race.Length == 0 && xenotype.Length == 0 && packAuthor.Length == 0 && searchText.Length == 0;
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive))
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(x, rect.Y, buttonWidth, rect.Height), ctx, ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive, controlId: "clear-pack-filters"))
         {
             ctx.Bindings.Invoke("clear-pack-filters", "");
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly))
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(x, rect.Y, buttonWidth, rect.Height), ctx, ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly, controlId: "filter-enabled"))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, !domainFilter.EnabledOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly))
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(x, rect.Y, buttonWidth, rect.Height), ctx, ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly, controlId: "filter-conflicts"))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.ConflictOnly, !domainFilter.ConflictOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly))
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(x, rect.Y, buttonWidth, rect.Height), ctx, ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly, controlId: "filter-orphan"))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.OrphanOnly, !domainFilter.OrphanOnly));
         }
     }
 
-    private void DrawFilterDropdownRow(Rect rect, UiWidgetContext ctx)
+    private void DrawFilterDropdownRow(UiLayoutRect rect, UiWidgetContext ctx)
     {
         DrawNestedDropdown(rect, "pack-filter", KeyLabelAuthor, ctx);
     }
@@ -178,7 +174,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     /// rows show the translated display while the write carries the machine token. An empty selection
     /// leaves the field blank; the label column carries the meaning, as it always did.
     /// </summary>
-    private void DrawNestedDropdown(Rect rect, string elementId, string labelKey, UiWidgetContext ctx)
+    private void DrawNestedDropdown(UiLayoutRect rect, string elementId, string labelKey, UiWidgetContext ctx)
     {
         string optionsKey = "author-options";
 
@@ -207,17 +203,17 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
                 option.Value));
         }
 
-        float labelWidth = Math.Min(UsFilterBarLayout.DropdownLabelWidth, rect.width * 0.4f);
-        UsKernelDraw.Label(
-            new Rect(rect.x, rect.y, labelWidth, rect.height),
+        float labelWidth = Math.Min(UsFilterBarLayout.DropdownLabelWidth, rect.Width * 0.4f);
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X, rect.Y, labelWidth, rect.Height),
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft,
+            UiTextAnchor.MiddleLeft,
             singleLine: true);
 
-        Rect fieldRect = new(rect.x + labelWidth, rect.y, Math.Max(1f, rect.width - labelWidth), rect.height);
+        UiLayoutRect fieldRect = new(rect.X + labelWidth, rect.Y, Math.Max(1f, rect.Width - labelWidth), rect.Height);
         UsKernelDraw.Dropdown(fieldRect, elementId, ctx, current, pairs, selected =>
         {
             if (string.Equals(selected, current, StringComparison.Ordinal)) return;

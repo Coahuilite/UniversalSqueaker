@@ -17,6 +17,8 @@ namespace UniversalSqueaker.UI;
 public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
 {
     private readonly GameSettings settings;
+    private readonly VerseUiImages? images;
+    private readonly Dictionary<Texture2D, UiImage> imageRefs = new();
     private readonly VoicePacksPageState state;
     private VoicePacksViewState? cachedView;
     private Func<int>? revisionSource;
@@ -24,9 +26,10 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     private long cachedConfiguration = -1;
     private Authoring.DefinitionCatalog? cachedDefinitions;
 
-    public UsKernelSettingsSource(GameSettings settings)
+    public UsKernelSettingsSource(GameSettings settings, VerseUiImages? images = null)
     {
         this.settings = settings ?? throw new System.ArgumentNullException(nameof(settings));
+        this.images = images;
         state = new VoicePacksPageState();
         // CORRECTIONS-R1 topic 3: the teaching opens/collapses as a PERSISTED UI preference.
         // The page state mirrors the setting on construction; audio runtime is never notified - the
@@ -57,13 +60,22 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
             || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions))
         {
-            cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state);
+            cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state, ImageOf);
             cachedRevision = revision;
             cachedConfiguration = configuration;
             cachedDefinitions = SqueakerRuntime.Definitions;
         }
 
         return cachedView;
+    }
+
+    // Native image references belong to the enclosing window execution, never to the core/view.
+    private UiImage ImageOf(Texture2D? texture)
+    {
+        if (texture == null || images == null) return default;
+        if (!imageRefs.TryGetValue(texture, out UiImage image))
+            imageRefs.Add(texture, image = images.Add(texture));
+        return image;
     }
 
     public string SectionHelpRef(string sectionKey)

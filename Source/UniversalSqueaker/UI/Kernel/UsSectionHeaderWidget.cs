@@ -71,7 +71,7 @@ public sealed class UsSectionHeaderWidget : IUiWidget
 
     /// <summary>
     /// Left inset of the title, in the theme's own `Geometry.Padding`. The carrier's header drew its
-    /// label from the band's own `rect.x`, and the card that arranges this element already pads that
+    /// label from the band's own `rect.X`, and the card that arranges this element already pads that
     /// rect - so keeping this number identical is what makes the swap pixel-neutral for the title
     /// baseline, and the reason the card's height does not move.
     /// </summary>
@@ -86,11 +86,7 @@ public sealed class UsSectionHeaderWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsSectionHeaderWidget(),
-            new[] { "Id", "Kind", "Title", "TitleKey", "HelpKey", "Tab", "Hidden", "Height" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsSectionHeaderWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Title"), new UiAttributeDefinition("TitleKey"), new UiAttributeDefinition("HelpRef"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean), new UiAttributeDefinition("Height", UiAttributeKind.Length))));
     }
 
     public void Configure(UiElementSpec spec)
@@ -98,7 +94,7 @@ public sealed class UsSectionHeaderWidget : IUiWidget
         this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         // A header carries a title, never a value: there is no binding to require. A missing TitleKey is a
         // legal (if empty) header rather than a creation-time failure - the carrier's header behaves the
@@ -110,9 +106,9 @@ public sealed class UsSectionHeaderWidget : IUiWidget
         return ReadHeight(ctx);
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
         UiTheme theme = ctx.Theme;
 
@@ -120,32 +116,32 @@ public sealed class UsSectionHeaderWidget : IUiWidget
         // literal, so a lane can assert the identity instead of a number. NOT SelectedSurface.Border: the
         // flat scope sets that equal to Selected (that is how a flat surface paints no box), so it is not
         // gold inside these cards - measured, recorded in the class comment.
-        UiThemeDraw.AccentRail(rect, theme, true, RailWidth, theme[UiPaletteRole.Accent]);
+        UiThemeDraw.AccentRail(ctx.Drawing, rect, theme, true, RailWidth, theme[UiPaletteRole.Accent]);
 
-        float left = rect.x + TitleInset;
+        float left = rect.X + TitleInset;
         string title = ResolveTitle(ctx);
         float markerWidth = MarkerWidth(ctx);
         if (markerWidth > 0f)
         {
             UsKernelDraw.Label(
-                new Rect(left, rect.y, markerWidth, rect.height),
+                new UiLayoutRect(left, rect.Y, markerWidth, rect.Height),
                 Marker,
                 ctx,
                 theme[UiPaletteRole.Foreground],
                 UiFont.Small,
-                TextAnchor.MiddleLeft,
+                UiTextAnchor.MiddleLeft,
                 singleLine: true);
             left += markerWidth + MarkerGap;
         }
 
-        float textWidth = Math.Max(1f, rect.xMax - left);
+        float textWidth = Math.Max(1f, rect.XMax - left);
         UsKernelDraw.Label(
-            new Rect(left, rect.y, textWidth, rect.height),
+            new UiLayoutRect(left, rect.Y, textWidth, rect.Height),
             title,
             ctx,
             theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
     }
 
     /// <summary>

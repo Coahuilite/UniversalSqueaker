@@ -705,6 +705,6 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 ## 24 固定FL0.8技术消费，不预定下一版页面
 
-当前依赖为FL源码fc010bd1eab8ed434e03de6241fdae89e94b1283的固定0.8 Dev，范围[0.8.0,0.9.0)、Private=false、单carrier。生产Host/三个Manifest、主窗口/Overlay/确认、公开Palette颜色、显式Live编辑和实际绑定/请求/生命周期已经迁移，完整用法与检查入口见[消费者说明](fl08-consumer-migration-zh.md)。原24色值和旧有效边框/警告处理保为30明确语义角色；活跃主题只写颜色，不撤销页面度量。普通getters与业务settings保存的所有权/原条件不变。
+当前依赖为FL源码7eb8073492a1380aa18c67cc30960d19645efbd1 final的固定0.8 Dev，范围[0.8.0,0.9.0)、Private=false、单carrier。生产Host/三个Manifest、主窗口/Overlay/确认、公开Palette颜色、显式Live编辑和实际绑定/请求/生命周期已经迁移，完整用法与检查入口见[消费者说明](fl08-consumer-migration-zh.md)。原24色值和旧有效边框/警告处理保为30明确语义角色；活跃主题只写颜色，不撤销页面度量。普通getters与业务settings保存的所有权/原条件不变。
 
-这是现有消费者技术迁移，不改变15包事实、已裁Select三资格/Eat三轴、Dev政策门或声音决策；不固化Dashboard/页面数/Help新方案。后续UI/UX定稿与实现另行安排。原生1.6/真实Config/Scribe/字体/音频/听感及逐包两个人工关口仍待验；固定FL未交付1.7 adapter。CI获取尚指旧0.7，须维护者另排真实0.8发布载体，不能静默回退。
+这是现有消费者技术迁移，不改变15包事实、已裁Select三资格/Eat三轴、Dev政策门或声音决策；不固化Dashboard/页面数/Help新方案。后续UI/UX定稿与实现另行安排。原生1.6/真实Config/Scribe/字体/音频/听感及逐包两个人工关口仍待验；固定FL未交付1.7 adapter。CI已移除旧0.7 pin，并在批准坐标缺失时先拒绝；真实0.8 Release资产与源码配对仍待维护者交付，不能以本地Dev包代替远端通过。

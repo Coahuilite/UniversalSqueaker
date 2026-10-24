@@ -117,6 +117,6 @@ Scribe 同步执行，临时序列化字段在 `finally` 恢复。generation、�
 
 ## 固定依赖与验收状态
 
-当前固定 FL **0.8.0-dev / fc010bd1eab8ed434e03de6241fdae89e94b1283**（A002），`Private=false`、范围 `[0.8.0,0.9.0)`，US 包不带 FL DLL。新的跨库候选与真实远端0.8 CI载体待维护者交付；旧0.7 CI输入不能证明本候选可构建。使用明确固定路径，不追移动输出。
+当前固定 FL **0.8.0-dev / 7eb8073492a1380aa18c67cc30960d19645efbd1 final**，`Private=false`、范围 `[0.8.0,0.9.0)`，US 包不带 FL DLL。实际跨库 Host／执行器／帮助与调用已迁移，见[消费者说明](fl08-consumer-migration-zh.md)。本地 Dev 配对与 US Release 技术构建分开；远端真实0.8 Release载体及批准坐标仍待交付，CI不得回退旧0.7。使用明确固定路径，不追移动输出。
 
 自动检查按各候选输入区分独立 Core、生产适配替身、生产设置／ExposeData／原子文件与 Scribe 替身、真实 Host 读面以及最终 DLL 外部作者编译。游戏内1.6、真实 Config／Scribe、画面、试听和十五包双人工关口仍需用户。技术候选、整轮工作接受与发布是三个不同状态。

@@ -72,7 +72,7 @@ public sealed class UsNavWidget : IUiWidget
     private const int SubtitleLines = 1;
 
     /// <summary>
-    /// Tab is a machine token: it is compared against the persisted <c>UiBindings.ActiveTabKey</c>
+    /// Tab is a machine token: it is compared against the persisted <c>UiBindings.ActiveTabBind</c>
     /// binding and against the manifest's Tab attributes, so it never gets translated. Label and Description are Keyed.
     /// </summary>
     private static readonly (string Tab, string LabelKey, string DescriptionKey)[] Workspaces =
@@ -95,11 +95,7 @@ public sealed class UsNavWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsNavWidget(),
-            new[] { "Id", "Kind", "Tab", "Hidden" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsNavWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec value)
@@ -107,9 +103,9 @@ public sealed class UsNavWidget : IUiWidget
         spec = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
-        bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
+        bindings.ValidateValue<string>(UiBindings.ActiveTabBind, elementPath);
         bindings.ValidateAction<string>("set-tab", elementPath);
     }
 
@@ -125,23 +121,23 @@ public sealed class UsNavWidget : IUiWidget
         return TopPadding + Workspaces.Length * CardHeight(ctx) + (Workspaces.Length - 1) * Gap + StackBottomPadding;
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
         // V1 (2026-10-02): the COLUMN is a plane now, not a box. It used to paint its WorkspacePlane fill
         // AND a full `theme.Border` frame around it, which made the nav read as three nested edges - the
         // page plane, the column box, then each card's own enclosure. The column keeps the lifted plane (it
         // is `#191612` against the page's `#0e0d0c`, so it still reads as its own region) and gives up the
         // outline; the card enclosures below are the only edges left inside it.
-        UiThemeDraw.BackgroundPlane(rect, ctx.Theme);
-        ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
+        UiThemeDraw.BackgroundPlane(ctx.Drawing, rect, ctx.Theme);
+        ctx.Bindings.TryGet(UiBindings.ActiveTabBind, out string activeTab);
 
-        float innerWidth = Math.Max(1f, rect.width - SidePadding * 2f);
-        float textWidth = TextWidth(rect.width);
+        float innerWidth = Math.Max(1f, rect.Width - SidePadding * 2f);
+        float textWidth = TextWidth(rect.Width);
         float cardHeight = CardHeight(ctx);
         float subtitleBand = SubtitleBand(ctx);
-        float y = rect.y + TopPadding;
+        float y = rect.Y + TopPadding;
         for (int i = 0; i < Workspaces.Length; i++)
         {
             (string tab, string labelKey, string descriptionKey) = Workspaces[i];
@@ -150,7 +146,7 @@ public sealed class UsNavWidget : IUiWidget
             // inherited `us-flat-panel`, whose RaisedBorder IS its Raised fill, so an ordinary row painted
             // no enclosure at all and its text read as floating. The frame is therefore painted HERE, with
             // an edge the scheme cannot alias away, while the SELECTED fill still comes from the palette.
-            Rect card = new(rect.x + SidePadding, y, innerWidth, cardHeight);
+            UiLayoutRect card = new(rect.X + SidePadding, y, innerWidth, cardHeight);
             bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
             bool hovered = UsKernelDraw.HelpHover(card, ctx, "us/page-title/nav");
 
@@ -160,42 +156,42 @@ public sealed class UsNavWidget : IUiWidget
             // carries "ordinary", so the accent keeps its meaning.
             if (active)
             {
-                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.SelectedSurface.Fill, ctx.Theme[UiPaletteRole.Accent]);
+                UiThemeDraw.Surface(ctx.Drawing, card, ctx.Theme, ctx.Theme.SelectedSurface.Fill, ctx.Theme[UiPaletteRole.Accent]);
             }
             else if (hovered)
             {
-                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme[UiPaletteRole.StrongBorder]);
+                UiThemeDraw.Surface(ctx.Drawing, card, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme[UiPaletteRole.StrongBorder]);
             }
             else
             {
-                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme[UiPaletteRole.Border]);
+                UiThemeDraw.Surface(ctx.Drawing, card, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme[UiPaletteRole.Border]);
             }
 
-            UiThemeDraw.AccentRail(card, ctx.Theme, active, 3f);
+            UiThemeDraw.AccentRail(ctx.Drawing, card, ctx.Theme, active, 3f);
 
             // Both bands are ellipsized into the card's fixed text column through the same metric seam the
             // fit audit reads, so a long translation is cut deliberately instead of resizing the card.
             string label = UsKernelDraw.Ellipsized(ctx.Translation.Translate(labelKey), ctx, UiFont.Small, textWidth);
-            UsKernelDraw.Label(
-                new Rect(card.x + TextInset, card.y + LabelTop, textWidth, LabelHeight),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(card.X + TextInset, card.Y + LabelTop, textWidth, LabelHeight),
                 label,
                 ctx.Theme,
                 active ? ctx.Theme[UiPaletteRole.SelectedForeground] : ctx.Theme[UiPaletteRole.Foreground],
                 UiFont.Small,
-                TextAnchor.MiddleLeft,
+                UiTextAnchor.MiddleLeft,
                 singleLine: true);
 
             string description = UsKernelDraw.EllipsizedToLines(
                 ctx.Translation.Translate(descriptionKey), ctx, UiFont.Tiny, textWidth, SubtitleLines);
-            UsKernelDraw.Label(
-                new Rect(card.x + TextInset, card.y + LabelTop + LabelHeight + DescriptionGap, textWidth, subtitleBand),
+            UsKernelDraw.Label(ctx.Drawing,
+                new UiLayoutRect(card.X + TextInset, card.Y + LabelTop + LabelHeight + DescriptionGap, textWidth, subtitleBand),
                 description,
                 ctx.Theme,
                 active ? ctx.Theme[UiPaletteRole.SelectedForeground] : hovered ? ctx.Theme[UiPaletteRole.Foreground] : ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Tiny,
-                TextAnchor.UpperLeft);
+                UiTextAnchor.UpperLeft);
 
-            if (UiNative.Button(card, ctx))
+            if (ctx.Controls.Activation(card, ctx, "set-tab", "card", tab).Request)
             {
                 ctx.Bindings.Invoke("set-tab", tab);
             }

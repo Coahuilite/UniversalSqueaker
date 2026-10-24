@@ -27,10 +27,10 @@
          height is the page budget minus chrome: 164 - 12 padding - 10 gap - 24 row - 12 padding = 106,
          and the SA1.3 shell lane fit-audits the resolved EN/ZH bodies inside it every run; the Scroll
          is the fail-soft if a future table ever outgrows the region. -->
-    <Scroll Id="confirm-body-first-region" Height="106" Padding="0" VisibleKey="confirm-step1">
+    <Scroll Id="confirm-body-first-region" Height="106" Padding="0" VisibleBind="confirm-step1">
       <Widget Id="confirm-body-first" Kind="text/wrapped" TextKey="US.Remix.Confirm1.Body" />
     </Scroll>
-    <Scroll Id="confirm-body-second-region" Height="106" Padding="0" VisibleKey="confirm-step2">
+    <Scroll Id="confirm-body-second-region" Height="106" Padding="0" VisibleBind="confirm-step2">
       <Widget Id="confirm-body-second" Kind="text/wrapped" TextKey="US.Remix.Confirm2.Body" />
     </Scroll>
     <!-- SA1.3 slot swap, and the r1 correction on the emphasis: step one's Cancel is the PROTECTIVE
@@ -41,13 +41,13 @@
          scope only supplies the resting plane the Neutral buttons sit on. -->
     <Row Id="confirm-buttons" Gap="8" Padding="0">
       <Widget Id="confirm-continue" Kind="input/button" TextKey="US.Remix.Confirm.Continue"
-              ActionBind="confirm-continue" VisibleKey="confirm-step1" Emphasis="Muted" />
+              ActionBind="confirm-continue" VisibleBind="confirm-step1" Emphasis="Muted" />
       <Widget Id="confirm-cancel-first" Kind="input/button" TextKey="US.Common.Cancel"
-              ActionBind="confirm-cancel" VisibleKey="confirm-step1" Tone="Active" />
+              ActionBind="confirm-cancel" VisibleBind="confirm-step1" Tone="Active" />
       <Widget Id="confirm-cancel-second" Kind="input/button" TextKey="US.Common.Cancel"
-              ActionBind="confirm-cancel" VisibleKey="confirm-step2" Emphasis="Muted" />
+              ActionBind="confirm-cancel" VisibleBind="confirm-step2" Emphasis="Muted" />
       <Widget Id="confirm-enable" Kind="input/button" TextKey="US.Remix.Confirm.Enable"
-              ActionBind="confirm-enable" VisibleKey="confirm-step2" Tone="Danger" />
+              ActionBind="confirm-enable" VisibleBind="confirm-step2" Tone="Danger" />
     </Row>
   </Column>
 </UiPage>

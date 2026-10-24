@@ -35,10 +35,10 @@ public static class UsAttention
     public const string Marker = "[!]";
 
     /// <summary>Bright cyan <c>#86E7D8</c>: the one attention foreground on US's dark planes.</summary>
-    public static readonly Color Brush = Rgb(0x86, 0xE7, 0xD8);
+    public static readonly UiColour Brush = Rgb(0x86, 0xE7, 0xD8);
 
     /// <summary>Dark ink <c>#0f1116</c> for text sitting ON <see cref="Brush"/>.</summary>
-    public static readonly Color InkOnBrush = Rgb(0x0f, 0x11, 0x16);
+    public static readonly UiColour InkOnBrush = Rgb(0x0f, 0x11, 0x16);
 
     /// <summary>Neutral panel fill plus the cyan edge: the ruling's default treatment for an
     /// attention band, and deliberately not a new tinted background token.</summary>
@@ -53,34 +53,34 @@ public static class UsAttention
     public const float RailWidth = 2f;
 
     /// <summary>Thin cyan edge, drawn through the library's rail primitive.</summary>
-    public static void Rail(Rect rect, UiTheme theme, float width = RailWidth)
+    public static void Rail(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme, float width = RailWidth)
     {
-        UiThemeDraw.AccentRail(rect, theme, true, width, Brush);
+        UiThemeDraw.AccentRail(drawing, rect, theme, true, width, Brush);
     }
 
     /// <summary>Neutral fill with a cyan border, for a block summary or an unavailable-source band.</summary>
-    public static void Band(Rect rect, UiTheme theme)
+    public static void Band(IUiDrawing drawing, UiLayoutRect rect, UiTheme theme)
     {
-        UiThemeDraw.Surface(rect, BandSurface(theme));
+        UiThemeDraw.Surface(drawing, rect, BandSurface(theme));
     }
 
     /// <summary>Cyan fill with dark ink - the only legal foreground on the attention fill.</summary>
-    public static void Badge(Rect rect, string text, UiTheme theme, UiFont font = UiFont.Tiny)
+    public static void Badge(IUiDrawing drawing, UiLayoutRect rect, string text, UiTheme theme, UiFont font = UiFont.Tiny)
     {
-        if (rect.width <= 0f || rect.height <= 0f) return;
-        UiThemeDraw.Surface(rect, theme, Brush, Brush);
-        UiThemeDraw.Label(
-            new Rect(rect.x + 4f, rect.y, Mathf.Max(1f, rect.width - 8f), rect.height),
+        if (rect.Width <= 0f || rect.Height <= 0f) return;
+        UiThemeDraw.Surface(drawing, rect, theme, Brush, Brush);
+        UiThemeDraw.Label(drawing,
+            new UiLayoutRect(rect.X + 4f, rect.Y, Mathf.Max(1f, rect.Width - 8f), rect.Height),
             text,
             theme,
             InkOnBrush,
             font,
-            TextAnchor.MiddleCenter,
+            UiTextAnchor.MiddleCenter,
             singleLine: true);
     }
 
-    private static Color Rgb(int r, int g, int b)
+    private static UiColour Rgb(int r, int g, int b)
     {
-        return new Color(r / 255f, g / 255f, b / 255f, 1f);
+        return new UiColour(r / 255f, g / 255f, b / 255f, 1f);
     }
 }

@@ -88,14 +88,10 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            KindName,
-            () => new UsRaceBoardWidget(),
-            UsKernelWidgetRegistrar.SectionSchema);
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsRaceBoardWidget(), UsKernelWidgetRegistrar.SectionSchema));
     }
 
-    public override void Validate(IUiBindings bindings, string elementPath)
+    public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<UsRaceBoardView>("race-board-view", elementPath);
         bindings.ValidateAction<string>("race-board-xeno-open", elementPath);
@@ -139,7 +135,7 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
         return total - RowGap;
     }
 
-    protected override void DrawBody(Rect rect, UiWidgetContext ctx)
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (TitleHidden)
         {
@@ -150,14 +146,14 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
         DrawCard(rect, ctx, body => DrawRows(body, ctx));
     }
 
-    private void DrawRows(Rect body, UiWidgetContext ctx)
+    private void DrawRows(UiLayoutRect body, UiWidgetContext ctx)
     {
         UsRaceBoardView view = View(ctx);
         IReadOnlyList<RaceBoardRow> rows = view.Rows;
         if (rows.Count == 0 && view.Xenotypes.Count == 0)
         {
             UsKernelDraw.Label(
-                new Rect(body.x, body.y, body.width, UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny) + 2f),
+                new UiLayoutRect(body.X, body.Y, body.Width, UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny) + 2f),
                 UsKernelDraw.Keyed(ctx, KeyEmpty),
                 ctx,
                 ctx.Theme[UiPaletteRole.SecondaryForeground],
@@ -165,9 +161,9 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
             return;
         }
 
-        float inner = Math.Max(1f, body.width - SidePadding * 2f);
+        float inner = Math.Max(1f, body.Width - SidePadding * 2f);
         float chipsWidth = Math.Max(1f, inner - ActionsWidth() - TextInset - ButtonGap);
-        float y = body.y;
+        float y = body.Y;
         // CO review r1 item 7: DRAW order == the view's band index == the measure total (the total
         // is order-independent, so MeasureBody above needs no change): humanlike rows, then the
         // xenotype band, then creatures - never the band dumped behind every animal/mech/entity.
@@ -183,7 +179,7 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
 
             RaceBoardRow row = rows[i];
             float rowHeight = RowHeight(ctx, row, chipsWidth);
-            var rowRect = new Rect(body.x + SidePadding, y, inner, rowHeight);
+            var rowRect = new UiLayoutRect(body.X + SidePadding, y, inner, rowHeight);
             DrawRow(rowRect, row, chipsWidth, ctx);
             y += rowHeight + RowGap;
         }
@@ -196,13 +192,13 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
 
     /// <summary>The expanded xenotype directory band (section line + one row per loaded
     /// XenotypeDef). Returns the y after the band. Empty when the view carries no rows.</summary>
-    private static float DrawXenoBand(Rect body, float inner, float y, UsRaceBoardView view, UiWidgetContext ctx)
+    private static float DrawXenoBand(UiLayoutRect body, float inner, float y, UsRaceBoardView view, UiWidgetContext ctx)
     {
         if (view.Xenotypes.Count == 0) return y;
         if (view.XenotypeBandIndex > 0)
         {
             UsKernelDraw.Label(
-                new Rect(body.x + SidePadding, y, inner, UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny)),
+                new UiLayoutRect(body.X + SidePadding, y, inner, UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny)),
                 UsKernelDraw.Keyed(ctx, "US.Board.XenoDir"),
                 ctx,
                 ctx.Theme[UiPaletteRole.SecondaryForeground],
@@ -214,62 +210,62 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
         float xenoLine = RowHeightStatic(ctx);
         for (int i = 0; i < view.Xenotypes.Count; i++)
         {
-            DrawXenoRow(new Rect(body.x + SidePadding, y, inner, xenoLine), view.Xenotypes[i], ctx);
+            DrawXenoRow(new UiLayoutRect(body.X + SidePadding, y, inner, xenoLine), view.Xenotypes[i], ctx);
             y += xenoLine + RowGap;
         }
 
         return y;
     }
 
-    private static void DrawXenoRow(Rect rowRect, XenotypeBoardRow row, UiWidgetContext ctx)
+    private static void DrawXenoRow(UiLayoutRect rowRect, XenotypeBoardRow row, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rowRect, ctx, "us/race-board/xenorow");
         UiSurfaceStyle plane = hovered ? ctx.Theme.HoverSurface : ctx.Theme.RaisedSurface;
-        UiThemeDraw.Surface(rowRect, ctx.Theme, plane.Fill, plane.Border);
+        UiThemeDraw.Surface(ctx.Drawing, rowRect, ctx.Theme, plane.Fill, plane.Border);
 
         // PM narrow-geometry addendum: the SAME actionsW/columnX that places the buttons bounds the
         // title AND the chips - with a unique quick-enable the action column is wider than OpenWidth
         // and a long name must never intrude on it (measure/draw/hit share one boundary).
         float xenoActionsW = row.QuickEnablePackKey.Length > 0 ? EnableWidth + ButtonGap + OpenWidth : OpenWidth;
-        float xenoColumnX = rowRect.xMax - xenoActionsW - 2f;
-        float labelWidth = Math.Max(1f, xenoColumnX - rowRect.x - TextInset - 4f);
+        float xenoColumnX = rowRect.XMax - xenoActionsW - 2f;
+        float labelWidth = Math.Max(1f, xenoColumnX - rowRect.X - TextInset - 4f);
         UsKernelDraw.Label(
-            new Rect(rowRect.x + TextInset, rowRect.y + RowTop, labelWidth, TitleBand),
+            new UiLayoutRect(rowRect.X + TextInset, rowRect.Y + RowTop, labelWidth, TitleBand),
             UsKernelDraw.Ellipsized(row.Label, ctx, UiFont.Small, labelWidth),
             ctx,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft,
+            UiTextAnchor.MiddleLeft,
             singleLine: true);
 
         // Two fixed chips, drawn DIRECTLY (PM item 2: no per-GUI-line List allocation), bounded by
         // the same columnX. The source chip carries the REAL package name (PM item 3: display, not
         // only search) - the name ellipsizes into the chip budget, the word prefix never does.
         float chipLineHeight = UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny) + ChipBandExtra;
-        float chipX = rowRect.x + TextInset;
-        float chipY = rowRect.y + RowTop + TitleBand + ChipGapY;
+        float chipX = rowRect.X + TextInset;
+        float chipY = rowRect.Y + RowTop + TitleBand + ChipGapY;
         float chipBudget = Math.Max(1f, xenoColumnX - chipX - 4f);
         string sourceChip = SourceChip(row.Source, row.SourcePackageName, row.SourcePackageId,
             ctx, chipBudget * 0.55f);
         float sourceW = ChipWidth(sourceChip, ctx, chipBudget);
-        DrawChip(new Rect(chipX, chipY, sourceW, chipLineHeight), sourceChip, ctx);
+        DrawChip(new UiLayoutRect(chipX, chipY, sourceW, chipLineHeight), sourceChip, ctx);
         chipX += sourceW + ChipSep;
         string supplyChip = row.PackCount > 0
             ? Num2(ctx, KeyChipXeno, row.EnabledCount, row.PackCount)
             : UsKernelDraw.Keyed(ctx, KeyXenoEmpty);
         float supplyW = ChipWidth(supplyChip, ctx, Math.Max(1f, xenoColumnX - chipX - 2f));
-        DrawChip(new Rect(chipX, chipY, supplyW, chipLineHeight), supplyChip, ctx);
+        DrawChip(new UiLayoutRect(chipX, chipY, supplyW, chipLineHeight), supplyChip, ctx);
 
-        var bandRect = new Rect(xenoColumnX, rowRect.y + (rowRect.height - ButtonBand) / 2f, xenoActionsW, ButtonBand);
-        float cursor = bandRect.x;
+        var bandRect = new UiLayoutRect(xenoColumnX, rowRect.Y + (rowRect.Height - ButtonBand) / 2f, xenoActionsW, ButtonBand);
+        float cursor = bandRect.X;
         if (row.QuickEnablePackKey.Length > 0)
         {
-            var enableRect = new Rect(cursor, bandRect.y, EnableWidth, bandRect.height);
+            var enableRect = new UiLayoutRect(cursor, bandRect.Y, EnableWidth, bandRect.Height);
             UsKernelDraw.HelpHover(enableRect, ctx, "us/race-board/enable");
             string caption = UsKernelDraw.Ellipsized(
                 string.Format(UsKernelDraw.Keyed(ctx, KeyEnablePack), row.QuickEnablePackLabel),
                 ctx, UiFont.Tiny, EnableWidth - 16f);
-            if (UsKernelDraw.SelectionButton(enableRect, ctx, caption, ctx.Theme, false))
+            if (UsKernelDraw.SelectionButton(enableRect, ctx, caption, ctx.Theme, false, controlId: "xeno-enable", itemKey: (row.QuickEnableRaceDefName, row.DefName, row.QuickEnablePackKey)))
             {
                 ctx.Bindings.Invoke("race-board-enable", new UsPackToggle(
                     SqueakVoicePackScope.Xenotype, row.QuickEnableRaceDefName, row.DefName, row.QuickEnablePackKey, true));
@@ -278,68 +274,68 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
             cursor += EnableWidth + ButtonGap;
         }
 
-        var openRect = new Rect(cursor, bandRect.y, OpenWidth, bandRect.height);
-        if (UsKernelDraw.SelectionButton(openRect, ctx, UsKernelDraw.Keyed(ctx, KeyOpen), ctx.Theme, false))
+        var openRect = new UiLayoutRect(cursor, bandRect.Y, OpenWidth, bandRect.Height);
+        if (UsKernelDraw.SelectionButton(openRect, ctx, UsKernelDraw.Keyed(ctx, KeyOpen), ctx.Theme, false, controlId: "xeno-open", itemKey: row.DefName))
         {
             ctx.Bindings.Invoke("race-board-xeno-open", row.DefName);
         }
 
-        var hit = new Rect(rowRect.x + TextInset, rowRect.y, Math.Max(1f, bandRect.x - rowRect.x - TextInset - 4f), rowRect.height);
-        if (UiNative.Button(hit, ctx))
+        var hit = new UiLayoutRect(rowRect.X + TextInset, rowRect.Y, Math.Max(1f, bandRect.X - rowRect.X - TextInset - 4f), rowRect.Height);
+        if (ctx.Controls.Activation(hit, ctx, "race-board-xeno-open", "body", row.DefName).Request)
         {
             ctx.Bindings.Invoke("race-board-xeno-open", row.DefName);
         }
     }
 
-    private void DrawRow(Rect rowRect, RaceBoardRow row, float chipsWidth, UiWidgetContext ctx)
+    private void DrawRow(UiLayoutRect rowRect, RaceBoardRow row, float chipsWidth, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rowRect, ctx, "us/race-board/row");
         UiSurfaceStyle plane = hovered ? ctx.Theme.HoverSurface : ctx.Theme.RaisedSurface;
-        UiThemeDraw.Surface(rowRect, ctx.Theme, plane.Fill, plane.Border);
+        UiThemeDraw.Surface(ctx.Drawing, rowRect, ctx.Theme, plane.Fill, plane.Border);
 
         // Title band: the name may ellipsize (the full identity rides the row's help entry).
-        float labelWidth = Math.Max(1f, rowRect.width - ActionsWidth() - TextInset - ButtonGap);
+        float labelWidth = Math.Max(1f, rowRect.Width - ActionsWidth() - TextInset - ButtonGap);
         UsKernelDraw.Label(
-            new Rect(rowRect.x + TextInset, rowRect.y + RowTop, labelWidth, TitleBand),
+            new UiLayoutRect(rowRect.X + TextInset, rowRect.Y + RowTop, labelWidth, TitleBand),
             UsKernelDraw.Ellipsized(row.Label, ctx, UiFont.Small, labelWidth),
             ctx,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
-            TextAnchor.MiddleLeft,
+            UiTextAnchor.MiddleLeft,
             singleLine: true);
 
         // Chip bands: fixed short strings, never ellipsized; wrapped lines were reserved by Measure.
         List<string> chips = Chips(row, ctx, chipsWidth);
         float chipLineHeight = UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny) + ChipBandExtra;
-        float chipY = rowRect.y + RowTop + TitleBand + ChipGapY;
-        float cursorX = rowRect.x + TextInset;
-        float lineRight = rowRect.x + TextInset + chipsWidth;
+        float chipY = rowRect.Y + RowTop + TitleBand + ChipGapY;
+        float cursorX = rowRect.X + TextInset;
+        float lineRight = rowRect.X + TextInset + chipsWidth;
         for (int c = 0; c < chips.Count; c++)
         {
             float chipWidth = ChipWidth(chips[c], ctx, chipsWidth);
-            if (cursorX + chipWidth > lineRight + 0.5f && cursorX > rowRect.x + TextInset + 0.5f)
+            if (cursorX + chipWidth > lineRight + 0.5f && cursorX > rowRect.X + TextInset + 0.5f)
             {
                 chipY += chipLineHeight + ChipGapY;
-                cursorX = rowRect.x + TextInset;
+                cursorX = rowRect.X + TextInset;
             }
 
-            var chipRect = new Rect(cursorX, chipY, chipWidth, chipLineHeight);
+            var chipRect = new UiLayoutRect(cursorX, chipY, chipWidth, chipLineHeight);
             DrawChip(chipRect, chips[c], ctx);
             cursorX += chipWidth + ChipSep;
         }
 
         // Action column: [enable (names the EXACT pack, and target when xeno)][open].
         float actionsW = ActionsWidth(row);
-        float columnX = rowRect.xMax - actionsW - 2f;
-        var bandRect = new Rect(columnX, rowRect.y + (rowRect.height - ButtonBand) / 2f, actionsW, ButtonBand);
+        float columnX = rowRect.XMax - actionsW - 2f;
+        var bandRect = new UiLayoutRect(columnX, rowRect.Y + (rowRect.Height - ButtonBand) / 2f, actionsW, ButtonBand);
 
-        float cursor = bandRect.x;
+        float cursor = bandRect.X;
         if (row.QuickEnablePackKey.Length > 0)
         {
-            var enableRect = new Rect(cursor, bandRect.y, EnableWidth, bandRect.height);
+            var enableRect = new UiLayoutRect(cursor, bandRect.Y, EnableWidth, bandRect.Height);
             string caption = EnableCaption(row, ctx, EnableWidth - 16f);
             UsKernelDraw.HelpHover(enableRect, ctx, "us/race-board/enable");
-            if (UsKernelDraw.SelectionButton(enableRect, ctx, caption, ctx.Theme, false))
+            if (UsKernelDraw.SelectionButton(enableRect, ctx, caption, ctx.Theme, false, controlId: "race-enable", itemKey: (row.RaceDefName, row.QuickEnableScope, row.QuickEnableTarget, row.QuickEnablePackKey)))
             {
                 ctx.Bindings.Invoke("race-board-enable", new UsPackToggle(
                     row.QuickEnableScope == "Xenotype" ? SqueakVoicePackScope.Xenotype : SqueakVoicePackScope.Race,
@@ -349,35 +345,35 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
             cursor += EnableWidth + ButtonGap;
         }
 
-        var openRect = new Rect(cursor, bandRect.y, OpenWidth, bandRect.height);
-        if (UsKernelDraw.SelectionButton(openRect, ctx, UsKernelDraw.Keyed(ctx, KeyOpen), ctx.Theme, false))
+        var openRect = new UiLayoutRect(cursor, bandRect.Y, OpenWidth, bandRect.Height);
+        if (UsKernelDraw.SelectionButton(openRect, ctx, UsKernelDraw.Keyed(ctx, KeyOpen), ctx.Theme, false, controlId: "race-open", itemKey: row.RaceDefName))
         {
             ctx.Bindings.Invoke("race-board-open", row.RaceDefName);
         }
 
         // The whole remaining band is the atomic jump too; it stops before the action column, so one
         // press can never mean two intents.
-        var hit = new Rect(
-            rowRect.x + TextInset,
-            rowRect.y,
-            Math.Max(1f, bandRect.x - rowRect.x - TextInset - 4f),
-            rowRect.height);
-        if (UiNative.Button(hit, ctx))
+        var hit = new UiLayoutRect(
+            rowRect.X + TextInset,
+            rowRect.Y,
+            Math.Max(1f, bandRect.X - rowRect.X - TextInset - 4f),
+            rowRect.Height);
+        if (ctx.Controls.Activation(hit, ctx, "race-board-open", "body", row.RaceDefName).Request)
         {
             ctx.Bindings.Invoke("race-board-open", row.RaceDefName);
         }
     }
 
-    private static void DrawChip(Rect chipRect, string text, UiWidgetContext ctx)
+    private static void DrawChip(UiLayoutRect chipRect, string text, UiWidgetContext ctx)
     {
-        UiThemeDraw.Surface(chipRect, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(ctx.Drawing, chipRect, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme[UiPaletteRole.Border]);
         UsKernelDraw.Label(
-            new Rect(chipRect.x + ChipPadX, chipRect.y, Math.Max(1f, chipRect.width - ChipPadX * 2f), chipRect.height),
+            new UiLayoutRect(chipRect.X + ChipPadX, chipRect.Y, Math.Max(1f, chipRect.Width - ChipPadX * 2f), chipRect.Height),
             text,
             ctx,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
-            TextAnchor.MiddleLeft,
+            UiTextAnchor.MiddleLeft,
             singleLine: true);
     }
 

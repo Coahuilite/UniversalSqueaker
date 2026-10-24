@@ -149,18 +149,12 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
+        UiThemeDraw.Surface(Execution, VerseUiExecution.Rect(rect), WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(24f);
         bool prerequisite = notice == UiWindowNotice.Prerequisite;
 
-        UsKernelDraw.Label(
-            new Rect(body.x, body.y, body.width, 30f),
-            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"),
-            WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
-        UsKernelDraw.Label(
-            new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
-            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"),
-            WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
+        UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y, body.width, 30f)), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"), WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
+        UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f))), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"), WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
     }
 
     protected override void OnDrawFailure(Exception error)

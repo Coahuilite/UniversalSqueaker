@@ -5,7 +5,13 @@ The `.cs` files are a source snapshot from FerriteLib commit
 `tools/FerriteLib.UiKit.Tests/Stubs`. They model the 1.6 Core/IMGUI/TextRendering/InputLegacy
 and Verse/Harmony surfaces used by the fixed 0.8 DLL. They are test inputs, not game binaries.
 
-Only project output/intermediate paths differ. Defaults stay in this repository's
+A003 synchronizes `UnityEngineImGuiStub/ImGuiStubs.cs`, `VerseStub/VerseStubs.cs` and
+`VerseStub/TooltipStubs.cs` from the fixed producer commit
+`7eb8073492a1380aa18c67cc30960d19645efbd1`. These supply its actual native adapter
+contracts (focus/control-name/text outlet and tooltip); no FL runtime implementation is copied.
+The remaining snapshot stays at the source above.
+
+Project output/intermediate paths are consumer-local. Defaults stay in this repository's
 `dist/fl08-migration-a001`; isolated Host builds may pass `FerriteLibStubOutputRoot`
 and `FerriteLibStubObjRoot` (directories ending with a separator). Both follow the nested
 stub builds and runtime copies; existing callers retain their defaults. No producer source

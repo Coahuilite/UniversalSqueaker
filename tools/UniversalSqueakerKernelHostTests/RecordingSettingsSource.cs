@@ -23,6 +23,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// harness exercises the real dynamic-list widget draw paths instead of the empty projections.
     /// </summary>
     public bool RichData;
+    public bool ReversePackOrder { get; set; }
+    public int PackWriteCount { get; private set; }
     public bool RichScaleFrequencyWithTalking = true;
     /// <summary>UIR-002: board rows the fake projection returns (the harness cannot build a real
     /// catalog snapshot - its constructor is internal by design; the rows themselves are the
@@ -50,7 +52,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// long. The layer-height assertions need this because every other fixture string fits one line, and
     /// a one-line world cannot tell a measured band from a constant one.
     /// </summary>
-    public bool WrappingDomainText;
+    public bool WrappingDomainText = false;
 
 
     /// <summary>
@@ -62,7 +64,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// merge inside the fake would be a second implementation of the thing under test - the cross-channel
     /// increments are asserted on the write recorders instead, which fire on every write.</para>
     /// </summary>
-    public bool MirrorTuningWrites;
+    public bool MirrorTuningWrites = false;
 
     /// <summary>
     /// XG1.1 instrument: when true the fixture yields the production-SHAPED "xenotype layer with no tunable
@@ -70,21 +72,21 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// the production-shaped action-scope and mood rows. Off by default, so no earlier lane's input changes.
     /// See <see cref="ApplyEmptyXenotypeTargetFixture"/> for what this does and does not prove.
     /// </summary>
-    public bool EmptyXenotypeTarget;
+    public bool EmptyXenotypeTarget = false;
 
     /// <summary>
     /// XG1.1 instrument: the rich view's tuning-domain option list. Null keeps the fixture's two-entry
     /// race-level list; a lane that needs a VALID layer-2 target supplies its own (race, label, xenotype)
     /// entries, and the empty-target lane leaves this null and sets <see cref="EmptyXenotypeTarget"/>.
     /// </summary>
-    public TuningDomainOptionView[]? TuningDomains;
+    public TuningDomainOptionView[]? TuningDomains = null;
 
     /// <summary>
     /// V3 task-18 instrument: per-factor SUPPLYING LAYERS for the four rich mood rows, in row order
     /// (mood-major, factor-minor: pitch, volume, jitter), 0=Global 1=Race 2=Xenotype -1=no layer (default).
     /// Null keeps the fixture's production-shaped mix. This is the input the corrected readout renders.
     /// </summary>
-    public ActionScopeRowView[]? TuningActionScopes;
+    public ActionScopeRowView[]? TuningActionScopes = null;
     public EatPhase EatPhase = EatPhase.WholeProcess;
     public EatNutritionScope EatNutritionScope = EatNutritionScope.Any;
     public EatDrugScope EatDrugScope = EatDrugScope.Any;
@@ -154,7 +156,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// card must fall back on; a lane that wants the picture path sets it. It is a plain value - the fixture,
     /// like the production adapter, never loads a resource.
     /// </summary>
-    public Texture2D? XenotypeIcon { get; set; }
+    public UiImage XenotypeIcon { get; set; }
 
     // Packs writes.
     public SqueakVoicePackScope? LastPackScope;
@@ -172,10 +174,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     /// <summary>V4.4 instrument: feeds a LONG technical identity (the dev form Mod.cs:132-143 builds) so the
     /// footer lane can prove the band grows to fit it instead of clipping, in both languages.</summary>
-    public string? BuildIdentityOverride;
+    public string? BuildIdentityOverride = null;
 
     /// <summary>V4.2 instrument: the baseline preset's display label (null keeps the built-in short one).</summary>
-    public string? PresetLabel;
+    public string? PresetLabel = null;
 
     public string SaveStatus => SaveStatusOverride;
     public string SaveStatusOverride = "Idle";
@@ -183,14 +185,14 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool SaveStatusVisibleOverride = true;
 
     public bool IsDirty => IsDirtyOverride;
-    public bool IsDirtyOverride;
+    public bool IsDirtyOverride = false;
     /// <summary>
     /// When set, the fake behaves like the production source's view cache: the view is built once
     /// and only rebuilt when this revision changes, counting rebuilds. The D1/D6 display-write
     /// contract lane needs exactly this - a cache-less fake makes "stale projection" unobservable
     /// (the blind spot the 2026-09-05 in-game report exposed).
     /// </summary>
-    public Func<int>? RevisionSource;
+    public Func<int>? RevisionSource = null;
     public int BuildViewCount;
     private VoicePacksViewState? cachedView;
     private int cachedRevision = -1;
@@ -436,6 +438,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 false, false, false, false));
         }
 
+        if (ReversePackOrder) source.Reverse();
         return PackCardProjection.Build(
             source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
             in state.DomainFilter, state.PackCardsExpanded);
@@ -1004,6 +1007,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void ToggleVoicePack(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey, bool enabled)
     {
+        PackWriteCount++;
         LastPackScope = scope;
         LastPackRace = raceDefName;
         LastPackTarget = targetDefName;

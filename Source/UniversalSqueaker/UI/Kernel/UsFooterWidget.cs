@@ -24,11 +24,7 @@ public sealed class UsKernelFooterWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Register(
-            UsKernelWidgetRegistrar.Scope,
-            Kind,
-            () => new UsKernelFooterWidget(),
-            new[] { "Id", "Kind", "Height", "Tab", "Hidden" });
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsKernelFooterWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Height", UiAttributeKind.Length), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec spec)
@@ -36,7 +32,7 @@ public sealed class UsKernelFooterWidget : IUiWidget
         this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
-    public void Validate(IUiBindings bindings, string elementPath)
+    public void Validate(IUiBindingAccess bindings, string elementPath)
     {
         bindings.ValidateValue<string>("build-identity", elementPath);
         bindings.ValidateValue<string>("save-status", elementPath);
@@ -60,30 +56,30 @@ public sealed class UsKernelFooterWidget : IUiWidget
         return Math.Max(FooterHeight, Math.Max(left, right) + 6f);
     }
 
-    public void Draw(Rect rect, UiWidgetContext ctx)
+    public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
-        if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.Width <= 1f || rect.Height <= 1f) return;
 
         ctx.Bindings.TryGet("build-identity", out string buildIdentity);
         ctx.Bindings.TryGet("save-status", out string saveStatus);
         bool isDirty = ctx.Bindings.TryGet("is-dirty", out bool dirty) && dirty;
 
-        UiThemeDraw.Surface(new Rect(rect.x, rect.y, rect.width, 1f), ctx.Theme, ctx.Theme[UiPaletteRole.Divider], ctx.Theme[UiPaletteRole.Divider]);
+        UiThemeDraw.Surface(ctx.Drawing, new UiLayoutRect(rect.X, rect.Y, rect.Width, 1f), ctx.Theme, ctx.Theme[UiPaletteRole.Divider], ctx.Theme[UiPaletteRole.Divider]);
 
-        UsKernelDraw.Label(
-            new Rect(rect.x + Padding, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height),
+        UsKernelDraw.Label(ctx.Drawing,
+            new UiLayoutRect(rect.X + Padding, rect.Y, Math.Max(1f, rect.Width * 0.5f - Padding), rect.Height),
             buildIdentity,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            UiTextAnchor.MiddleLeft);
 
         if (!StatusVisible(ctx)) return;
 
         // Accent discipline (05 §3.1): "saving" and "dirty" are activity, not "currently in effect" -
         // the ● prefix and the text already carry that, so the color only steps up from secondary to
         // primary. The destructive/handling failure keeps its status color (Danger).
-        Color statusColor = saveStatus switch
+        UiColour statusColor = saveStatus switch
         {
             "Failed" => ctx.Theme[UiPaletteRole.DangerSurface],
             "Saving" => ctx.Theme[UiPaletteRole.Foreground],
@@ -94,15 +90,15 @@ public sealed class UsKernelFooterWidget : IUiWidget
             statusColor = ctx.Theme[UiPaletteRole.Foreground];
         }
 
-        Rect statusRect = new(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height);
+        UiLayoutRect statusRect = new(rect.X + rect.Width * 0.5f, rect.Y, Math.Max(1f, rect.Width * 0.5f - Padding), rect.Height);
         UsKernelDraw.HelpHover(statusRect, ctx, "us/page-title/apply");
-        UsKernelDraw.Label(
+        UsKernelDraw.Label(ctx.Drawing,
             statusRect,
             StatusLabel(ctx, saveStatus, isDirty),
             ctx.Theme,
             statusColor,
             UiFont.Tiny,
-            TextAnchor.MiddleRight);
+            UiTextAnchor.MiddleRight);
     }
 
     // A pending edit is necessary state even after the transient save sentence has expired.
