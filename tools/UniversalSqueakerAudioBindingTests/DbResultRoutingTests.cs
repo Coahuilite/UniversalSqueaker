@@ -39,6 +39,7 @@ internal static partial class Program
                 directory.RacePacks.Add(projected);
                 selections[new AudioDomain(new RaceKey(projected.raceDefName), null)] = new HashSet<string> { key };
             }
+            ProjectSelection(directory, selections);
         }
         (Pawn Pawn, Thing Food, JobDriver_Ingest Driver) Begin(string id, float nutrition)
         {

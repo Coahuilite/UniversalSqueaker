@@ -61,6 +61,7 @@ internal static partial class Program
                 if (pack.scope == SqueakVoicePackScope.Race) directory.RacePacks.Add(pack);
                 else directory.XenotypePacksByDefName[pack.targetDefName] = new[] { pack };
             }
+            ProjectSelection(directory, selections);
         }
         PublishSelectedPacks();
         Check(!VoicePackDirectory.Directory.Any(x => x.defName == "US_DaInvalidXeno"),
@@ -90,6 +91,7 @@ internal static partial class Program
         selector.Selected.Clear();
         selector.Select(proxy);
         var session = RuntimeSession(pawn);
+        Console.WriteLine("DA SELECT " + session.DiagnosticText);
         Check(session.LastOutcome.Action == "us.core/Select" && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && SoundStarter.Played.Count == starts + 1 && session.DiagnosticText.Contains("role=SelectedSubject")
             && session.DiagnosticText.Contains("subject=" + SqueakerNotifications.SubjectKey(pawn)) && session.DiagnosticText.Contains("nativeLabel=Ratkin-A") && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaRatkin/ordinary"),

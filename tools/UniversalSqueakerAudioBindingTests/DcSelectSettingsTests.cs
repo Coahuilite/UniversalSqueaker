@@ -38,6 +38,7 @@ internal static partial class Program
             audio.TryGetPackKey(out var key); directory.RacePacks.Add(audio);
             selections[new AudioDomain(new RaceKey(audio.raceDefName), null)] = new HashSet<string> { key };
         }
+        ProjectSelection(directory, selections);
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
         SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         var settings = SqueakerMod.Settings;
