@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
 using UnityEngine;
 
 using FerriteLib.UiKit.Kernel;
@@ -28,6 +29,7 @@ internal static class DiagnosticsPanelLaneTests
 
     public static void RunAll()
     {
+        int before = matchedSteps;
         Step("main host validates the generated master-detail spec", MainHostCreation);
         Step("detail host validates the lock page", DetailHostCreation);
         Step("view writes route to the source and bump the session clock", WritesRouteAndBump);
@@ -54,6 +56,7 @@ internal static class DiagnosticsPanelLaneTests
         Step("layout diagnosis is per host: settings capture leaves this panel's host alone", LayoutDiagnosisIsPerHost);
         Step("the outline switch is independent of capture (SA1.5)", OutlineIsIndependentOfCapture);
 #endif
+        if (matchedSteps == before) throw new InvalidOperationException("No existing diagnostics case matched " + Program.ExistingCaseFilter);
     }
 
 #if US_DEV
@@ -95,8 +98,8 @@ internal static class DiagnosticsPanelLaneTests
         using UsTextFitAudit diagnosticsAudit = UsTextFitAudit.Open(diagnostics, auditFit: true);
 
         // Both hosts must have drawn a real pass before anything can be reported.
-        settings.DrawFrame(viewport);
-        diagnostics.DrawFrame(viewport);
+        Fl08PublicObservation.Draw(settings, viewport);
+        Fl08PublicObservation.Draw(diagnostics, viewport);
 
         // ---- (0) FIX 3: reading the status must not start capture, and it must still answer truthfully.
         Assert(!settings.Diagnostics.GeometryEnabled,
@@ -174,7 +177,7 @@ internal static class DiagnosticsPanelLaneTests
             fake.AttachHost(host);
             using UsTextFitAudit audit = UsTextFitAudit.Open(host, auditFit: true);
             var viewport = new Rect(0f, 0f, 760f, 524f);
-            host.DrawFrame(viewport);
+            Fl08PublicObservation.Draw(host, viewport);
 
             // (1) outline opens WITHOUT capture, through the page's own bound command.
             host.Bindings.Set("layout-outline", true);
@@ -220,11 +223,16 @@ internal static class DiagnosticsPanelLaneTests
 
 #endif
 
+    private static int matchedSteps;
     private static void Step(string name, Action action)
     {
+        if (Program.ExistingCaseFilter != null && action.Method.Name.IndexOf(Program.ExistingCaseFilter, StringComparison.OrdinalIgnoreCase) < 0) return;
+        matchedSteps++;
         try
         {
+            Console.WriteLine("[existing-diagnostics] BEGIN " + name);
             action();
+            Console.WriteLine("[existing-diagnostics] PASS " + name);
         }
         catch (Exception ex)
         {
@@ -394,7 +402,7 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 20);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        IUiBindings bindings = host.Bindings;
+        IUiBindingAccess bindings = host.Bindings;
 
         int rev = host.Session.ContentRevision;
         bindings.Set(UsDiagnosticsHost.KeySeconds, true);
@@ -442,19 +450,19 @@ internal static class DiagnosticsPanelLaneTests
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
         Vector2 size = new(680f, 560f); // the panel's round-10 geometry (620 -> 680, lead-authorised)
 
-        UiLayoutSnapshot open = host.MeasureAndArrange(size);
-        Assert(open.RectById.TryGetValue("diag-list", out Rect listRect) && listRect.height > 0f,
+        UiLayoutSnapshot open = host.MeasureAndArrange(VerseUiExecution.Point(size));
+        Assert(open.RectById.TryGetValue("diag-list", out UiLayoutRect listRect) && listRect.Height > 0f,
             "expanded: list column has height");
-        Assert(!open.RectById.TryGetValue("diag-bar", out Rect barOpen) || barOpen.height <= 0f,
+        Assert(!open.RectById.TryGetValue("diag-bar", out UiLayoutRect barOpen) || barOpen.Height <= 0f,
             "expanded: the bar measures zero");
 
         host.Bindings.Set(UsDiagnosticsHost.KeyCollapsed, true);
-        UiLayoutSnapshot bar = host.MeasureAndArrange(size);
-        Assert(bar.RectById.TryGetValue("diag-bar", out Rect barRect) && barRect.height > 0f,
+        UiLayoutSnapshot bar = host.MeasureAndArrange(VerseUiExecution.Point(size));
+        Assert(bar.RectById.TryGetValue("diag-bar", out UiLayoutRect barRect) && barRect.Height > 0f,
             "collapsed: the bar has height (same session, one binding flip - the bar ruling)");
-        Assert(Math.Abs(barRect.width - size.x) <= 0.5f,
-            "collapsed: the bar spans the full page width, got " + barRect.width + " (the defect was a bar squeezed into the 250px list column)");
-        Assert((bar.RectById.TryGetValue("diag-list", out Rect listBar) ? listBar.height : 0f) <= 0f,
+        Assert(Math.Abs(barRect.Width - size.x) <= 0.5f,
+            "collapsed: the bar spans the full page width, got " + barRect.Width + " (the defect was a bar squeezed into the 250px list column)");
+        Assert((bar.RectById.TryGetValue("diag-list", out UiLayoutRect listBar) ? listBar.Height : 0f) <= 0f,
             "collapsed: list column measures zero");
     }
 
@@ -464,7 +472,7 @@ internal static class DiagnosticsPanelLaneTests
         FillRows(fake, 8);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
         host.Bindings.Set(UsDiagnosticsHost.KeyCollapsed, true);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyBar, out UsDiagBarModel? bar) && bar != null,
             "the collapsed bar reads its model through the real host (typed binding, not a paint-side lookup)");
@@ -506,12 +514,12 @@ internal static class DiagnosticsPanelLaneTests
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
         Assert(!fake.RawOpen, "raw values start folded: evidence never leads");
 
-        UiLayoutSnapshot folded = host.MeasureAndArrange(new Vector2(680f, 560f));
+        UiLayoutSnapshot folded = host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
         // Through the binding: the fold is page state on the same session clock as every other write.
         host.Bindings.Set(UsDiagnosticsHost.KeyRawOpen, true);
         Assert(fake.RawOpen, "the fold write routes to the source");
-        UiLayoutSnapshot open = host.MeasureAndArrange(new Vector2(680f, 560f));
-        Assert(open.RectById["diag-detail"].height > folded.RectById["diag-detail"].height,
+        UiLayoutSnapshot open = host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
+        Assert(open.RectById["diag-detail"].Height > folded.RectById["diag-detail"].Height,
             "unfolding the raw block adds its two rows to the detail column");
     }
 
@@ -535,7 +543,7 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 4);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         int blockRows = 0;
         List<string> blockValues = new();
@@ -599,7 +607,7 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 4);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         IList rects = RecordedStub("DrawBoxSolidRects");
         IList colors = RecordedStub("DrawBoxSolidColors");
@@ -613,7 +621,7 @@ internal static class DiagnosticsPanelLaneTests
         for (int i = boxStart; i < rects.Count && i < colors.Count; i++)
         {
             Rect rail = (Rect)rects[i]!;
-            Color colour = (Color)colors[i]!;
+            UiColour colour = VerseUiExecution.Colour((Color)colors[i]!);
             if (SameColor(colour, hostTheme[UiPaletteRole.Divider]) && Math.Abs(rail.width - 2f) <= 0.01f) dividerRails++;
             if (!SameColor(colour, UniversalSqueaker.UsAttention.Brush)) continue;
             if (Math.Abs(rail.width - 2f) <= 0.01f) attentionRails++;
@@ -641,7 +649,7 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 4);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         int blockRows = 0;
         if (host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null)
@@ -671,7 +679,7 @@ internal static class DiagnosticsPanelLaneTests
         {
             if (!string.Equals((string)texts[i]!, statusText, StringComparison.Ordinal)) continue;
             found++;
-            Color colour = (Color)colors[i]!;
+            UiColour colour = VerseUiExecution.Colour((Color)colors[i]!);
             Assert(SameColor(colour, UniversalSqueaker.UsAttention.Brush),
                 "a blocked status cell is painted with the attention brush, got " + colour);
             Assert(!SameColor(colour, theme[UiPaletteRole.Accent]),
@@ -693,7 +701,7 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 4);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         IList texts = RecordedStub("LabelTexts");
         IList colors = RecordedStub("LabelColors");
@@ -710,7 +718,7 @@ internal static class DiagnosticsPanelLaneTests
         for (int i = textStart; i < texts.Count && i < colors.Count; i++)
         {
             string text = (string)texts[i]!;
-            Color colour = (Color)colors[i]!;
+            UiColour colour = VerseUiExecution.Colour((Color)colors[i]!);
             if (string.Equals(text, "US.Diagnostics.Value.NotApplicable", StringComparison.Ordinal))
             {
                 naDrawn++;
@@ -764,7 +772,7 @@ internal static class DiagnosticsPanelLaneTests
         };
         FillRows(fake, 4);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null, "detail projects");
         Assert(detail!.Gates[14].State == UsDiagGateState.Block, "the fixture really does have a previous-event failure");
@@ -795,7 +803,7 @@ internal static class DiagnosticsPanelLaneTests
     /// 09 §3.5: below the measured split threshold the page must switch to the in-window list/detail
     /// navigation, expose a working Back, and leave the search text and page exactly where they were.
     /// The switch is the TWO mutually exclusive presentations of <see cref="UsDiagnosticsSpec.MainXml"/>
-    /// behind their VisibleKeys, not a column that collapses to a pixel (FL 0.7 A1 retired that idiom),
+    /// behind their VisibleBinds, not a column that collapses to a pixel (FL 0.7 A1 retired that idiom),
     /// so each half of the boundary is asserted by the OTHER presentation owning no arranged geometry.
     /// </summary>
     private static void NarrowNavigation()
@@ -804,10 +812,10 @@ internal static class DiagnosticsPanelLaneTests
         FillRows(fake, 12);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
 
-        // The spec must spell the host's own keys: an unresolvable VisibleKey stays VISIBLE, so a drift
+        // The spec must spell the host's own keys: an unresolvable VisibleBind stays VISIBLE, so a drift
         // between the two would show both presentations at once. This is the positive control for it.
-        Assert(UsDiagnosticsSpec.MainXml.IndexOf("VisibleKey=\"" + UsDiagnosticsHost.KeyWide + "\"", StringComparison.Ordinal) >= 0
-                && UsDiagnosticsSpec.MainXml.IndexOf("VisibleKey=\"" + UsDiagnosticsHost.KeyNarrow + "\"", StringComparison.Ordinal) >= 0,
+        Assert(UsDiagnosticsSpec.MainXml.IndexOf("VisibleBind=\"" + UsDiagnosticsHost.KeyWide + "\"", StringComparison.Ordinal) >= 0
+                && UsDiagnosticsSpec.MainXml.IndexOf("VisibleBind=\"" + UsDiagnosticsHost.KeyNarrow + "\"", StringComparison.Ordinal) >= 0,
             "the main spec binds both presentations to the host's contract keys");
         Assert(UsDiagnosticsSpec.MainXml.IndexOf("NarrowHidden", StringComparison.Ordinal) < 0,
             "the retired idiom is gone: a presentation is hidden whole, never left as a pixel-wide remnant");
@@ -819,7 +827,7 @@ internal static class DiagnosticsPanelLaneTests
         HostArrangeAt(680f);
 
         // This width is half a pixel under the threshold. Crossing it must move the layout clock exactly
-        // once: the VisibleKey binding is read-only, so ApplyContentWidth is the ONLY thing that
+        // once: the VisibleBind binding is read-only, so ApplyContentWidth is the ONLY thing that
         // re-arranges the page when the width flips - the engine has no Breakpoint swap doing it for us.
         const float narrowWidth = UsDiagnosticsProjection.NarrowBreakpoint + UsDiagnosticsProjection.PagePadding * 2f - 0.5f;
         int revBeforeFlip = host.Session.ContentRevision;
@@ -877,9 +885,9 @@ internal static class DiagnosticsPanelLaneTests
         Arrange(narrowWidth, shortHeight);
         UiNode? listScroll = host.Session.GetNodeByElementId("diag-nav-scroll");
         Assert(listScroll != null, "the narrow list scroll has a node to own its position");
-        host.Session.SetScrollPosition(listScroll!, new Vector2(0f, 60f));
+        host.Session.SetScrollPosition(listScroll!, VerseUiExecution.Point(new Vector2(0f, 60f)));
         Arrange(narrowWidth, shortHeight);
-        float before = host.Session.GetScrollPosition(listScroll!).y;
+        float before = host.Session.GetScrollPosition(listScroll!).Y;
         Assert(before > 1f, "the fixture really scrolled (a clamped-to-zero offset would make the check vacuous), got " + before);
 
         // Show the detail view - the state whose Back control is under test - and click ITS drawn control.
@@ -892,7 +900,7 @@ internal static class DiagnosticsPanelLaneTests
             "the drawn Back control is on the frame before it is clicked");
         int revAtClick = host.Session.ContentRevision;
 
-        ClickRect(host, shortViewport, backLabel);
+        ClickRect(host, shortViewport, backLabel, "diag-nav-back");
 
         Assert(fake.NavigationView == UsDiagNavView.List, "clicking the drawn Back control switches the view back");
         Assert(host.Session.ContentRevision == revAtClick + 1,
@@ -902,8 +910,8 @@ internal static class DiagnosticsPanelLaneTests
         Assert(fake.Page == 2, "and the page is exactly where it was, got " + fake.Page);
         UiLayoutSnapshot back = Arrange(narrowWidth, shortHeight);
         Assert(Height(back, "diag-nav-body") > 0f, "the list view is arranged again");
-        Assert(Math.Abs(host.Session.GetScrollPosition(listScroll!).y - before) < 0.5f,
-            "and the list position survived the round trip, got " + host.Session.GetScrollPosition(listScroll!).y + " vs " + before);
+        Assert(Math.Abs(host.Session.GetScrollPosition(listScroll!).Y - before) < 0.5f,
+            "and the list position survived the round trip, got " + host.Session.GetScrollPosition(listScroll!).Y + " vs " + before);
 
         // The wide side of the same boundary: the master/detail split is the arranged shape, and the
         // narrow presentation owns NO geometry there - not a 1px stub, and not a share of the wide
@@ -929,7 +937,7 @@ internal static class DiagnosticsPanelLaneTests
         UiLayoutSnapshot Arrange(float width, float height)
         {
             UsDiagnosticsHost.ApplyContentWidth(fake, host, width);
-            return host.MeasureAndArrange(new Vector2(width, height));
+            return host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(width, height)));
         }
 
         UiLayoutSnapshot HostArrangeAt(float width) => Arrange(width, 560f);
@@ -955,7 +963,7 @@ internal static class DiagnosticsPanelLaneTests
         fake.NavigationView = UsDiagNavView.Detail;
         Assert(fake.ShowBackControl, "positive control: in this state the main page would show Back");
         using UiHost host = UsDiagnosticsHost.CreateDetail(fake);
-        host.MeasureAndArrange(new Vector2(320f, 480f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(320f, 480f)));
 
         IList texts = RecordedStub("LabelTexts");
         int textStart = texts.Count;
@@ -1032,7 +1040,7 @@ internal static class DiagnosticsPanelLaneTests
         const float narrowWidth = 620f;
         fake.SetContentWidth(narrowWidth);
         fake.NavigationView = UsDiagNavView.Detail; // the narrow detail view is what draws the value cell
-        host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(narrowWidth, 560f)));
 
         IList texts = RecordedStub("LabelTexts");
         IList rects = RecordedStub("LabelRects");
@@ -1066,7 +1074,7 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 4);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(680f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
 
         Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null, "detail projects");
         Assert(detail!.Gates.Count == 16, "the chain is still 16 conditions");
@@ -1092,22 +1100,22 @@ internal static class DiagnosticsPanelLaneTests
         Assert(DrawnContains(texts, start, "US.Diagnostics.Gate.OnMap"), "the sweep finds a game-side name");
         Assert(DrawnContains(texts, start, "US.Diagnostics.Gate.Dispatch"), "and an audio-side name");
 
-        float openHeight = Height(host.MeasureAndArrange(new Vector2(680f, 560f)), "diag-detail");
+        float openHeight = Height(host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f))), "diag-detail");
         Rect viewport = new(0f, 0f, 680f, 560f);
 
-        // Fold the Audio group by CLICKING its heading through the engine's own hit outlet - the same
-        // stub override the mood lane uses. A heading that stopped being a control reddens here.
+        // Fold the Audio group through public native press/release on the visible heading.
+        // The original fold and one-revision assertions remain.
         int clickStart = texts.Count;
         host.DrawChecked(viewport);
         Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), clickStart,
                 "[-] US.Diagnostics.Gate.Group.Audio · US.Diagnostics.Basis.Current", out Rect openHeading),
             "the open Audio heading is drawn as a control and names its group");
         int revBefore = host.Session.ContentRevision;
-        ClickRect(host, viewport, openHeading);
+        ClickRect(host, viewport, openHeading, "diag-detail");
         Assert(!fake.IsGroupOpen(UsDiagGateGroup.Audio), "clicking the heading folds the group");
         Assert(host.Session.ContentRevision == revBefore + 1, "and the fold is one display write, not a repaint");
 
-        UiLayoutSnapshot folded = host.MeasureAndArrange(viewport.size);
+        UiLayoutSnapshot folded = host.MeasureAndArrange(VerseUiExecution.Point(viewport.size));
         Assert(Height(folded, "diag-detail") < openHeight,
             "a folded group takes its rows out of the page, got " + Height(folded, "diag-detail") + " vs " + openHeight);
 
@@ -1126,7 +1134,7 @@ internal static class DiagnosticsPanelLaneTests
 
         // A data update must not move the developer's view: the state is page state, never derived.
         fake.Facts.OnMap = true;
-        host.MeasureAndArrange(viewport.size);
+        host.MeasureAndArrange(VerseUiExecution.Point(viewport.size));
         host.DrawChecked(viewport);
         Assert(!fake.IsGroupOpen(UsDiagGateGroup.Audio),
             "an update to the values never re-opens a folded group (no automatic collapse or expand)");
@@ -1138,7 +1146,7 @@ internal static class DiagnosticsPanelLaneTests
         host.DrawChecked(viewport);
         Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), reopenStart, "[+] US.Diagnostics.Gate.Group.Audio", out Rect closedHeading),
             "the folded heading is drawn as a control");
-        ClickRect(host, viewport, closedHeading);
+        ClickRect(host, viewport, closedHeading, "diag-detail");
         Assert(fake.IsGroupOpen(UsDiagGateGroup.Audio), "clicking it again expands the group");
     }
 
@@ -1157,36 +1165,45 @@ internal static class DiagnosticsPanelLaneTests
     }
 
     /// <summary>
-    /// One frame in which the control whose surface ENCLOSES <paramref name="labelRect"/> reports a
-    /// click (the carrier's own test seam, <c>UiNative.ButtonOverride</c>).
+    /// Primary press/release on the drawn label, translated through its public origin
+    /// and revealed through the real scroll container before native input.
     /// </summary>
-    private static void ClickRect(UiHost host, Rect viewport, Rect labelRect)
+    private static void ClickRect(UiHost host, Rect viewport, Rect labelRect, string elementId)
     {
-        SetButtonOverride(rect => Math.Abs(rect.y - labelRect.y) <= 0.5f
-            && Math.Abs(rect.height - labelRect.height) <= 0.5f
-            && rect.x <= labelRect.x + 0.5f
-            && rect.xMax >= labelRect.xMax - 0.5f);
+        // The old logical override used draw-local rectangles, including off-screen ones. Native
+        // input needs the public window origin and an actual visible point inside the owner's clip.
+        Event? previous = Event.current;
+        bool geometryWasOn = host.Diagnostics.GeometryEnabled;
+        host.Diagnostics.GeometryEnabled = true;
         try
         {
+            Event.current = new Event { type = EventType.Repaint, mousePosition = new Vector2(-1000, -1000) };
             host.DrawChecked(viewport);
+            if (!host.Diagnostics.TryGetGeometrySnapshot(out var geometry) || geometry == null)
+                throw new InvalidOperationException("No actual geometry for existing click " + elementId);
+            var drawn = geometry.Nodes.Single(node => node.ElementId == elementId);
+            UiLayoutPoint point = VerseUiExecution.Point(labelRect.center) + drawn.Origin;
+            if (drawn.Clip.IsKnown && !drawn.Clip.Rect.Contains(point))
+            {
+                UiNode? scroll = host.Session.GetNodeByElementId(elementId)?.Parent;
+                while (scroll != null && scroll.Kind != "Scroll") scroll = scroll.Parent;
+                if (scroll == null) throw new InvalidOperationException("Existing click has no visible scroll route: " + elementId);
+                UiLayoutPoint offset = host.GetScrollPosition(scroll.ElementId);
+                host.SetScrollPosition(scroll.ElementId, new UiLayoutPoint(offset.X, offset.Y + point.Y - drawn.Clip.Rect.Center.Y));
+                host.DrawChecked(viewport);
+                if (!host.Diagnostics.TryGetGeometrySnapshot(out geometry) || geometry == null)
+                    throw new InvalidOperationException("No scrolled geometry for existing click " + elementId);
+                drawn = geometry.Nodes.Single(node => node.ElementId == elementId);
+                point = VerseUiExecution.Point(labelRect.center) + drawn.Origin;
+            }
+            Console.WriteLine("[existing-click] " + elementId + " local=" + labelRect + " origin=" + drawn.Origin + " point=" + point + " clip=" + drawn.Clip);
+            foreach (var phase in new[] { EventType.MouseDown, EventType.MouseUp })
+            {
+                Event.current = new Event { type = phase, button = 0, mousePosition = VerseUiExecution.Point(point) };
+                host.DrawChecked(viewport);
+            }
         }
-        finally
-        {
-            SetButtonOverride(null);
-        }
-    }
-
-    private static void SetButtonOverride(Func<Rect, bool>? value)
-    {
-        FieldInfo? info = typeof(UiNative).GetField("ButtonOverride", BindingFlags.NonPublic | BindingFlags.Static);
-        if (info == null)
-        {
-            throw new InvalidOperationException(
-                "the carrier no longer exposes UiNative.ButtonOverride, so this lane cannot simulate a click; "
-                + "the fold check must not be deleted to make that compile error go away");
-        }
-
-        info.SetValue(null, value);
+        finally { host.Diagnostics.GeometryEnabled = geometryWasOn; Event.current = previous; }
     }
 
     private static bool DrawnContains(IList texts, int from, string needle)
@@ -1200,10 +1217,10 @@ internal static class DiagnosticsPanelLaneTests
     }
 
     private static float Height(UiLayoutSnapshot snapshot, string id)
-        => snapshot.RectById.TryGetValue(id, out Rect rect) ? rect.height : 0f;
+        => snapshot.RectById.TryGetValue(id, out UiLayoutRect rect) ? rect.Height : 0f;
 
     private static float Width(UiLayoutSnapshot snapshot, string id)
-        => snapshot.RectById.TryGetValue(id, out Rect rect) ? rect.width : 0f;
+        => snapshot.RectById.TryGetValue(id, out UiLayoutRect rect) ? rect.Width : 0f;
 
     private static IList RecordedStub(string field)
     {
@@ -1212,9 +1229,9 @@ internal static class DiagnosticsPanelLaneTests
         return (IList)info.GetValue(null)!;
     }
 
-    private static bool SameColor(Color left, Color right)
-        => Math.Abs(left.r - right.r) <= 0.0001f && Math.Abs(left.g - right.g) <= 0.0001f
-        && Math.Abs(left.b - right.b) <= 0.0001f && Math.Abs(left.a - right.a) <= 0.0001f;
+    private static bool SameColor(UiColour left, UiColour right)
+        => Math.Abs(left.Red - right.Red) <= 0.0001f && Math.Abs(left.Green - right.Green) <= 0.0001f
+        && Math.Abs(left.Blue - right.Blue) <= 0.0001f && Math.Abs(left.Alpha - right.Alpha) <= 0.0001f;
 
     private static int CountOccurrences(string text, string token)
     {
@@ -1258,7 +1275,7 @@ internal static class DiagnosticsPanelLaneTests
         FillRows(fake, 8);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
 
-        host.MeasureAndArrange(new Vector2(620f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(620f, 560f)));
         // This lane TRIPS ON PURPOSE, so the switch is explicit in the call rather than an omission - and it
         // is passed on every later frame too, because UiSession remembers a trip until it is disposed.
         host.DrawChecked(new Rect(0f, 0f, 620f, 560f), deliberateTrips: true);
@@ -1269,7 +1286,7 @@ internal static class DiagnosticsPanelLaneTests
         Assert(UsTripGuard.Describe(host.Session, "diag").Contains("planted projection failure"),
             "the trip log names what the element threw, so a silent recovery cannot hide the cause");
         fake.ThrowOnDetail = false;
-        host.MeasureAndArrange(new Vector2(620f, 560f));
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(620f, 560f)));
         // Still the declared lane: the detail element draws cleanly from here on, but the session keeps the
         // earlier trip in TrippedNodes, so this is the same deliberate declaration, not a new one.
         host.DrawChecked(new Rect(0f, 0f, 620f, 560f), deliberateTrips: true);
@@ -1289,8 +1306,8 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource { ThrowOnDetail = true };
         FillRows(fake, 8);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        host.MeasureAndArrange(new Vector2(620f, 560f));
-        host.DrawFrame(new Rect(0f, 0f, 620f, 560f)); // deliberately unguarded: this step is about the guard failing
+        host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(620f, 560f)));
+        Fl08PublicObservation.Draw(host, new Rect(0f, 0f, 620f, 560f)); // deliberately unguarded: this step is about the guard failing
 
         Assert(UsTripGuard.AnyTripped(host.Session), "the planted throw is recorded as a tripped element");
 
@@ -1315,6 +1332,6 @@ internal static class DiagnosticsPanelLaneTests
 
     private static void Assert(bool condition, string message)
     {
-        if (!condition) throw new Exception(message);
+        Program.Check(condition, message);
     }
 }

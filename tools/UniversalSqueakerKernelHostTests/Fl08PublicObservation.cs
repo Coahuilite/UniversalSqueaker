@@ -15,9 +15,25 @@ internal static class Fl08PublicObservation
     private sealed class Record
     {
         internal UiHitLayer? Popup;
+        internal VerseUiExecution? Execution;
         internal readonly HashSet<string> Recoveries = new();
     }
     private static readonly ConditionalWeakTable<UiSession, Record> records = new();
+    private static readonly List<VerseUiExecution> executions = new();
+    internal static VerseUiExecution ExecutionFor(UiHost host)
+    {
+        var record = records.GetOrCreateValue(host.Session);
+        if (record.Execution == null) { record.Execution = new VerseUiExecution(); executions.Add(record.Execution); }
+        return record.Execution;
+    }
+    // The existing image fixture supplies its own explicit owner; it disposes that owner itself.
+    internal static void UseExecution(UiHost host, VerseUiExecution execution)
+        => records.GetOrCreateValue(host.Session).Execution = execution;
+    internal static void DisposeExecutions()
+    {
+        foreach (var execution in executions) execution.Dispose();
+        executions.Clear();
+    }
     internal static bool Popup(UiSession session, out UiHitLayer layer)
     {
         layer = default;
@@ -45,10 +61,10 @@ internal static class Fl08PublicObservation
     {
         var record = records.GetOrCreateValue(host.Session);
         record.Popup = null;
-        var prior = UiNative.Trace;
-        UiNative.Trace = text => {
+        var prior = host.Session.Controls.Trace;
+        host.Session.Controls.Trace = text => {
             prior?.Invoke(text);
-            var match = Regex.Match(text, @"^publish id=(.*?) rect=([-0-9.,]+) firstRow=");
+            var match = Regex.Match(text, @"^publish id=(.*?) rect=\(?([-0-9.,]+)\)? firstRow=");
             if (!match.Success) return;
             float[] v = match.Groups[2].Value.Split(new[] { ',' }).Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
             string id = match.Groups[1].Value;
@@ -63,11 +79,20 @@ internal static class Fl08PublicObservation
             }
             owner = owner
                 ?? throw new InvalidOperationException("No declared US owner for observed popup " + id);
-            record.Popup = new UiHitLayer(owner, new Rect(v[0], v[1], v[2], v[3]), true, id);
+            // US composites now own each popup through their public named child context.
+            if (ownerId == "scope-tree" || ownerId == "filter-bar")
+                owner = host.CreateContext(viewport.width).WithNode(owner).Child(id).Node;
+            record.Popup = new UiHitLayer(owner, new UiLayoutRect(v[0], v[1], v[2], v[3]), true, id);
         };
-        try { host.DrawFrame(viewport); }
+        var previous = Event.current;
+        if (previous == null) Event.current = new Event { type = EventType.Repaint, mousePosition = new Vector2(-1000, -1000) };
+        try {
+            var execution = ExecutionFor(host);
+            host.DrawFrame(VerseUiExecution.Rect(viewport), execution.CaptureFrame(), execution);
+        }
         finally {
-            UiNative.Trace = prior;
+            host.Session.Controls.Trace = prior;
+            Event.current = previous;
         }
     }
     private static IEnumerable<string> BoundDropdowns(IReadOnlyList<UiElementSpec> specs, string binding)

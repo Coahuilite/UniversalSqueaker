@@ -14,12 +14,13 @@ namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>Fixed FL consumer tests. Native operations use the actual VerseUiExecution from the
 /// selected DLL against identified platform doubles. No private static FL control override exists.</summary>
-internal static class Program
+internal static partial class Program
 {
     internal const string Scope = "coahuilite.universalsqueaker";
     internal static readonly StubMetrics Metrics = new();
     private static int assertions;
     private static string? lane;
+    internal static string? ExistingCaseFilter;
     private static readonly UiLayoutRect View = new(0, 0, 1000, 1200);
     private static string Repository => FindRepository();
     private static int Main(string[] args)
@@ -40,6 +41,12 @@ internal static class Program
                 .GetMethod("InitializeMainThread", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null);
             if (args.Length != 0 && args[0].StartsWith("--lane=", StringComparison.Ordinal)) lane = args[0].Substring(7);
             else if (args.Length != 0 && args[0] != "--fixed-fl") throw new Exception("Unknown test mode");
+            if (lane != null && lane.StartsWith("existing-", StringComparison.Ordinal))
+            {
+                ExistingCaseFilter = lane.Substring("existing-".Length);
+                lane = "existing diagnostics";
+                Console.WriteLine("EXISTING CASE FILTER=" + ExistingCaseFilter);
+            }
             string expectedCarrier = typeof(SqueakerMod).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .Single(attribute => attribute.Key == "FerriteLib.SHA256").Value!;
             using (var carrierBytes = File.OpenRead(typeof(UiHost).Assembly.Location))
@@ -54,12 +61,23 @@ internal static class Program
             Run("overlay execution lifetime / separate hosts / image ownership", OverlayAndImages);
             Run("Eat and Select actual production read-model", () => { DbEatUiTests.Run(); DcSelectUiTests.Run(); });
             Run("preservation: help scroll/theme geometry/fallback/list identities/text hit", InteractionPreservationTests.Run);
+            Run("existing diagnostics panel lane (round-9 contract)", DiagnosticsPanelLaneTests.RunAll);
+            Run("existing preset rows compose through the shared row band (R4-B)", PresetRowsComposeThroughTheSharedBand);
+            Run("roots / RichDynamicDataMeasureAndDraw", RichDynamicDataMeasureAndDraw);
+            Run("roots / CompositeDropdownPublishesCoveringRect", CompositeDropdownPublishesCoveringRect);
+            Run("roots / TypedScopeChoiceCommitsTheValue", TypedScopeChoiceCommitsTheValue);
+            Run("roots / LongAuthorFilterTruncatesTheDisplayOnly", LongAuthorFilterTruncatesTheDisplayOnly);
+            Run("roots / PopupOverflowReportCarriesElementIdentity", PopupOverflowReportCarriesElementIdentity);
+            Run("roots / PopupWidthFollowsWidestOptionThenViewport", PopupWidthFollowsWidestOptionThenViewport);
+            Run("roots / OverlayDrawFailureDoesNotDoubleReserveRow", OverlayDrawFailureDoesNotDoubleReserveRow);
+            Run("roots / SettingsWindowShellCarriesTheFailureContract", SettingsWindowShellCarriesTheFailureContract);
+            Run("old-v4 / DistanceAndPresetsAtTheRealBoxes", V4RemainingLaneTests.DistanceAndPresetsAtTheRealBoxes);
             if (ran == 0) throw new Exception("No matching test group: " + lane);
             Console.WriteLine("PASS " + assertions + " fixed-FL consumer assertions; platform doubles, not native game/Config acceptance");
             return 0;
         }
         catch (Exception e) { Console.Error.WriteLine(e); return 1; }
-        finally { SetTranslatorResolver(null); Event.current = null; }
+        finally { Fl08PublicObservation.DisposeExecutions(); SetTranslatorResolver(null); Event.current = null; }
     }
     private static int ran;
     private static void Run(string name, Action action)

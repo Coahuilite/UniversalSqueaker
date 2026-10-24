@@ -48,9 +48,9 @@ XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / W
 
 ## 当前验证入口与边界
 
-`tools/UniversalSqueakerKernelHostTests` 当前入口为 `--fixed-fl`，或 `--lane=<分组关键词>`，例如 `--lane=preservation`、`--lane=confirmation`、`--lane=proxy`。调用时同时显式选择 `FerriteLibArtifactPath` 与已构建的 `UsProductArtifactPath`；`UsProductAlreadyBuilt=true` 避免覆写候选。
+`tools/UniversalSqueakerKernelHostTests` 当前入口为 `--fixed-fl`，或 `--lane=<分组关键词>`，例如 `--lane=preservation`、`--lane=confirmation`、`--lane=proxy`。原有检查迁回的入口为 `--lane=existing`（诊断与R4-B预设）、`--lane=existing-GroupFold`（按原诊断方法筛选）、`--lane=roots`（受改旧根反例）、`--lane=old-v4`（原双语真实页面尺寸检查）。调用时同时显式选择 `FerriteLibArtifactPath` 与已构建的 `UsProductArtifactPath`；`UsProductAlreadyBuilt=true` 避免覆写候选。
 
-当前 runner 使用真实产品 DLL、固定 FL DLL、嵌入 XML 和真实 `VerseUiExecution`；native 文字／鼠标／绘制由[来源明确的平台替身](../tools/FerriteLib08.Stubs/README.md)提供。覆盖实际确认取消／一次写入、Live／冲突／hide-show、typed choices／无 sink 帮助／15pass、独立滚动／主题几何、列表重排和第二项真实动作、fallback Cancel 和关闭清理、双语长文字／命中。旧根 Program 的私有 UiNative 钩子已不适用，保留源码但不计当前通过；未逐个迁回其 76 lane，不能以创建／layout 无 throw 代替各行为。诊断面板和预设的完整旧交互尚未在新执行链逐项复跑；当前只具有受改签名编译、现有图像／窗口链及明确交互子集证据。
+当前 runner 使用真实产品 DLL、固定 FL DLL、嵌入 XML 和真实 `VerseUiExecution`；native 文字／鼠标／绘制由[来源明确的平台替身](../tools/FerriteLib08.Stubs/README.md)提供。覆盖实际确认取消／一次写入、Live／冲突／hide-show、typed choices／无 sink 帮助／15pass、独立滚动／主题几何、列表重排和第二项真实动作、fallback Cancel 和关闭清理、双语长文字／命中。旧根 Program 中依赖私有 UiNative 的旧形状保留源码但不计当前通过；迁回的方法在 Current/ 和显式重纳文件中编入，未逐个迁回其 76 lane，不能以创建／layout 无 throw 代替各行为。原诊断生成页／读面／写入修订／组折叠／窄导航／恢复、预设图像／绘制复选框／独立展开／原回调和双语页面尺寸检查已迁至公开执行链，保原断言。另迁回原scope popup覆盖／类型值、作者显示截断与原token、弹层尺寸／溢出归属、Overlay失败游标及窗口通知／关闭反例。原toolbar／pager／lock／close和预设import的部分旧检查是直接binding操作，只证明原路由／读回；它们不含逐个按钮的原生指针场景，不能凭迁移补称那一层已过。
 
 Core、完整十五合同、CoreWork、通知／四回执、稀疏配置、生产 settings／ExposeData／原子文件与 Scribe 替身往返的未变证据继续按原范围适用，不重录 golden。真实游戏 Config／Scribe、IME／字体像素、屏幕外观、窗口栈、音频／听感及逐包人工验收仍待验；当前迁移不预定新页面或普通政策。
 
