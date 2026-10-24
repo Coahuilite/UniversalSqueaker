@@ -335,7 +335,12 @@ try {
         Write-Host 'vector5 (scanner anonymity): SKIPPED on hosted runner (runner identity is not the maintainer secret)'
     }
     else {
-        $anonTokens = @($env:USERNAME, $env:COMPUTERNAME) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+        $userToken = if ([string]::IsNullOrWhiteSpace($env:USERNAME)) { [Environment]::UserName } else { $env:USERNAME }
+        $machineToken = if ([string]::IsNullOrWhiteSpace($env:COMPUTERNAME)) { [Environment]::MachineName } else { $env:COMPUTERNAME }
+        $anonTokens = @(@($userToken, $machineToken) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+        if ($anonTokens.Count -eq 0) {
+            Add-Failure 'vector5 anonymity was not checked: no runtime identity tokens available' 'Neither environment nor .NET supplied a non-empty runtime identity.'
+        }
         $anonLeaks = New-Object 'System.Collections.Generic.List[string]'
         foreach ($tok in $anonTokens) {
             # -F 定值搜（避开 ERE 转义地狱），再在 PowerShell 侧用 .NET 词边界精判，
@@ -350,7 +355,10 @@ try {
         if ($anonLeaks.Count -gt 0) {
             Add-Failure 'vector5 anonymity: a runtime personal token leaked into tracked files' (($anonLeaks | ForEach-Object { ($_ -split ':', 3)[0..1] -join ':' }) -join $newLine)
         }
-        Write-Host "vector5 (scanner anonymity): checked $($anonTokens.Count) runtime-derived token(s), zero literals stored"
+        if ($anonTokens.Count -gt 0) {
+            Write-Host "vector5 (scanner anonymity): checked $($anonTokens.Count) runtime-derived token(s), zero literals stored"
+        }
+        else { Write-Host 'vector5 (scanner anonymity): NOT CHECKED (runtime identity unavailable)' }
     }
     # ---- -PrePush：推送前机械自检 ----
     if ($PrePush) {

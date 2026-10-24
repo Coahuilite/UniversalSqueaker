@@ -16,7 +16,9 @@ path or different pattern is not covered. Git resolution failures fail the scan.
 Run once in each clone: pwsh -NoProfile -File scripts/install-hooks.ps1.
 The pre-push hook automatically runs privacy-audit.ps1 -FullHistory. A dedicated
 GitHub workflow runs the same audit with fetch-depth: 0 on every push and PR,
-including version branches. Scanner success is a privacy result, not gameplay,
+including version branches. On local processes, missing username/machine environment values are supplied by
+the invoking .NET runtime identity. Zero effective tokens fails the audit; values
+are never stored in the scanner or report. Scanner success is a privacy result, not gameplay,
 build or release acceptance. Existing build checks retain their own scope.
 
 For a local review: pwsh -NoProfile -File scripts/privacy-audit.ps1 -FullHistory.
