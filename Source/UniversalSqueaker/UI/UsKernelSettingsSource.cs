@@ -14,7 +14,7 @@ namespace UniversalSqueaker.UI;
 /// surface (<see cref="GameSettings"/> and the typed
 /// <see cref="VoicePacksPageModel"/> facade).
 /// </summary>
-public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
+public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource
 {
     private readonly GameSettings settings;
     private readonly VerseUiImages? images;
@@ -38,6 +38,10 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     }
 
     public VoicePacksPageState ViewState => state;
+    public bool MainMenuEntryVisible => settings.showMainMenuEntry;
+    public bool OptionsEntryVisible => settings.showOptionsEntry;
+    public void SetMainMenuEntryVisible(bool visible) => settings.SetMainMenuEntry(visible);
+    public void SetOptionsEntryVisible(bool visible) => settings.SetOptionsEntry(visible);
 
     /// <summary>
     /// Wires the view cache to the Host session's content revision - the SAME clock the layout cache

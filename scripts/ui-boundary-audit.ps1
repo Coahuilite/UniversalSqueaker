@@ -81,6 +81,7 @@ $Whitelist = [ordered]@{
     # RECYCLE when the opener moves into the kernel tree (it then has a context and must use
     # Button(rect, ctx)), or when the shell retires.
     'UI/SettingsWindowOwner.cs' = 'same task-60 context-free settings opener moved from Mod.cs; outside the kernel session, no new call-site exemption; recycle when the opener enters the kernel tree or the shell retires'
+    'Patches/Patch_SettingsEntries.cs' = 'WO-US06-UIUX-20261025 UI06-ENTRY: native main-menu list insertion and options category-column button only; no panel renderer; recycle when vanilla supplies a public mod entry seam'
 }
 
 # ---- comment stripping -------------------------------------------------------

@@ -34,6 +34,8 @@ public partial class GameSettings
         Scribe_Values.Look(ref devLoggingMode, "diagnosticLogging", SqueakDevLoggingMode.Auto);
         Scribe_Values.Look(ref uiSwatchId, "appearanceSwatch", "core");
         Scribe_Values.Look(ref uiIntroCollapsed, "overviewIntroCollapsed", false);
+        Scribe_Values.Look(ref showMainMenuEntry, "showMainMenuEntry", true);
+        Scribe_Values.Look(ref showOptionsEntry, "showOptionsEntry", true);
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         configurationUnreadable = configurationFormat != 1;
         if (configurationUnreadable) { Log.Warning("usdiag configuration=UnsupportedResponseConfigurationFormat:" + configurationFormat); return; }

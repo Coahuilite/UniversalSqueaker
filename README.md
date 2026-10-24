@@ -8,7 +8,7 @@ A voice-pack routing kernel for RimWorld 1.6, derived from Squeaky Ratkin under 
 
 US attaches third-party voices to accurate race/xenotype domains, with layered tuning, mood modulation, easter-egg eligibility, camera-height attenuation and diagnostics. It ships no audio files of its own; the current tree includes a Ratkin final-fallback mapping that references vanilla Core audio.
 
-The settings window has five workspaces: **Overview / Packs / Tuning / Presets / Advanced**, plus an expandable bottom help panel.
+Open **US Voices** from the startup menu, the vanilla Options category column, or Mod Settings. The default voice-management page keeps mode, volume, search and exact pack targets together; **Settings & tools** holds the secondary editors. The two native entries can be hidden independently. See the [current UI contract](docs/ui-contract-0.6-zh.md) for compact/wide layouts and native acceptance boundaries.
 
 ## Requirements and identity
 

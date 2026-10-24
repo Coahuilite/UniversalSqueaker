@@ -40,13 +40,13 @@ Xenotype 图像由窗口的 `Execution.Images` 注册为 `UiImage`。无图像�
 
 XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / WidthKey / SelectedKey / PayloadKey / ActiveTabKey` 改为相应 `*Bind`；`TextKey / LabelKey` 仍是翻译 key，不机械更名。
 
-统一底部面板直接读 `Session.CurrentHelpRef`，不依赖 `HoveredOptionHelpOutputBind`。`PublishHelp(ref)` 归于当前实际发布节点，`CurrentHelpSource` 保留该归属；后发布覆盖先发布。首 gap reset 后保留 15 个 pass，再过期回到 section 概述，不是秒数，也不是每个原生渲染帧。
+当前详细帮助页打开时固定 `Session.CurrentHelpRef`，随后不被 hover 替换；未固定的帮助控件直接读该 session 值，不依赖 `HoveredOptionHelpOutputBind`。`PublishHelp(ref)` 归于当前实际发布节点，`CurrentHelpSource` 保留该归属；后发布覆盖先发布。首 gap reset 后保留 15 个 pass，再过期回到 section 概述，不是秒数，也不是每个原生渲染帧。
 
-四个 mode 明确给各自的 `UiChoice<T>.HelpRef`。空／省略的选项 ref 不发布，不猜 Value、Text、标签或 index；元素一般帮助仍在。未知条目回 section 概述，无 section 时保持原空面板规则。目录 ref 和译文 key 分开，同一译文入口用于测量与绘制。Help 开合不改变窗口宽度，正文与底部帮助各自滚动并保留节点状态。
+四个 mode 明确给各自的 `UiChoice<T>.HelpRef`。空／省略的选项 ref 不发布，不猜 Value、Text、标签或 index；元素一般帮助仍在。未知条目回 section 概述，无 section 时保持原空面板规则。目录 ref 和译文 key 分开，同一译文入口用于测量与绘制。详细帮助与原页面各自保留 scroll 节点，不预留永久底栏；返回恢复上下文，见[当前 UI 合同](ui-contract-0.6-zh.md)。
 
-## 保留原页面和保存语义
+## 页面更新，保存与业务身份保留
 
-三个嵌入 Manifest、五工作区、音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持。主题使用原 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
+三个嵌入 Manifest、准确音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持；当前 UIUX 将五工作区重组为语音管理首页与二级工具。主题使用原 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
 
 搜索和原即时数值控件保持显式 Live。合格 primary release 请求一次，确认取消零写；已有草稿在隐藏／恢复和外部模型冲突时仍由原 editor 持有。普通 Select／Eat／scope／response 立即发布，并由单一保存 owner 按 0.35 秒 realtime debounce 写盘；真正原子 TryCommit 仍 persist-first，Committed 后的发布修复不重复写文件。详见[公开合同](us-public-contracts-and-help-zh.md)。
 
@@ -54,9 +54,9 @@ XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / W
 
 `tools/UniversalSqueakerKernelHostTests` 当前入口为 `--fixed-fl`，或 `--lane=<分组关键词>`，例如 `--lane=preservation`、`--lane=confirmation`、`--lane=proxy`。原有检查迁回的入口为 `--lane=existing`（诊断与R4-B预设）、`--lane=existing-GroupFold`（按原诊断方法筛选）、`--lane=roots`（受改旧根反例）、`--lane=old-v4`（原双语真实页面尺寸检查）。调用时同时显式选择 `FerriteLibArtifactPath` 与已构建的 `UsProductArtifactPath`；`UsProductAlreadyBuilt=true` 避免覆写候选。
 
-当前 runner 使用真实产品 DLL、固定 FL DLL、嵌入 XML 和真实 `VerseUiExecution`；native 文字／鼠标／绘制由[来源明确的平台替身](../tools/FerriteLib08.Stubs/README.md)提供。覆盖实际确认取消／一次写入、Live／冲突／hide-show、typed choices／无 sink 帮助／15pass、独立滚动／主题几何、列表重排和第二项真实动作、fallback Cancel 和关闭清理、双语长文字／命中。旧根 Program 中依赖私有 UiNative 的旧形状保留源码但不计当前通过；迁回的方法在 Current/ 和显式重纳文件中编入，未逐个迁回其 76 lane，不能以创建／layout 无 throw 代替各行为。原诊断生成页／读面／写入修订／组折叠／窄导航／恢复、预设图像／绘制复选框／独立展开／原回调和双语页面尺寸检查已迁至公开执行链，保原断言。另迁回原scope popup覆盖／类型值、作者显示截断与原token、弹层尺寸／溢出归属、Overlay失败游标及窗口通知／关闭反例。原toolbar／pager／lock／close和预设import的部分旧检查是直接binding操作，只证明原路由／读回；它们不含逐个按钮的原生指针场景，不能凭迁移补称那一层已过。
+RC 迁移阶段的 runner 使用真实产品 DLL、固定 FL DLL、嵌入 XML 和真实 `VerseUiExecution`；native 文字／鼠标／绘制由[来源明确的平台替身](../tools/FerriteLib08.Stubs/README.md)提供。覆盖实际确认取消／一次写入、Live／冲突／hide-show、typed choices／无 sink 帮助／15pass、独立滚动／主题几何、列表重排和第二项真实动作、fallback Cancel 和关闭清理、双语长文字／命中。旧根 Program 中依赖私有 UiNative 的旧形状保留源码但不计当前通过；迁回的方法在 Current/ 和显式重纳文件中编入，未逐个迁回其 76 lane，不能以创建／layout 无 throw 代替各行为。原诊断生成页／读面／写入修订／组折叠／窄导航／恢复、预设图像／绘制复选框／独立展开／原回调和双语页面尺寸检查已迁至公开执行链，保原断言。另迁回原scope popup覆盖／类型值、作者显示截断与原token、弹层尺寸／溢出归属、Overlay失败游标及窗口通知／关闭反例。原toolbar／pager／lock／close和预设import的部分旧检查是直接binding操作，只证明原路由／读回；它们不含逐个按钮的原生指针场景，不能凭迁移补称那一层已过。
 
-Core、完整十五合同、CoreWork、通知／四回执、稀疏配置、生产 settings／ExposeData／原子文件与 Scribe 替身往返的未变证据继续按原范围适用，不重录 golden。真实游戏 Config／Scribe、IME／字体像素、屏幕外观、窗口栈、音频／听感及逐包人工验收仍待验；当前迁移不预定新页面或普通政策。
+Core、完整十五合同、CoreWork、通知／四回执、稀疏配置、生产 settings／ExposeData／原子文件与 Scribe 替身往返的未变证据继续按原范围适用，不重录 golden。真实游戏 Config／Scribe、IME／字体像素、屏幕外观、窗口栈、音频／听感及逐包人工验收仍待验；当前 UIUX 已授权改编排，普通政策未改变。旧五区／800×600／140帮助几何检查仍保留，不能直接签新 UI；适用检查按本次候选与输入分别记录。
 
 Release 夹具不启用 Dev-only `GeometryEnabled`：既有控件定位读取公开 arranged 节点与 scroll 状态，原生 press/release 仍走同一 `VerseUiExecution`。目录／fallback 的既有夹具仅在同一执行器外记录真实 text paint 和 `PrepareControl` 分配；该记录不是 Dev input-query 矩形／命中快照，也不扩大原生游戏覆盖。并行的文字／矩形／颜色平台记录必须一起重置，不能用错位索引判定产品颜色。
 

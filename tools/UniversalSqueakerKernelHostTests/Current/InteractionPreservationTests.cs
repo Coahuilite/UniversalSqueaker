@@ -11,13 +11,15 @@ namespace UniversalSqueaker.KernelHostTests;
 internal static class InteractionPreservationTests
 {
     private static readonly UiLayoutRect View = new(0, 0, 1280, 1800);
+    internal static string? ExistingCaseFilter;
     internal static void Run()
     {
-        HelpScrollAndTheme();
-        PackIdentityAndNativeAction();
-        DirectoryNativeActions();
-        FallbackCancelLayers();
-        TextFitAndHit();
+        // Selection only: retain every pre-existing scenario/assertion, including obsolete geometry reds.
+        if (ExistingCaseFilter == null || ExistingCaseFilter == nameof(HelpScrollAndTheme)) HelpScrollAndTheme();
+        if (ExistingCaseFilter == null || ExistingCaseFilter == nameof(PackIdentityAndNativeAction)) PackIdentityAndNativeAction();
+        if (ExistingCaseFilter == null || ExistingCaseFilter == nameof(DirectoryNativeActions)) DirectoryNativeActions();
+        if (ExistingCaseFilter == null || ExistingCaseFilter == nameof(FallbackCancelLayers)) FallbackCancelLayers();
+        if (ExistingCaseFilter == null || ExistingCaseFilter == nameof(TextFitAndHit)) TextFitAndHit();
     }
     private static void HelpScrollAndTheme()
     {
@@ -70,7 +72,7 @@ internal static class InteractionPreservationTests
         page.Host.Bindings.Invoke("set-tab", "Packs"); page.Draw(View);
         Program.Press(page, View, "pack-card-row-expand#us.sang");
         Program.Check(source.TogglePackCardCount == 1, "actual materialized header press expands named pack exactly once; count=" + source.TogglePackCardCount);
-        string race = "pack-card-row-check#us.sang|human", xeno = "pack-card-row-check#us.sang|human|sanguophage";
+        string race = "pack-detail-enabled#us.sang|human", xeno = "pack-detail-enabled#us.sang|human|sanguophage";
         Program.Press(page, View, race);
         Program.Check(source.PackWriteCount == 1 && source.LastPackKey == "us.sang" && source.LastPackScope == SqueakVoicePackScope.Race
             && source.LastPackRace == "human" && source.LastPackTarget == "" && source.LastPackEnabled == true, "actual row switch writes one exact Race identity");
@@ -83,7 +85,7 @@ internal static class InteractionPreservationTests
             "reordered same-pack Xeno switch writes its own exact target once");
         string raceBind = UsWriteBindings.ItemKey("pack-card-keys", "us.sang|human", "enabled");
         Program.Check(page.Host.Bindings.Get<bool>(raceBind), "Xeno write does not overwrite neighboring Race read-back");
-        Program.Press(page, View, "pack-card-row-hit#us.sang|human|sanguophage");
+        Program.Press(page, View, "pack-detail-select#us.sang|human|sanguophage");
         // The retained recording source records SelectDomain; it deliberately does not mirror the
         // full selected-domain projection (the original PackCards lane asserts these same fields).
         Program.Check(source.LastSelectedScope == SqueakVoicePackScope.Xenotype
@@ -104,6 +106,7 @@ internal static class InteractionPreservationTests
             RecordingSettingsSource.SeedRow("human", "Human", racePacks: 1, supplyKeys: new[] { "us.sang2" }, quickKey: "us.sang2", quickScope: "Race")
         }};
         using var page = new Program.Page(UsKernelSettingsHost.Create(source, Program.Metrics));
+        page.Host.Bindings.TryInvokeCommand("browse-definitions");
         var geometry = Geometry(page, "race-board-cards");
         var input = geometry.Where(x => x.ElementId == "race-board-cards").ToArray();
         Program.Check(input.Length == 6, "two directory rows allocate enable/open/body controls separately; actual=" + input.Length
@@ -116,13 +119,14 @@ internal static class InteractionPreservationTests
         Program.Check(source.LastRaceBoardOpenRace == "human" && source.LastRaceBoardScrollKey == "pack-card-row#us.sang2"
             && page.Host.Bindings.Get<string>(UiBindings.ActiveTabBind) == "Packs", "actual directory Open arrives at named second pack row");
         page.Draw(View);
-        Program.Check(page.Host.Session.GetNodeByElementId("pack-card-row#us.sang2") != null, "arrival resolves actual materialized target rather than only retaining a command token");
+        // Compact arrival now materializes the exact target in detail, not its hidden master header.
+        Program.Check(page.Host.Session.GetNodeByElementId("pack-detail-row#us.sang2|human") != null, "arrival resolves actual materialized target rather than only retaining a command token");
     }
     private static void FallbackCancelLayers()
     {
         var source = new RecordingSettingsSource { RichData = true, FallbackTableAutoRace = "RaceA" };
         using var page = new Program.Page(UsKernelSettingsHost.Create(source, Program.Metrics));
-        page.Host.Bindings.Invoke("set-tab", "Packs");
+        page.Host.Bindings.Invoke("go-page", "Fallback");
         source.ViewState.FallbackSelectedEntryAction = "us.core/Call";
         var geometry = Geometry(page, "fallback-editor");
         var inputs = geometry.Where(x => x.ElementId == "fallback-editor" || x.Path.Contains("/fallback-editor/@")).ToArray();
@@ -135,7 +139,8 @@ internal static class InteractionPreservationTests
         Program.Check(page.Host.TryHandleCancel(), "next Cancel reaches fallback table layer"); page.Draw(View);
         Program.Check(source.ViewState.FallbackTableCanceled && source.ViewState.FallbackSelectedRace.Length == 0
             && source.FallbackDeleteCalls == 0 && source.FallbackRestoreCalls == 0 && source.PackWriteCount == 0, "fallback returns write no table/config/audio business values");
-        Program.Check(!page.Host.TryHandleCancel(), "declined fallback reaches root without hidden extra layer");
+        // WO UI06-SECONDARY adds a visible secondary-page Back layer before the main window.
+        Program.Check(page.Host.TryHandleCancel() && source.ViewState.Page == "Voices", "declined fallback returns to its originating page without a hidden extra layer");
         page.Host.Dispose();
         Program.Check(!page.Host.Session.IsActive && page.Host.Session.OpenPopupId == null && page.Host.Session.ActiveEditNode == null,
             "host close releases popup/editor state");

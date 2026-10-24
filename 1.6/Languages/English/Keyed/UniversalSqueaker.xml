@@ -253,7 +253,7 @@
   <US.Packs.Results.Empty>No VoicePack matches the current filters.</US.Packs.Results.Empty>
   <US.Packs.Results.None>No VoicePack is installed. Install a VoicePack that declares a raceDefName.</US.Packs.Results.None>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
-  <US.Packs.Checklist.PackActions>Actions {0}/{1}</US.Packs.Checklist.PackActions>
+  <US.Packs.Checklist.PackActions>Mapped actions {0}; this view has not verified sound availability.</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>No VoicePack domains are currently installed. Add a VoicePack that declares a raceDefName to configure audio.</US.Packs.Banner.NoDomains>
   <US.Packs.Banner.DormantBiotech>Biotech is not active. Xenotype VoicePack selections are dormant and will not route to pawns.</US.Packs.Banner.DormantBiotech>
   <US.Packs.Banner.VanillaMode>VoicePack mode is Vanilla. Enabled packs are retained, but VoicePack audio is not routed.</US.Packs.Banner.VanillaMode>
@@ -325,18 +325,18 @@
   <US.Help.EmptyTitle>Help</US.Help.EmptyTitle>
   <!-- Bottom help panel (BH1): retain the existing machine keys across the footer move. -->
   <US.Help.Drawer.Toggle>Help</US.Help.Drawer.Toggle>
-  <US.Help.Drawer.Toggle.Hint>Show or hide the bottom help panel</US.Help.Drawer.Toggle.Hint>
+  <US.Help.Drawer.Toggle.Hint>Open detailed help for the current topic</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>Select a section to see its help here.</US.Help.EmptyText>
   <US.Help.Overview>Overview</US.Help.Overview>
   <!-- Help catalog (C+A panel): authoritative Chinese copy, English translated from it. -->
   <US.Help.PageTitle.Title>Using This Window</US.Help.PageTitle.Title>
-  <US.Help.PageTitle.Overview>The window is organized into workspaces - Overview, Distance, VoicePacks, Tuning and Presets - switched from the left navigation. Every change applies immediately and is saved to disk automatically.</US.Help.PageTitle.Overview>
-  <US.Help.PageTitle.Nav.Label>Workspace Navigation</US.Help.PageTitle.Nav.Label>
-  <US.Help.PageTitle.Nav.Text>The left navigation switches between the five workspaces: Overview, Distance, VoicePacks, Tuning and Presets. Selecting a workspace also updates the help panel at the bottom of the window.</US.Help.PageTitle.Nav.Text>
-  <US.Help.PageTitle.Apply.Label>Apply &amp; Save</US.Help.PageTitle.Apply.Label>
-  <US.Help.PageTitle.Apply.Text>Every change applies immediately. Settings are written to disk automatically right after each edit - the footer shows Saving / Saved - and closing the window performs a final forced flush.</US.Help.PageTitle.Apply.Text>
-  <US.Help.PageTitle.HelpDrawer.Label>Help Panel Toggle</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>Shows or hides the help panel just above this switch, beside the build identity and the save status. The panel explains whatever control the pointer is over; the settings keep their width and stay operable while it is open, and the selected topic plus each area's own scroll position are kept across toggles.</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.Overview>Start in Voices to choose exact pack targets. Settings &amp; tools contains the secondary editors. Back restores the originating page and its context.</US.Help.PageTitle.Overview>
+  <US.Help.PageTitle.Nav.Label>Pages &amp; tools</US.Help.PageTitle.Nav.Label>
+  <US.Help.PageTitle.Nav.Text>Voices combines configuration status, mode, volume, search and pack management. Behaviour, presets, output, fallback, appearance, diagnostics and restore are secondary tools, not a permanent sidebar.</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Apply.Label>Publication &amp; saving</US.Help.PageTitle.Apply.Label>
+  <US.Help.PageTitle.Apply.Text>Ordinary edits publish immediately and share a 0.35-second physical-save debounce. Source and sparse-row transactions persist before publication. Failed saves expose Retry; closing flushes queued Live changes and abandons unpublished retained drafts.</US.Help.PageTitle.Apply.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>Detailed help &amp; return</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>Detailed help occupies the content area of the same window. Opening fixes the current topic; hover cannot replace it while reading. Back restores the previous page and its independent scroll.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>
@@ -380,7 +380,7 @@
   <US.Help.Diagnostics.LayoutCapture.Text>Records every arranged element of this window - its rect in each coordinate space, its height mode and resolved height. Costs frames while on, and is off by default; it is never saved.</US.Help.Diagnostics.LayoutCapture.Text>
   <US.Help.Diagnostics.LayoutOutline.Text>Draws an outline around the rects this window paints, so a rect can be seen rather than read. It is independent of capture (SA1.5): with capture on it outlines the retained set, with capture off it outlines every drawn rect and samples nothing - no report is armed by this switch.</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>Writes the last completed capture once to the log, then stops. Press it again for another. For a rect that does not respond to clicks, read the input lines: each one carries the pointer, the queried rect and the verdict (hit, miss, covered or disabled).</US.Help.Diagnostics.LayoutReport.Text>
-  <US.Help.ScopeTree.Overview>Choose the exact Global, Race or Race/Xenotype layer. Action scopes and response details read the same effective configuration as playback, including sparse overrides, origins, dependencies and local pauses.</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Overview>Choose Pawn profile, Race or legal Race/Xenotype. Scopes and response details read the same effective fold as playback. Source selection is independent of packs; sparse-row fields distinguish inheritance from false or zero and persist atomically before publication.</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
@@ -393,22 +393,22 @@
   <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>Applies only template-present fields to the selected exact player domains. Repeating the import does not duplicate rows; values omitted by the template preserve the player&apos;s existing fields.</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>The composed conditions of the Packs workspace, all acting on the one card result below: the keyword matches pack names, internal names, mods, authors and the race / xenotype domains they provide; Enabled only keeps domain rows whose pack is enabled; Conflicts keeps rows whose domain is conflicting, dormant, target not loaded or dangling; Orphan only keeps rows from domains with stale selections; the author, race and xenotype dropdowns narrow the same rows; All clears every condition at once.</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>Search, author, Race, Xenotype and state conditions narrow the same exact pack/domain projection. Enabled-only retains its initial members while you edit; Refresh or changing a filter recalculates membership. Collapsing filters keeps the active-condition summary and Clear visible.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>Keyword</US.Help.FilterBar.Keyword.Label>
-  <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching the pack display name, defName, mod, author or pack key, and also the domain names a pack provides. A keyword that hits a xenotype name auto-expands the cards providing it; clearing the keyword restores the cards you opened yourself.</US.Help.FilterBar.Keyword.Text>
+  <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching covers pack label, DefName, mod, author, key and provided domains. Open a matching pack to inspect its individual targets; search never changes selections.</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>Domain Filter Chips</US.Help.FilterBar.Domain.Label>
-  <US.Help.FilterBar.Domain.Text>Enabled only, Conflicts and Orphan each narrow the domain rows inside the cards and combine freely; All clears every condition, the keyword included.</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.Domain.Text>Enabled, conflict and missing-selection conditions compose over exact domain rows. Enabled-only keeps edited rows until explicit refresh or filter change. All clears the composed conditions, including the keyword.</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.Author.Text>Narrows the cards by author; packs without a declared author stand in by mod name. Matching is case-insensitive containment.</US.Help.FilterBar.Author.Text>
   <US.Help.FilterBar.Race.Text>Narrows the domain rows to one race: that race's own domain and its xenotype domains stay, everything else steps out; the xenotype dropdown's options narrow with it. Translated names are shown.</US.Help.FilterBar.Race.Text>
   <US.Help.FilterBar.Xenotype.Text>Narrows the domain rows to one xenotype domain; race domains step out while it is set. Translated names are shown.</US.Help.FilterBar.Xenotype.Text>
   <US.Help.FilterBar.Summary.Label>Condition Echo</US.Help.FilterBar.Summary.Label>
   <US.Help.FilterBar.Summary.Text>Names every condition that is active and counts the surviving cards. It is read-only and always agrees with the controls.</US.Help.FilterBar.Summary.Text>
-  <US.Help.PackCards.Overview>The page's one result: one card per pack, listing the race and xenotype domains it provides as rows. Each row carries its own enable switch - the same pack can be on for one domain and off for another.</US.Help.PackCards.Overview>
+  <US.Help.PackCards.Overview>Browse independent packs and inspect exact Race or legal Race/Xenotype targets. A single target has a direct switch; multi-target packs expose separate switches in detail. Selecting one target never enables every target.</US.Help.PackCards.Overview>
   <US.Help.PackCards.Card.Label>Pack Card</US.Help.PackCards.Card.Label>
-  <US.Help.PackCards.Card.Text>The header shows the pack's display name, its internal defName, the mod and author line and its action coverage.</US.Help.PackCards.Card.Text>
-  <US.Help.PackCards.Expand.Text>Opens or closes this card's domain rows. What you open here is what clearing the keyword restores; cards the keyword opened on its own close with it. Pressing Escape once closes the cards you opened - filters and selections stay.</US.Help.PackCards.Expand.Text>
+  <US.Help.PackCards.Card.Text>The header identifies the pack, source mod and author. The detail shows DefName and mapped-action count. A catalog mapping is not proof of native sound availability or audible playback.</US.Help.PackCards.Card.Text>
+  <US.Help.PackCards.Expand.Text>View the named pack in detail. Wide layout keeps list and detail together; compact layout replaces the list and provides Back to list without resetting its scroll, search or filters. This button never bulk-enables a pack.</US.Help.PackCards.Expand.Text>
   <US.Help.PackCards.Row.Label>Domain Row</US.Help.PackCards.Row.Label>
-  <US.Help.PackCards.Row.Text>Clicking a row makes that domain the operation domain - the status banners above answer to it - and the highlighted row shows which one that is.</US.Help.PackCards.Row.Text>
+  <US.Help.PackCards.Row.Text>Choose an exact domain as the context for behaviour or fallback tools. The row switch independently selects only this pack in this domain. Labels are presentation; identity remains pack key plus exact domain.</US.Help.PackCards.Row.Text>
   <US.Help.PackCards.Enable.Label>Enable Switch</US.Help.PackCards.Enable.Label>
   <US.Help.PackCards.Enable.Text>Enables or disables this pack for this domain only. Two rows of one pack are two separate selections; filtering and expanding never write them.</US.Help.PackCards.Enable.Text>
   <US.Help.Checklist.Overview>The operation domain's status banners: dormant, target not loaded and conflict notices, plus the stale-selection banner with its Forget dangling button.</US.Help.Checklist.Overview>
@@ -588,7 +588,7 @@
   <US.Help.Theme.Overview>Choose among the official Core and DLC palettes for colour validation. The shipped default is Core.</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>Palette</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>A switch changes colour and nothing else - the page keeps its layout, focus and scroll. The choice is saved with the settings and returned by Restore defaults; author-supplied custom themes stay supported by the library.</US.Help.Theme.Switch.Text>
-  <US.Kernel.PolicyRequired>No development policy selected: playback is paused. The old timing controls are retired; a policy must be injected explicitly for this development build.</US.Kernel.PolicyRequired>
+  <US.Kernel.PolicyRequired>PolicySelectionRequired: ordinary playback policy is unselected. Configuration remains editable; dispatch is paused unless an explicit development candidate was activated.</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>An explicit development candidate is active. Activity A and response parameters use the new Config/author contract; old timing controls are retired.</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>Kernel: last observed decision</US.Kernel.LastObservedDecision>
@@ -626,4 +626,65 @@ Configuration/policy: {9}</US.Response.Details>
   <US.Response.PolicyPending>Policy unselected</US.Response.PolicyPending>
   <US.Preset.Invalid>This template is invalid. No settings were changed. See the named preset diagnostic.</US.Preset.Invalid>
   <US.Help.ScopeTree.ResponseDetails.Text>Read the selected action&apos;s current folded values, response participation, parameters, sources and dependencies. These are configuration facts, not a prediction that audio will dispatch.</US.Help.ScopeTree.ResponseDetails.Text>
+  <US.UI.Entry>US Voices</US.UI.Entry>
+  <US.UI.Voices>Voices</US.UI.Voices>
+  <US.UI.Tools>Settings &amp; tools</US.UI.Tools>
+  <US.UI.Back>Back</US.UI.Back>
+  <US.UI.Help>Help</US.UI.Help>
+  <US.UI.Behavior>Behaviour &amp; sources</US.UI.Behavior>
+  <US.UI.Presets>Import presets</US.UI.Presets>
+  <US.UI.Output>Sound selection &amp; output</US.UI.Output>
+  <US.UI.Fallback>Final fallback table</US.UI.Fallback>
+  <US.UI.Appearance>Appearance &amp; entries</US.UI.Appearance>
+  <US.UI.Diagnostics>Diagnostics &amp; dependencies</US.UI.Diagnostics>
+  <US.UI.Restore>Restore settings</US.UI.Restore>
+  <US.UI.Packs>Voice packs</US.UI.Packs>
+  <US.UI.Definitions>Races &amp; xenotypes</US.UI.Definitions>
+  <US.UI.Filters>Filters</US.UI.Filters>
+  <US.UI.Clear>Clear</US.UI.Clear>
+  <US.UI.Refresh>Refresh</US.UI.Refresh>
+  <US.UI.Previous>Previous</US.UI.Previous>
+  <US.UI.Next>Next</US.UI.Next>
+  <US.UI.PageCount>Page {0} / {1}</US.UI.PageCount>
+  <US.UI.Summary>Selected packs {0}/{1} · missing saved selections {2}</US.UI.Summary>
+  <US.UI.StableFilter>Enabled filter retains these rows while you edit. Refresh or change a filter to recalculate.</US.UI.StableFilter>
+  <US.UI.ChoosePack>Choose a pack</US.UI.ChoosePack>
+  <US.UI.ChoosePackNote>Open a pack to inspect its exact targets. A pack title never toggles all targets.</US.UI.ChoosePackNote>
+  <US.UI.BackToList>Back to list</US.UI.BackToList>
+  <US.UI.ChooseDomain>Use this domain for tools</US.UI.ChooseDomain>
+  <US.UI.SelectedForDomain>Selected for this domain</US.UI.SelectedForDomain>
+  <US.UI.SelectionNote>Catalogued, selected and playable are different facts. A dispatch is not proof of audible sound. Select a target before opening its behaviour or fallback.</US.UI.SelectionNote>
+  <US.UI.ToolsNote>Editors share the same configuration and save owner. Back preserves the window context.</US.UI.ToolsNote>
+  <US.UI.PresetNote>Choose import targets and review the affected rows. Import changes player overrides, not behaviour-source selection or voice-pack selection.</US.UI.PresetNote>
+  <US.UI.EntryNote>These switches change entry visibility only. Mod Settings remains available; the open panel and playback policy are unaffected.</US.UI.EntryNote>
+  <US.UI.MainMenuEntry>Show in startup menu</US.UI.MainMenuEntry>
+  <US.UI.OptionsEntry>Show in Options categories</US.UI.OptionsEntry>
+  <US.UI.Retry>Retry save</US.UI.Retry>
+  <US.UI.RestoreNote>Prefer the current scope or a single area. Global restore affects all settings and requires confirmation.</US.UI.RestoreNote>
+  <US.UI.RestoreAllExpand>Show global restore…</US.UI.RestoreAllExpand>
+  <US.UI.HelpPinned>This topic stays fixed while you read. Back returns to the previous page.</US.UI.HelpPinned>
+  <US.UI.SourceNote>Behaviour sources are independent of audio packs and preset imports. Choose a Race or legal Xenotype scope above. Source changes persist atomically before publication; blank means inherit.</US.UI.SourceNote>
+  <US.UI.SourceStatus>Stored source intent</US.UI.SourceStatus>
+  <US.UI.SourceInherit>Inherit / no explicit source</US.UI.SourceInherit>
+  <US.UI.SourceChooseDomain>The Pawn profile has no author-source binding. Select a Race or legal Xenotype to change a source.</US.UI.SourceChooseDomain>
+  <US.UI.SourceUnavailable>Source editing is unavailable in this host.</US.UI.SourceUnavailable>
+  <US.UI.SourceCommitted>Configuration saved and published.</US.UI.SourceCommitted>
+  <US.UI.SourcePublishFailed>Saved to disk; runtime publication failed. Do not repeat the disk transaction.</US.UI.SourcePublishFailed>
+  <US.UI.SourceRejected>Source was not committed; previous configuration remains active.</US.UI.SourceRejected>
+  <US.UI.ObservationBoundary>Policy and save state are real configuration observations. Geometry diagnostics depend on the build; local harness results do not verify game rendering, real Config or audible playback.</US.UI.ObservationBoundary>
+  <US.UI.MissingSelections>Missing saved selections (kept, not counted as selected catalog packs)</US.UI.MissingSelections>
+  <US.UI.SparseNote>Blank inherits; false and zero are explicit. These row fields save atomically before publication. Other fields and source selection are kept.</US.UI.SparseNote>
+  <US.UI.InheritBlank>Blank = inherit</US.UI.InheritBlank>
+  <US.UI.Yes>Yes</US.UI.Yes>
+  <US.UI.No>No</US.UI.No>
+  <US.UI.RowInvalid>Invalid sparse value; no change committed. Use an invariant number or leave blank to inherit.</US.UI.RowInvalid>
+  <US.UI.Field.enabled>Enabled</US.UI.Field.enabled>
+  <US.UI.Field.interval>Hard interval (ticks)</US.UI.Field.interval>
+  <US.UI.Field.volume>Volume multiplier</US.UI.Field.volume>
+  <US.UI.Field.pitch>Pitch multiplier</US.UI.Field.pitch>
+  <US.UI.Field.talking>Talking participation</US.UI.Field.talking>
+  <US.UI.Field.age>Age response</US.UI.Field.age>
+  <US.UI.Field.mood>Mood response</US.UI.Field.mood>
+  <US.UI.EditContext>Current Eat / Select edit domain</US.UI.EditContext>
+  <US.UI.OutputContext>Change scope / per-action volume and pitch…</US.UI.OutputContext>
 </LanguageData>

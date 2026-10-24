@@ -249,7 +249,7 @@
   <US.Packs.Results.Empty>没有符合当前筛选的语音包。</US.Packs.Results.Empty>
   <US.Packs.Results.None>未安装任何语音包。请安装声明 raceDefName 的语音包。</US.Packs.Results.None>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
-  <US.Packs.Checklist.PackActions>动作 {0}/{1}</US.Packs.Checklist.PackActions>
+  <US.Packs.Checklist.PackActions>映射动作 {0}；本页未验证声音可用性。</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>当前未安装任何语音包域。请添加声明 raceDefName 的语音包以配置音频。</US.Packs.Banner.NoDomains>
   <US.Packs.Banner.DormantBiotech>Biotech 未启用。异种语音包选择处于休眠，不会路由到 pawn。</US.Packs.Banner.DormantBiotech>
   <US.Packs.Banner.VanillaMode>语音包模式为原版。已启用的包会保留，但不路由语音包音频。</US.Packs.Banner.VanillaMode>
@@ -320,18 +320,18 @@
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
   <!-- 底部帮助面板（BH1）：移至页脚时保留既有机器标识。 -->
   <US.Help.Drawer.Toggle>帮助</US.Help.Drawer.Toggle>
-  <US.Help.Drawer.Toggle.Hint>显示或隐藏底部帮助面板</US.Help.Drawer.Toggle.Hint>
+  <US.Help.Drawer.Toggle.Hint>打开当前主题的详细帮助</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
   <US.Help.Overview>总览</US.Help.Overview>
   <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
   <US.Help.PageTitle.Title>本窗口的用法</US.Help.PageTitle.Title>
-  <US.Help.PageTitle.Overview>窗口按工作区组织：总览、距离、语音包、调音与预设，由左侧导航切换。所有修改即时生效，并自动保存到磁盘。</US.Help.PageTitle.Overview>
-  <US.Help.PageTitle.Nav.Label>工作区导航</US.Help.PageTitle.Nav.Label>
-  <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新窗口底部帮助面板的内容。</US.Help.PageTitle.Nav.Text>
-  <US.Help.PageTitle.Apply.Label>生效与保存</US.Help.PageTitle.Apply.Label>
-  <US.Help.PageTitle.Apply.Text>所有修改即时生效。系统在每次修改后自动写入磁盘，窗口底部右侧显示"保存中 / 已保存"状态；关闭窗口时再强制补写一次。</US.Help.PageTitle.Apply.Text>
-  <US.Help.PageTitle.HelpDrawer.Label>帮助面板开关</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏本开关上方的帮助面板；它与构建标识、保存状态同处页脚一行。把指针停在任意控件上，面板即解释该控件；展开时设置区宽度不变、仍可继续操作，已选主题与各区域自身的滚动位置在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.Overview>首页“语音管理”选择准确包目标；“设置与工具”提供二级编辑器。返回恢复原页面及其上下文。</US.Help.PageTitle.Overview>
+  <US.Help.PageTitle.Nav.Label>页面与工具</US.Help.PageTitle.Nav.Label>
+  <US.Help.PageTitle.Nav.Text>语音管理集中配置状态、模式、音量、搜索与包管理；行为、预设、输出、回退、外观、诊断和恢复位于二级工具，不占永久侧栏。</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Apply.Label>发布与保存</US.Help.PageTitle.Apply.Label>
+  <US.Help.PageTitle.Apply.Text>普通编辑立即发布，并共用 0.35 秒物理保存防抖；来源与稀疏行事务先保存再发布。保存失败可重试；关闭时刷新已排队的 Live 修改，放弃未发布的保留草稿。</US.Help.PageTitle.Apply.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>详细帮助与返回</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>详细帮助使用同一窗口的内容区；打开时固定当前主题，阅读期间悬停不会替换。返回恢复原页及其独立滚动位置。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>
@@ -375,7 +375,7 @@
   <US.Help.Diagnostics.LayoutCapture.Text>记录本窗口每个已排布元素的各坐标空间矩形、高度模式与最终高度。开启时会拖慢帧率，默认关闭，且从不写入存档。</US.Help.Diagnostics.LayoutCapture.Text>
   <US.Help.Diagnostics.LayoutOutline.Text>为本窗口绘制的矩形描出边框，让矩形可以被看到而不只是读到。它与采集互相独立（SA1.5）：采集开启时描出被保留的集合，采集关闭时描出每个绘制的矩形且不采样——本开关不会备好报告。</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>把最近一次完成的采集写入日志一次，然后停止；再按一次才会再写一份。若某个矩形不响应点击，请看输入行：每行带有指针位置、被查询的矩形与判定结果（命中/未命中/被遮挡/不可用）。</US.Help.Diagnostics.LayoutReport.Text>
-  <US.Help.ScopeTree.Overview>选择全局、种族或准确的种族／异种层。动作作用域与响应详情和播放读取同一有效配置，包括稀疏覆盖、来源、依赖和局部暂停。</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Overview>选择 Pawn 总体、种族或合法种族／异种层。作用域与响应详情读取播放使用的同一有效折叠。来源选择独立于包；稀疏行字段区分继承与 false／0，并先原子保存再发布。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>每个动作一行下拉："自动"继承下方生效值；也可强制为关闭、任意或指令，仅限该动作支持的档位。宽屏行内以箭头提示继承结果。</US.Help.ScopeTree.ActionScope.Text>
@@ -388,22 +388,22 @@
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>仅将模板中存在的字段应用到选中的准确玩家域；重复导入不重复建行，模板省略的字段保留玩家现值。</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>语音包工作区的一组可组合条件，全部作用于下方的唯一卡片结果：关键词匹配包显示名、内部名、Mod、作者及其提供的种族/异种域名；仅已启用留下该域已启用此包的行；仅冲突留下冲突、休眠、目标未加载或已失效域的行；仅已失效只看含失效选择域的行；作者、种族、异种下拉收窄同一批行；“全部”一次清空所有条件。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>搜索、作者、种族、异种与状态条件收窄同一准确包／域投影。“仅已启用”在编辑期间保留初始成员，刷新或更改筛选后重算。折叠筛选仍显示当前条件与清除入口。</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>关键词</US.Help.FilterBar.Keyword.Label>
-  <US.Help.FilterBar.Keyword.Text>忽略大小写的连续子串，命中包显示名、defName、Mod、作者、包键，也命中包所提供的域名。关键词命中异种名时，提供该异种的卡片自动展开；清空关键词后恢复的是你自己展开的状态。</US.Help.FilterBar.Keyword.Text>
+  <US.Help.FilterBar.Keyword.Text>忽略大小写的子串匹配包名、DefName、Mod、作者、键及其提供的域。查看匹配包后逐一检查目标；搜索不改变选用状态。</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
-  <US.Help.FilterBar.Domain.Text>仅已启用、仅冲突、仅已失效各自收窄卡片内的域行，可自由叠加；“全部”清除包括关键词在内的一切条件。</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.Domain.Text>已启用、冲突与失效选择条件可组合到准确域行。“仅已启用”保留操作行，直到显式刷新或更改筛选。“全部”清除包含关键词的所有条件。</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.Author.Text>按作者过滤卡片；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
   <US.Help.FilterBar.Race.Text>把域行收窄到一个种族：该种族自身的域与它的异种域留下，其余退出；异种下拉的选项随之收窄。下拉显示已翻译名称。</US.Help.FilterBar.Race.Text>
   <US.Help.FilterBar.Xenotype.Text>把域行收窄到一个异种域；设定期间种族域退出列表。下拉显示已翻译名称。</US.Help.FilterBar.Xenotype.Text>
   <US.Help.FilterBar.Summary.Label>条件回显</US.Help.FilterBar.Summary.Label>
   <US.Help.FilterBar.Summary.Text>逐一列出当前生效的条件并统计留下的卡片数。它只读，且永远与控件一致。</US.Help.FilterBar.Summary.Text>
-  <US.Help.PackCards.Overview>本页唯一结果区：每个语音包一张卡片，列出它提供的种族与异种域行；每行有各自的启用开关——同一个包可以在一个域启用、在另一个域停用。</US.Help.PackCards.Overview>
+  <US.Help.PackCards.Overview>按独立包浏览，查看准确种族或合法种族／异种目标。单目标有直接开关，多目标在详情逐域开关；选择一个目标不会启用全部目标。</US.Help.PackCards.Overview>
   <US.Help.PackCards.Card.Label>语音包卡片</US.Help.PackCards.Card.Label>
-  <US.Help.PackCards.Card.Text>卡头显示包的显示名、内部 defName、Mod 与作者行以及动作覆盖数。</US.Help.PackCards.Card.Text>
-  <US.Help.PackCards.Expand.Text>展开或收起本卡的域行。你手动展开的状态正是清空关键词后恢复的内容；关键词代开的卡片随关键词一起关闭。按 Esc 一次收起你打开的卡片——筛选与启用状态保持不变。</US.Help.PackCards.Expand.Text>
+  <US.Help.PackCards.Card.Text>包头标识语音包、来源 Mod 与作者；详情显示 DefName 和映射动作数。目录映射不证明原生声音可用或实际听见。</US.Help.PackCards.Card.Text>
+  <US.Help.PackCards.Expand.Text>查看点名包的详情。宽布局并列列表和详情；紧凑布局进入同区详情，可返回保留滚动、搜索与筛选的列表。此按钮不批量启用包。</US.Help.PackCards.Expand.Text>
   <US.Help.PackCards.Row.Label>域行</US.Help.PackCards.Row.Label>
-  <US.Help.PackCards.Row.Text>点击一行即把该域设为操作域——上方的状态横幅以它为对象——高亮行标示当前是哪一个。</US.Help.PackCards.Row.Text>
+  <US.Help.PackCards.Row.Text>选定准确域作为行为或回退工具的上下文；行开关只在该域选用此包。标签只负责展示，身份仍为包键加准确域。</US.Help.PackCards.Row.Text>
   <US.Help.PackCards.Enable.Label>启用开关</US.Help.PackCards.Enable.Label>
   <US.Help.PackCards.Enable.Text>只对本行的域启用或停用这个包。同一包的两行是两个独立的选择；筛选与展开从不写入它们。</US.Help.PackCards.Enable.Text>
   <US.Help.Checklist.Overview>操作域的状态横幅：休眠、目标未加载与冲突提示，以及带“清除失效”按钮的失效选择横幅。</US.Help.Checklist.Overview>
@@ -582,7 +582,7 @@
   <US.Help.Theme.Overview>在官方核心与五个 DLC 调色板之间选择以验证颜色。出厂默认为核心。</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>调色板</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>切换只改颜色,不改任何东西——页面保留布局、焦点与滚动位置。选择随设置保存,并会被"恢复默认"还原;作者自定义主题继续由库支持。</US.Help.Theme.Switch.Text>
-  <US.Kernel.PolicyRequired>尚未注入开发策略：当前不派发声音。旧节奏控件已退役；本开发版本须经明确开发入口注入候选策略。</US.Kernel.PolicyRequired>
+  <US.Kernel.PolicyRequired>PolicySelectionRequired：普通播放政策尚未选定，可继续编辑配置；未明示激活开发候选时不派发声音。</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>当前运行明示注入的开发候选。活跃度 A 与响应参数采用新 Config／作者合同；旧节奏控件已退役。</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>旧概率与心情因子编辑器已退役。上方动作许可仍有效；独立响应启用、参数及 Apply／Skip 参与请使用当前作者／Config 合同。</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>内核：最后观察到的决策</US.Kernel.LastObservedDecision>
@@ -620,4 +620,65 @@
   <US.Response.PolicyPending>政策未选定</US.Response.PolicyPending>
   <US.Preset.Invalid>此预设无效，未更改设置。请查看包含预设名称的诊断。</US.Preset.Invalid>
   <US.Help.ScopeTree.ResponseDetails.Text>查看所选动作当前合成的值、响应参与、参数、来源与依赖。这些是配置事实，不是保证发声的预测。</US.Help.ScopeTree.ResponseDetails.Text>
+  <US.UI.Entry>US 语音</US.UI.Entry>
+  <US.UI.Voices>语音管理</US.UI.Voices>
+  <US.UI.Tools>设置与工具</US.UI.Tools>
+  <US.UI.Back>返回</US.UI.Back>
+  <US.UI.Help>详细帮助</US.UI.Help>
+  <US.UI.Behavior>行为与来源</US.UI.Behavior>
+  <US.UI.Presets>预设导入</US.UI.Presets>
+  <US.UI.Output>声音选取与输出</US.UI.Output>
+  <US.UI.Fallback>最终回退表</US.UI.Fallback>
+  <US.UI.Appearance>外观与入口</US.UI.Appearance>
+  <US.UI.Diagnostics>诊断与依赖</US.UI.Diagnostics>
+  <US.UI.Restore>恢复设置</US.UI.Restore>
+  <US.UI.Packs>语音包</US.UI.Packs>
+  <US.UI.Definitions>种族与异种</US.UI.Definitions>
+  <US.UI.Filters>筛选</US.UI.Filters>
+  <US.UI.Clear>清除</US.UI.Clear>
+  <US.UI.Refresh>刷新</US.UI.Refresh>
+  <US.UI.Previous>上一页</US.UI.Previous>
+  <US.UI.Next>下一页</US.UI.Next>
+  <US.UI.PageCount>第 {0} / {1} 页</US.UI.PageCount>
+  <US.UI.Summary>已选包 {0}/{1} · 缺失的已存选择 {2}</US.UI.Summary>
+  <US.UI.StableFilter>“已启用”筛选在操作期间保留这些行。刷新或更改筛选条件后重新计算。</US.UI.StableFilter>
+  <US.UI.ChoosePack>选择一个语音包</US.UI.ChoosePack>
+  <US.UI.ChoosePackNote>查看语音包以逐一选择准确目标。包标题不会批量开关所有目标。</US.UI.ChoosePackNote>
+  <US.UI.BackToList>返回列表</US.UI.BackToList>
+  <US.UI.ChooseDomain>以此域打开工具</US.UI.ChooseDomain>
+  <US.UI.SelectedForDomain>在此域中选用</US.UI.SelectedForDomain>
+  <US.UI.SelectionNote>目录存在、选用与可播放是不同事实；已派发不等于听到了声音。打开行为或回退表前，先选定目标域。</US.UI.SelectionNote>
+  <US.UI.ToolsNote>所有编辑器共用同一配置与保存权威。返回会保留本窗口上下文。</US.UI.ToolsNote>
+  <US.UI.PresetNote>选择导入目标并检查受影响行。导入修改玩家覆盖，不改变行为来源或语音包选择。</US.UI.PresetNote>
+  <US.UI.EntryNote>开关只控制入口可见性；模组设置仍可进入，不关闭当前面板，也不改变播放政策。</US.UI.EntryNote>
+  <US.UI.MainMenuEntry>在启动主菜单显示入口</US.UI.MainMenuEntry>
+  <US.UI.OptionsEntry>在原版设置类别栏显示入口</US.UI.OptionsEntry>
+  <US.UI.Retry>重试保存</US.UI.Retry>
+  <US.UI.RestoreNote>优先恢复当前作用域或单一区域。全局恢复影响全部设置，并需确认。</US.UI.RestoreNote>
+  <US.UI.RestoreAllExpand>展开全局恢复…</US.UI.RestoreAllExpand>
+  <US.UI.HelpPinned>阅读期间主题保持固定；返回会回到原页面。</US.UI.HelpPinned>
+  <US.UI.SourceNote>行为来源独立于语音包与预设导入。先在上方选择种族或合法异种域。来源先原子保存再发布；空选择表示继承。</US.UI.SourceNote>
+  <US.UI.SourceStatus>已存来源意图</US.UI.SourceStatus>
+  <US.UI.SourceInherit>继承／不显式绑定来源</US.UI.SourceInherit>
+  <US.UI.SourceChooseDomain>Pawn 总体配置没有作者来源绑定；选择种族或合法异种后可修改来源。</US.UI.SourceChooseDomain>
+  <US.UI.SourceUnavailable>此 host 不提供来源编辑。</US.UI.SourceUnavailable>
+  <US.UI.SourceCommitted>配置已保存并发布。</US.UI.SourceCommitted>
+  <US.UI.SourcePublishFailed>磁盘已提交，运行时发布失败；不要重复磁盘事务。</US.UI.SourcePublishFailed>
+  <US.UI.SourceRejected>来源未提交，先前配置保持生效。</US.UI.SourceRejected>
+  <US.UI.ObservationBoundary>政策与保存状态来自实际配置观察。几何诊断取决于构建；本地夹具不证明游戏渲染、真实 Config 或听感。</US.UI.ObservationBoundary>
+  <US.UI.MissingSelections>缺失的已存选择（继续保留，不计入目录中已选包）</US.UI.MissingSelections>
+  <US.UI.SparseNote>空白表示继承；false 与 0 是显式值。这些行字段先原子保存再发布，保留其他字段及来源选择。</US.UI.SparseNote>
+  <US.UI.InheritBlank>留空＝继承</US.UI.InheritBlank>
+  <US.UI.Yes>是</US.UI.Yes>
+  <US.UI.No>否</US.UI.No>
+  <US.UI.RowInvalid>稀疏值无效，未提交修改。使用半角数字／小数点，或留空继承。</US.UI.RowInvalid>
+  <US.UI.Field.enabled>启用</US.UI.Field.enabled>
+  <US.UI.Field.interval>硬间隔（tick）</US.UI.Field.interval>
+  <US.UI.Field.volume>音量倍数</US.UI.Field.volume>
+  <US.UI.Field.pitch>音调倍数</US.UI.Field.pitch>
+  <US.UI.Field.talking>谈话调制参与</US.UI.Field.talking>
+  <US.UI.Field.age>年龄响应</US.UI.Field.age>
+  <US.UI.Field.mood>心情响应</US.UI.Field.mood>
+  <US.UI.EditContext>当前 Eat／Select 编辑域</US.UI.EditContext>
+  <US.UI.OutputContext>更改作用域／逐动作音量与音调…</US.UI.OutputContext>
 </LanguageData>

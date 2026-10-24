@@ -62,4 +62,4 @@ Choose scenarios for the changed behavior: accurate Race/Xenotype selection and 
 
 For UI, inspect the real page and native input. For audio, test production dispatch and hearing separately from preview. For a new domain, check admission after restart. Do not rerun accepted historical matrices without a changed premise.
 
-Current UI limits are in [the UI contract](ui-contract-0.5-zh.md); dated evidence is scoped in [history](history/README.md).
+Current UI limits are in [the UI contract](ui-contract-0.6-zh.md); dated evidence is scoped in [history](history/README.md).

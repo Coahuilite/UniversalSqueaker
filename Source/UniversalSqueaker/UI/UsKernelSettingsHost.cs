@@ -22,7 +22,7 @@ namespace UniversalSqueaker.UI;
 ///  - OptionsBind = typed options key;
 ///  - ActionBind = typed action key.
 /// </summary>
-public static class UsKernelSettingsHost
+public static partial class UsKernelSettingsHost
 {
     private static IReadOnlyList<UiChoice<string>> EatOptions(Type type)
     {
@@ -88,7 +88,7 @@ public static class UsKernelSettingsHost
         // PM ruling of 2026-10-07; the budget is the engine's own VisibleRows="4.5" counting on the
         // arranged rows (FL capability in the working tree - the US build slot must use the freeze
         // that carries it).
-        UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
+        UiLayoutManifest manifest = PageDefinition(source.ViewState.WideLayout);
 
         // The bottom help panel (BH1) is DECLARATIVE: the manifest's help-scroll Scroll carries
         // VisibleBind="help-open", so the element stays in the definition and the engine simply does not
@@ -186,6 +186,7 @@ public static class UsKernelSettingsHost
     private sealed class SessionRevisionBumper
     {
         private UiHost? host;
+        public string CurrentHelpRef => host?.Session.CurrentHelpRef ?? "";
 
         public void Attach(UiHost value)
         {
@@ -416,6 +417,20 @@ public static class UsKernelSettingsHost
         // them. The funnel records each key it registers, which is what lets the harness enumerate the
         // write set instead of restating it (see UsWriteBindings for the measured scope).
         var writes = new UsWriteBindings(bindings);
+        var entrySource = source as IUsSettingsEntrySource;
+        bindings.BindReadOnly<bool>("native-entry-unavailable", () => entrySource == null);
+        if (entrySource != null)
+        {
+            writes.Value<bool>("main-menu-entry", () => entrySource.MainMenuEntryVisible,
+                value => { entrySource.SetMainMenuEntryVisible(value); bump(); });
+            writes.Value<bool>("options-entry", () => entrySource.OptionsEntryVisible,
+                value => { entrySource.SetOptionsEntryVisible(value); bump(); });
+        }
+        else
+        {
+            bindings.BindReadOnly<bool>("main-menu-entry", () => true);
+            bindings.BindReadOnly<bool>("options-entry", () => true);
+        }
 
         // Navigation / page chrome.
         // The engine's Tab gate reads this key, and the page's visible sections follow the value it
@@ -427,6 +442,7 @@ public static class UsKernelSettingsHost
         writes.Value<string>(UiBindings.ActiveTabBind, () => state.ActiveTab, value =>
         {
             source.SetActiveTab(value);
+            state.Page = LegacyPage(value);
             bump();
         });
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
@@ -435,6 +451,7 @@ public static class UsKernelSettingsHost
         writes.Action<string>("set-tab", tab =>
         {
             source.SetActiveTab(tab);
+            state.Page = LegacyPage(tab);
             bumper.ResetScroll();
             bump();
         });
@@ -942,8 +959,12 @@ public static class UsKernelSettingsHost
             {
                 // The destination is pure data (FL-materialized row id / static section id / "").
                 string destination = source.OpenRaceTarget(race);
+                NavigatePage(state, destination.StartsWith("pack", StringComparison.Ordinal) ? "Voices" : "Fallback");
+                state.BrowseDefinitions = false;
                 bumper.ArmScrollTarget(destination);
                 bump();
+                ApplyPackArrival(source, destination);
+                state.DetailOpen = state.SelectedPackKey != "";
             });
         writes.Action<string>(
             "race-board-xeno-open",
@@ -952,8 +973,12 @@ public static class UsKernelSettingsHost
                 // OVT-003: the directory row's arrival - exact target identity, real empty
                 // state, "" destination clears any pending scroll. Zero persisted writes.
                 string destination = source.OpenXenotypeTarget(target);
+                NavigatePage(state, "Voices");
+                state.BrowseDefinitions = false;
                 bumper.ArmScrollTarget(destination);
                 bump();
+                ApplyPackArrival(source, destination);
+                state.DetailOpen = state.SelectedPackKey != "";
             });
         writes.Action<UsPackToggle>(
             "race-board-enable",
@@ -987,6 +1012,7 @@ public static class UsKernelSettingsHost
             bindings.BindReadOnly<string>("ui-swatch-" + swatchId + "-value", () => swatchId);
             bindings.BindReadOnly<bool>("ui-swatch-" + swatchId, () => source.UiSwatchId == swatchId);
         }
+        BindVoiceManagement(source, writes, bumper, translation);
         return writes;
     }
 
@@ -1021,22 +1047,21 @@ public static class UsKernelSettingsHost
     }
 
     /// <summary>
-    /// US-PACK1: the flat item-key list the pack-card Repeat materializes. A collapsed card contributes
-    /// ONLY its header key; an expanded card (manual OR query-hit auto) is followed by one row key per
-    /// surviving domain ("<packKey>|<race>" / "<packKey>|<race>|<target>"). Order is the projection's -
-    /// first appearance of each pack across the domain scan - and it is part of the contract, because
-    /// Repeat reuses a row's node and state by key.
+    /// One bounded page of stable pack/domain identities. Headers and single targets are available
+    /// in the list; a selected multi-target pack contributes its exact detail rows. The two Repeat
+    /// presentations share the same typed item bindings, never a second selection owner.
     /// </summary>
     private static IReadOnlyList<string> PackCardKeys(IUsKernelSettingsSource source)
     {
         IReadOnlyList<PackCardView> cards = source.BuildView().PackCards;
         var keys = new List<string>();
-        for (int i = 0; i < cards.Count; i++)
+        int start = Math.Min(source.ViewState.PackPage * 20, Math.Max(0, ((cards.Count - 1) / 20) * 20));
+        for (int i = start; i < Math.Min(cards.Count, start + 20); i++)
         {
             PackCardView card = cards[i];
             if (string.IsNullOrEmpty(card.Key)) continue;
             keys.Add(card.Key);
-            if (!card.Expanded) continue;
+            if (card.Rows.Count != 1 && card.Key != source.ViewState.SelectedPackKey) continue;
             for (int r = 0; r < card.Rows.Count; r++)
             {
                 string rowKey = card.Rows[r].RowKey(card.Key);
@@ -1100,6 +1125,8 @@ public static class UsKernelSettingsHost
             bool isHeader = key.IndexOf(RowKeySeparator) < 0;
             bindings.BindReadOnly<bool>(Address("is-header"), () => IsHeaderLive(key));
             bindings.BindReadOnly<bool>(Address("is-domain"), () => !IsHeaderLive(key));
+            bindings.BindReadOnly<bool>(Address("in-list"), () => !IsHeaderLive(key) && FindOwningCard(key)?.Rows.Count == 1);
+            bindings.BindReadOnly<bool>(Address("in-detail"), () => !IsHeaderLive(key) && FindOwningCard(key)?.Key == source.ViewState.SelectedPackKey);
             bindings.BindReadOnly<string>(Address("payload"), () => Payload(key));
             bindings.BindReadOnly<string>(Address("title"), () => Title(key));
             // The selection-surface is drawn for BOTH kinds (it is the template's hover/selected plate),
@@ -1111,10 +1138,18 @@ public static class UsKernelSettingsHost
             {
                 bindings.BindReadOnly<string>(Address("meta"), () => Meta(key));
                 bindings.BindReadOnly<string>(Address("coverage"), () => FindCard(key)?.Coverage ?? "");
-                bindings.BindReadOnly<bool>(Address("expanded"), () => FindCard(key)?.Expanded ?? false);
+                bindings.BindReadOnly<bool>(Address("expanded"), () => source.ViewState.SelectedPackKey == key && source.ViewState.DetailOpen);
                 writes.ItemAction<string>(PackCardKeysKey, key, "toggle-pack-card", _ =>
                 {
                     source.TogglePackCard(key);
+                    source.ViewState.SelectedPackKey = key;
+                    source.ViewState.DetailOpen = true;
+                    var card = FindCard(key);
+                    if (card.HasValue && card.Value.Rows.Count > 0)
+                    {
+                        var row = card.Value.Rows[0];
+                        source.SelectDomain(row.Scope, row.RaceDefName, row.TargetDefName);
+                    }
                     // A display write: the card's own body appears/disappears, so the clock must move.
                     bump();
                 });

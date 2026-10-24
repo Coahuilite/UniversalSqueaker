@@ -14,6 +14,7 @@ public partial class GameSettings
             || distancePreset != d.distancePreset || !DistanceRangesEqual(distanceRange, d.distanceRange)
             || localizeDebugActions != d.localizeDebugActions || showCameraIndicator != d.showCameraIndicator
             || devLoggingMode != d.devLoggingMode || uiSwatchId != d.uiSwatchId || uiIntroCollapsed != d.uiIntroCollapsed
+            || showMainMenuEntry != d.showMainMenuEntry || showOptionsEntry != d.showOptionsEntry
             || allowEasterEggSounds != d.allowEasterEggSounds || voicePackSelections.Count != 0 || actionTuning.Count != 0;
         if (!changed) return SqueakResetOutcome.NoChange;
         voicePackMode = d.voicePackMode; scaleFrequencyWithTalking = d.scaleFrequencyWithTalking;
@@ -21,6 +22,7 @@ public partial class GameSettings
         distancePreset = d.distancePreset; distanceRange = d.distanceRange;
         localizeDebugActions = d.localizeDebugActions; showCameraIndicator = d.showCameraIndicator;
         devLoggingMode = d.devLoggingMode; uiSwatchId = d.uiSwatchId; uiIntroCollapsed = d.uiIntroCollapsed;
+        showMainMenuEntry = d.showMainMenuEntry; showOptionsEntry = d.showOptionsEntry;
         allowEasterEggSounds = d.allowEasterEggSounds;
         // Source binding intent and last-good author snapshots are not player tuning defaults.
         voicePackSelections = d.voicePackSelections; actionTuning = d.actionTuning;

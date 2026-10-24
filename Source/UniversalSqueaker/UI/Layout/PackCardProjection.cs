@@ -95,7 +95,8 @@ public static class PackCardProjection
         string raceFilter,
         string xenotypeFilter,
         in UiDomainFilter state,
-        IReadOnlyCollection<string> manualExpanded)
+        IReadOnlyCollection<string> manualExpanded,
+        IReadOnlyCollection<string>? retainedEnabledRows = null)
     {
         var cards = new List<PackCardView>();
         if (source == null || source.Count == 0) return cards;
@@ -130,7 +131,9 @@ public static class PackCardProjection
             // State flags: the domain's four answers plus THIS pair's enable.
             if (!VoicePacksFilters.DomainMatches(
                     pair.HasConflict, pair.IsDormant, pair.IsTargetUnavailable,
-                    pair.DomainHasOrphan, pair.PackEnabledInDomain, in state)) continue;
+                    pair.DomainHasOrphan, pair.PackEnabledInDomain ||
+                    (retainedEnabledRows != null && ContainsOrdinal(retainedEnabledRows,
+                        pair.PackKey + "|" + pair.RaceDefName + (pair.Scope == SqueakVoicePackScope.Xenotype ? "|" + pair.TargetDefName : ""))), in state)) continue;
             // Keyword: pack half OR domain half. The auto-expand trigger (review-1 correction 1) is a
             // hit on the XENOTYPE domain's half from EITHER condition of the region that names a
             // xenotype: the keyword matching the domain half, or the ACTIVE xenotype dropdown - a row

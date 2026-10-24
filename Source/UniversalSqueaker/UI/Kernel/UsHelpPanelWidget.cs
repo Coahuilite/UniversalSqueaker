@@ -178,7 +178,9 @@ public sealed class UsHelpPanelWidget : IUiWidget
     /// CurrentHelpRef is a catalog reference, not a binding or a raw current-frame hit.</summary>
     private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
     {
-        return UsHelpPanelLogic.Resolve(section, ctx.Session.CurrentHelpRef ?? "", TranslationSeam(ctx));
+        string current = ctx.Bindings.TryGet("pinned-help-ref", out string pinned) && pinned.Length > 0
+            ? pinned : ctx.Session.CurrentHelpRef ?? "";
+        return UsHelpPanelLogic.Resolve(section, current, TranslationSeam(ctx));
     }
 
     /// <summary>

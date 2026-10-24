@@ -32,7 +32,7 @@ internal static class DbEatUiTests
                 {
                     var source = new RecordingSettingsSource { RichData = true };
                     using var host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
-                    host.Bindings.Invoke("set-tab", "Tuning");
+                    host.Bindings.Invoke("go-page", "Output");
                     var snapshot = host.MeasureAndArrange(new UiLayoutPoint(width, 900));
                     foreach (string axis in new[] { "eat", "eat-nutrition", "eat-drug" })
                     {

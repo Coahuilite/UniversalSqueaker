@@ -57,7 +57,7 @@ internal static partial class Program
             ClearDrawBoxSolidCalls();
             host.DrawChecked(viewport);
             Rect card = PresetCard(host, viewport);
-            UiLayoutRect scroll = host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(viewport.width, viewport.height))).RectById["content-scroll"];
+            UiLayoutRect scroll = host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(viewport.width, viewport.height))).RectById["page-Presets-scroll"];
 
             float boxX = card.xMax - scroll.X - UsCardLayout.Padding - (UsKernelDraw.ControlColumnRightInset + UsKernelDraw.CheckboxVisual);
             Rect? box = DrawnBoxAtX(boxX);

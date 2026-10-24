@@ -48,6 +48,7 @@ public sealed class GameSettingsWindow : UiWindowHost
     // The page's per-window business boundary, kept so BeforeDraw can read the layout-report request and
     // tick the pending settings save. CreateHost builds it once per window instance.
     private UsKernelSettingsSource? source;
+    private Rect lastContentRect;
 
     /// <summary>SA1.3: ONE Remix confirmation flow per parent window. Created with the host (the mode
     /// write below is the only writer it gates) and released at PostClose: closing the parent can never
@@ -87,13 +88,9 @@ public sealed class GameSettingsWindow : UiWindowHost
     // belonged to (the 128px record was the DIAGNOSTICS panel's own long close text, not this one).
 
     /// <summary>
-    /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
-    /// clamps 50% of the screen width into [800, 1600] and the height is that width at 4:3 with a 600px
-    /// floor. BH1 removed the drawer-expanded branch: the help panel reserves height inside the page above
-    /// the footer, so this is the window's size in BOTH help states. At the 1024x768 game screen that is
-    /// 800x600, and the page box the shell hands the page is 760x524 open or closed. The shell's default
-    /// would be the game's own <see cref="Window.InitialSize"/>, so this policy is
-    /// what makes the opening size a product decision instead of an accident.
+    /// US logical-screen size policy. The inherited resolution-change notification re-reads this
+    /// dynamic InitialSize; the actual FL content rectangle, not an inferred chrome subtraction,
+    /// selects the page layout in BeforeDraw. No independent scale or per-frame screen poll.
     /// </summary>
     protected override Func<Vector2>? InitialSizePolicy => InitialSizeFromScreen;
 
@@ -121,9 +118,8 @@ public sealed class GameSettingsWindow : UiWindowHost
     protected override UiHost CreateHost()
     {
         source = new UsKernelSettingsSource(SqueakerMod.Settings, Execution.Images);
-        // BH1: no page-width feed any more. The help panel's presentation does not depend on the box the
-        // shell hands the page - there is exactly one presentation, and the engine hides it declaratively -
-        // so the window has no width-shaped decision left to feed.
+        source.SetContentLayout(WindowChromeLayout.UsesWideLayout(lastContentRect.width, lastContentRect.height));
+        // BeforeDraw precedes first CreateHost: the opening layout already uses the actual content box.
         // SA1.3: the Remix confirmation flow is THIS window's - one per parent, built before the host so
         // the mode write registers against it, released in PostClose so no dialog or staged commit can
         // outlive the page that created it.
@@ -158,15 +154,27 @@ public sealed class GameSettingsWindow : UiWindowHost
     /// the window is open must still flush on its own timer, or the footer status lies. The hover-claim
     /// frame boundary used to be called from here; since FL P3 <c>UiHost.DrawFrame</c> runs it on the
     /// session, so the window owns no frame protocol at all.
-    /// <para>
-    /// BH1 retired the rest of what this method used to own: feeding the shell's actual page-box width to
-    /// the host's presentation decision, bumping the layout clock when that width flipped the shape, and
-    /// resizing the window on the drawer edge. The help panel changes no width, so a toggle is a page write
-    /// like any other and the toggle's own bumper covers it.
-    /// </para>
+    /// Actual content-size changes retire old popup/capture coordinates. Only the breakpoint edge
+    /// updates the compatible definition; host, editor, selected domain and scroll remain owned here.
     /// </summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        if (contentRect.size != lastContentRect.size)
+        {
+            bool wide = WindowChromeLayout.UsesWideLayout(contentRect.width, contentRect.height);
+            bool changed = source != null && source.ViewState.WideLayout != wide;
+            lastContentRect = contentRect;
+            if (Host != null)
+            {
+                // Geometry invalidates popup/capture coordinates, never commits or cancels a text draft.
+                Host.Session.ClosePopup();
+                Host.Session.Interactions.End(UiInteractionEnd.Aborted);
+                if (Host.Session.OwnedHotControl is UiControlKey capture) Host.Session.ReleaseHotControl(capture);
+                source!.SetContentLayout(wide);
+                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide));
+                else Host.Invalidate();
+            }
+        }
         // The per-host channel is a BOUNDED RING, not a push sink: drain what the previous pass's chrome
         // and page draw published before this pass adds to it, so a frame's findings cannot be pushed out
         // of the ring unread (FL-20).
@@ -211,6 +219,8 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     public override void PreClose()
     {
+        // Live writes already reached the ordinary queue; retained-only drafts are abandoned on close.
+        if (Host?.InputState.IsEditing == true) Host.TryHandleCancel();
         // Final drain + release this window's hold on the process-wide detection switch, BEFORE the shell
         // disposes the host and with it the subscription.
         audit?.Dispose();

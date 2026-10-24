@@ -928,12 +928,11 @@ public static class VoicePacksPageModel
         string modName = pack.modContentPack?.Name ?? pack.modContentPack?.PackageId ?? "—";
         string author = pack.modContentPack?.ModMetaData?.AuthorsString ?? "";
         if (string.IsNullOrEmpty(author)) author = modName;
-        int playable = pack.CountPlayableActions();
+        int mapped = pack.CountPlayableActions(); // Directory mappings, not a native playback observation.
         string coverage = string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
             "US.Packs.Checklist.PackActions".Translate(),
-            playable,
-            ActionPresentations.Count);
+            mapped);
         string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
         return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
@@ -1081,9 +1080,34 @@ public static class VoicePacksPageModel
             }
         }
 
+        state.PackTotal = CountCataloguedPacks(catalog);
+        state.PackSelected = source.Where(x => x.PackEnabledInDomain).Select(x => x.PackKey).Distinct(StringComparer.Ordinal).Count();
+        // Missing saved identities are separate from P/Q, including domains no longer in the catalog.
+        var available = new HashSet<(SqueakVoicePackScope, string, string, string)>(source.Select(pair =>
+            (pair.Scope, pair.RaceDefName, pair.TargetDefName, pair.PackKey)));
+        // Match GetVoicePackSelectionStatus's last-wins domain contract, even before normalization.
+        var missing = settings.voicePackSelections.Where(x => x != null)
+            .GroupBy(x => (x.scope, x.raceDefName, x.xenotypeDefName)).Select(group => group.Last())
+            .SelectMany(x => x.enabledPackKeys.Distinct(StringComparer.Ordinal).Where(key =>
+                !available.Contains((x.scope, x.raceDefName, x.scope == SqueakVoicePackScope.Xenotype ? x.xenotypeDefName : "", key)))
+                .Select(key => x.scope + ": " + x.raceDefName + (x.scope == SqueakVoicePackScope.Xenotype ? "/" + x.xenotypeDefName : "") + " · " + key)).ToArray();
+        state.OrphanSelectionCount = missing.Length;
+        state.MissingSelections = string.Join("\n", missing);
+        string filterIdentity = string.Join("\u001f", state.SearchText, state.PackFilter.Author, state.RaceFilter,
+            state.XenotypeFilter, state.DomainFilter.EnabledOnly, state.DomainFilter.ConflictOnly, state.DomainFilter.OrphanOnly);
+        if (state.EnabledFilterIdentity != filterIdentity)
+        {
+            state.EnabledFilterIdentity = filterIdentity;
+            state.EnabledFilterRows.Clear();
+            state.PackPage = 0;
+            if (state.DomainFilter.EnabledOnly)
+                foreach (var pair in source.Where(x => x.PackEnabledInDomain))
+                    state.EnabledFilterRows.Add(pair.PackKey + "|" + pair.RaceDefName +
+                        (pair.Scope == SqueakVoicePackScope.Xenotype ? "|" + pair.TargetDefName : ""));
+        }
         return PackCardProjection.Build(
             source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
-            in state.DomainFilter, state.PackCardsExpanded);
+            in state.DomainFilter, state.PackCardsExpanded, state.EnabledFilterRows);
     }
 
     /// <summary>Distinct pack keys the catalog carries at all - the "no packs here" sentence's denominator.</summary>

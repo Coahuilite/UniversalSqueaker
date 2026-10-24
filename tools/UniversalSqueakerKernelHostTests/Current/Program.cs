@@ -47,6 +47,11 @@ internal static partial class Program
                 lane = "existing diagnostics";
                 Console.WriteLine("EXISTING CASE FILTER=" + ExistingCaseFilter);
             }
+            if (lane != null && lane.StartsWith("preservation-", StringComparison.Ordinal))
+            {
+                InteractionPreservationTests.ExistingCaseFilter = lane.Substring("preservation-".Length);
+                lane = "preservation:";
+            }
             string expectedCarrier = typeof(SqueakerMod).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .Single(attribute => attribute.Key == "FerriteLib.SHA256").Value!;
             using (var carrierBytes = File.OpenRead(typeof(UiHost).Assembly.Location))

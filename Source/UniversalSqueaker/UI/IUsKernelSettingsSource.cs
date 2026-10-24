@@ -2,6 +2,15 @@ using System;
 
 namespace UniversalSqueaker.UI;
 
+/// <summary>Optional native-entry preferences; embedded/recording sources need not own platform menus.</summary>
+public interface IUsSettingsEntrySource
+{
+    bool MainMenuEntryVisible { get; }
+    bool OptionsEntryVisible { get; }
+    void SetMainMenuEntryVisible(bool visible);
+    void SetOptionsEntryVisible(bool visible);
+}
+
 /// <summary>Business/view boundary of the kernel settings path. The Host adapter binds every typed widget
 /// binding/action to this surface; the production implementation routes to
 /// <see cref="GameSettings"/> and <see cref="VoicePacksPageModel"/>. The interface is

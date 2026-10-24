@@ -16,6 +16,21 @@ public partial class GameSettings : ModSettings
     public SqueakVoicePackMode voicePackMode = SqueakVoicePackMode.Fallback;
     public bool scaleFrequencyWithTalking = true;
     public bool localizeDebugActions = false;
+    // Visibility only. Missing fields default on; an explicitly saved false is never repaired away.
+    public bool showMainMenuEntry = true;
+    public bool showOptionsEntry = true;
+    public void SetMainMenuEntry(bool value)
+    {
+        if (showMainMenuEntry == value) return;
+        showMainMenuEntry = value;
+        QueuePersistence();
+    }
+    public void SetOptionsEntry(bool value)
+    {
+        if (showOptionsEntry == value) return;
+        showOptionsEntry = value;
+        QueuePersistence();
+    }
     // S4 diagnostics foundation: player-facing camera indicator readout (no DevMode gating).
     public bool showCameraIndicator = false;
     public SqueakDevLoggingMode devLoggingMode = SqueakDevLoggingMode.Auto;

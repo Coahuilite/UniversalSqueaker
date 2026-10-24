@@ -5,6 +5,7 @@ using System.Reflection;
 using UnityEngine;
 using Verse;
 using FerriteLib.UiKit.Kernel;
+using HarmonyLib;
 
 namespace UniversalSqueaker;
 
@@ -17,6 +18,9 @@ internal sealed class SettingsWindowOwner
     private readonly HashSet<Window> settingsWindows = new();
     private readonly Dictionary<Type, FieldInfo?> optionsOwnerFields = new();
     private UI.GameSettingsWindow? activeSettingsWindow;
+    // Native ordering, not Catalog activation: never close/recreate a live page to focus it.
+    private static readonly FieldInfo? WindowList = AccessTools.Field(typeof(WindowStack), "windows");
+    private static readonly MethodInfo? InsertWindow = AccessTools.Method(typeof(WindowStack), "InsertAtCorrectPositionInList", new[] { typeof(Window) });
     internal SettingsWindowOwner(SqueakerMod mod, GameSettingsPersistence persistence) { this.mod = mod; this.persistence = persistence; }
     internal static string BuildIdentity()
     {
@@ -80,10 +84,11 @@ internal sealed class SettingsWindowOwner
     public void OpenSettings()
     {
         if (Find.WindowStack == null) return;
-        if (activeSettingsWindow != null)
+        if (activeSettingsWindow != null && Find.WindowStack.IsOpen(activeSettingsWindow))
         {
-            Find.WindowStack.TryRemove(activeSettingsWindow, true);
-            activeSettingsWindow = null;
+            try { ActivateExisting(Find.WindowStack, activeSettingsWindow); }
+            catch (Exception error) { SqueakLog.SettingsOpenFailed(error); }
+            return;
         }
 
         try
@@ -98,6 +103,23 @@ internal sealed class SettingsWindowOwner
             activeSettingsWindow = null;
             SqueakLog.SettingsOpenFailed(ex);
         }
+    }
+
+    private static void ActivateExisting(WindowStack stack, Window window)
+    {
+        if (WindowList?.GetValue(stack) is List<Window> list && InsertWindow != null)
+        {
+            int prior = list.IndexOf(window);
+            if (prior >= 0)
+            {
+                list.RemoveAt(prior);
+                try { InsertWindow.Invoke(stack, new object[] { window }); }
+                catch { if (!list.Contains(window)) list.Insert(Math.Min(prior, list.Count), window); throw; }
+            }
+        }
+        else Log.Warning("usdiag UI=NativeWindowActivationUnavailable; existing US window retained");
+        // A higher-layer confirmation retains its native key ownership.
+        if (stack.GetsInput(window)) stack.Notify_ManuallySetFocus(window);
     }
 
     internal void RegisterSettingsWindow(Window window)

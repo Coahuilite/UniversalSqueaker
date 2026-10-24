@@ -1,6 +1,6 @@
 # Universal Squeaker 文档
 
-当前源码为 **0.6.0 Dev / RimWorld1.6.4871**。r2已切换完整中立Core、单主体owner、一次通知声明与新Config格式；普通政策、UI/UX定稿和十五包双人工关口仍待裁／待验。
+当前源码为 **0.6.0 Dev / RimWorld1.6.4871**。r2已切换完整中立Core、单主体owner、一次通知声明与新Config格式；普通政策和十五包双人工关口仍待裁／待验；新语音管理 UI 已进入本地候选，原生外观与交互待人验。
 
 | 你要做什么 | 当前入口 |
 | --- | --- |
@@ -11,7 +11,7 @@
 | 核对正向事实、调用主体、版本和Unknown | [事实适配表](us-kernel-0.6-fact-adapters-zh.md) |
 | 核对Core工作完整范围 | [20 WorkType／105 Giver／78过程清单](us-core-work-scope-zh.md) |
 | 查具体算法、参数与未决政策 | [规格r15](us-kernel-0.6-spec-zh.md)、[验收](us-kernel-0.6-acceptance-zh.md)、[测试迁移](us-kernel-0.6-test-migration-zh.md) |
-| 修改源码／现有UI读面 | [架构](architecture-0.5-zh.md)、[UI契约](ui-contract-0.5-zh.md) |
+| 修改源码／现有UI读面 | [架构](architecture-0.5-zh.md)、[UI契约](ui-contract-0.6-zh.md) |
 | 构建固定候选／选择FL／打包 | [Build and debug](build-and-debug.md)、[FL0.8消费](fl08-consumer-migration-zh.md)、[目录](mod-structure-reference-zh.md) |
 | 准备发布 | [发布流程](release-runbook-zh.md)、[隐私门禁](push-privacy-gate.md) |
 

@@ -12,6 +12,24 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public sealed class VoicePacksPageState
 {
+    // Navigation and layout are per-window, never persisted or used as runtime policy.
+    public string Page = "Voices";
+    public readonly List<string> PageHistory = new();
+    public string PinnedHelpRef = "";
+    public bool BrowseDefinitions;
+    public bool FiltersOpen;
+    public bool RestoreAllOpen;
+    public bool WideLayout;
+    public bool DetailOpen;
+    public string SelectedPackKey = "";
+    public int PackPage;
+    public int PackTotal;
+    public int PackSelected;
+    public int OrphanSelectionCount;
+    public string MissingSelections = "";
+    public string SourceChangeDiagnostic = "";
+    public string EnabledFilterIdentity = "";
+    public readonly HashSet<string> EnabledFilterRows = new(StringComparer.Ordinal);
     public SqueakVoicePackScope SelectedScope = SqueakVoicePackScope.Race;
     public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
@@ -88,6 +106,12 @@ public sealed class VoicePacksPageState
 
     public void Reset()
     {
+        Page = "Voices"; PinnedHelpRef = "";
+        PageHistory.Clear();
+        BrowseDefinitions = false; FiltersOpen = false; RestoreAllOpen = false;
+        DetailOpen = false; SelectedPackKey = ""; PackPage = 0;
+        PackTotal = 0; PackSelected = 0; OrphanSelectionCount = 0; MissingSelections = "";
+        SourceChangeDiagnostic = ""; EnabledFilterIdentity = ""; EnabledFilterRows.Clear();
         SelectedScope = SqueakVoicePackScope.Race;
         SelectedRaceDefName = "";
         SelectedTargetName = "";

@@ -97,7 +97,7 @@ internal static partial class Program
         // UIR-001: the rule bands joined the Tuning tab, so the scope-tree composite sits below the
         // fold at scroll 0 and the dropdown never draws - scroll it into view first (the player can).
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
-        UiNode? foldNode = host.Session.GetNodeByElementId("content-scroll");
+        UiNode? foldNode = host.Session.GetNodeByElementId("page-Behavior-scroll");
         Assert(foldNode != null, "the content scroll must exist to reach the scope tree");
         host.Session.SetScrollPosition(foldNode!, VerseUiExecution.Point(new Vector2(0f, 700f)));
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
@@ -194,9 +194,9 @@ internal static partial class Program
         // UIR-001: the rule bands joined the Tuning tab, so the scope rows sit below the fold at top
         // scroll; reveal them once, and every popup helper below draws against live rows.
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
-        UiNode? revealNode = host.Session.GetNodeByElementId("content-scroll");
+        UiNode? revealNode = host.Session.GetNodeByElementId("page-Behavior-scroll");
         Assert(revealNode != null, "the content scroll node must exist to reach the scope rows");
-        host.Session.SetScrollPosition(revealNode!, VerseUiExecution.Point(new Vector2(0f, 700f)));
+        host.Session.SetScrollTarget("scope-tree");
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
         host.DrawChecked(viewport);
 

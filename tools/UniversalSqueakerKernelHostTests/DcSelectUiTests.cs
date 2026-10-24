@@ -17,7 +17,7 @@ internal static class DcSelectUiTests
                 foreach (float width in new[] { 760f, 480f }) {
                     var source = new RecordingSettingsSource { RichData = true };
                     using var host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
-                    host.Bindings.Invoke("set-tab", "Tuning");
+                    host.Bindings.Invoke("go-page", "Output");
                     var layout = host.MeasureAndArrange(new UiLayoutPoint(width, 1000));
                     foreach (string name in new[] { "player", "awake", "not-downed" }) {
                         Check(layout.RectById.TryGetValue("basic-select-" + name + "-choice", out var rect) && rect.Width >= 100 && rect.Height >= 26,

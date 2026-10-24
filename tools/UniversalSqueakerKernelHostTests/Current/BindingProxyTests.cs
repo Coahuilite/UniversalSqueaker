@@ -34,6 +34,7 @@ internal static class BindingProxyTests
     }
     internal static void Run()
     {
+        UsKernelWidgetRegistrar.EnsureRegistered(); // The existing lane also runs independently.
         var a = new UiBindings(); var b = new UiBindings();
         SqueakVoicePackMode currentA = SqueakVoicePackMode.Vanilla, currentB = SqueakVoicePackMode.Disabled;
         a.BindValue("mode", () => currentA, value => currentA = value);
