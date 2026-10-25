@@ -49,6 +49,8 @@ public static class WorkFinished
 
 配置编辑不重抽已安排等待、不清硬截止。当前事实、发声能力、准确域、可播放性、preflight 及全局输出仍在本次机会或持续维护读取。持续音配置关闭后须按当前授权结束；普通 OneShot 的自然尾音不被过程退出硬切。局部 L 在本次请求固定，后续自有 Sample 读取当前 G 与距离；不改共享 SoundDef。
 
+原生输出就绪按实际形态隔离：物理OneShot只要求Sample音量、更新和清理接缝；真正Sustainer还要求持续实例／辅助调用接缝。仅持续接缝缺失不再连带禁用OneShot；共同Sample接缝缺失仍拒绝两者。此依赖隔离不表示现场已经发生第二个零声根因。
+
 ## 配置写入有两种提交语义
 
 - **普通编辑**：具体 setter 校验并立即发布配置；单一 `SettingsSaveOwner` 按实时 **0.35秒** 合并物理写入。窗口自己的 tab／filter／scroll 与 FL session 不进入业务配置。

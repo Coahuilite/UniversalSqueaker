@@ -30,6 +30,7 @@ public sealed class ResponseFrame
     public bool ActiveCommand;
     public bool HasVocalOrgans = true;
     public double TalkingChance = 1;
+    public double StateWaitFactor = 1;
     public FactSnapshot Facts = new(Array.Empty<KeyValuePair<string, Truth>>());
     public IReadOnlyDictionary<string, double> NumericFacts = new Dictionary<string, double>();
     public ISet<string> AvailableFacts = new HashSet<string>(StringComparer.Ordinal);
@@ -64,11 +65,8 @@ public static class BehaviorContract
         SelectRequireNotDowned = action.Key == CoreActions.Select ? true : null
     };
     public static BehaviorValues Defaults(ActionPlan action, UsDevelopmentPolicy policy)
-    {
-        var values = DeclaredDefaults(action);
-        if (BuiltInActionKeys.Contains(action.Key)) values.HardIntervalTicks = action.Key == CoreActions.Wounded ? policy.WoundedInterval : policy.Interval;
-        return values;
-    }
+        => policy.RuntimePolicy.Defaults(action);
+    public static BehaviorValues Defaults(ActionPlan action, UsResponsePolicy policy) => policy.Defaults(action);
     public static string InvalidParameters(ActionPlan action, BehaviorValues behavior)
         => !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue)
             ? "EatParametersRequireIngestionContract"

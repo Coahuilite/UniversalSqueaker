@@ -53,7 +53,7 @@ internal static class UsAttackObservation
     [ThreadStatic] private static Frame? current;
     internal static Frame? Begin(Verb verb)
     {
-        if (!SqueakerRuntime.DevelopmentActive || verb.caster is not Pawn pawn) return null;
+        if (!SqueakerRuntime.AttackObservationActive || verb.caster is not Pawn pawn) return null;
         return current = new Frame(pawn, current);
     }
     internal static void Mark(Pawn_DrawTracker drawer)
@@ -68,7 +68,7 @@ internal static class UsAttackObservation
     }
     internal static void Publish(Pawn pawn, string mechanism)
     {
-        if (SqueakerRuntime.DevelopmentActive && pawn.Spawned && pawn.MapHeld == Find.CurrentMap)
+        if (SqueakerRuntime.AttackObservationActive && pawn.Spawned && pawn.MapHeld == Find.CurrentMap)
             pawn.GetComp<CompSqueaker>()?.Notify_Attack(mechanism);
     }
 }

@@ -33,12 +33,16 @@ internal static class UsInstanceOutput
     private static readonly ConditionalWeakTable<Sustainer, object> closedOwnedParents = new();
     private static int nextToken;
     internal static bool Available { get; private set; }
+    internal static bool OneShotAvailable { get; private set; }
+    private static string oneShotFailure = "OutputAdapterNotInitialized";
     internal static string Failure { get; private set; } = "OutputAdapterNotInitialized";
     internal static FloatRange Distance = new(15, 50);
 
     internal static void Initialize(Harmony harmony)
     {
         Available = false;
+        OneShotAvailable = false;
+        Failure = oneShotFailure = "OutputAdapterNotInitialized";
         var targets = new MethodBase?[]
         {
             AccessTools.PropertyGetter(typeof(Sample), "Volume"),
@@ -49,14 +53,21 @@ internal static class UsInstanceOutput
             AccessTools.Method(typeof(Sustainer), "PlaySoundOnMapOrCamera", new[] { typeof(SoundDef) }),
             AccessTools.Method(typeof(Sustainer), "Cleanup")
         };
-        foreach (var target in targets)
+        string[] names = { "Sample.Volume", "Sample.Update", "Sample.SampleCleanup", "SampleSustainer.TryMakeAndPlay",
+            "Sustainer..ctor", "Sustainer.PlaySoundOnMapOrCamera", "Sustainer.Cleanup" };
+        for (int i = 0; i < targets.Length; i++)
         {
+            var target = targets[i];
             if (target == null || Harmony.GetPatchInfo(target)?.Owners.Contains(harmony.Id) != true)
             {
                 Available = false;
-                Failure = "RequiredOutputPatchUnavailable:" + target?.Name;
+                Failure = "RequiredOutputPatchUnavailable:" + names[i];
+                if (i < 3) oneShotFailure = Failure;
                 return;
             }
+            // Sample ownership/volume/update/cleanup are sufficient for physical OneShot output.
+            // The remaining targets and auxiliary IL validation belong to Sustainer output only.
+            if (i == 2) { OneShotAvailable = true; oneShotFailure = ""; }
         }
         if (!UsSustainerAuxiliaryPatch.Validated)
         {
@@ -65,6 +76,12 @@ internal static class UsInstanceOutput
         }
         Available = true;
         Failure = "";
+    }
+
+    internal static bool CanDispatch(bool sustainedMaterial, out string reason)
+    {
+        reason = sustainedMaterial ? Failure : oneShotFailure;
+        return sustainedMaterial ? Available : OneShotAvailable;
     }
 
     internal static int Mark(ref SoundInfo info, UsOutputContribution owner)
@@ -217,6 +234,8 @@ internal static class UsInstanceOutput
 [HarmonyPatch(typeof(SampleSustainer), "TryMakeAndPlay", new[] { typeof(SubSustainer), typeof(AudioClip), typeof(float), typeof(float) })]
 internal static class UsLateSustainedSamplePatch
 {
+    private static bool Prepare() => AccessTools.Method(typeof(SampleSustainer), "TryMakeAndPlay",
+        new[] { typeof(SubSustainer), typeof(AudioClip), typeof(float), typeof(float) }) != null;
     private static bool Prefix(SubSustainer subSus, ref SampleSustainer __result)
     {
         if (!UsInstanceOutput.RejectNewSample(subSus.parent))
@@ -231,26 +250,31 @@ internal static class UsLateSustainedSamplePatch
 [HarmonyPatch(typeof(Sample), "get_Volume")]
 internal static class UsSampleVolumePatch
 {
+    private static bool Prepare() => AccessTools.PropertyGetter(typeof(Sample), "Volume") != null;
     private static void Postfix(Sample __instance, ref float __result) => UsInstanceOutput.ApplyVolume(__instance, ref __result);
 }
 [HarmonyPatch(typeof(Sample), nameof(Sample.Update))]
 internal static class UsSampleDistancePatch
 {
+    private static bool Prepare() => AccessTools.Method(typeof(Sample), nameof(Sample.Update)) != null;
     private static void Prefix(Sample __instance) => UsInstanceOutput.ApplyDistance(__instance);
 }
 [HarmonyPatch(typeof(Sample), nameof(Sample.SampleCleanup))]
 internal static class UsSampleCleanupPatch
 {
+    private static bool Prepare() => AccessTools.Method(typeof(Sample), nameof(Sample.SampleCleanup)) != null;
     private static void Postfix(Sample __instance) => UsInstanceOutput.ReleaseSample(__instance);
 }
 [HarmonyPatch(typeof(Sustainer), MethodType.Constructor, new[] { typeof(SoundDef), typeof(SoundInfo) })]
 internal static class UsSustainerCapturePatch
 {
+    private static bool Prepare() => AccessTools.Constructor(typeof(Sustainer), new[] { typeof(SoundDef), typeof(SoundInfo) }) != null;
     private static void Postfix(Sustainer __instance, SoundInfo info) => UsInstanceOutput.CaptureSustainer(__instance, info);
 }
-[HarmonyPatch(typeof(Sustainer), "PlaySoundOnMapOrCamera")]
+[HarmonyPatch(typeof(Sustainer), "PlaySoundOnMapOrCamera", new[] { typeof(SoundDef) })]
 internal static class UsSustainerAuxiliaryPatch
 {
+    private static bool Prepare() => AccessTools.Method(typeof(Sustainer), "PlaySoundOnMapOrCamera", new[] { typeof(SoundDef) }) != null;
     internal static bool Validated;
     private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> original)
     {
@@ -281,5 +305,6 @@ internal static class UsSustainerAuxiliaryPatch
 [HarmonyPatch(typeof(Sustainer), "Cleanup")]
 internal static class UsSustainerCleanupPatch
 {
+    private static bool Prepare() => AccessTools.Method(typeof(Sustainer), "Cleanup") != null;
     private static void Postfix(Sustainer __instance) => UsInstanceOutput.ReleaseSustainer(__instance);
 }

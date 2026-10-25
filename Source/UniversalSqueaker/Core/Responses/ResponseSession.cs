@@ -51,6 +51,10 @@ public sealed class ResponseSession
 
     public DecisionOutcome Respond(RuntimeView view, ResponseFrame frame, UsDevelopmentPolicy selectedPolicy,
         IResponseRandom random, IResponseOutput output)
+        => Respond(view, frame, selectedPolicy.RuntimePolicy, random, output);
+
+    public DecisionOutcome Respond(RuntimeView view, ResponseFrame frame, UsResponsePolicy selectedPolicy,
+        IResponseRandom random, IResponseOutput output)
     {
         var plans = new List<ActionPlan>();
         var modulation = new Dictionary<string, ModulationPlan>(StringComparer.Ordinal);
@@ -80,7 +84,7 @@ public sealed class ResponseSession
                     ? "EquipQualificationRequired" : "ExplicitPlayerCoreEquipQualification";
             }
             plans.Add(new ActionPlan(action.Key, action.Priority, BehaviorContract.EffectiveCondition(action, behavior),
-                behavior.HardIntervalTicks ?? action.Interval, action.CheckShared, action.WriteShared,
+                behavior.HardIntervalTicks ?? action.Interval, selectedPolicy.ChecksShared(action), action.WriteShared,
                 frame.StateOpportunity ? action.Chance : action.Chance * selectedPolicy.EventProbability, action.BaseAction,
                 behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking,
                 behavior.Volume ?? 1, behavior.Pitch ?? 1, action.Sustained, action.RequiresVocal, action.SubjectRole, action.Scope));
@@ -94,7 +98,7 @@ public sealed class ResponseSession
             TargetNamespace = frame.Domain.Namespace, SubjectRole = frame.SubjectRole, Tick = frame.Tick,
             StateOpportunity = frame.StateOpportunity, Eligible = frame.Eligible,
             HasVocalOrgans = frame.HasVocalOrgans, TalkingChance = frame.TalkingChance,
-            Activity = view.Configuration.Activity, StateWaitFactor = selectedPolicy.StateWaitFactor,
+            Activity = view.Configuration.Activity, StateWaitFactor = selectedPolicy.StateWaitFactor * frame.StateWaitFactor,
             Facts = frame.Facts, Actions = plans.ToArray(), ActionModulation = modulation,
             BlockedActions = blocked, BlockedActionReasons = reasons, AudioCatalog = view.Audio,
             AudioContext = new Kernel.SelectionContext(domain, "", frame.Age, true, view.Configuration.AllowEggs),
@@ -103,6 +107,9 @@ public sealed class ResponseSession
     }
 
     public string Review(RuntimeView view, ResponseFrame frame, UsDevelopmentPolicy selectedPolicy, bool force)
+        => Review(view, frame, selectedPolicy.RuntimePolicy, force);
+
+    public string Review(RuntimeView view, ResponseFrame frame, UsResponsePolicy selectedPolicy, bool force)
     {
         var action = view.Definitions.Actions.FirstOrDefault(x => x.Key == ActiveAction);
         if (action == null) { Stop("CurrentContractUnavailable"); return LastEndReason; }

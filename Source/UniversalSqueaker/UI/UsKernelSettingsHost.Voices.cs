@@ -155,7 +155,7 @@ public static partial class UsKernelSettingsHost
                 ? EditContext() : topic == "us/fallback-editor" && s.FallbackSelectedRace != ""
                     ? s.FallbackSelectedRace : T(s.Page)));
         foreach (string topic in new[] { "us/behavior-source/selection", "us/scope-tree", "us/preset-list", "us/basic-tuning/select",
-            "us/basic-tuning/eat-phase", "us/basic-tuning/eat-nutrition", "us/basic-tuning/eat-drug", "us/attenuation-editor", "us/fallback-editor" })
+            "us/basic-tuning/eat-phase", "us/basic-tuning/eat-nutrition", "us/basic-tuning/eat-drug", "us/basic-tuning/activity", "us/attenuation-editor", "us/fallback-editor" })
             b.BindReadOnly<string>("explain:" + topic, () => topic);
         b.BindReadOnly<string>("pinned-help-ref", () => s.PinnedHelpRef);
         b.BindReadOnly<string>("pinned-help-context", () => s.PinnedHelpContext);

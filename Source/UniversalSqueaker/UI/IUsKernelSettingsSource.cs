@@ -2,6 +2,13 @@ using System;
 
 namespace UniversalSqueaker.UI;
 
+/// <summary>Optional system activity editor; existing embedded settings sources remain usable.</summary>
+public interface IUsActivitySettingsSource
+{
+    double Activity { get; }
+    void SetActivity(double value);
+}
+
 /// <summary>Optional native-entry preferences; embedded/recording sources need not own platform menus.</summary>
 public interface IUsSettingsEntrySource
 {

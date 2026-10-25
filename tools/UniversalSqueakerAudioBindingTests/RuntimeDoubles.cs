@@ -58,6 +58,9 @@ namespace UniversalSqueaker
     {
         public Pawn Pawn = null!;
         public static bool ScaleFrequencyWithTalking;
+        // Existing caller fixtures model one audible subject at 1x; native membership/speed
+        // sampling belongs to the production CompSqueaker boundary, not this platform double.
+        internal static double StateRhythmFactor() => 1;
         public bool Allowed = true;
         public bool ExternalAllowed = true;
         public bool Vocal = true;

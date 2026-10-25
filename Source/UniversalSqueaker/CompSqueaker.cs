@@ -266,6 +266,11 @@ public partial class CompSqueaker : ThingComp
     /// <summary>Explicit overlay/diagnostic maintenance; snapshot readers remain side-effect free.</summary>
     internal static void MaintainPeriodicPopulationDiagnostics() => SqueakPeriodicPopulation.Maintain(activeDistanceRange);
 
+    // One shared bounded-cadence audible snapshot; never a new per-Pawn map scan. A paused
+    // game has no state ticks, so normalize its zero tick rate to the neutral speed.
+    internal static double StateRhythmFactor() => SqueakPeriodicPopulation.Maintain(activeDistanceRange).Scale
+        * Math.Max(1d, Find.TickManager.TickRateMultiplier);
+
 
 }
 

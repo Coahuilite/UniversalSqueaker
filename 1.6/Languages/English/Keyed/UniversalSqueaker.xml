@@ -719,4 +719,11 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Nav.Behavior>Behaviour &amp; sources</US.UI.Nav.Behavior>
   <US.UI.Nav.Fallback>Fallback</US.UI.Nav.Fallback>
   <US.UI.Nav.Diagnostics>Diagnostics</US.UI.Nav.Diagnostics>
+  <US.Activity.Help>Global activity A applies once: future state waits are divided by A; event acceptance is multiplied by A and capped at 1. Hard action/shared limits, eligibility and sound supply remain unchanged. Changing A does not redraw the current wait, reset the owner or clear protection. The default base wait is 600 game ticks (10 seconds at 1x), before population/speed factors. Zero is not Off. Confirm a positive finite value; existing valid values are not clamped to a slider range. Playback defaults restore A to 1.</US.Activity.Help>
+  <US.Activity.Invalid>Enter a finite number greater than 0 (for example 0.5, 1 or 2). Use Disabled to turn US off.</US.Activity.Invalid>
+  <US.Activity.Note>1 is neutral. Higher values shorten future state waits and increase event acceptance; hard limits and response conditions still apply.</US.Activity.Note>
+  <US.Activity.Title>Global activity</US.Activity.Title>
+  <US.Kernel.ExplicitDevelopmentCandidate>An explicitly selected development plan is active. Sound still depends on the response conditions.</US.Kernel.ExplicitDevelopmentCandidate>
+  <US.Kernel.OrdinaryActive>Ordinary responses are ready. The current mode, selected packs and response conditions determine whether sound can play.</US.Kernel.OrdinaryActive>
+  <US.Kernel.PolicySelectionRequired>The response runtime is not ready. Pack selection is retained; check diagnostics for unavailable prerequisites.</US.Kernel.PolicySelectionRequired>
 </LanguageData>

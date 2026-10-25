@@ -8,6 +8,7 @@ public enum UsEquipQualification { Unselected, PlayerCoreEquip }
 
 public sealed class UsDevelopmentPolicy
 {
+    internal readonly UsResponsePolicy RuntimePolicy;
     internal readonly StatePolicy State;
     internal readonly UsEquipQualification EquipQualification;
     internal readonly long Interval;
@@ -34,5 +35,6 @@ public sealed class UsDevelopmentPolicy
         InitialSpread = initialSpreadTicks;
         EventProbability = eventProbability;
         StateWaitFactor = stateWaitFactor;
+        RuntimePolicy = new UsResponsePolicy(this);
     }
 }

@@ -713,4 +713,11 @@
   <US.UI.Nav.Behavior>行为与来源</US.UI.Nav.Behavior>
   <US.UI.Nav.Fallback>回退表</US.UI.Nav.Fallback>
   <US.UI.Nav.Diagnostics>诊断</US.UI.Nav.Diagnostics>
+  <US.Activity.Help>全局活跃度A只作用一次：后续状态软等待除以A；事件接纳率乘以A且最高为1。动作与共用硬间隔、资格和声音供给不变。修改A不重抽当前等待、不重建owner或清除保护。基础等待为600游戏tick（1倍速10秒），人口和速度因子另在这一软等待点合成。0不是关闭值。确认输入正的有限数；已有合法值不会被滑块范围夹断。恢复播放默认会将A还原为1。</US.Activity.Help>
+  <US.Activity.Invalid>请输入大于0的有限数，例如0.5、1或2。关闭US请使用“禁用”，不要填0。</US.Activity.Invalid>
+  <US.Activity.Note>1为中性。调高会缩短后续状态等待、提高事件接纳率；硬间隔和回应条件仍然有效。</US.Activity.Note>
+  <US.Activity.Title>全局活跃度</US.Activity.Title>
+  <US.Kernel.ExplicitDevelopmentCandidate>当前使用显式选定的开发方案，实际发声仍取决于回应条件。</US.Kernel.ExplicitDevelopmentCandidate>
+  <US.Kernel.OrdinaryActive>普通回应已接通；能否发声仍由当前模式、所选音频包与回应条件决定。</US.Kernel.OrdinaryActive>
+  <US.Kernel.PolicySelectionRequired>回应运行时尚未就绪。包选择仍保留，请在诊断中查看缺失的前置条件。</US.Kernel.PolicySelectionRequired>
 </LanguageData>

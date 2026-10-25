@@ -7,7 +7,9 @@
 
 ## NOW — 0.6.0 r2 candidate and product gates
 
-- The breaking Core/owner/configuration/author/UI-read-model cutover is described in `docs/us-kernel-0.6-refactor-zh.md`, with exact deleted-source replacements and current external author examples. Do not restore legacy readers, short-key fallback or a second runtime/settings authority. The UI blocker candidate consumes fixed FL `f362c993c9bb568ce83a8bc728a0b4d421577bd2` Release/local.nativeinput2; the published RC `a0b5b98`, intermediate069 and older Dev pins retain historical evidence. The matched native pass restored input but still has slow buttons. The first bounded native sample established heavy layout/draw rather than repeated full-view projection. Hand the bounded metrics/home-widget breakdown candidate to PM for targeted cost collection; keep fit/phase overlap and shell-before-phase timing limits explicit, and do not optimize caches without attribution. Colours/non-blocking styles and the remaining full native acceptance are paused; see `docs/ui-contract-0.6-zh.md`. Exact-target window seams are source-checked; native operations remain open. Existing size/page/help guards follow the replacement contract, with historical failures retained in task evidence. External integration remains PM-owned; ordinary policy is unchanged.
+- Highest priority is ordinary Release audio: the runtime-input/default-folding, native soft-rhythm and positive activity-editor checkpoint is implemented, but ordinary startup installation awaits the concrete per-action/default-permission decision. W600 is settled; do not install the old Dev or O1 table. The current specification records this partial boundary. Explicit builds now consume fixed FL36fa/residualcost1; the held US6c51/FL2309 pair remains recovery, not a new native performance result.
+
+- After Kernel closure, resume the serial UI work: remove help catalog-wide measurement, direct remembered equal-width tool navigation and on-demand bounded bottom help, then the separately authorized appearance changes. The existing initial size and1100x640 content breakpoint remain fixed. Deliver one final combined pair, not micro-pack human tests. Native performance, visual/IME/Config/audio and all-fifteen acceptance remain open; external integration is PM-owned.
 
 - D-C covers all fifteen official contracts/facts/callers and SR guides through the single owner; the two dedicated baby-fit responses are retired. Current interfaces, evidence boundaries and explicit fixture migrations live in the public specification, fact ledger and acceptance/migration pages.
 - Official Pawn Select defaults are settled and implemented as three independent adjustable true qualifications. Do not reopen this decision or change fixed accepted-feedback/final-subject evidence. Eat Whole/Any/Any is also settled.
@@ -223,4 +225,3 @@ expands the product scope.
   `MEMORY.md`.
 - **S3 / S4 / S6 and everything earlier (2026-08-23 → 2026-09-28)**: landed; the durable half is in `MEMORY.md`
   and the finished narratives are archived in `OBLIVIONIS.md`.
-

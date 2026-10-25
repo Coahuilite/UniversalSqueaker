@@ -15,7 +15,7 @@ namespace UniversalSqueaker.UI;
 /// surface (<see cref="GameSettings"/> and the typed
 /// <see cref="VoicePacksPageModel"/> facade).
 /// </summary>
-public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource
+public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource, IUsActivitySettingsSource
 {
     private readonly GameSettings settings;
     private readonly VerseUiImages? images;
@@ -142,7 +142,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
             var configuration = settings.CaptureBehaviorConfiguration();
             return string.Format(System.Globalization.CultureInfo.CurrentCulture, "US.Response.Profile".Translate().ToString(),
                 configuration.SystemVolume, configuration.Activity, configuration.SourceMode,
-                (SqueakerRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive").Translate());
+                ("US.Kernel." + SqueakerRuntime.PolicyStatus).Translate());
         }
     }
 
@@ -155,6 +155,9 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     {
         settings.SetGlobalVolume(value);
     }
+
+    public double Activity => settings.activity;
+    public void SetActivity(double value) => settings.SetActivity(value);
 
     public void SetDistancePreset(SqueakDistancePreset preset)
     {

@@ -35,7 +35,8 @@
     <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices">
       <Widget Id="voice-summary" Kind="text/wrapped" Bind="voice-summary" />
       <Row Id="playback-status" Gap="8" Padding="0">
-        <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" Tone="Warning" Emphasis="Normal" HelpRef="us/timing/policy" />
+        <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" Tone="Warning" Emphasis="Normal" VisibleBind="kernel-needs-policy" HelpRef="us/timing/policy" />
+        <Widget Id="kernel-ordinary-note" Kind="text/wrapped" TextKey="US.Kernel.OrdinaryActive" VisibleBind="kernel-ordinary-active" HelpRef="us/timing/policy" />
         <Widget Id="playback-status-details" Kind="input/button" TextKey="US.UI.StatusDetails" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" Width="100" Height="28" />
       </Row>
       <Row Id="home-output" Gap="12" Padding="0">
@@ -153,6 +154,15 @@
       </Column>
       <Section Id="basic-tuning" Padding="12" Gap="8">
         <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpRef="us/basic-tuning" />
+        <Column Id="global-activity-editor" Gap="4" Padding="0" VisibleBind="activity-available">
+          <Row Id="global-activity-row" Gap="8" Padding="0">
+            <Widget Id="global-activity-label" Kind="text/wrapped" TextKey="US.Activity.Title" />
+            <Widget Id="global-activity" Kind="input/text-field" Bind="global-activity" Width="160" Height="28" HelpRef="us/basic-tuning/activity" />
+          </Row>
+          <Widget Id="global-activity-note" Kind="text/wrapped" TextKey="US.Activity.Note" Emphasis="Muted" />
+          <Widget Id="global-activity-invalid" Kind="text/wrapped" TextKey="US.Activity.Invalid" Tone="Warning" VisibleBind="activity-invalid" />
+          <Widget Id="global-activity-explain" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/activity" Width="90" Height="28" />
+        </Column>
         <Wrap Id="output-explain-actions" Padding="0" Gap="6">
           <Widget Id="select-explain" Kind="input/button" TextKey="US.UI.ExplainSelect" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/select" Width="150" Height="28" />
           <Widget Id="eat-phase-explain" Kind="input/button" TextKey="US.UI.ExplainEatPhase" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/eat-phase" Width="160" Height="28" />

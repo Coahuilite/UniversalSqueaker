@@ -44,7 +44,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private readonly DefinitionCatalog catalog;
     private readonly ResponseSession owner;
     private DecisionState state => owner.State;
-    private readonly UsDevelopmentPolicy candidate;
+    private readonly UsResponsePolicy candidate;
     private readonly List<KeyValuePair<RandomPurpose, double>> draws = new();
     private SoundDef? preparedSound;
     private PlaybackRequest? lastRequest;
@@ -80,7 +80,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
 
     private bool HasAvailableFact(string key) => SqueakerRuntime.ImplementationAvailable(key);
 
-    internal PawnResponseAdapter(Pawn pawn, DefinitionCatalog catalog, UsDevelopmentPolicy candidate)
+    internal PawnResponseAdapter(Pawn pawn, DefinitionCatalog catalog, UsResponsePolicy candidate)
     {
         this.pawn = pawn;
         this.catalog = catalog;
@@ -121,6 +121,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
                 && accepted.SystemEnabled,
             HasVocalOrgans = vocal.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
             TalkingChance = accepted.TalkingScaling && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
+            StateWaitFactor = candidate.UsesNativeRhythm && eventKey == null ? CompSqueaker.StateRhythmFactor() : 1,
             Facts = catalog.Capture(owner.Subject, values, diagnostics, ingestion), NumericFacts = numbers,
             AvailableFacts = new HashSet<string>(catalog.FactKeys.Where(HasAvailableFact), StringComparer.Ordinal),
             Age = SqueakLifeStageResolver.Resolve(pawn),
@@ -261,9 +262,8 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
                 rejection = "InvalidFinalParameters";
                 return false;
             }
-            if (!UsInstanceOutput.Available)
+            if (!UsInstanceOutput.CanDispatch(request.Sustained && sound.sustain, out rejection))
             {
-                rejection = UsInstanceOutput.Failure;
                 return false;
             }
             if (request.Sustained && sound.sustain)
@@ -346,8 +346,11 @@ public static class SqueakerRuntime
     private static AudioInputBuilder audioInputs = new(catalog);
     internal static Kernel.AudioCatalog Audio { get; private set; } = Kernel.AudioCatalog.Empty;
     private static UsDevelopmentPolicy? selectedPolicy;
+    private static UsResponsePolicy? ordinaryPolicy;
     internal static bool DevelopmentActive => selectedPolicy != null;
-    public static string PolicyStatus => selectedPolicy == null ? "PolicySelectionRequired" : "ExplicitDevelopmentCandidate";
+    internal static bool AttackObservationActive => DevelopmentActive || ordinaryPolicy != null;
+    public static string PolicyStatus => selectedPolicy != null ? "ExplicitDevelopmentCandidate"
+        : ordinaryPolicy != null ? "OrdinaryActive" : "PolicySelectionRequired";
     public static IReadOnlyList<string> Issues => catalog.Issues;
     internal static bool DeclareNotification(NotificationContract contract)
     {
@@ -378,16 +381,27 @@ public static class SqueakerRuntime
         {
             throw new ArgumentNullException(nameof(policy));
         }
+        if (ReferenceEquals(selectedPolicy, policy)) return;
         if (selectedPolicy != null && !ReferenceEquals(selectedPolicy, policy))
         {
             throw new InvalidOperationException("A development policy is already selected for this process");
         }
+        if (sessions.Count != 0) throw new InvalidOperationException("DevelopmentSelectionRequiresNoActiveSubjects");
         selectedPolicy = policy;
+    }
+
+    internal static void InstallOrdinaryPolicy(UsResponsePolicy policy)
+    {
+        if (policy == null) throw new ArgumentNullException(nameof(policy));
+        if (ReferenceEquals(ordinaryPolicy, policy)) return;
+        if (sessions.Count != 0) throw new InvalidOperationException("OrdinaryPolicyInstallationRequiresNoActiveSubjects");
+        ordinaryPolicy = policy;
     }
 
     private static PawnResponseAdapter? SessionFor(Pawn pawn)
     {
-        if (selectedPolicy == null)
+        var runtimePolicy = selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
+        if (runtimePolicy == null)
         {
             return null;
         }
@@ -401,7 +415,7 @@ public static class SqueakerRuntime
         }
         if (session == null)
         {
-            session = new PawnResponseAdapter(pawn, catalog, selectedPolicy);
+            session = new PawnResponseAdapter(pawn, catalog, runtimePolicy);
             sessions.Add(pawn.thingIDNumber, session);
         }
         return session;
@@ -417,7 +431,8 @@ public static class SqueakerRuntime
     internal static EffectiveBehavior Explain(BehaviorConfiguration configuration, string actionId, string race, string child)
     {
         var action = catalog.Actions.First(x => x.Key == actionId);
-        var defaults = selectedPolicy == null ? BehaviorContract.DeclaredDefaults(action) : BehaviorContract.Defaults(action, selectedPolicy);
+        var policy = selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
+        var defaults = policy == null ? BehaviorContract.DeclaredDefaults(action) : BehaviorContract.Defaults(action, policy);
         return race == "" ? configuration.ResolveProfile("Pawn", "", actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts())
             : configuration.Resolve(new BehaviorDomain("Pawn", "", race, child), actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts());
     }
@@ -428,6 +443,7 @@ public static class SqueakerRuntime
     public static void Initialize()
     {
         ResetSession();
+        ordinaryPolicy = null;
         catalog = new DefinitionCatalog(720, 216, fullDevCandidate: true);
         audioInputs = new AudioInputBuilder(catalog);
         foreach (var notification in SqueakerNotifications.Declarations) catalog.DeclareNotification(notification);

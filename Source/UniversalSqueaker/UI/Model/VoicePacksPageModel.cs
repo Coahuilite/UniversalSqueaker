@@ -436,7 +436,7 @@ public static class VoicePacksPageModel
                 string.Join(", ", effective.Dependencies), options,
                 string.Join("; ", effective.Origins.Select(x => x.Key + "=" + x.Value)),
                 effective.Paused ? effective.Failure :
-                    (SqueakerRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive").Translate().ToString());
+                    ("US.Kernel." + SqueakerRuntime.PolicyStatus).Translate().ToString());
             rows.Add(new ActionScopeRowView(action.Key, Kernel.BuiltInActionKeys.Contains(action.Key) ? SqueakLabels.Action(action.Key) : action.Key,
                 ActionScopeRules.GroupFor(action.Key), own.Scope ?? action.Scope, action.Key, own.Scope.HasValue,
                 value.Enabled == false ? BehaviorScope.Disabled : value.Scope ?? action.Scope,

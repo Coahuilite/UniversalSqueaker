@@ -202,6 +202,7 @@ internal static class UsHelpCatalog
                     "US.Help.BasicTuning.EatNutrition.Text"),
                 new HelpItem("us/basic-tuning/eat-drug", "US.Help.BasicTuning.EatDrug.Label", "US.Help.BasicTuning.EatDrug.Text"),
                 new HelpItem("us/basic-tuning/select", "US.Help.Select.Label", "US.Help.Select.Text"),
+                new HelpItem("us/basic-tuning/activity", "US.Activity.Title", "US.Activity.Help"),
             }),
         ["us/timing"] = new HelpSection("us/timing", "US.Section.TriggerTiming", "US.Help.Timing.Overview", new[]
         {

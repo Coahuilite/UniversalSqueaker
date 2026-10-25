@@ -69,7 +69,7 @@ public partial class GameSettings
     private SqueakResetOutcome ResetBasicsArea()
     {
         var d = new GameSettings();
-        bool changed = allowEasterEggSounds != d.allowEasterEggSounds
+        bool changed = allowEasterEggSounds != d.allowEasterEggSounds || activity != d.activity
             || scaleFrequencyWithTalking != d.scaleFrequencyWithTalking || showCameraIndicator != d.showCameraIndicator;
         foreach (var row in actionTuning)
         {
@@ -84,6 +84,7 @@ public partial class GameSettings
             row.hasEatPhase = row.hasNutritionScope = row.hasDrugScope = false;
         }
         if (!changed) return SqueakResetOutcome.NoChange;
+        activity = d.activity;
         allowEasterEggSounds = d.allowEasterEggSounds; scaleFrequencyWithTalking = d.scaleFrequencyWithTalking;
         showCameraIndicator = d.showCameraIndicator; SqueakDebug.ShowCameraIndicator = showCameraIndicator;
         PublishBehaviorConfiguration(); QueuePersistence(); return SqueakResetOutcome.Applied;

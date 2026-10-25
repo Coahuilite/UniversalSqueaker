@@ -496,6 +496,8 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 
 ### 唯一生产 owner 与临时激活门
 
+普通接通工程已将运行输入抽为不可变 `UsResponsePolicy`，原 `UsDevelopmentPolicy` 构造和公开Respond/Review重载保留，通过同一owner适配。逐动作I／scope缺省可先于作者、玩家折叠提供；普通原生速度与既有共享可听人口快照只进入状态软等待因子。基础W采用600游戏tick（1倍速10秒）的方向已定，不能据此发行旧Dev或O1整表。当前完整普通默认、共享权限和资格仍待明确采用，普通启动尚未安装该输入，所以下述未装配零派发边界仍然存在；不是已接通普通声音的完成声明。
+
 `CompSqueaker.CompTick`、十五包适用通知和`NotifyExternalByKey`均进入`SqueakerRuntime`，每Pawn只有一份`PawnResponseAdapter`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。自定义通知须先用XML或一次C#明确声明；未知字符串拒绝，不补默认计划。完整新作者／保存／删除合同见[r2导读](us-kernel-0.6-refactor-zh.md)。
 
 产品数值默认尚未冻结。本开发版本未选择整体策略时返回可读状态`PolicySelectionRequired`，零派发、零每Pawn候选初始化，不回旧链。开发模式菜单`S4AB-S5 GLOBAL Dev candidate: W20 H40 I120 spread120 p1 N/speed1; Equip=PlayerCoreEquip (pending)`一次性注入全局隔离候选，显式选择待裁的玩家Core Equip回应资格；重复点同一工具不会清保护。若不用菜单，也可在新的开发进程中显式调用同一组候选输入：

@@ -505,6 +505,19 @@ public static partial class UsKernelSettingsHost
         // 0..100 points, and both read the same business setter. The caption is a read-only string the
         // page binds instead of formatting in C#, because the manifest has no format expression.
         writes.Value<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
+        var activitySource = source as IUsActivitySettingsSource;
+        bool invalidActivity = false;
+        bindings.BindReadOnly<bool>("activity-available", () => activitySource != null);
+        bindings.BindReadOnly<bool>("activity-invalid", () => invalidActivity);
+        writes.Value<string>("global-activity", () => activitySource?.Activity.ToString("R", System.Globalization.CultureInfo.InvariantCulture) ?? "",
+            text => {
+                if (activitySource == null) return;
+                invalidActivity = !double.TryParse(text, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double value)
+                    || double.IsNaN(value) || double.IsInfinity(value) || value <= 0;
+                if (!invalidActivity) activitySource.SetActivity(value);
+                bump();
+            });
         writes.Value<float>(
             "global-volume-percent",
             () => source.BuildView().GlobalVolumeFactor * 100f,
@@ -542,7 +555,9 @@ public static partial class UsKernelSettingsHost
         bindings.BindReadOnly<bool>(PresetBalancedKey, () => IsDistancePreset(source, SqueakDistancePreset.Balanced));
         bindings.BindReadOnly<string>("response-details", () => source.ResponseExplanation);
         bindings.BindReadOnly<string>("kernel-policy-note", () => translation.Translate(
-            SqueakerRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive"));
+            "US.Kernel." + SqueakerRuntime.PolicyStatus));
+        bindings.BindReadOnly<bool>("kernel-needs-policy", () => SqueakerRuntime.PolicyStatus != "OrdinaryActive");
+        bindings.BindReadOnly<bool>("kernel-ordinary-active", () => SqueakerRuntime.PolicyStatus == "OrdinaryActive");
         bindings.BindReadOnly<bool>(PresetStrongKey, () => IsDistancePreset(source, SqueakDistancePreset.Strong));
         // Each button's own payload. A declarative input/button with a PayloadBind opens the STRING contract
         // (G2), so each datum lives in a value binding rather than as a manifest literal - the same shape
@@ -853,7 +868,7 @@ public static partial class UsKernelSettingsHost
         // so it additionally requires the page to still be in the mood area.
         writes.Command(
             "reset-all-settings",
-            () => { if (source.ResetAllSettings() == SqueakResetOutcome.Applied) { source.EndAffectedEdit(_ => true); bump(); } });
+            () => { if (source.ResetAllSettings() == SqueakResetOutcome.Applied) { invalidActivity = false; source.EndAffectedEdit(_ => true); bump(); } });
         writes.Command(
             "reset-distance-defaults",
             () => { if (source.ResetDistanceDefaults() == SqueakResetOutcome.Applied) bump(); });
@@ -862,7 +877,7 @@ public static partial class UsKernelSettingsHost
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Distance) == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "global-volume-number"); bump(); } });
         writes.Command(
             "reset-normal-basics",
-            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Basics) == SqueakResetOutcome.Applied) bump(); });
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Basics) == SqueakResetOutcome.Applied) { invalidActivity = false; source.EndAffectedEdit(id => id == "global-activity"); bump(); } });
         writes.Command(
             "reset-normal-diagnostics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Diagnostics) == SqueakResetOutcome.Applied) bump(); });
