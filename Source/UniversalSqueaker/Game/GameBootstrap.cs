@@ -67,6 +67,7 @@ internal static class GameBootstrap
             // Ordinary activation is process setup, never a side effect of selecting a pack or opening UI.
             SqueakerRuntime.InstallOrdinaryPolicy(UsResponsePolicy.CreateOrdinary());
             // Any new-format repair queued during loading is flushed only after main-thread binding.
+            if (Settings.ConsumeAppearanceRepair()) persistence.Queue();
             persistence.Flush(true);
             Settings.ApplySettingsRuntimeSideEffects(false);
             SqueakAudioPoolNotificationService.EvaluateAndMaybeShow(Settings, SqueakXenotypeCatalog.Current);

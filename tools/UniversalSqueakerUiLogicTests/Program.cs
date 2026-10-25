@@ -297,7 +297,8 @@ internal static class Program
         // and the new us/pack-cards section claims card/expand/row/enable (50 -> 54).
         // r2 removes eleven retired timing/mood controls and adds four current explanation/reset
         // claims. Bidirectional source wiring above still proves each surviving item has a consumer.
-        Assert(itemCount == 48, "catalog item count matches the r2 current-control wiring table: " + itemCount);
+        // Adopted global activity adds one explicit field explanation (Kernel ordinary-input slice).
+        Assert(itemCount == 49, "catalog item count includes the approved global-activity explanation: " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

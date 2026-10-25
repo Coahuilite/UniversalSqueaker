@@ -243,6 +243,12 @@ public static partial class UsKernelSettingsHost
             host?.Session.SetScrollTarget(elementId);
         }
 
+        public void ResetHelpScroll()
+        {
+            if (host?.Session.GetNodeByElementId(HelpPanelScrollId) != null)
+                host.SetScrollPosition(HelpPanelScrollId, UiLayoutPoint.Zero);
+        }
+
         /// <summary>
         /// CORRECTIONS-R1 topic 2: the navigation arrival's scroll arming, in one place. Reset the
         /// page scrolls first (the arrival must not inherit the PREVIOUS workspace's offset - the
@@ -442,7 +448,7 @@ public static partial class UsKernelSettingsHost
         writes.Value<string>(UiBindings.ActiveTabBind, () => state.ActiveTab, value =>
         {
             source.SetActiveTab(value);
-            state.Page = LegacyPage(value);
+            SetPage(state, LegacyPage(value));
             bump();
         });
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
@@ -451,7 +457,7 @@ public static partial class UsKernelSettingsHost
         writes.Action<string>("set-tab", tab =>
         {
             source.SetActiveTab(tab);
-            state.Page = LegacyPage(tab);
+            SetPage(state, LegacyPage(tab));
             bumper.ResetScroll();
             bump();
         });
@@ -814,18 +820,9 @@ public static partial class UsKernelSettingsHost
         writes.Command(
             "toggle-help-drawer",
             () => { source.SetHelpPanelOpen(!state.HelpPanelOpen); bump(); });
-        // US-ESC1: the tree cancel layers the manifest declares with CancelBind (FL-IC2). The engine's
-        // TryHandleCancel walks menu → held capture → open edit → the nearest EXECUTABLE CancelBind up
-        // from the interaction subject; each Can here is the spec's "one press, one layer, decline means
-        // climb past" answer, and none of these writes touches settings, persistence or routing - they
-        // are session return states (§4.1). The page root (the five-workspace container) carries
-        // cancel-help; the packs RESULT carries cancel-pack-results (collapse the manually opened cards)
-        // and the card's operation-domain context carries cancel-domain-selection; the tuning COMPOSITE
-        // carries the visible-branch row steps and the container that WRAPS it carries the context
-        // return (review1 observation 1: 当前层域/区域 is its own Parent/CancelBind layer, active by business state, so
-        // even the untouched default Global/Actions page returns once before the root may close). With
-        // every layer declined the key reaches Verse and the main layer closes - "only the root
-        // closes", one press after the last observable release.
+        // FL cancels inner menus/capture/editors first. While bottom help is open the business
+        // return commands decline, so the root closes help before navigating/collapsing business.
+        // Every command below is window state only: no settings, audio or persistence writes.
         writes.Command(
             "cancel-help",
             () => { source.SetHelpPanelOpen(false); bump(); },
@@ -833,7 +830,7 @@ public static partial class UsKernelSettingsHost
         writes.Command(
             "cancel-domain-selection",
             () => { source.CancelDomainSelection(); bump(); },
-            () => source.CanCancelDomainSelection());
+            () => !state.HelpPanelOpen && source.CanCancelDomainSelection());
         // US-PACK1 result layer (§4.1, review-1 correction 2): the pack-card body is its own return
         // layer BETWEEN the operation domain and the page root. It answers ONLY while a MANUALLY opened
         // card is VISIBLE in the current projection - a query-auto-expanded card is the query's answer,
@@ -844,15 +841,15 @@ public static partial class UsKernelSettingsHost
         writes.Command(
             "cancel-pack-results",
             () => { source.CancelPackResults(); bump(); },
-            () => source.CanCancelPackResults());
+            () => !state.HelpPanelOpen && source.CanCancelPackResults());
         writes.Command(
             "cancel-tuning-target",
             () => { source.CancelTuningTarget(); bump(); },
-            () => source.CanCancelTuningTarget());
+            () => !state.HelpPanelOpen && source.CanCancelTuningTarget());
         writes.Command(
             "cancel-tuning-context",
             () => { VoicePacksPageModel.CancelTuningContext(state); bump(); },
-            () => VoicePacksPageModel.CanCancelTuningContext(state));
+            () => !state.HelpPanelOpen && VoicePacksPageModel.CanCancelTuningContext(state));
         // US-RESET1 (UI integration): the restore EFFECT commands. One invoke runs the backend restore
         // exactly once through the source facade (the settings' own publish/persistence funnel is never
         // re-called here); the revision advances only when the restore actually wrote (Applied), because
@@ -1008,12 +1005,12 @@ public static partial class UsKernelSettingsHost
         writes.Command(
             "cancel-fallback-table",
             () => { VoicePacksPageModel.CancelFallbackTable(state, source.BuildView()); bump(); },
-            () => VoicePacksPageModel.CanCancelFallbackTable(state, source.BuildView()));
-        // UIR-006: the theme validation picker (Advanced page). Six declarative buttons over ONE
-        // string action, the same shape set-dev-logging uses: each button's payload and its selected
-        // answer are READ-ONLY bindings named by the manifest, and the enum-side resolution (an
-        // unknown id resolving fail-soft to Core) lives on the source, not in the page.
+            () => !state.HelpPanelOpen && VoicePacksPageModel.CanCancelFallbackTable(state, source.BuildView()));
+        // One typed dropdown, sourced from the same embedded data as settings repair and colours.
         writes.Action<string>("set-ui-swatch", id => { source.SetUiSwatch(id); bump(); });
+        writes.Value<string>("ui-swatch", () => source.UiSwatchId, id => { source.SetUiSwatch(id); bump(); });
+        bindings.BindChoices<string>("ui-swatch-options", () => UsSwatches.All
+            .Select(swatch => new UiChoice<string>(translation.Translate(swatch.LabelKey), swatch.Id)).ToArray());
         bindings.BindReadOnly<string>("ui-swatch-status", () => string.Format(
             translation.Translate("US.Theme.Status"),
             translation.Translate(UsSwatches.Resolve(source.UiSwatchId).LabelKey)));

@@ -6,32 +6,18 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker;
 
 /// <summary>US owns thirty semantic colour roles through FL 0.8's public Palette.
-/// The six swatches preserve the former effective colours, including explicit selected/success
-/// borders and independent warning roles. Font, density and widget state belong to their
+/// Three embedded palettes provide explicit selected/success borders and independent warning
+/// roles. Font, density and widget state belong to their
 /// existing owners; changing a swatch writes colours only and keeps layout/scroll/focus/draft.</summary>
 public static class UsTheme
 {
     /// <summary>
-    /// The shipped default swatch's identity accent, spelled the way the table spells it
-    /// (<c>#B49C73</c>, the Core Bronze/Lark family member). Named separately because the surface lane
-    /// pins the accent against THIS constant rather than against a carrier swatch. Every swatch owns
-    /// its own accent through the token; this constant documents the default identity.
+    /// The default identity accent comes from the same embedded named-role data as the picker.
     /// </summary>
-    public const string AccentGoldHex = "#B49C73";
+    public static string AccentGoldHex => UsSwatchIds.Palettes.Count == 0 ? "" : UsSwatchIds.Palettes[0].Roles["Accent"];
 
     /// <summary>All thirty concrete FL 0.8 palette roles; order matches UsSwatch.RoleHexes.</summary>
-    public static readonly IReadOnlyList<string> ColorTokens = new[]
-    {
-        "WindowSurface", "WorkspaceSurface", "PanelSurface", "SectionSurface", "ControlSurface", "HoverSurface", "SelectedSurface",
-        "SuccessSurface", "DangerSurface",
-        "Border", "StrongBorder", "Divider",
-        "WindowBorder", "PanelBorder", "ControlBorder", "HoverBorder",
-        "Foreground", "SecondaryForeground", "DisabledForeground", "SelectedForeground", "DangerForeground",
-        "DangerBorder",
-        "Accent", "SwitchOff",
-        "SelectedBorder", "SuccessBorder", "SuccessForeground",
-        "WarningSurface", "WarningForeground", "WarningBorder"
-    };
+    public static readonly IReadOnlyList<string> ColorTokens = UsSwatchIds.RoleNames;
 
     /// <summary>The persisted swatch in force (fail-soft: null settings or an unknown id resolve to
     /// Core). This is the ONE read every surface takes; the writing side goes through the settings
@@ -113,12 +99,7 @@ public static class UsTheme
         // A swatch owns colours only. Applying a whole style document would also withdraw
         // the page's current font/density applications in 0.8; keep those declarations intact.
         UsSwatch swatch = UsSwatches.Resolve(swatchId);
-        for (int i = 0; i < ColorTokens.Count; i++)
-        {
-            if (!UiPalette.TryRole(ColorTokens[i], out var role) || !UiColour.TryParse(swatch.RoleHexes[i], out var colour))
-                throw new InvalidOperationException("Invalid US swatch role: " + ColorTokens[i]);
-            theme.Palette[role] = colour;
-        }
+        foreach (var pair in swatch.Colors) theme.Palette[pair.Key] = pair.Value;
         return theme;
     }
 

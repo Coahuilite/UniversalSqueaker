@@ -325,13 +325,13 @@
   <US.Help.Overview>总览</US.Help.Overview>
   <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
   <US.Help.PageTitle.Title>本窗口的用法</US.Help.PageTitle.Title>
-  <US.Help.PageTitle.Overview>首页“语音管理”选择准确包目标；“设置与工具”提供二级编辑器。返回恢复原页面及其上下文。</US.Help.PageTitle.Overview>
+  <US.Help.PageTitle.Overview>语音管理首页选择准确包目标。“设置与工具”直接打开本窗口上次工具（首次为行为与来源）。同级等宽标签可直接切换；返回保留包、搜索、目标与滚动位置。</US.Help.PageTitle.Overview>
   <US.Help.PageTitle.Nav.Label>页面与工具</US.Help.PageTitle.Nav.Label>
   <US.Help.PageTitle.Nav.Text>语音管理集中配置状态、模式、音量、搜索与包管理；行为、预设、输出、回退、外观、诊断和恢复位于二级工具，不占永久侧栏。</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>修改与保存</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>普通设置修改立即生效，并稍后自动保存。来源和逐动作字段会先尝试保存：未能保存时保留原配置；已保存但无法应用时可查看诊断，不必重复保存相同修改。关闭窗口会保存已生效的修改，放弃尚未确认的草稿。</US.Help.PageTitle.Apply.Text>
   <US.Help.PageTitle.HelpDrawer.Label>详细帮助与返回</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>本页帮助固定解释当前页面；字段旁的说明解释该字段与打开时的目标。阅读期间移动鼠标不会换题。返回保留原页与滚动位置。</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Text>本页帮助解释当前页；字段说明明确字段与打开时的目标。底部帮助保持该主题，正文独立滚动，标题和关闭始终可见。Esc 先取消内层弹出菜单或编辑，再收帮助，最后业务返回。切换工具会收起帮助。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>
@@ -557,19 +557,11 @@
   <US.Section.Theme>界面主题</US.Section.Theme>
   <US.Theme.Note>只改颜色。选择调色板仅重绘页面,不移动任何控件、不重置滚动、更不改变声音。</US.Theme.Note>
   <US.Theme.Status>当前调色板:{0}</US.Theme.Status>
-  <US.Theme.Core.Label>核心</US.Theme.Core.Label>
+  <US.Theme.Core.Label>原版深色</US.Theme.Core.Label>
   <US.Theme.Royalty.Label>Royalty</US.Theme.Royalty.Label>
-  <US.Theme.Ideology.Label>Ideology</US.Theme.Ideology.Label>
-  <US.Theme.Biotech.Label>Biotech</US.Theme.Biotech.Label>
-  <US.Theme.Anomaly.Label>Anomaly</US.Theme.Anomaly.Label>
-  <US.Theme.Odyssey.Label>Odyssey</US.Theme.Odyssey.Label>
   <US.Section.FallbackTable>最终原生 fallback</US.Section.FallbackTable>
-  <US.Theme.Core.Note>失散殖民船上仍在工作终端：灰色空间、旧铜交互、淡色墨水与羊皮纸点缀。小字不落在 Quiet Shade/Bronze Mist/Lark 上；必要状态由 Rutabaga 标记、开关位置与文字共同承担，强调色永不单独标记必要状态。</US.Theme.Core.Note>
+  <US.Theme.Core.Note>深炭灰底、清楚浅色正文与克制金色交互。配色只作用于 US；警告、错误与禁用保留独立角色。</US.Theme.Core.Note>
   <US.Theme.Royalty.Note>夜蓝空间承托金色动作与暗酒红选中面；系列的暖金识别保留，由冷蓝衬托。</US.Theme.Royalty.Note>
-  <US.Theme.Ideology.Note>炭色与陶土般的暗面,配骨白文字和克制的赭金。</US.Theme.Ideology.Note>
-  <US.Theme.Biotech.Note>靛蓝表面与柔和玫粉操作标记；高亮青色留给注意语义。</US.Theme.Biotech.Note>
-  <US.Theme.Anomaly.Note>冷灰与炭黑承托苍白文字,少量苔色带出异常感。</US.Theme.Anomaly.Note>
-  <US.Theme.Odyssey.Note>深色金属、冰蓝引擎光与荧光森林的蓝紫暗面。</US.Theme.Odyssey.Note>
   <US.Help.Intro.Overview>一次性的入门说明。收起后不再打扰,一键即可回到。</US.Help.Intro.Overview>
   <US.Help.Intro.Collapse.Text>收起只折叠本教学条,下方看板保持可见。该偏好随设置保存,不改变任何声音,全局恢复会将其还原为展开默认。</US.Help.Intro.Collapse.Text>
   <US.Help.RaceBoard.Overview>全部已加载种族的只读看板——音源包供给、已启用选择、最终 fallback,以及每项缺失的准确原因。它绝不声称声音已经播放过。</US.Help.RaceBoard.Overview>
@@ -579,9 +571,9 @@
   <US.Help.FallbackEditor.Overview>逐种族的最终 fallback 表:维护者行与你的覆盖、显式"无音"标记和恢复继承是三种不同状态,界面上分开展示。</US.Help.FallbackEditor.Overview>
   <US.Help.FallbackEditor.States.Label>条目状态</US.Help.FallbackEditor.States.Label>
   <US.Help.FallbackEditor.States.Text>覆盖=你设定的声音;维护者=随包出厂行;无音=你选择的静音;未设=跟随未来更新。Escape 先清除所选条目,再释放所选种族表——绝不写入设置。</US.Help.FallbackEditor.States.Text>
-  <US.Help.Theme.Overview>在官方核心与五个 DLC 调色板之间选择以验证颜色。出厂默认为核心。</US.Help.Theme.Overview>
+  <US.Help.Theme.Overview>从下拉框选择原版深色（默认）、Royalty 或黑金。三套配色共用一份嵌入的命名角色颜色数据，只作用于 US。</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>调色板</US.Help.Theme.Switch.Label>
-  <US.Help.Theme.Switch.Text>切换只改颜色,不改任何东西——页面保留布局、焦点与滚动位置。选择随设置保存,并会被"恢复默认"还原;作者自定义主题继续由库支持。</US.Help.Theme.Switch.Text>
+  <US.Help.Theme.Switch.Text>切换只改颜色，不移动控件、焦点、滚动或草稿。选择随设置保存，恢复默认返回原版深色；旧版已移除的 DLC 选择在加载时修复到原版深色。</US.Help.Theme.Switch.Text>
   <US.Kernel.PolicyRequired>回应运行时尚未就绪。你仍可选择语音包和调整设置，请在诊断中查看缺失的前置条件。</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>正在使用显式启用的开发播放方案，并非普通默认规则。实际出声仍取决于触发条件。</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>旧概率与心情因子编辑器已退役。上方动作许可仍有效；独立响应启用、参数及 Apply／Skip 参与请使用当前作者／Config 合同。</US.Kernel.ResponseEditorRetired>
@@ -656,7 +648,7 @@
   <US.UI.Retry>重试保存</US.UI.Retry>
   <US.UI.RestoreNote>优先恢复当前作用域或单一区域。全局恢复影响全部设置，并需确认。</US.UI.RestoreNote>
   <US.UI.RestoreAllExpand>展开全局恢复…</US.UI.RestoreAllExpand>
-  <US.UI.HelpPinned>阅读期间主题保持固定；返回会回到原页面。</US.UI.HelpPinned>
+  <US.UI.HelpPinned>帮助位于当前页下方。关闭即归还空间，保留页面、草稿与列表位置。</US.UI.HelpPinned>
   <US.UI.SourceNote>先选择种族或合法异种，再选择它的行为来源。此操作不会更换语音包，也不会导入预设。</US.UI.SourceNote>
   <US.UI.SourceStatus>此目标的行为来源</US.UI.SourceStatus>
   <US.UI.SourceInherit>继承／不指定来源</US.UI.SourceInherit>
@@ -720,4 +712,7 @@
   <US.Kernel.ExplicitDevelopmentCandidate>当前使用显式选定的开发方案，实际发声仍取决于回应条件。</US.Kernel.ExplicitDevelopmentCandidate>
   <US.Kernel.OrdinaryActive>普通回应已接通；能否发声仍由当前模式、所选音频包与回应条件决定。</US.Kernel.OrdinaryActive>
   <US.Kernel.PolicySelectionRequired>回应运行时尚未就绪。包选择仍保留，请在诊断中查看缺失的前置条件。</US.Kernel.PolicySelectionRequired>
+  <US.UI.CloseHelp>关闭帮助</US.UI.CloseHelp>
+  <US.Theme.BlackGold.Note>近黑底与清楚浅色正文，金色只强调动作和选中。绿色成功、琥珀警告与红色错误保持区分。</US.Theme.BlackGold.Note>
+  <US.Theme.BlackGold.Label>黑金</US.Theme.BlackGold.Label>
 </LanguageData>

@@ -96,4 +96,5 @@
     <None Remove="UI\Layout.RemixConfirm.Schema2.xml" />
   </ItemGroup>
 
+  <ItemGroup><EmbeddedResource Include="Themes/Palettes.xml" LogicalName="UniversalSqueaker.Themes.Palettes.xml" /></ItemGroup>
 </Project>

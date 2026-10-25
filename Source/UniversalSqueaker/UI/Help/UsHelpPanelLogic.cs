@@ -3,8 +3,8 @@ using System;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Pure display resolution for the bottom help panel (C+A model; D2 ruling retired the
-/// persistent index list and pinned selection with it). The current help reference resolves across
+/// Pure display resolution for the optional bottom help panel. Explicit page/field topics are
+/// pinned by the Host; other consumers pass the effective hover reference. Either resolves across
 /// the WHOLE catalog, including navigation/footer topics outside the active content section.
 /// The fixed carrier's session retains it for 15 completed passes without a fresh publication;
 /// only grace expiry returns the section overview. This resolver consumes that effective reference,

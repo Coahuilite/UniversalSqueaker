@@ -330,13 +330,13 @@
   <US.Help.Overview>Overview</US.Help.Overview>
   <!-- Help catalog (C+A panel): authoritative Chinese copy, English translated from it. -->
   <US.Help.PageTitle.Title>Using This Window</US.Help.PageTitle.Title>
-  <US.Help.PageTitle.Overview>Start in Voices to choose exact pack targets. Settings &amp; tools contains the secondary editors. Back restores the originating page and its context.</US.Help.PageTitle.Overview>
+  <US.Help.PageTitle.Overview>Manage exact voice-pack targets at home. Settings &amp; tools opens your last tool in this window (Behaviour first). Equal-width tabs switch directly; returning keeps your pack, search, target and scroll.</US.Help.PageTitle.Overview>
   <US.Help.PageTitle.Nav.Label>Pages &amp; tools</US.Help.PageTitle.Nav.Label>
   <US.Help.PageTitle.Nav.Text>Voices combines configuration status, mode, volume, search and pack management. Behaviour, presets, output, fallback, appearance, diagnostics and restore are secondary tools, not a permanent sidebar.</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>Editing and saving</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>Ordinary edits take effect immediately and save automatically shortly afterwards. Source and action-field edits first attempt saving: failure keeps the previous configuration; saved-but-not-applied changes can be inspected in Diagnostics without saving again. Closing saves applied edits and discards unconfirmed drafts.</US.Help.PageTitle.Apply.Text>
   <US.Help.PageTitle.HelpDrawer.Label>Detailed help &amp; return</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>Page help explains the current page; Explain beside a field explains that field and the target captured when opened. Moving the pointer never changes the pinned topic. Back keeps the originating page and scroll.</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Text>Page help explains the current page; a field explanation names that field and its target. The bottom panel stays on that topic while you read. Its title and Close stay visible while the text scrolls. Escape closes inner popups or edits first, then help, then returns from the business page. Changing tools closes help.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>
@@ -560,19 +560,11 @@
   <US.Section.Theme>Surface theme</US.Section.Theme>
   <US.Theme.Note>Colours only. Choosing a palette repaints the page and never moves a control, resets the scroll or changes the sound.</US.Theme.Note>
   <US.Theme.Status>Active palette: {0}</US.Theme.Status>
-  <US.Theme.Core.Label>Core</US.Theme.Core.Label>
+  <US.Theme.Core.Label>Original dark</US.Theme.Core.Label>
   <US.Theme.Royalty.Label>Royalty</US.Theme.Royalty.Label>
-  <US.Theme.Ideology.Label>Ideology</US.Theme.Ideology.Label>
-  <US.Theme.Biotech.Label>Biotech</US.Theme.Biotech.Label>
-  <US.Theme.Anomaly.Label>Anomaly</US.Theme.Anomaly.Label>
-  <US.Theme.Odyssey.Label>Odyssey</US.Theme.Odyssey.Label>
   <US.Section.FallbackTable>Final native fallback</US.Section.FallbackTable>
-  <US.Theme.Core.Note>A still-working terminal on a lost colony ship: muted grey space, old bronze interaction, pale ink, parchment accents. Small text never sits on Quiet Shade / Bronze Mist / Lark; required states ride Rutabaga markers, switch position and text, and the accent never carries a required mark alone.</US.Theme.Core.Note>
+  <US.Theme.Core.Note>Deep charcoal, pale text and restrained gold actions. Colour changes affect only US; warning, error and disabled states keep distinct roles.</US.Theme.Core.Note>
   <US.Theme.Royalty.Note>Night-blue space carrying gold actions and a dark wine-red selected plate; the series keeps its warm-gold identity, set off by cool blue.</US.Theme.Royalty.Note>
-  <US.Theme.Ideology.Note>Charcoal and earthen surfaces, bone-white text and restrained ochre.</US.Theme.Ideology.Note>
-  <US.Theme.Biotech.Note>Indigo surfaces with soft rose action marks; bright cyan is reserved for the attention role.</US.Theme.Biotech.Note>
-  <US.Theme.Anomaly.Note>Cold grey and charcoal carry pale text with a restrained lichen accent.</US.Theme.Anomaly.Note>
-  <US.Theme.Odyssey.Note>Dark metal, ice-blue engine light and muted blue-violet glowforest surfaces.</US.Theme.Odyssey.Note>
   <US.Help.Intro.Overview>The one-time teaching. It stays out of the way once collapsed and is a single press from returning.</US.Help.Intro.Overview>
   <US.Help.Intro.Collapse.Text>Collapsing hides only this teaching band - the board below stays. The preference is saved with the settings, changes no sound, and the global restore returns it to the open default.</US.Help.Intro.Collapse.Text>
   <US.Help.RaceBoard.Overview>A read-only board of every loaded race - pack supply, what is selected, the final fallback and why anything is absent. It never claims a sound already played.</US.Help.RaceBoard.Overview>
@@ -585,9 +577,9 @@
   <US.Help.FallbackEditor.Overview>The per-race final fallback table: maintainer rows with your overrides, an explicit no-sound marker and restore-inheritance are three different states, shown apart.</US.Help.FallbackEditor.Overview>
   <US.Help.FallbackEditor.States.Label>Entry states</US.Help.FallbackEditor.States.Label>
   <US.Help.FallbackEditor.States.Text>Override marks a sound you set; Maintainer is the shipped row; NoSound is the silence you chose and Unset follows future updates. Escape clears the selected entry, then the selected race - it never writes a setting.</US.Help.FallbackEditor.States.Text>
-  <US.Help.Theme.Overview>Choose among the official Core and DLC palettes for colour validation. The shipped default is Core.</US.Help.Theme.Overview>
+  <US.Help.Theme.Overview>Choose Original dark (default), Royalty or Black &amp; gold from the dropdown. The three palettes share one embedded named-role colour resource and affect only US.</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>Palette</US.Help.Theme.Switch.Label>
-  <US.Help.Theme.Switch.Text>A switch changes colour and nothing else - the page keeps its layout, focus and scroll. The choice is saved with the settings and returned by Restore defaults; author-supplied custom themes stay supported by the library.</US.Help.Theme.Switch.Text>
+  <US.Help.Theme.Switch.Text>Changing the palette repaints colours without moving controls, focus, scroll or drafts. The choice is saved; Restore defaults returns to Original dark. Older removed DLC choices repair to Original dark on loading.</US.Help.Theme.Switch.Text>
   <US.Kernel.PolicyRequired>The response runtime is not ready. You can still choose packs and edit settings; check diagnostics for unavailable prerequisites.</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>An explicitly enabled development playback plan is active, not an ordinary default. Sound still depends on the response conditions.</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
@@ -662,7 +654,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Retry>Retry save</US.UI.Retry>
   <US.UI.RestoreNote>Prefer the current scope or a single area. Global restore affects all settings and requires confirmation.</US.UI.RestoreNote>
   <US.UI.RestoreAllExpand>Show global restore…</US.UI.RestoreAllExpand>
-  <US.UI.HelpPinned>This topic stays fixed while you read. Back returns to the previous page.</US.UI.HelpPinned>
+  <US.UI.HelpPinned>Help stays below this page. Close it to regain the space; your page, edits and list position stay put.</US.UI.HelpPinned>
   <US.UI.SourceNote>Choose a Race or legal Xenotype, then its behaviour source. This does not change audio packs or import a preset.</US.UI.SourceNote>
   <US.UI.SourceStatus>Behaviour source for this target</US.UI.SourceStatus>
   <US.UI.SourceInherit>Inherit / no explicit source</US.UI.SourceInherit>
@@ -716,7 +708,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Nav.Restore>Restore</US.UI.Nav.Restore>
   <US.UI.Nav.Presets>Presets</US.UI.Nav.Presets>
   <US.UI.Nav.Appearance>Appearance</US.UI.Nav.Appearance>
-  <US.UI.Nav.Behavior>Behaviour &amp; sources</US.UI.Nav.Behavior>
+  <US.UI.Nav.Behavior>Behaviour</US.UI.Nav.Behavior>
   <US.UI.Nav.Fallback>Fallback</US.UI.Nav.Fallback>
   <US.UI.Nav.Diagnostics>Diagnostics</US.UI.Nav.Diagnostics>
   <US.Activity.Help>Global activity A applies once: future state waits are divided by A; event acceptance is multiplied by A and capped at 1. Hard action/shared limits, eligibility and sound supply remain unchanged. Changing A does not redraw the current wait, reset the owner or clear protection. The default base wait is 600 game ticks (10 seconds at 1x), before population/speed factors. Zero is not Off. Confirm a positive finite value; existing valid values are not clamped to a slider range. Playback defaults restore A to 1.</US.Activity.Help>
@@ -726,4 +718,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.Kernel.ExplicitDevelopmentCandidate>An explicitly selected development plan is active. Sound still depends on the response conditions.</US.Kernel.ExplicitDevelopmentCandidate>
   <US.Kernel.OrdinaryActive>Ordinary responses are ready. The current mode, selected packs and response conditions determine whether sound can play.</US.Kernel.OrdinaryActive>
   <US.Kernel.PolicySelectionRequired>The response runtime is not ready. Pack selection is retained; check diagnostics for unavailable prerequisites.</US.Kernel.PolicySelectionRequired>
+  <US.UI.CloseHelp>Close help</US.UI.CloseHelp>
+  <US.Theme.BlackGold.Note>Near-black surfaces and clear pale text; gold marks actions and selection. Green success, amber warning and red error remain distinct.</US.Theme.BlackGold.Note>
+  <US.Theme.BlackGold.Label>Black &amp; gold</US.Theme.BlackGold.Label>
 </LanguageData>

@@ -10,6 +10,9 @@ public partial class GameSettings
     private int configurationFormat = 1;
     private bool configurationUnreadable;
     private bool settingsLoadedFromFile;
+    private bool appearanceRepairPending;
+    internal bool ConsumeAppearanceRepair()
+    { bool pending = appearanceRepairPending; appearanceRepairPending = false; return pending; }
     public bool allowEasterEggSounds;
     internal bool SettingsLoadedFromFile => settingsLoadedFromFile;
     internal bool IsConfigurationUnreadable => configurationUnreadable;
@@ -43,7 +46,10 @@ public partial class GameSettings
         actionTuning ??= new List<ActionTuningRecord>();
         if (!Enum.IsDefined(typeof(SqueakVoicePackMode), voicePackMode)) voicePackMode = SqueakVoicePackMode.Disabled;
         if (!Enum.IsDefined(typeof(SqueakDevLoggingMode), devLoggingMode)) devLoggingMode = SqueakDevLoggingMode.Auto;
-        if (!UsSwatchIds.IsKnown(uiSwatchId)) uiSwatchId = UsSwatchIds.Default;
+        // Stored as a string, not an enum: removed DLC IDs and unknown values remain readable.
+        // Capture repair only: GetSettings runs before the native persistence owner exists and
+        // may be off the Unity thread. Main-thread startup queues the existing save funnel once.
+        if (!UsSwatchIds.IsKnown(uiSwatchId)) { uiSwatchId = UsSwatchIds.Default; appearanceRepairPending = true; }
         distanceRange = ClampDistanceRange(distanceRange);
         PublishBehaviorConfiguration();
     }

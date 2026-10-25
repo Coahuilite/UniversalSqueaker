@@ -7,6 +7,7 @@ using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using Verse.Sound;
 
 namespace UniversalSqueaker;
 
@@ -56,6 +57,25 @@ internal static class Patch_USOptionsEntry
             && (category != OptionCategoryDefOf.Mods || hasMods));
         var rect = new Rect(4, rows * 50f + 4, 152, 40);
         if (rect.yMax > inRect.height - 50) return;
-        if (Widgets.ButtonText(rect, "US.UI.Entry".Translate())) SqueakerMod.Instance.OpenSettings();
+        // Use the same category background/hit primitive as Dialog_Options.DoCategoryRow,
+        // not its brown command-button chrome. This row opens a child, never selects a fake Def.
+        Color color = GUI.color;
+        bool enabled = GUI.enabled;
+        GameFont font = Text.Font;
+        TextAnchor anchor = Text.Anchor;
+        try
+        {
+            GUI.color = Color.white;
+            Text.Font = GameFont.Small;
+            Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.DrawOptionBackground(rect, Find.WindowStack.Windows.Any(window => window is UI.GameSettingsWindow));
+            if (Widgets.ButtonInvisible(rect))
+            {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                SqueakerMod.Instance.OpenSettings();
+            }
+            Widgets.Label(new Rect(rect.x + 10f, rect.y, rect.width - 20f, rect.height), "US.UI.Entry".Translate());
+        }
+        finally { GUI.color = color; GUI.enabled = enabled; Text.Font = font; Text.Anchor = anchor; }
     }
 }

@@ -26,7 +26,7 @@ internal static class UsKernelContractInvariantTests
 
     /// <summary>
     /// Existing real-resource structure guard, migrated to WO r3: one home or secondary content
-    /// destination, the same independent wrap-aware footer, and a full-content detailed-help page.
+    /// destination, the same independent wrap-aware footer, and optional bottom help.
     /// The old fixed sidebar/bottom reservation is explicitly replaced, not silently tolerated.
     /// </summary>
     private static void VerifyRealSchema2RootStructure(string root)
@@ -41,7 +41,7 @@ internal static class UsKernelContractInvariantTests
         var pageRoot = page!.SelectSingleNode("Column[@Id='page-root']") as XmlElement;
         Assert(pageRoot != null && pageRoot.GetAttribute("Gap") == "6" && pageRoot.GetAttribute("Padding") == "12",
             "compact page root keeps the declared six-unit gap and twelve-unit inner padding");
-        var home = pageRoot!.SelectSingleNode("Column[@Id='voice-home']") as XmlElement;
+        var home = pageRoot!.SelectSingleNode("Column[@Id='business-body']/Column[@Id='voice-home']") as XmlElement;
         var footerBand = pageRoot.SelectSingleNode("*[@Id='footer-band']") as XmlElement;
         Assert(home != null && IsTrue(home.GetAttribute("Fill")) && home.GetAttribute("VisibleBind") == "page-Voices",
             "the Voice management home occupies one flexible page destination");
@@ -81,12 +81,12 @@ internal static class UsKernelContractInvariantTests
             "home has compact browse navigation and flexible list/detail scrolls, never a permanent help column");
         Assert(listScroll && detailScroll,
             "both list and detail remain shrinking scroll viewports rather than overflowing natural-height columns");
-        var help = pageRoot.SelectSingleNode("Scroll[@Id='page-Help-scroll']") as XmlElement;
-        Assert(help != null && !help.HasAttribute("Height") && IsTrue(help.GetAttribute("Fill"))
-                && help.GetAttribute("VisibleBind") == "page-Help",
-            "detailed help is a full-content destination, not a reserved 140-unit bottom band");
+        var help = pageRoot.SelectSingleNode("Column[@Id='help-drawer']") as XmlElement;
+        Assert(help != null && help.GetAttribute("Height") == "128"
+                && help.SelectSingleNode("Scroll[@Id='help-scroll'][@Fill='true']") != null && help.GetAttribute("VisibleBind") == "help-open",
+            "help is an optional bottom sibling; the consumer computes its bounded height around a shrinking independent scroll");
         bool hasPageSections = false;
-        foreach (XmlNode node in pageRoot.ChildNodes)
+        foreach (XmlNode node in pageRoot.SelectSingleNode("Column[@Id='business-body']")!.ChildNodes)
             if (node is XmlElement element && element.Name == "Scroll"
                 && element.GetAttribute("VisibleBind").StartsWith("page-", StringComparison.Ordinal)) hasPageSections = true;
         Assert(hasPageSections, "secondary content scrolls reflow through explicit page visibility bindings");
@@ -136,7 +136,7 @@ internal static class UsKernelContractInvariantTests
         // measure against the whole catalog) and the pinned selection is retired, so it owns no
         // write channel and must never bump the revision.
         Assert(!help.Contains("BumpContentRevision"),
-            "UsHelpPanelWidget must not bump the revision itself - hover is height-invariant and the panel writes nothing");
+            "UsHelpPanelWidget must not bump the revision itself - current-text arrangement is consumer-owned and the panel writes nothing");
         Assert(!help.Contains(".Invoke"),
             "the help panel has no write channel at all: claims arrive only from the controls via UsKernelDraw.HelpHover");
 

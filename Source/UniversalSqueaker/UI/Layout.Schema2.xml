@@ -13,25 +13,21 @@
   </Styles>
   <Column Id="page-root" Gap="6" Padding="12" CancelBind="page-cancel">
     <Row Id="header-band" Gap="8" Padding="0">
-      <Widget Id="page-back" Kind="input/button" TextKey="US.UI.Back" ActionBind="page-back" VisibleBind="page-Help" Width="82" Height="28" HelpRef="us/page-title/help-drawer" />
       <Widget Id="home-return" Kind="input/button" TextKey="US.UI.BackToVoices" ActionBind="go-home" VisibleBind="page-tools-area" Width="172" Height="28" />
       <Widget Id="page-title" Kind="text/wrapped" Bind="voice-page-title" />
       <Widget Id="tools-link" Kind="input/button" TextKey="US.UI.Tools" ActionBind="go-page" PayloadBind="go-Tools-payload" VisibleBind="page-Voices" Width="160" Height="28" />
-      <Widget Id="topic-link" Kind="input/button" TextKey="US.UI.Help" ActionBind="open-topic" VisibleBind="page-not-help" Width="110" Height="28" />
+      <Widget Id="topic-link" Kind="input/button" TextKey="US.UI.Help" ActionBind="open-topic" HelpRef="us/page-title/help-drawer" Width="110" Height="28" />
     </Row>
-    <Wrap Id="tool-nav-wide" Gap="4" Padding="0" VisibleBind="tool-nav-wide">
-      <Widget Id="nav-Behavior" Kind="input/button" TextKey="US.UI.Nav.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" SelectedBind="tool-is-Behavior" Width="180" Height="30" />
-      <Widget Id="nav-Presets" Kind="input/button" TextKey="US.UI.Nav.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" SelectedBind="tool-is-Presets" Width="100" Height="30" />
-      <Widget Id="nav-Output" Kind="input/button" TextKey="US.UI.Nav.Output" ActionBind="go-page" PayloadBind="go-Output-payload" SelectedBind="tool-is-Output" Width="100" Height="30" />
-      <Widget Id="nav-Fallback" Kind="input/button" TextKey="US.UI.Nav.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" SelectedBind="tool-is-Fallback" Width="112" Height="30" />
-      <Widget Id="nav-Appearance" Kind="input/button" TextKey="US.UI.Nav.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" SelectedBind="tool-is-Appearance" Width="140" Height="30" />
-      <Widget Id="nav-Diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" SelectedBind="tool-is-Diagnostics" Width="124" Height="30" />
-      <Widget Id="nav-Restore" Kind="input/button" TextKey="US.UI.Nav.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" SelectedBind="tool-is-Restore" Width="100" Height="30" />
+    <Wrap Id="tool-nav" Cols="7" Gap="4" Padding="0" VisibleBind="page-tools-area">
+      <Widget Id="nav-Behavior" Kind="input/button" TextKey="US.UI.Nav.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" SelectedBind="tool-is-Behavior" Height="30" />
+      <Widget Id="nav-Presets" Kind="input/button" TextKey="US.UI.Nav.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" SelectedBind="tool-is-Presets" Height="30" />
+      <Widget Id="nav-Output" Kind="input/button" TextKey="US.UI.Nav.Output" ActionBind="go-page" PayloadBind="go-Output-payload" SelectedBind="tool-is-Output" Height="30" />
+      <Widget Id="nav-Fallback" Kind="input/button" TextKey="US.UI.Nav.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" SelectedBind="tool-is-Fallback" Height="30" />
+      <Widget Id="nav-Appearance" Kind="input/button" TextKey="US.UI.Nav.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" SelectedBind="tool-is-Appearance" Height="30" />
+      <Widget Id="nav-Diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" SelectedBind="tool-is-Diagnostics" Height="30" />
+      <Widget Id="nav-Restore" Kind="input/button" TextKey="US.UI.Nav.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" SelectedBind="tool-is-Restore" Height="30" />
     </Wrap>
-    <Row Id="tool-nav-compact" Gap="8" Padding="0" VisibleBind="tool-nav-compact">
-      <Widget Id="tool-category-label" Kind="text/wrapped" TextKey="US.UI.ToolCategory" Width="110" />
-      <Widget Id="tool-category" Kind="input/dropdown" Bind="tool-page" OptionsBind="tool-page-options" Height="30" />
-    </Row>
+    <Column Id="business-body" Fill="true" Padding="0" Gap="0">
     <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices">
       <Widget Id="voice-summary" Kind="text/wrapped" Bind="voice-summary" />
       <Row Id="playback-status" Gap="8" Padding="0">
@@ -50,7 +46,7 @@
         </Column>
       </Row>
       <Row Id="voice-browse-tabs" Gap="6" Padding="0">
-        <Widget Id="browse-packs" Kind="input/button" TextKey="US.UI.Packs" ActionBind="browse-packs" SelectedBind="voice-packs" Width="105" Height="28" />
+        <Widget Id="browse-packs" Kind="input/button" TextKey="US.UI.Packs" ActionBind="browse-packs" SelectedBind="voice-packs" Width="190" Height="28" />
         <Widget Id="browse-definitions" Kind="input/button" TextKey="US.UI.Definitions" ActionBind="browse-definitions" SelectedBind="voice-definitions" Width="190" Height="28" />
         <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-packs" HelpRef="us/filter-bar/keyword" />
         <Widget Id="home-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-definitions" HelpRef="us/race-board/search" />
@@ -96,8 +92,8 @@
         <Column Id="definition-filters" Gap="4" Padding="0" VisibleBind="voice-filters-open">
           <Row Id="race-board-groups" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
             <Widget Id="race-board-group-player" Kind="input/button" TextKey="US.Board.Group.Player" ActionBind="board-group" PayloadBind="board-group-player" SelectedBind="board-group-is-player" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
-            <Widget Id="race-board-group-creatures" Kind="input/button" TextKey="US.Board.Group.Creatures" ActionBind="board-group" PayloadBind="board-group-creatures" SelectedBind="board-group-is-creatures" Width="110" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
-            <Widget Id="race-board-group-all" Kind="input/button" TextKey="US.Board.Group.All" ActionBind="board-group" PayloadBind="board-group-all" SelectedBind="board-group-is-all" Width="84" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
+            <Widget Id="race-board-group-creatures" Kind="input/button" TextKey="US.Board.Group.Creatures" ActionBind="board-group" PayloadBind="board-group-creatures" SelectedBind="board-group-is-creatures" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
+            <Widget Id="race-board-group-all" Kind="input/button" TextKey="US.Board.Group.All" ActionBind="board-group" PayloadBind="board-group-all" SelectedBind="board-group-is-all" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
           </Row>
           <Row Id="race-board-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
             <Widget Id="race-board-filter-har" Kind="input/button" TextKey="US.Board.Filter.Har" ActionBind="board-filter" PayloadBind="board-filter-har" SelectedBind="board-filter-is-har" Width="84" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
@@ -115,16 +111,6 @@
         <Widget Id="voice-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="voice-next" Width="90" Height="24" />
       </Row>
     </Column>
-    <Scroll Id="tools-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Tools">
-      <Widget Id="tools-intro" Kind="text/wrapped" TextKey="US.UI.ToolsNote" Emphasis="Muted" />
-      <Widget Id="tools-Behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" Height="36" />
-      <Widget Id="tools-Presets" Kind="input/button" TextKey="US.UI.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" Height="36" />
-      <Widget Id="tools-Output" Kind="input/button" TextKey="US.UI.Output" ActionBind="go-page" PayloadBind="go-Output-payload" Height="36" />
-      <Widget Id="tools-Fallback" Kind="input/button" TextKey="US.UI.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" Height="36" />
-      <Widget Id="tools-Appearance" Kind="input/button" TextKey="US.UI.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" Height="36" />
-      <Widget Id="tools-Diagnostics" Kind="input/button" TextKey="US.UI.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" Height="36" />
-      <Widget Id="tools-Restore" Kind="input/button" TextKey="US.UI.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" Height="36" />
-    </Scroll>
     <Scroll Id="page-Behavior-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Behavior">
       <Column Id="tuning-context" Gap="0" Padding="0" CancelBind="cancel-tuning-context">
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpRef="us/scope-tree" CancelBind="cancel-tuning-target" />
@@ -243,16 +229,7 @@
       <Section Id="theme-picker" Padding="12" Gap="6">
         <Widget Id="theme-picker-header" Kind="us/section-header" TitleKey="US.Section.Theme" Height="26" HelpRef="us/theme-picker" />
         <Widget Id="theme-picker-note" Kind="text/wrapped" TextKey="US.Theme.Note" Emphasis="Muted" HelpRef="us/theme-picker" />
-        <Row Id="theme-picker-row-1" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-          <Widget Id="theme-core" Kind="input/button" TextKey="US.Theme.Core.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-core-value" SelectedBind="ui-swatch-core" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
-          <Widget Id="theme-royalty" Kind="input/button" TextKey="US.Theme.Royalty.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-royalty-value" SelectedBind="ui-swatch-royalty" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
-          <Widget Id="theme-ideology" Kind="input/button" TextKey="US.Theme.Ideology.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-ideology-value" SelectedBind="ui-swatch-ideology" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
-        </Row>
-        <Row Id="theme-picker-row-2" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-          <Widget Id="theme-biotech" Kind="input/button" TextKey="US.Theme.Biotech.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-biotech-value" SelectedBind="ui-swatch-biotech" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
-          <Widget Id="theme-anomaly" Kind="input/button" TextKey="US.Theme.Anomaly.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-anomaly-value" SelectedBind="ui-swatch-anomaly" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
-          <Widget Id="theme-odyssey" Kind="input/button" TextKey="US.Theme.Odyssey.Label" ActionBind="set-ui-swatch" PayloadBind="ui-swatch-odyssey-value" SelectedBind="ui-swatch-odyssey" Width="118" Height="24" HelpRef="us/theme-picker/switch" />
-        </Row>
+        <Widget Id="theme-picker-choice" Kind="input/dropdown" Bind="ui-swatch" OptionsBind="ui-swatch-options" Height="30" HelpRef="us/theme-picker/switch" />
         <Widget Id="theme-picker-status" Kind="text/wrapped" Bind="ui-swatch-status" HelpRef="us/theme-picker" />
         <Widget Id="theme-picker-note-author" Kind="text/wrapped" Bind="ui-swatch-author-note" Emphasis="Muted" />
       </Section>
@@ -327,11 +304,17 @@
         <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" Height="24" AlignX="Left" HelpRef="us/reset-center/restore-all" />
       </Section>
     </Scroll>
-    <Scroll Id="page-Help-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Help">
-      <Widget Id="help-pinned-note" Kind="text/wrapped" TextKey="US.UI.HelpPinned" Emphasis="Muted" />
-      <Widget Id="help-object-context" Kind="text/wrapped" Bind="pinned-help-context" />
-      <Widget Id="help-panel" Kind="us/help-panel" />
-    </Scroll>
+    </Column>
+    <Column Id="help-drawer" Height="128" Padding="0" Gap="4" VisibleBind="help-open" CancelBind="cancel-help">
+      <Row Id="help-header" Padding="0" Gap="8">
+        <Widget Id="help-title" Kind="text/wrapped" Bind="help-title" />
+        <Widget Id="help-close" Kind="input/button" TextKey="US.UI.CloseHelp" ActionBind="cancel-help" Width="96" Height="28" />
+      </Row>
+      <Scroll Id="help-scroll" Fill="true" Padding="0" Gap="4">
+        <Widget Id="help-object-context" Kind="text/wrapped" Bind="pinned-help-context" Emphasis="Muted" />
+        <Widget Id="help-panel" Kind="us/help-panel" TitleHidden="true" />
+      </Scroll>
+    </Column>
     <Row Id="footer-band" Padding="0" Gap="8">
       <Widget Id="footer" Kind="us/footer" />
       <Widget Id="save-retry" Kind="input/button" TextKey="US.UI.Retry" ActionBind="retry-save" VisibleBind="save-failed" Width="110" Height="28" />

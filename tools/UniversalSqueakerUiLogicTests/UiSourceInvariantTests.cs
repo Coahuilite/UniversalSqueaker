@@ -374,8 +374,9 @@ internal static class UiSourceInvariantTests
             foreach (string forbidden in forbiddenTypes)
             {
                 // UiTextAnchor is the new neutral FL enum, not the retired UiText helper.
+                // The public metrics-environment capability is also not the deleted UiText helper.
                 // Other old UiText-prefixed helpers remain rejected.
-                string scanned = forbidden == "UiText" ? text.Replace("UiTextAnchor", "") : text;
+                string scanned = forbidden == "UiText" ? text.Replace("UiTextAnchor", "").Replace("IUiTextMetricsEnvironment", "") : text;
                 // FL 0.8's capture-abort enum is not the deleted UiInteract event authority.
                 if (forbidden == "UiInteract") scanned = scanned.Replace("UiInteractionEnd", "");
                 if (scanned.IndexOf(forbidden, StringComparison.Ordinal) >= 0)
@@ -549,10 +550,10 @@ internal static class UiSourceInvariantTests
             search = end;
         }
 
-        Assert(embedded.Count == 3,
-            "exactly three UI manifests are embedded (SA1.3 re-cut), found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
+        Assert(embedded.Count == 4,
+            "three UI manifests plus the single WO16 colour-data resource are embedded, found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
         Assert(embedded.Contains("Layout.Schema2.xml") && embedded.Contains("Layout.Overlay.Schema2.xml")
-                && embedded.Contains("Layout.RemixConfirm.Schema2.xml"),
+                && embedded.Contains("Layout.RemixConfirm.Schema2.xml") && embedded.Contains("Palettes.xml"),
             "the embedded manifests must be the settings page, the overlay and the SA1.3 Remix dialog, got ["
             + string.Join(",", embedded) + "]");
         Assert(!proj.Contains("\\Layout.xml") && !proj.Contains("/Layout.xml"),
@@ -624,7 +625,7 @@ internal static class UiSourceInvariantTests
 
     // 5b. Panel: a pure read surface (D2 ruling - the index list and pinned selection are gone), and
     // since FL P3 the hover CLAIM is session state: the panel sizes its text band from the
-    // hover-invariant catalog maxima, resolves through the pure logic seam, and reads
+    // actual displayed text, resolves through the pure logic seam, and reads
     // UiSession.CurrentHelpRef. Claims arrive only from the mid-column controls through the single outlet,
     // UsKernelDraw.HelpHover -> Session.PublishHelp. The consumer-side grace machine that used to own
     // this must stay deleted - re-growing it would put two owners on one clock.
@@ -634,12 +635,12 @@ internal static class UiSourceInvariantTests
         CheckSourceContains(panel, new[]
         {
             "ValidateValue<string>(\"help-section-ref\"",
-            "MaxBodyBand(ctx, textWidth)",
+            "Band(ctx, display.BodyText, textWidth, UiFont.Tiny)",
             "ctx.Session.CurrentHelpRef ?? \"\"",
             "TranslationSeam(ctx)",
         },
-        "the help panel must validate its one read key, size its text band from the hover-invariant "
-        + "catalog maxima (MaxBodyBand), take the claim from the session, and resolve its display "
+        "the help panel must validate its one read key, size its text band from the actual displayed "
+        + "body text, take the claim from the session, and resolve its display "
         + "through the pure logic seam with the Host translation seam applied in one pass");
         CheckSourceDoesNotContain(panel, "ctx.Bindings.Invoke",
             "the help panel is read-only: no write channel survives the D2 index-list cut");
@@ -939,18 +940,18 @@ internal static class UiSourceInvariantTests
         var document = new XmlDocument();
         document.XmlResolver = null;
         document.Load(manifest);
-        XmlElement? band = document.SelectSingleNode("//*[@Id='page-Help-scroll']") as XmlElement;
+        XmlElement? band = document.SelectSingleNode("//*[@Id='help-drawer']") as XmlElement;
         Assert(band != null,
             "detailed help must have its own retained content scroll");
         Assert(!band!.HasAttribute("Tab"),
             "the help page must not reuse the legacy active-tab switch");
         Assert(band.HasAttribute("VisibleBind")
-                && string.Equals(band.GetAttribute("VisibleBind"), "page-Help", StringComparison.Ordinal),
-            "the fixed help page follows the one per-window page selection");
-        Assert(string.Equals(band.GetAttribute("Fill"), "true", StringComparison.Ordinal),
-            "detailed help uses the remaining content space, not a bottom reservation");
-        Assert(!band.HasAttribute("Height"),
-            "detailed help must not restore the fixed 140-height band");
+                && string.Equals(band.GetAttribute("VisibleBind"), "help-open", StringComparison.Ordinal),
+            "the bottom help follows independent per-window visibility, not the business page selection");
+        Assert(band.SelectSingleNode("Scroll[@Id='help-scroll'][@Fill='true']") != null,
+            "help has its own shrinking scroll below its fixed header");
+        Assert(band.GetAttribute("Height") == "128" && File.ReadAllText(Path.Combine(ui, "UsKernelSettingsHost.Voices.cs")).Contains("float budget = Math.Max(0f, (available.Y - 12f - footer.Height - 6f - body.Y) / 3f)"),
+            "the initial placeholder is replaced by the actual arranged one-third body budget, not a permanent 140 band");
 
         // The retired machinery must stay retired: a reappearing derived key means the drawer presentation
         // came back in some form, and a body row gated by a key means a help state can eat the settings.
@@ -960,7 +961,7 @@ internal static class UiSourceInvariantTests
             "the second help panel instance must not come back with the retired band");
         XmlElement? bodyRow = document.SelectSingleNode("//*[@Id='voice-home']") as XmlElement;
         Assert(bodyRow != null && bodyRow.GetAttribute("VisibleBind") == "page-Voices",
-            "home and detailed help are separate content destinations, not simultaneous columns");
+            "home visibility follows the business page only, never help-open");
         Assert(document.SelectNodes("//*[@VisibleBind='help-open-wide']").Count == 0
                 && document.SelectNodes("//*[@VisibleBind='help-open-narrow']").Count == 0
                 && document.SelectNodes("//*[@VisibleBind='body-visible']").Count == 0,
@@ -977,7 +978,7 @@ internal static class UiSourceInvariantTests
             "the footer holds real save status/Retry without a help reservation or switch");
         XmlElement? header = document.SelectSingleNode("//*[@Id='header-band']") as XmlElement;
         Assert(header != null && header.SelectSingleNode("*[@Id='topic-link'][@ActionBind='open-topic']") != null
-                && header.SelectSingleNode("*[@Id='page-back'][@ActionBind='page-back']") != null,
+                && header.SelectSingleNode("*[@Id='home-return'][@ActionBind='go-home']") != null,
             "the shared header exposes the detailed-help entry and explicit return");
 
         string hostPath = Path.Combine(ui, "UsKernelSettingsHost.cs");

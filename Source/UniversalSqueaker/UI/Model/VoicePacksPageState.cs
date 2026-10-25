@@ -14,6 +14,7 @@ public sealed class VoicePacksPageState
 {
     // Navigation and layout are per-window, never persisted or used as runtime policy.
     public string Page = "Voices";
+    public string LastToolPage = "Behavior";
     public readonly List<string> PageHistory = new();
     public string PinnedHelpRef = "";
     public string PinnedHelpContext = "";
@@ -74,13 +75,15 @@ public sealed class VoicePacksPageState
     public string ActiveSectionKey = "mode-row";
 
     /// <summary>
-    /// Bottom help panel visibility (BH1). INDEPENDENT state on purpose: the engine's only
-    /// binding-driven visibility switch is the <c>Tab</c> attribute compared against
-    /// <c>UiBindings.ActiveTabBind</c>, and help visibility must never follow workspace switching.
-    /// Defaults to false: the shipped window opens with the panel retracted above the footer, and
-    /// expanding it neither widens nor moves the window - the body row just yields height.
+    /// Optional bottom sibling of the business body. Closed on a different page; its pinned topic
+    /// and session-owned scroll survive closing/reopening the same topic within this window.
     /// </summary>
     public bool HelpPanelOpen = false;
+    internal float HelpHeight = 128f;
+    internal float HelpViewWidth, HelpViewHeight;
+    internal long HelpLayoutRevision = -1;
+    internal string HelpLayoutText = "";
+    internal object? HelpSmallEnvironment, HelpTinyEnvironment;
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
@@ -107,7 +110,8 @@ public sealed class VoicePacksPageState
 
     public void Reset()
     {
-        Page = "Voices"; PinnedHelpRef = ""; PinnedHelpContext = "";
+        Page = "Voices"; LastToolPage = "Behavior"; PinnedHelpRef = ""; PinnedHelpContext = "";
+        HelpHeight = 128f; HelpViewWidth = HelpViewHeight = 0; HelpLayoutRevision = -1; HelpLayoutText = "";
         PageHistory.Clear();
         BrowseDefinitions = false; FiltersOpen = false; RestoreAllOpen = false;
         DetailOpen = false; SelectedPackKey = ""; PackPage = 0;

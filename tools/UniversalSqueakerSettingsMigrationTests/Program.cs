@@ -188,8 +188,8 @@ internal static partial class Program
     {
         Scenario("16-ui-swatch-round-trip-repair-omission");
         GameSettings source = NewSettings();
-        source.SetUiSwatchId("biotech");
-        Check(source.uiSwatchId == "biotech", "ui-swatch: setter accepts a known id", ref failures);
+        source.SetUiSwatchId("blackgold");
+        Check(source.uiSwatchId == "blackgold", "ui-swatch: setter accepts a known id", ref failures);
         string path = Path.Combine(Path.GetTempPath(), "us-settings-swatch-" + Guid.NewGuid().ToString("N") + ".xml");
         try
         {
@@ -198,11 +198,11 @@ internal static partial class Program
             Check(xml.Contains("appearanceSwatch"), "ui-swatch: a non-default value writes its node", ref failures);
             GameSettings loaded = NewSettings();
             Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
-            Check(loaded.uiSwatchId == "biotech", "ui-swatch: Scribe round-trip preserves the value", ref failures);
+            Check(loaded.uiSwatchId == "blackgold", "ui-swatch: Scribe round-trip preserves the value", ref failures);
 
-            // Unknown hand-edited id -> PostLoadInit repairs to the shipped default.
+            // Removed legacy DLC string ID -> PostLoadInit repairs to the shipped default.
             string bad = path + "-bad.xml";
-            File.WriteAllText(bad, xml.Replace(">biotech<", ">neon<"));
+            File.WriteAllText(bad, xml.Replace(">blackgold<", ">biotech<"));
             GameSettings repaired = NewSettings();
             Scribe.loader.InitLoading(bad);
             repaired.ExposeData();
@@ -211,7 +211,7 @@ internal static partial class Program
             Scribe.mode = LoadSaveMode.PostLoadInit;
             repaired.ExposeData();
             Scribe.loader.FinalizeLoading();
-            Check(repaired.uiSwatchId == "core", "ui-swatch: unknown id repairs to core", ref failures);
+            Check(repaired.uiSwatchId == "core", "ui-swatch: removed DLC ID repairs to core", ref failures);
             File.Delete(bad);
         }
         finally

@@ -1,6 +1,6 @@
 # 使用固定 FL 0.8 构建当前 US
 
-当前 UI 阻断修复候选显式配对本地 FerriteLib `f362c993c9bb568ce83a8bc728a0b4d421577bd2`，ProductVersion `0.8.0-local.nativeinput2+f362c993c9bb568ce83a8bc728a0b4d421577bd2`、配置 Release。它包含原生 EventType 值映射与 Repeat 模板根可见性修复，尚未通过原生输入／卡顿复验。原 [FerriteLib v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 仍是 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，中间 `069b88a`／local.nativeinput1 与 `7eb8073` final Dev 均保留历史身份；本地修补不替换已发布 RC。API0.8.0、AssemblyVersion0.8.0.0、运行范围 `[0.8.0,0.9.0)` 与生产 Reference 的 `Private=false` 不变。该输入提供 1.6 adapter，未交付 1.7 adapter。
+当前联合候选显式配对 FerriteLib `36fa7ad628c529c3e65cc2c24d3cb47bc46c4465`，ProductVersion `0.8.0-local.residualcost1+36fa7ad628c529c3e65cc2c24d3cb47bc46c4465`，配置 Release；继承事件映射、Repeat 与后续等义热路径修复。原已发布 [v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 为 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，历史 f362／6f／2309 本地候选不改签。API0.8.0、AssemblyVersion0.8.0.0、生产 Require 范围 `[0.8.0,0.9.0)` 与 `Private=false` 不变。生产只核 API 范围；完整 SHA 编译收据核对属于 Host runner／stage，不是普通游戏启动门。该输入提供 1.6 adapter，未交付 1.7 adapter；原生性能／视觉、声音和全部十五包装人验仍开放。
 
 ## 安装运行前置
 
@@ -40,13 +40,13 @@ Xenotype 图像由窗口的 `Execution.Images` 注册为 `UiImage`。无图像�
 
 XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / WidthKey / SelectedKey / PayloadKey / ActiveTabKey` 改为相应 `*Bind`；`TextKey / LabelKey` 仍是翻译 key，不机械更名。
 
-当前详细帮助页打开时固定 `Session.CurrentHelpRef`，随后不被 hover 替换；未固定的帮助控件直接读该 session 值，不依赖 `HoveredOptionHelpOutputBind`。`PublishHelp(ref)` 归于当前实际发布节点，`CurrentHelpSource` 保留该归属；后发布覆盖先发布。首 gap reset 后保留 15 个 pass，再过期回到 section 概述，不是秒数，也不是每个原生渲染帧。
+当前页头或字段说明打开底栏时显式固定该页／字段的 topic，不取之前的 `Session.CurrentHelpRef`，随后不被 hover 替换；未固定的帮助控件直接读该 session 值，不依赖 `HoveredOptionHelpOutputBind`。`PublishHelp(ref)` 归于当前实际发布节点，`CurrentHelpSource` 保留该归属；后发布覆盖先发布。首 gap reset 后保留 15 个 pass，再过期回到 section 概述，不是秒数，也不是每个原生渲染帧。
 
-四个 mode 明确给各自的 `UiChoice<T>.HelpRef`。空／省略的选项 ref 不发布，不猜 Value、Text、标签或 index；元素一般帮助仍在。未知条目回 section 概述，无 section 时保持原空面板规则。目录 ref 和译文 key 分开，同一译文入口用于测量与绘制。详细帮助与原页面各自保留 scroll 节点，不预留永久底栏；返回恢复上下文，见[当前 UI 合同](ui-contract-0.6-zh.md)。
+四个 mode 明确给各自的 `UiChoice<T>.HelpRef`。空／省略的选项 ref 不发布，不猜 Value、Text、标签或 index；元素一般帮助仍在。未知条目回 section 概述，无 section 时保持原空面板规则。目录 ref 和译文 key 分开，同一译文入口用于测量与绘制。底部帮助与业务页各自保留 scroll 节点，关闭零占位、打开最多三分之一正文预算；收起恢复空间，见[当前 UI 合同](ui-contract-0.6-zh.md)。
 
 ## 页面更新，保存与业务身份保留
 
-三个嵌入 Manifest、准确音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持；当前 UIUX 将五工作区重组为语音管理首页与二级工具。主题使用原 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
+三个嵌入 Manifest 和一份命名角色 Palettes.xml 数据、准确音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持；当前 UIUX 将五工作区重组为语音管理首页与二级工具。三套配色通过一个同源 Dropdown 选择，使用 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
 
 搜索和原即时数值控件保持显式 Live。合格 primary release 请求一次，确认取消零写；已有草稿在隐藏／恢复和外部模型冲突时仍由原 editor 持有。普通 Select／Eat／scope／response 立即发布，并由单一保存 owner 按 0.35 秒 realtime debounce 写盘；真正原子 TryCommit 仍 persist-first，Committed 后的发布修复不重复写文件。详见[公开合同](us-public-contracts-and-help-zh.md)。
 

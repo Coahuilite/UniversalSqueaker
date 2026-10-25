@@ -189,7 +189,7 @@ public sealed class GameSettingsWindow : UiWindowHost
                 Host.Session.Interactions.End(UiInteractionEnd.Aborted);
                 if (Host.Session.OwnedHotControl is UiControlKey capture) Host.Session.ReleaseHotControl(capture);
                 source!.SetContentLayout(wide);
-                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide));
+                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide, source!.ViewState.HelpHeight));
                 else Host.Invalidate();
             }
         }
@@ -213,6 +213,7 @@ public sealed class GameSettingsWindow : UiWindowHost
         // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
         if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Invalidate();
         mod.TickSettingsSaveForWindow();
+        if (Host != null) UsKernelSettingsHost.PreparePage(Host, new UiLayoutPoint(contentRect.width, contentRect.height));
     }
 
     /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>

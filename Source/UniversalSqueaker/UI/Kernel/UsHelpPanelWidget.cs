@@ -7,16 +7,9 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Kernel-owned US help panel content widget (C+A model; D2 ruling: no persistent index list).
-/// It lives inside the XML "help-scroll" Scroll container (the engine owns BeginScrollView), so
-/// this widget only measures and draws help content: the hovered control's entry when a claim is
-/// live, otherwise the active section's overview (the big-level fallback). Claims come from the
-/// mid-column controls through <see cref="UsKernelDraw.HelpHover"/>; the panel owns no interactive
-/// rows - with hover supplying context, a list of options disconnected from what is shown read as
-/// broken (maintainer ruling, 2026-09-05) - so pinned selection retired with the list. Text bands
-/// are hover-invariant catalog maxima, so switching entries never changes the panel height and
-/// never invalidates layout. Content comes from <see cref="UsHelpCatalog"/> /
-/// <see cref="UsHelpPanelLogic"/> pure sources, stored as Keyed entry names.
+/// Scroll-owned help content. Explicit pinned topics take precedence; unpinned consumers retain
+/// the session's effective hover reference and fifteen-pass grace. Only the displayed text is
+/// translated/measured, with the same width and font in Measure and Draw, never catalog maxima.
 /// </summary>
 public sealed class UsHelpPanelWidget : IUiWidget
 {
@@ -36,7 +29,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     public static void Register()
     {
-        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsHelpPanelWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean))));
+        UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, Kind, () => new UsHelpPanelWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Tab"), new UiAttributeDefinition("Hidden", UiAttributeKind.Boolean), new UiAttributeDefinition("TitleHidden", UiAttributeKind.Boolean))));
     }
 
     public void Configure(UiElementSpec spec)
@@ -52,16 +45,14 @@ public sealed class UsHelpPanelWidget : IUiWidget
     public float Measure(UiWidgetContext ctx)
     {
         float textWidth = Math.Max(1f, ctx.ViewWidth - Padding * 2f);
-
-        // Hover-invariant bands: any catalog entry can appear in the header/label/body at any
-        // time (hover resolves across the whole catalog), so the panel sizes against the tallest
-        // candidate, never the currently displayed string. Switching help text on hover therefore
-        // never changes the panel height and never invalidates layout.
-        float headerHeight = MaxHeaderBand(ctx, textWidth);
-        float labelHeight = MaxLabelBand(ctx, textWidth);
-        float textHeight = MaxBodyBand(ctx, textWidth);
-        return Padding * 2f + headerHeight + TitleGap + ContentGap + labelHeight + 2f + textHeight + 4f;
+        var display = ResolveFrameDisplay(ctx, CurrentSection(ctx));
+        float header = TitleHidden ? 0 : Math.Max(TitleMinHeight, Band(ctx, HeaderText(ctx, display), textWidth, UiFont.Small)) + TitleGap + ContentGap;
+        return Padding * 2f + header + Band(ctx, display.LabelText, textWidth, UiFont.Small)
+            + 2f + Band(ctx, display.BodyText, textWidth, UiFont.Tiny) + 4f;
     }
+
+    private bool TitleHidden => spec.TryGetAttribute("TitleHidden", out string raw)
+        && string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The one header-text outlet. The header is a Keyed format string wrapping the active title,
@@ -71,56 +62,6 @@ public sealed class UsHelpPanelWidget : IUiWidget
     private static string HeaderText(UiWidgetContext ctx, UsHelpPanelLogic.HelpPanelDisplay display)
     {
         return string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.TitleText);
-    }
-
-    /// <summary>
-    /// Header band measured against every title the header can ever show (hover is global). The
-    /// candidates are the catalog's section title keys resolved through the same seam the panel
-    /// draws from, and the header renders in Small, so both font and resolution match the draw.
-    /// </summary>
-    private static float MaxHeaderBand(UiWidgetContext ctx, float textWidth)
-    {
-        string format = UsKernelDraw.Keyed(ctx, HeaderFormatKey);
-        float max = Band(ctx, string.Format(format, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTitleKey)), textWidth, UiFont.Small);
-        foreach (string titleKey in UsHelpCatalog.AllSectionTitleKeys())
-        {
-            max = Math.Max(max, Band(ctx, string.Format(format, UsKernelDraw.Keyed(ctx, titleKey)), textWidth, UiFont.Small));
-        }
-
-        return Math.Max(TitleMinHeight, max);
-    }
-
-    /// <summary>Label band (Small, as drawn) against the overview label, the empty title and every resolved item label.</summary>
-    private static float MaxLabelBand(UiWidgetContext ctx, float textWidth)
-    {
-        float max = Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.OverviewLabelKey), textWidth, UiFont.Small);
-        max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTitleKey), textWidth, UiFont.Small));
-        foreach (string labelKey in UsHelpCatalog.AllItemLabelKeys())
-        {
-            max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, labelKey), textWidth, UiFont.Small));
-        }
-
-        return max;
-    }
-
-    /// <summary>
-    /// Body band (Tiny, as drawn) against every resolved string the body can ever show: the empty
-    /// text, EVERY section overview (overviews run longer than any item body) and every item body.
-    /// </summary>
-    private static float MaxBodyBand(UiWidgetContext ctx, float textWidth)
-    {
-        float max = Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTextKey), textWidth, UiFont.Tiny);
-        foreach (string overviewKey in UsHelpCatalog.AllSectionOverviewKeys())
-        {
-            max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, overviewKey), textWidth, UiFont.Tiny));
-        }
-
-        foreach (string textKey in UsHelpCatalog.AllItemTextKeys())
-        {
-            max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, textKey), textWidth, UiFont.Tiny));
-        }
-
-        return max;
     }
 
     private static float Band(UiWidgetContext ctx, string text, float textWidth, UiFont font)
@@ -141,24 +82,24 @@ public sealed class UsHelpPanelWidget : IUiWidget
         float y = rect.Y + Padding;
         float textWidth = Math.Max(1f, rect.Width - Padding * 2f);
 
-        // Header, then the displayed entry's label and body. All three bands are the same
-        // hover-invariant maxima Measure allocated, so the content below cannot shift.
-        string header = HeaderText(ctx, display);
-        UiLayoutRect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
-        UiThemeDraw.SectionHeader(ctx.Drawing, headerRect, header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
-        y += headerRect.Height + TitleGap;
-
-        y += ContentGap;
+        if (!TitleHidden)
+        {
+            string header = HeaderText(ctx, display);
+            UiLayoutRect headerRect = new(x, y, textWidth, Math.Max(TitleMinHeight, Band(ctx, header, textWidth, UiFont.Small)));
+            UiThemeDraw.SectionHeader(ctx.Drawing, headerRect, header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
+            y += headerRect.Height + TitleGap + ContentGap;
+        }
+        float labelHeight = Band(ctx, display.LabelText, textWidth, UiFont.Small);
         UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(x, y, textWidth, MaxLabelBand(ctx, textWidth)),
+            new UiLayoutRect(x, y, textWidth, labelHeight),
             display.LabelText,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             UiTextAnchor.UpperLeft);
-        y += MaxLabelBand(ctx, textWidth) + 2f;
+        y += labelHeight + 2f;
         UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(x, y, textWidth, MaxBodyBand(ctx, textWidth)),
+            new UiLayoutRect(x, y, textWidth, Band(ctx, display.BodyText, textWidth, UiFont.Tiny)),
             display.BodyText,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
@@ -185,7 +126,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     /// <summary>
     /// The seam handed to the Verse-free panel logic: catalog and panel strings are Keyed entry
-    /// names, and Measure, Draw and the band maxima all resolve through it, so a measured height
+    /// names, and Measure and Draw both resolve through it, so a measured height
     /// can never belong to a different string than the one drawn.
     /// </summary>
     private static Func<string, string> TranslationSeam(UiWidgetContext ctx)

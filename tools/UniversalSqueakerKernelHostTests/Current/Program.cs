@@ -108,6 +108,7 @@ internal static partial class Program
             {
                 Event.current = new Event { type = phase, button = 0, mousePosition = VerseUiExecution.Point(pointer ?? new UiLayoutPoint(-1000, -1000)) };
                 Observation.BeginPass();
+                UsKernelSettingsHost.PreparePage(Host, viewport.Size);
                 Host.DrawFrame(viewport, Execution.CaptureFrame(), Observation);
                 NoTrips(Host);
             }
@@ -129,7 +130,13 @@ internal static partial class Program
     }
     internal static UiLayoutRect WindowRect(Page page, UiLayoutRect view, string id)
     {
-        page.Host.Session.SetScrollTarget(id);
+        page.Draw(view);
+        // ScrollTarget is an arrival request for content, not a way to locate fixed chrome.
+        // A header/Close below a business scroller must not arm an unrelated geometric target.
+        UiNode? ancestor = page.Host.Session.GetNodeByElementId(id)?.Parent;
+        while (ancestor != null && ancestor.Kind != "Scroll") ancestor = ancestor.Parent;
+        if (ancestor != null) page.Host.Session.SetScrollTarget(id);
+        else page.Host.Session.ClearScrollTarget();
         page.Draw(view);
         var layout = page.Host.MeasureAndArrange(view.Size);
         Check(layout.RectById.ContainsKey(id), "actual completed Release arrangement available");
@@ -185,16 +192,9 @@ internal static partial class Program
                 if (new[] { "Behavior", "Presets", "Diagnostics" }.Contains(destination)
                     && new[] { "Behavior", "Presets", "Diagnostics" }.Contains(source.ViewState.Page))
                 {
-                    if (source.ViewState.WideLayout) Press(page, view, "nav-" + destination);
-                    else
-                    {
-                        Press(page, view, "tool-category");
-                        var options = page.Host.Bindings.Choices("tool-page-options").Read();
-                        int index = options.Select(x => (string)x.Value!).ToList().IndexOf(destination);
-                        var popup = UiPopup.RectFor(page.Host.Session.OpenPopupAnchor!.Value, options.Count, view);
-                        Click(page, view, new UiLayoutRect(popup.X + 8, popup.Y + index * UiPopup.OptionHeight + 4, popup.Width - 16, UiPopup.OptionHeight - 8));
-                    }
+                    Press(page, view, "nav-" + destination);
                 }
+                else if (destination == "Behavior" && source.ViewState.Page == "Voices") Press(page, view, "tools-link");
                 else page.Host.Bindings.Invoke("go-page", destination);
                 page.Host.Bindings.TryInvokeCommand(definitions ? "browse-definitions" : "browse-packs");
                 if (help)
@@ -205,16 +205,27 @@ internal static partial class Program
                         page.Draw(view, EventType.Repaint, WindowRect(page, view, "global-volume-slider").Center);
                     Press(page, view, "topic-link");
                 }
-                UiLayoutSnapshot layout = page.Host.MeasureAndArrange(view.Size);
-                // Help hides unrelated navigation controls under WO r4. Pin its required roles,
-                // not an incidental node count inherited from the old always-visible toolbar.
-                bool contentPresent = help ? new[] { "page-root", "header-band", "page-back", "page-title", "page-Help-scroll", "help-pinned-note", "help-object-context", "help-panel", "footer-band", "footer" }
-                    .All(id => layout.RectById.TryGetValue(id, out var rect) && rect.Width > 0 && rect.Height > 0)
-                    : layout.VisibleIds.Count > 10;
-                Check(contentPresent && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual layout");
                 page.Draw(view);
-                bool visible = layout.RectById.ContainsKey("help-panel") && layout.RectById.ContainsKey("page-Help-scroll");
-                bool followsPage = source.ViewState.Page == (help ? "Help" : destination);
+                UiLayoutSnapshot layout = page.Host.MeasureAndArrange(view.Size);
+                // WO16: optional bottom sibling, not a replacement page. Header/close remain fixed.
+                bool contentPresent = (help ? new[] { "page-root", "header-band", "page-title", "business-body", "help-drawer", "help-header", "help-close", "help-scroll", "help-panel", "footer-band", "footer" }
+                    : new[] { "business-body", "footer-band" })
+                    .All(id => layout.RectById.TryGetValue(id, out var rect) && rect.Width > 0 && rect.Height > 0);
+                if (destination != "Voices")
+                {
+                    // WO16, not a captured golden: seven equal columns wide; three equal columns
+                    // compact, with the final row's remaining item retaining that same width.
+                    int columns = source.ViewState.WideLayout ? 7 : 3;
+                    float expectedWidth = (width - 24 - 4 * (columns - 1)) / columns;
+                    var tabs = new[] { "Behavior", "Presets", "Output", "Fallback", "Appearance", "Diagnostics", "Restore" }
+                        .Select(name => layout.RectById["nav-" + name]).ToArray();
+                    contentPresent &= tabs.All(rect => Math.Abs(rect.Width - expectedWidth) < .01f)
+                        && (columns == 7 ? tabs.All(rect => rect.Y == tabs[0].Y) : tabs[6].Y > tabs[3].Y && tabs[6].X == tabs[0].X);
+                }
+                Check(contentPresent && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual equal-tab layout; help-height=" + (help ? layout.RectById["help-drawer"].Height : 0));
+                page.Draw(view);
+                bool visible = layout.RectById.ContainsKey("help-panel") && layout.RectById.ContainsKey("help-scroll");
+                bool followsPage = source.ViewState.Page == destination;
                 if (help)
                 {
                     string pinned = page.Host.Bindings.Get<string>("pinned-help-ref");
@@ -224,16 +235,19 @@ internal static partial class Program
                     // hover grace, and Back returns to the originating page on the same Host.
                     for (int pass = 0; pass <= 15; pass++) page.Draw(view);
                     followsPage &= pinned == expected && page.Host.Bindings.Get<string>("pinned-help-ref") == expected;
-                    page.Host.Bindings.TryInvokeCommand("page-back"); page.Draw(view);
+                    page.Host.Bindings.TryInvokeCommand("cancel-help"); page.Draw(view);
                     followsPage &= source.ViewState.Page == destination && !page.Host.MeasureAndArrange(view.Size).RectById.ContainsKey("help-panel");
                     if (destination == "Diagnostics")
                     {
                         Press(page, view, "home-return");
                         followsPage &= source.ViewState.Page == "Voices" && source.ViewState.PageHistory.Count == 0;
+                        Press(page, view, "tools-link");
+                        followsPage &= source.ViewState.Page == "Diagnostics";
+                        Press(page, view, "home-return");
                     }
                 }
                 followsPage &= source.ViewState.PageHistory.Count <= 1;
-                Check(visible == help && followsPage, "help occupies its fixed content page, retains its topic beyond15 passes and returns to the origin; no permanent bottom reservation");
+                Check(visible == help && followsPage, "bottom help preserves the current business page, pins its topic beyond15 passes, and closes without changing the return trail");
             }
             Check(page.Host.Manifest.Roots.Count > 0 && page.Host.Bindings.BindingOwner != null, "actual manifest and concrete registry retained");
             }
@@ -268,9 +282,10 @@ internal static partial class Program
         Check(source.LastSearchText == " LOCAL " && source.SearchWriteCount == 1, "actual native adapter input publishes ordinary Live once");
         Check(editor.Draft == " LOCAL ", "actual retained editor holds user draft");
         int identity = page.Host.Session.Identity;
-        UsKernelSettingsHost.ApplySwatchLive(new GameSettings(), page.Host, UsTheme.ChromeTheme, "biotech");
+        UsKernelSettingsHost.ApplySwatchLive(new GameSettings(), page.Host, UsTheme.ChromeTheme, "blackgold");
         page.Draw(View);
-        Check(page.Host.Session.Identity == identity && ReferenceEquals(editor, ctx.Controls.Editor<string>(ctx, "search-text", v => v, ParseText)), "theme switch preserves Host/editor identity");
+        Check(page.Host.Session.Identity == identity && ReferenceEquals(editor, ctx.Controls.Editor<string>(ctx, "search-text", v => v, ParseText))
+            && Enumerable.SequenceEqual(UsSwatchIds.All, new[] { "core", "royalty", "blackgold" }), "three data palettes and live theme switch preserve Host/editor identity");
         page.Host.SetDisplayDemand(false); source.SetSearchText("external"); page.Host.Invalidate();
         page.Host.SetDisplayDemand(true); page.Draw(View);
         Check(editor.Draft == " LOCAL " && editor.Conflict && source.SearchWriteCount == 2, "hide/show retains conflict with actual changed model, no automatic write");
