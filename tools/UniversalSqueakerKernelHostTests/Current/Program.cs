@@ -388,6 +388,9 @@ internal static partial class Program
     {
         FieldInfo field = typeof(Translator).GetField("Resolve", BindingFlags.Public | BindingFlags.Static)!;
         field.SetValue(null, table == null ? null : new Func<string, string>(key => table.TryGetValue(key, out string? value) ? value : key));
+        // IUiTranslation requires a changed revision when resolved text may differ. The old
+        // constant-zero double let Draw change language without arranging the new text bands.
+        translationRevision++;
     }
     private static string FindRepository()
     {
@@ -400,5 +403,6 @@ internal static partial class Program
         public float MeasureText(string text, UiFont font, float width) => Math.Max(1, (int)Math.Ceiling(MeasureWidth(text, font) / Math.Max(1, width))) * (font == UiFont.Tiny ? 18 : font == UiFont.Medium ? 30 : 21.33333f);
         public float MeasureWidth(string text, UiFont font) => (text ?? "").Sum(c => c >= 0x2e80 ? 1f : .5f) * (font == UiFont.Tiny ? 12 : font == UiFont.Medium ? 18 : 16);
     }
-    internal sealed class StubTranslation : IUiTranslation { public string Translate(string key) => key.Translate(); public int TranslationRevision => 0; }
+    private static int translationRevision;
+    internal sealed class StubTranslation : IUiTranslation { public string Translate(string key) => key.Translate(); public int TranslationRevision => translationRevision; }
 }

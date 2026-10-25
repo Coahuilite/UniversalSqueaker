@@ -14,7 +14,7 @@ public static class UsTheme
     /// <summary>
     /// The default identity accent comes from the same embedded named-role data as the picker.
     /// </summary>
-    public static string AccentGoldHex => UsSwatchIds.Palettes.Count == 0 ? "" : UsSwatchIds.Palettes[0].Roles["Accent"];
+    public static string AccentGoldHex => UsSwatchIds.DefaultPalette?.Roles["Accent"] ?? "";
 
     /// <summary>All thirty concrete FL 0.8 palette roles; order matches UsSwatch.RoleHexes.</summary>
     public static readonly IReadOnlyList<string> ColorTokens = UsSwatchIds.RoleNames;

@@ -59,7 +59,7 @@ public static class UsSwatches
     }
     public static IReadOnlyList<UsSwatch> All => table;
     public static bool IsKnown(string id) => UsSwatchIds.IsKnown(id);
-    public static UsSwatch Resolve(string id) => table.FirstOrDefault(p => p.Id == id) ?? table[0];
+    public static UsSwatch Resolve(string id) => table.FirstOrDefault(p => p.Id == id) ?? table.First(p => p.Id == DefaultId);
     public static string DocumentFor(UsSwatch swatch)
     {
         var builder = new StringBuilder("<Styles Schema='1' Scheme='us-root'><Scheme Name='us-root'>");

@@ -12,6 +12,7 @@ public static class UsSwatchIds
     public const string Default = "core";
     public const string ResourceName = "UniversalSqueaker.Themes.Palettes.xml";
     public static readonly IReadOnlyList<UsSwatchData> Palettes;
+    internal static readonly UsSwatchData? DefaultPalette;
     public static readonly string[] All;
     public static readonly IReadOnlyList<string> RoleNames;
     public static readonly string DataError;
@@ -42,11 +43,13 @@ public static class UsSwatchIds
                 if (roles.Count != 30) throw new InvalidOperationException(id + ": expected thirty named roles");
                 palettes.Add(new UsSwatchData(id, Required(element, "LabelKey"), Required(element, "NoteKey"), roles));
             }
-            if (palettes.Count != 3 || palettes[0].Id != Default)
-                throw new InvalidOperationException("Expected three palettes, core first");
+            if (palettes.Count == 0 || !palettes.Any(p => p.Id == Default))
+                throw new InvalidOperationException("Expected a non-empty palette set with the stable core default");
             Palettes = palettes.AsReadOnly();
+            DefaultPalette = palettes.First(p => p.Id == Default);
             All = palettes.Select(p => p.Id).ToArray();
-            RoleNames = root.Elements("Palette").First().Elements("Color").Select(c => Required(c, "Role")).ToArray();
+            RoleNames = root.Elements("Palette").First(p => Required(p, "Id") == Default)
+                .Elements("Color").Select(c => Required(c, "Role")).ToArray();
             if (palettes.Any(p => RoleNames.Any(role => !p.Roles.ContainsKey(role))))
                 throw new InvalidOperationException("Palettes disagree on named roles");
             DataError = "";
@@ -55,11 +58,16 @@ public static class UsSwatchIds
         {
             // Settings must still load. The native UI reports this one actionable failure and uses
             // the carrier's safe colour defaults instead of throwing from a window constructor.
-            Palettes = Array.Empty<UsSwatchData>(); All = new[] { Default }; RoleNames = Array.Empty<string>(); DataError = error.Message;
+            Palettes = Array.Empty<UsSwatchData>(); DefaultPalette = null;
+            All = new[] { Default }; RoleNames = Array.Empty<string>(); DataError = error.Message;
         }
     }
-    private static string Required(XElement e, string name) => (string?)e.Attribute(name)
-        ?? throw new InvalidOperationException("Missing " + name + " on " + e.Name);
+    private static string Required(XElement e, string name)
+    {
+        string? value = (string?)e.Attribute(name);
+        if (string.IsNullOrWhiteSpace(value)) throw new InvalidOperationException("Missing " + name + " on " + e.Name);
+        return value!;
+    }
     public static bool IsKnown(string id) => Array.IndexOf(All, id) >= 0;
 }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Verse;
 
@@ -25,6 +26,30 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     private UiElementSpec spec = UiElementSpec.Empty;
 
+    // Node-owned, released with that node. FL may measure a scroll's full and scrollbar-reserved
+    // widths in one arrange and reuse either result later; retain the corresponding displays,
+    // not just the last Measure call. This is not a catalog or process-wide cache.
+    private sealed class DisplayState
+    {
+        internal readonly List<MeasuredDisplay> Measured = new();
+        internal string ObservedHoverRef = "";
+        internal bool HasObservedHover;
+    }
+
+    private sealed class MeasuredDisplay
+    {
+        internal string Header = "", Label = "", Body = "";
+        internal float Width, HeaderHeight, LabelHeight, BodyHeight;
+        internal bool HideTitle;
+        internal UiMeasureInputs? SmallEnvironment, TinyEnvironment;
+        internal float Height => Padding * 2f + (HideTitle ? 0 : HeaderHeight + TitleGap + ContentGap)
+            + LabelHeight + 2f + BodyHeight + 4f;
+        internal bool Matches(UsHelpPanelLogic.HelpPanelDisplay display, string header)
+            => Header == header && Label == display.LabelText && Body == display.BodyText;
+    }
+
+    private static DisplayState State(UiWidgetContext ctx) => ctx.State("us/help-measured-display", () => new DisplayState());
+
     string IUiWidget.Kind => Kind;
 
     public static void Register()
@@ -44,11 +69,28 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     public float Measure(UiWidgetContext ctx)
     {
+        DisplayState state = State(ctx);
         float textWidth = Math.Max(1f, ctx.ViewWidth - Padding * 2f);
-        var display = ResolveFrameDisplay(ctx, CurrentSection(ctx));
-        float header = TitleHidden ? 0 : Math.Max(TitleMinHeight, Band(ctx, HeaderText(ctx, display), textWidth, UiFont.Small)) + TitleGap + ContentGap;
-        return Padding * 2f + header + Band(ctx, display.LabelText, textWidth, UiFont.Small)
-            + 2f + Band(ctx, display.BodyText, textWidth, UiFont.Tiny) + 4f;
+        // BeginHelpPass clears a fresh claim before the controls republish during Draw. Consume
+        // that previous Draw's observed ref at this boundary; there is no second grace clock.
+        // Explicit pins and a currently effective session ref always take precedence.
+        var display = ResolveFrameDisplay(ctx, CurrentSection(ctx), state.HasObservedHover ? state.ObservedHoverRef : null);
+        string header = TitleHidden ? "" : HeaderText(ctx, display);
+        var environment = ctx.Metrics as IUiTextMetricsEnvironment;
+        var measured = new MeasuredDisplay {
+            Width = textWidth, HideTitle = TitleHidden, Header = header,
+            Label = display.LabelText, Body = display.BodyText,
+            HeaderHeight = TitleHidden ? 0 : Math.Max(TitleMinHeight, Band(ctx, header, textWidth, UiFont.Small)),
+            LabelHeight = Band(ctx, display.LabelText, textWidth, UiFont.Small),
+            BodyHeight = Band(ctx, display.BodyText, textWidth, UiFont.Tiny),
+            SmallEnvironment = environment?.CaptureEnvironment(UiFont.Small),
+            TinyEnvironment = environment?.CaptureEnvironment(UiFont.Tiny)
+        };
+        state.Measured.RemoveAll(value => value.Width == textWidth && value.HideTitle == measured.HideTitle);
+        state.Measured.Add(measured);
+        // Same bounded set of alternate measure contexts the carrier retains per leaf.
+        if (state.Measured.Count > 4) state.Measured.RemoveAt(0);
+        return measured.Height;
     }
 
     private bool TitleHidden => spec.TryGetAttribute("TitleHidden", out string raw)
@@ -75,32 +117,49 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
         UiThemeDraw.Panel(ctx.Drawing, rect, ctx.Theme);
 
-        HelpSection? section = CurrentSection(ctx);
-        UsHelpPanelLogic.HelpPanelDisplay display = ResolveFrameDisplay(ctx, section);
-
         float x = rect.X + Padding;
         float y = rect.Y + Padding;
         float textWidth = Math.Max(1f, rect.Width - Padding * 2f);
-
-        if (!TitleHidden)
+        DisplayState state = State(ctx);
+        var display = ResolveFrameDisplay(ctx, CurrentSection(ctx));
+        bool pinned = ctx.Bindings.TryGet("pinned-help-ref", out string pin) && pin.Length > 0;
+        state.HasObservedHover = !pinned;
+        state.ObservedHoverRef = pinned ? "" : ctx.Session.CurrentHelpRef ?? "";
+        MeasuredDisplay? measured = state.Measured.FindLast(value => value.Width == textWidth && value.HideTitle == TitleHidden);
+        var environment = ctx.Metrics as IUiTextMetricsEnvironment;
+        if (measured == null || !Equals(measured.SmallEnvironment, environment?.CaptureEnvironment(UiFont.Small))
+            || !Equals(measured.TinyEnvironment, environment?.CaptureEnvironment(UiFont.Tiny)))
         {
-            string header = HeaderText(ctx, display);
-            UiLayoutRect headerRect = new(x, y, textWidth, Math.Max(TitleMinHeight, Band(ctx, header, textWidth, UiFont.Small)));
-            UiThemeDraw.SectionHeader(ctx.Drawing, headerRect, header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
+            ctx.Invalidate();
+            return; // Never paint text using an unmeasured width/font environment.
+        }
+        if (!measured.Matches(display, TitleHidden ? "" : HeaderText(ctx, display)))
+        {
+            ctx.Invalidate();
+            // A pin changed by an earlier action belongs to the next arranged text, never the old
+            // topic. Ordinary explicit navigation already bumps/arranges before its next repaint.
+            if (pinned) return;
+        }
+
+        // A hover claim can change after this pass arranged. Draw only that arrangement's captured
+        // strings AND bands; the dirty node adopts the new effective topic at the next boundary.
+        if (!measured.HideTitle)
+        {
+            UiLayoutRect headerRect = new(x, y, textWidth, measured.HeaderHeight);
+            UiThemeDraw.SectionHeader(ctx.Drawing, headerRect, measured.Header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
             y += headerRect.Height + TitleGap + ContentGap;
         }
-        float labelHeight = Band(ctx, display.LabelText, textWidth, UiFont.Small);
         UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(x, y, textWidth, labelHeight),
-            display.LabelText,
+            new UiLayoutRect(x, y, textWidth, measured.LabelHeight),
+            measured.Label,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             UiTextAnchor.UpperLeft);
-        y += labelHeight + 2f;
+        y += measured.LabelHeight + 2f;
         UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(x, y, textWidth, Band(ctx, display.BodyText, textWidth, UiFont.Tiny)),
-            display.BodyText,
+            new UiLayoutRect(x, y, textWidth, measured.BodyHeight),
+            measured.Body,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
@@ -117,10 +176,10 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     /// <summary>Reads the session's effective help reference, including its 15-pass grace.
     /// CurrentHelpRef is a catalog reference, not a binding or a raw current-frame hit.</summary>
-    private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
+    private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section, string? observedHoverRef = null)
     {
         string current = ctx.Bindings.TryGet("pinned-help-ref", out string pinned) && pinned.Length > 0
-            ? pinned : ctx.Session.CurrentHelpRef ?? "";
+            ? pinned : ctx.Session.CurrentHelpRef ?? observedHoverRef ?? "";
         return UsHelpPanelLogic.Resolve(section, current, TranslationSeam(ctx));
     }
 
