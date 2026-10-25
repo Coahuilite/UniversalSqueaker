@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
@@ -207,6 +208,7 @@ public static partial class UsKernelSettingsHost
         });
         b.BindReadOnly<string>("transaction-diagnostics", () => s.SourceChangeDiagnostic + "\n" + (production?.RowDiagnostic ?? ""));
         b.BindReadOnly<string>("kernel-status-raw", () => SqueakerRuntime.PolicyStatus);
-        b.BindReadOnly<string>("dependency-status", () => source.BuildIdentity + "\nFerriteLib v0.8.0-rc1 · a0b5b98\n" + T("ObservationBoundary"));
+        string carrier = typeof(UiHost).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
+        b.BindReadOnly<string>("dependency-status", () => source.BuildIdentity + "\nFerriteLib " + carrier + "\n" + T("ObservationBoundary"));
     }
 }

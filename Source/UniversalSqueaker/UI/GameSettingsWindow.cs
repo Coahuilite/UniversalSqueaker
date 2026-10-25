@@ -49,6 +49,9 @@ public sealed class GameSettingsWindow : UiWindowHost
     // tick the pending settings save. CreateHost builds it once per window instance.
     private UsKernelSettingsSource? source;
     private Rect lastContentRect;
+    private const int UiCostSamplePasses = 32;
+    private bool uiCostSampling;
+    private int uiCostFirstPass;
 
     /// <summary>SA1.3: ONE Remix confirmation flow per parent window. Created with the host (the mode
     /// write below is the only writer it gates) and released at PostClose: closing the parent can never
@@ -117,6 +120,9 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     protected override UiHost CreateHost()
     {
+        // Explicit Enabled only: Auto (including the normal Release default) never starts timing.
+        bool sampleCosts = SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled;
+        long started = sampleCosts ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         source = new UsKernelSettingsSource(SqueakerMod.Settings, Execution.Images);
         source.SetContentLayout(WindowChromeLayout.UsesWideLayout(lastContentRect.width, lastContentRect.height));
         // BeforeDraw precedes first CreateHost: the opening layout already uses the actual content box.
@@ -132,6 +138,13 @@ public sealed class GameSettingsWindow : UiWindowHost
         // a scope exists at all: with detailed logging off this window is a geometry-only handle (nothing is
         // measured, the process-wide switch is untouched) and the layout-diagnosis controls still work.
         audit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        if (sampleCosts)
+        {
+            audit.BeginTimingObservation();
+            uiCostSampling = true;
+            uiCostFirstPass = host.Session.Frame;
+            source.BeginUiCostSample(System.Diagnostics.Stopwatch.GetTimestamp() - started);
+        }
         // DT1: the dev panel's default target - registered with the host, cleared in PreClose.
         UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = host;
         return host;
@@ -179,6 +192,11 @@ public sealed class GameSettingsWindow : UiWindowHost
         // and page draw published before this pass adds to it, so a frame's findings cannot be pushed out
         // of the ring unread (FL-20).
         audit?.Publish();
+        // Drain the completed previous pass first. One window, one finite aggregate, then off.
+        if (uiCostSampling && Host != null && Host.Session.Frame - uiCostFirstPass >= UiCostSamplePasses)
+        {
+            EndUiCostObservation(false);
+        }
         // R3-B's one-shot report. It runs here, before the pass draws, so the capture it prints is the last
         // pass that COMPLETED - the request is made during a draw, and this is the next one. One request is
         // one report: the source clears its pending request in the same step that writes it, so the pass after
@@ -217,8 +235,18 @@ public sealed class GameSettingsWindow : UiWindowHost
         SqueakLog.SettingsOpenFailed(error);
     }
 
+    private void EndUiCostObservation(bool partial)
+    {
+        if (!uiCostSampling || Host == null) return;
+        // Drain both phase accumulators before disabling sampling/disposal, including early Close.
+        audit?.EndTimingObservation(partial);
+        source?.EndUiCostSample(Host.Session.Frame - uiCostFirstPass, partial);
+        uiCostSampling = false;
+    }
+
     public override void PreClose()
     {
+        EndUiCostObservation(true);
         // Live writes already reached the ordinary queue; retained-only drafts are abandoned on close.
         if (Host?.InputState.IsEditing == true) Host.TryHandleCancel();
         // Final drain + release this window's hold on the process-wide detection switch, BEFORE the shell

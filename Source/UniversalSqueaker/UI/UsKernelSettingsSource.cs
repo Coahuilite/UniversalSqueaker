@@ -1,6 +1,7 @@
 using System.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using FerriteLib.UiKit.Kernel;
 using UnityEngine;
 using Verse;
@@ -25,6 +26,26 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     private int cachedRevision = -1;
     private long cachedConfiguration = -1;
     private Authoring.DefinitionCatalog? cachedDefinitions;
+    private bool uiCostActive;
+    private long uiViewReads, uiViewBuilds, uiViewTicks, uiViewMaxTicks, uiCreateTicks;
+
+    // Armed only by an explicitly requested, per-window diagnostic sample. No object labels/values.
+    internal void BeginUiCostSample(long creationTicks)
+    {
+        uiCostActive = true;
+        uiCreateTicks = creationTicks;
+    }
+
+    internal void EndUiCostSample(int passes, bool partial)
+    {
+        if (!uiCostActive) return;
+        uiCostActive = false;
+        double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
+        SqueakLog.LayoutTrace(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "UI.cost passes={0} partial={1} create_ms={2:F3} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
+            passes, partial, Milliseconds(uiCreateTicks), uiViewReads, uiViewBuilds,
+            Milliseconds(uiViewTicks), Milliseconds(uiViewMaxTicks)));
+    }
 
     public UsKernelSettingsSource(GameSettings settings, VerseUiImages? images = null)
     {
@@ -59,18 +80,33 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public VoicePacksViewState BuildView()
     {
-        int revision = revisionSource != null ? revisionSource() : Time.frameCount;
-        long configuration = settings.CaptureBehaviorConfiguration().Id;
-        if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
-            || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions))
+        long started = uiCostActive ? Stopwatch.GetTimestamp() : 0;
+        if (uiCostActive) uiViewReads++;
+        try
         {
-            cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state, ImageOf);
-            cachedRevision = revision;
-            cachedConfiguration = configuration;
-            cachedDefinitions = SqueakerRuntime.Definitions;
-        }
+            int revision = revisionSource != null ? revisionSource() : Time.frameCount;
+            long configuration = settings.CaptureBehaviorConfiguration().Id;
+            if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
+                || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions))
+            {
+                if (uiCostActive) uiViewBuilds++;
+                cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state, ImageOf);
+                cachedRevision = revision;
+                cachedConfiguration = configuration;
+                cachedDefinitions = SqueakerRuntime.Definitions;
+            }
 
-        return cachedView;
+            return cachedView;
+        }
+        finally
+        {
+            if (uiCostActive)
+            {
+                long ticks = Stopwatch.GetTimestamp() - started;
+                uiViewTicks += ticks;
+                uiViewMaxTicks = Math.Max(uiViewMaxTicks, ticks);
+            }
+        }
     }
 
     // Native image references belong to the enclosing window execution, never to the core/view.

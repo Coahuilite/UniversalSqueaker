@@ -113,6 +113,33 @@ public sealed class UsTextFitAudit : IDisposable
     private readonly UiDiagnosticSubscription subscription;
     private long loggedThrough;
     private bool disposed;
+    private bool timingObservation;
+    private int timingFirstPass, arrangeSamples, drawSamples;
+    private double arrangeTotal, arrangeMax, drawTotal, drawMax;
+
+    internal void BeginTimingObservation()
+    {
+        timingObservation = true;
+        timingFirstPass = host.Session.Frame;
+        // One existing phase event per completed invocation, buffered here rather than logged.
+        // Unlike a 32-call FL aggregate, this also permits an honest early-Close partial summary.
+        subscription.TimingSampleFrames = 1;
+        subscription.TimingEnabled = true;
+    }
+
+    internal void EndTimingObservation(bool partial)
+    {
+        if (!timingObservation) return;
+        Publish();
+        subscription.TimingEnabled = false;
+        timingObservation = false;
+        string Summary(string phase, int samples, double total, double max) => string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            "UI.cost phase={0} passes={1} samples={2} total_ms={3:F3} max_ms={4:F3} partial={5}",
+            phase, host.Session.Frame - timingFirstPass, samples, total, max, partial);
+        SqueakLog.LayoutTrace(Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
+        SqueakLog.LayoutTrace(Summary("draw", drawSamples, drawTotal, drawMax));
+    }
 
     /// <summary>
     /// Whether this scope also runs the text-fit audit, which is the caller's logging policy restated (R3-B
@@ -252,7 +279,7 @@ public sealed class UsTextFitAudit : IDisposable
     {
         if (disposed || !subscription.IsActive) return;
 
-        if (!auditsFit)
+        if (!auditsFit && !timingObservation)
         {
             // A geometry-only scope does not audit text, and must not consume the ring another window reads.
             return;
@@ -268,6 +295,22 @@ public sealed class UsTextFitAudit : IDisposable
             {
                 Report(found.Overflow.Value);
             }
+            else if (timingObservation && found.Kind == UiDiagnosticKind.Timing && found.Timing.HasValue)
+            {
+                UiDiagnosticTiming timing = found.Timing.Value;
+                if (timing.Name == "arrange")
+                {
+                    arrangeSamples += timing.Samples;
+                    arrangeTotal += timing.TotalMilliseconds;
+                    arrangeMax = Math.Max(arrangeMax, timing.MaxMilliseconds);
+                }
+                else if (timing.Name == "draw")
+                {
+                    drawSamples += timing.Samples;
+                    drawTotal += timing.TotalMilliseconds;
+                    drawMax = Math.Max(drawMax, timing.MaxMilliseconds);
+                }
+            }
         }
     }
 
@@ -282,6 +325,7 @@ public sealed class UsTextFitAudit : IDisposable
     public void Dispose()
     {
         if (disposed) return;
+        EndTimingObservation(true);
         Publish();
         disposed = true;
 

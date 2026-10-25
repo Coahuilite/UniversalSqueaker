@@ -1,6 +1,6 @@
 # 使用固定 FL 0.8 构建当前 US
 
-当前 US 0.6 的 Release 配对输入为 [FerriteLib v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 的实际发布资产，源码 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，ProductVersion `0.8.0+a0b5b983c3c13a099c62d936305eaebaf1deb5a8`、配置 Release。先前 `7eb8073` final Dev 配对保留为历史证据。运行范围为 `[0.8.0,0.9.0)`，生产 Reference 为 `Private=false`。该输入提供 1.6 adapter；原生 1.6 仍待验，未交付 1.7 adapter。
+当前 UI 阻断修复候选显式配对本地 FerriteLib `f362c993c9bb568ce83a8bc728a0b4d421577bd2`，ProductVersion `0.8.0-local.nativeinput2+f362c993c9bb568ce83a8bc728a0b4d421577bd2`、配置 Release。它包含原生 EventType 值映射与 Repeat 模板根可见性修复，尚未通过原生输入／卡顿复验。原 [FerriteLib v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 仍是 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，中间 `069b88a`／local.nativeinput1 与 `7eb8073` final Dev 均保留历史身份；本地修补不替换已发布 RC。API0.8.0、AssemblyVersion0.8.0.0、运行范围 `[0.8.0,0.9.0)` 与生产 Reference 的 `Private=false` 不变。该输入提供 1.6 adapter，未交付 1.7 adapter。
 
 ## 安装运行前置
 
