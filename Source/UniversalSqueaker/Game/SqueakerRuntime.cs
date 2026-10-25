@@ -44,7 +44,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private readonly DefinitionCatalog catalog;
     private readonly ResponseSession owner;
     private DecisionState state => owner.State;
-    private readonly UsResponsePolicy candidate;
+    private UsResponsePolicy candidate;
     private readonly List<KeyValuePair<RandomPurpose, double>> draws = new();
     private SoundDef? preparedSound;
     private PlaybackRequest? lastRequest;
@@ -77,6 +77,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
     internal SessionObservation Observation => owner.Observe();
+    internal bool OnMap(Map map) => pawn.MapHeld == map;
 
     private bool HasAvailableFact(string key) => SqueakerRuntime.ImplementationAvailable(key);
 
@@ -88,6 +89,15 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         long now = Find.TickManager.TicksGame;
         long offset = candidate.InitialSpread == 0 ? 0 : (long)((uint)pawn.thingIDNumber % (ulong)candidate.InitialSpread);
         owner = new ResponseSession(SqueakerRuntime.SubjectKey(pawn), now > long.MaxValue - offset ? long.MaxValue : now + offset, candidate.State);
+    }
+
+    internal void UsePolicy(UsResponsePolicy policy)
+    {
+        candidate = policy;
+        owner.UsePolicy(policy.State);
+        // The next existing maintenance pass reviews active authorization, even if configuration
+        // is unchanged. Selection itself captures no facts and creates no response opportunity.
+        reviewedConfiguration = -1;
     }
 
     private ResponseFrame Capture(BehaviorConfiguration accepted, string? eventKey, bool activeCommand = false, string? registeredAction = null,
@@ -347,6 +357,7 @@ public static class SqueakerRuntime
     internal static Kernel.AudioCatalog Audio { get; private set; } = Kernel.AudioCatalog.Empty;
     private static UsDevelopmentPolicy? selectedPolicy;
     private static UsResponsePolicy? ordinaryPolicy;
+    internal static UsResponsePolicy? CurrentPolicy => selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
     internal static bool DevelopmentActive => selectedPolicy != null;
     internal static bool AttackObservationActive => DevelopmentActive || ordinaryPolicy != null;
     public static string PolicyStatus => selectedPolicy != null ? "ExplicitDevelopmentCandidate"
@@ -386,8 +397,8 @@ public static class SqueakerRuntime
         {
             throw new InvalidOperationException("A development policy is already selected for this process");
         }
-        if (sessions.Count != 0) throw new InvalidOperationException("DevelopmentSelectionRequiresNoActiveSubjects");
         selectedPolicy = policy;
+        foreach (var session in sessions.Values) session.UsePolicy(policy.RuntimePolicy);
     }
 
     internal static void InstallOrdinaryPolicy(UsResponsePolicy policy)
@@ -400,7 +411,7 @@ public static class SqueakerRuntime
 
     private static PawnResponseAdapter? SessionFor(Pawn pawn)
     {
-        var runtimePolicy = selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
+        var runtimePolicy = CurrentPolicy;
         if (runtimePolicy == null)
         {
             return null;
@@ -431,7 +442,7 @@ public static class SqueakerRuntime
     internal static EffectiveBehavior Explain(BehaviorConfiguration configuration, string actionId, string race, string child)
     {
         var action = catalog.Actions.First(x => x.Key == actionId);
-        var policy = selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
+        var policy = CurrentPolicy;
         var defaults = policy == null ? BehaviorContract.DeclaredDefaults(action) : BehaviorContract.Defaults(action, policy);
         return race == "" ? configuration.ResolveProfile("Pawn", "", actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts())
             : configuration.Resolve(new BehaviorDomain("Pawn", "", race, child), actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts());
@@ -544,6 +555,14 @@ public static class SqueakerRuntime
             session.Stop();
         }
         sessions.Remove(pawn.thingIDNumber);
+    }
+    internal static void ReleaseMap(Map map)
+    {
+        foreach (var pair in sessions.Where(x => x.Value.OnMap(map)).ToArray())
+        {
+            pair.Value.Stop();
+            sessions.Remove(pair.Key);
+        }
     }
     public static bool IsControlled(Pawn pawn) => sessions.ContainsKey(pawn.thingIDNumber);
     internal static void IngestionChanged(Pawn pawn)

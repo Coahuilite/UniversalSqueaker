@@ -15,7 +15,7 @@ internal static partial class Program
 {
     private static void RefactorThrough()
     {
-        Console.WriteLine("MODE --refactor-through: actual Harmony hooks → production declaration/config/facts/neutral owner/audio → native output double/receipt");
+        Console.WriteLine("MODE --refactor-through: ordinary factory → actual Harmony hooks/neutral owner/output double → retained-owner Dev selection");
         var custom = new NotificationContract("external.worker/Finished", 120, 40);
         SqueakerNotifications.Declare(custom);
         var restricted = new NotificationContract("external.worker/NeedsInjury", restriction: new Condition("ref", "us.core/HasCurrentInjury"));
@@ -41,8 +41,10 @@ internal static partial class Program
         pawn.Comp = new CompSqueaker { Pawn = pawn, Vocal = false };
         int before = SoundStarter.Played.Count;
         new Selector().Select(pawn);
-        Check(!SqueakerRuntime.IsControlled(pawn) && SoundStarter.Played.Count == before, "unselected Dev gate still allocates no subject owner");
-        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        Check(!SqueakerRuntime.IsControlled(pawn) && SoundStarter.Played.Count == before, "pre-install runtime allocates no subject owner");
+        Prefs.DevMode = false;
+        // The same factory/install entry used by GameBootstrap after definition/configuration readiness.
+        SqueakerRuntime.InstallOrdinaryPolicy(UsResponsePolicy.CreateOrdinary());
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
         Check(UsInstanceOutput.Available, "actual native output patch owner/readiness is the one installed fixture Harmony identity");
         Find.TickManager.TicksGame += 1;
@@ -50,9 +52,10 @@ internal static partial class Program
         var owner = RuntimeSession(pawn);
         Console.WriteLine("SELECT TRACE " + owner.DiagnosticText + " issues=" + string.Join(";", SqueakerRuntime.Issues));
         Check(owner.LastOutcome.Action == CoreActions.Select && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
-            && SoundStarter.Played.Count == before + 1, "actual accepted Select reaches same neutral owner without hidden vocal gate");
+            && SoundStarter.Played.Count == before + 1 && !SqueakerRuntime.DevelopmentActive && SqueakerRuntime.PolicyStatus == "OrdinaryActive",
+            "ordinary non-Dev accepted Select reaches neutral owner without hidden vocal gate");
         pawn.Comp.Vocal = true;
-        Find.TickManager.TicksGame += 1;
+        Find.TickManager.TicksGame = (int)Math.Max(Find.TickManager.TicksGame + 1L, owner.State.SharedDeadline);
         var melee = new Verb_MeleeAttack { caster = pawn, Result = false };
         melee.Execute();
         Check(owner.LastOutcome.Action == CoreActions.Attack && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
@@ -65,7 +68,8 @@ internal static partial class Program
         var driver = new JobDriver_Ingest { pawn = pawn, job = job };
         pawn.CurJob = job; pawn.jobs!.curDriver = driver;
         driver.SetupToils(); driver.FixtureToil = new Toil { actor = pawn };
-        Find.TickManager.TicksGame += 1; pawn.Comp.CompTick();
+        Find.TickManager.TicksGame = (int)Math.Max(Find.TickManager.TicksGame + 1L, Math.Max(owner.State.NextStateTick, owner.State.SharedDeadline));
+        pawn.Comp.CompTick();
         Check(owner.LastOutcome.Action == CoreActions.Eat && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && SoundStarter.Played.Count == before + 3, "actual ingestion process uses settled Whole/Any/Any in neutral session");
         long wait = owner.State.NextStateTick, attempt = owner.State.AttemptTick;
@@ -73,13 +77,18 @@ internal static partial class Program
         food.NutritionResult = .5f; food.Ingested(pawn, 1);
         Check(owner.State.NextStateTick == wait && owner.State.AttemptTick == attempt && SoundStarter.Played.Count == before + 3,
             "normal zero/positive ingestion results with no Result consumer do not create ordinary Eat opportunities");
-        Find.TickManager.TicksGame += 1;
+        // Reuse this existing author/owner scenario for the public Dev transition: the old hard
+        // protection and ordinary scheduled W must survive, while future settlement uses Dev H0.
+        Prefs.DevMode = true;
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        Find.TickManager.TicksGame = (int)Math.Max(Find.TickManager.TicksGame + 1L, owner.State.SharedDeadline);
         Check(SqueakerNotifications.TryProcess(pawn, custom), "declared external C# notification enters production gateway");
         var request = pawn.Comp.LastCandidateRequest;
         Check(ReferenceEquals(owner, RuntimeSession(pawn)) && request?.Action == custom.ActionId && request.Subject == SqueakerNotifications.SubjectKey(pawn)
             && request.Audio.EntryKey == "fixture.through/US_Through/" + custom.ActionId
-            && request.Audio.AudioId == "actual.provider/Ratkin1" && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched,
-            "C# author notification settles original subject owner with exact ActionId/entry/AudioId/receipt");
+            && request.Audio.AudioId == "actual.provider/Ratkin1" && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
+            && owner.State.NextStateTick == wait && owner.State.SharedDeadline == Find.TickManager.TicksGame,
+            "C# notification after Dev selection retains original owner/wait and exact identity/receipt, settling with new H0");
         long deadline = owner.State.ActionDeadline(custom.ActionId);
         Find.TickManager.TicksGame += 1; SqueakerNotifications.TryProcess(pawn, custom);
         Check(owner.LastOutcome.Reason == "HardDeadline" && owner.State.ActionDeadline(custom.ActionId) == deadline && SoundStarter.Played.Count == before + 4,

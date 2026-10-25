@@ -350,7 +350,7 @@
   <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、适中 15-50、激进 15-40；套用后曲线与状态行同步更新。手动编辑区间后标签会变成「自定义」。</US.Help.Attenuation.Presets.Text>
   <US.Help.Attenuation.Status.Label>预设 / 区间读数</US.Help.Attenuation.Status.Label>
   <US.Help.Attenuation.Status.Text>曲线下方的只读状态行：显示当前生效的预设（手动拖动后为"自定义"）与当前距离区间。它本身不改变任何设置。</US.Help.Attenuation.Status.Text>
-  <US.Help.BasicTuning.Overview>这里设置音频参与、说话能力缩放和独立的 Pawn Eat／Select 选项。普通节奏与竞争政策仍待裁定；仅显式激活的 Dev 候选会派发。</US.Help.BasicTuning.Overview>
+  <US.Help.BasicTuning.Overview>这里设置音频参与、说话能力缩放、全局活跃度和独立的Pawn Eat／Select选项。普通回应在启动就绪时自动装配，实际发声仍取决于当前条件和所选音频。</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>彩蛋音效</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>开启后，彩蛋条目与普通条目一同参与抽取；关闭时只有普通条目可能被选中。</US.Help.BasicTuning.Egg.Text>
   <US.Help.BasicTuning.ScaleCooldown.Label>时间流速缩放</US.Help.BasicTuning.ScaleCooldown.Label>
@@ -361,7 +361,7 @@
   <US.Help.BasicTuning.ScalePopulation.Text>可听区域内已接入 US 的 Pawn 较多时，周期叫声减少：间隔随可闻 Pawn 数除以十的系数增大（不低于一倍），随机尝试的通过概率同比例下降，因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
-  <US.Help.Timing.Overview>这里显示是否已显式激活 Dev 政策。硬间隔与状态机会按该候选及动作有效配置执行；已退役的全局冷却和人口控件不再生效。</US.Help.Timing.Overview>
+  <US.Help.Timing.Overview>这里显示实际普通或显式开发方案。普通状态基础等待600游戏tick，再合成活跃度、速度与可听人口因子；动作／共享硬间隔不缩放，作者与玩家显式覆盖仍然有效。</US.Help.Timing.Overview>
   <US.Help.Timing.Interval.Label>叫声间隔总控</US.Help.Timing.Interval.Label>
   <US.Help.Timing.Interval.Text>两次叫声之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。1.0x 使用当前默认节奏，人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
@@ -582,7 +582,7 @@
   <US.Help.Theme.Overview>在官方核心与五个 DLC 调色板之间选择以验证颜色。出厂默认为核心。</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>调色板</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>切换只改颜色,不改任何东西——页面保留布局、焦点与滚动位置。选择随设置保存,并会被"恢复默认"还原;作者自定义主题继续由库支持。</US.Help.Theme.Switch.Text>
-  <US.Kernel.PolicyRequired>US 响应尚未启用：普通播放规则仍待确定。你仍可选择语音包和调整设置。</US.Kernel.PolicyRequired>
+  <US.Kernel.PolicyRequired>回应运行时尚未就绪。你仍可选择语音包和调整设置，请在诊断中查看缺失的前置条件。</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>正在使用显式启用的开发播放方案，并非普通默认规则。实际出声仍取决于触发条件。</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>旧概率与心情因子编辑器已退役。上方动作许可仍有效；独立响应启用、参数及 Apply／Skip 参与请使用当前作者／Config 合同。</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>内核：最后观察到的决策</US.Kernel.LastObservedDecision>

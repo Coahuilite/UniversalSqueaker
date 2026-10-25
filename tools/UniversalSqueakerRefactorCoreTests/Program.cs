@@ -108,7 +108,7 @@ internal static class Program
     private static void AllFifteen()
     {
         var definitions = new DefinitionCatalog(0, 0, true);
-        var policy = new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1, UsEquipQualification.PlayerCoreEquip);
+        var policy = UsResponsePolicy.CreateOrdinary();
         var entries = new List<AudioCandidate>();
         foreach (string action in CoreActions.All) entries.Add(new AudioCandidate("pack/" + action, "owner/audio", action, "RaceA", 1));
         definitions.Publish();

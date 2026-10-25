@@ -1,8 +1,8 @@
 # 官方15包合同导读
 
-当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包原有的产品语义／来源／未决与人工关口。
+当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包产品语义／来源与人工关口，普通缺省按当前表执行。
 
-修订：2026-10-24，r11（r2单语义与当前作者／配置入口）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+修订：2026-10-26，r12（普通Release装配与已采用的SR校准默认）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -11,7 +11,7 @@
 1. 事实适配先解析“谁发生什么、谁发声”，再以实例＋服务对象族＋准确域进入单 owner。Pawn 按真实 Race／合法 Xenotype；NonPawn 按 Family／Namespace／Target。共享 profile、合同或 AudioId 不合声音池。当前只有 Pawn 完整宿主，NonPawn 验纯链与目录边界。
 2. 固定条件 All/Any/Not 三态：仅 True 有资格；必要事实 Unknown 不当 True；实现缺失在注册／所选依赖处隔离。定义不可变，扩展只能增加固定条件；玩家只能覆盖公开参数，不能删固定条件。
 3. 每主体一份状态机会；真实事件即到同一 owner。显式优先序选一，平级按完整键序；选后无音、拒绝或概率未中都不改选另一包补播。同 tick 一次新尝试，多个声音包不加机会。父子关系不决定优先／抢占。
-4. 节奏：游戏 tick；动作／共用硬截止取较晚，不缩放。状态等待 ceil(W_base/A)，事件概率 min(1,p_base×A)，A>0、1 中性；失败状态重检 R=60。候选数值 W20/H40/I120、p1、N/speed1 是隔离非持久开发输入，不是发行默认。15 包总排序、等待分布／数值、A 界面范围、关键例外、人口／速度、首次唯一作者来源政策由 PM 集中交用户。
+4. 节奏：游戏tick；动作／共用硬截止取较晚、不缩放。普通W600/H216、逐动作I、五项共享CHECK豁免及现总序已采用，完整表见[普通默认](us-kernel-0.6-spec-zh.md#唯一生产-owner-与普通启动)。状态软W仅一次合成人口／速度后除以A，事件min(1,p_base×A)，A为任意有限正数、1中性；失败状态重检R60。Dev W20/H40/I120仍是隔离高频输入。首次作者来源仍显式选择，不因唯一候选自动采用。
 5. 行为层目标为包装缺省 → 已选主域作者 → 已选合法子域作者 → 玩家服务对象 profile → 玩家主域 → 玩家合法子域。省略不贡献，false／0 显式；作者整体先于玩家。system 总音量、活动、彩蛋总许可与距离独立，不被子域抵消。D-B已把完整分层与Eat参数接入生产settings／session；三类profile与当前入口见主规格§22。
 6. 可用音源：同 Race 的 Xeno 常规 → Race 常规 → 当前精确域 PackFallback → 最终 Race 表；NonPawn 无 Race 后备。Fallback 首层可用，Remix 非空层等权后层内选择，Vanilla 仅最终表，Disabled 零派发。Xeno 不能借 Race PackFallback。先包权重、后包内变体权重；精确年龄存在但不可播不退本包全龄；彩蛋独立许可。保条目、资源 AudioId、实际供音域／层，不能只写 fallback/动作。
 7. 局部音高／音量从条目校准和有效响应一次合成；年龄先、心情后、一次 jitter；省略均中性 1，年龄／心情缺省不启用，参与 Apply/Skip 不等于启用。包→本包动作→条目→玩家参与覆盖只解析一次。音量允许0、音高有限正值，非法参数在副作用前拒绝。输出 L×当前 system G(t)，不写共享 Def；共享资源的非 US 实例不受影响。
@@ -23,12 +23,12 @@
 | 字段 | 缺省／单位／范围 | 谁能改；当前落点 |
 | --- | --- | --- |
 | enabled／scope | 包装启用；scope=AnyOccurrence 或显式 ActiveCommand/Disabled；无单位 | 作者贡献与玩家合法层；ActiveCommand 另需实际命令与控制事实。D-A 按完整 ActionId 解析，不拿父尾名 |
-| hardIntervalTicks | 包装显式值；缺失用隔离 Dev 候选；≥0 tick | 作者／玩家全部合法层均已持久化；0 不等缺失 |
-| talkingEnabled | 通用包缺省不要求 Pawn Talking；Pawn 包按显式资格选择 | 作者／玩家允许层；不得让通用 Select／NonPawn 暗接 Pawn 器官门。其余包默认资格还须逐包审阅 |
+| hardIntervalTicks | 普通官方按已采用独立表；自定义按自身声明；≥0 tick | 作者／玩家全部合法层均已持久化并可覆盖缺省；0不等缺失 |
+| talkingEnabled | 通用包缺省不要求 Pawn Talking；Pawn 包按显式资格选择 | 作者／玩家允许层；不得让通用 Select／NonPawn 暗接 Pawn 器官门。官方普通按当前资格表，成果仍逐包人验 |
 | volume／pitch | 局部1；volume≥0、pitch>0，有限且原生float可表示 | 作者与允许玩家层；不当 system 总控 |
 | ageEnabled／moodEnabled／response／parameter | 默认关闭；数值倍率无单位，mood阈值0..1；jitter=[1,1] | 已有稀疏行为来源／玩家响应行；逐响应实际依赖，未配置不增加事实要求 |
 | playback | OneShot；可选 Sustained | 包装定义者显式指定，不因继承或 WholeProcess 自动变为持续 |
-| priority／chance／shared权限 | 独立包装明确声明或中性缺省；chance 0..1、间隔 tick | 定义者；继承固定条件不暗复制路由／政策。官方发行总序与节奏尚待用户 |
+| priority／chance／shared权限 | 独立包装明确声明或中性缺省；chance 0..1、间隔tick | 定义者；继承固定条件不暗复制路由／政策。官方普通值见上述固定表 |
 
 ## Select：接受与反馈固定，Pawn资格三项独立可调
 
@@ -83,7 +83,7 @@
 
 **组成合同／主体：** 受支持的实际攻击执行事件，角色Attacker，取真实Pawn caster；受害者的Wounded另属另一owner、Race和保护。选择目标、尝试、命中及伤害分别需要自己的事实；本合同不从声音名或方法名推断结果。当前完整宿主仅Pawn，不借炮塔操作者或选中Pawn替代真实caster。
 
-**4871已核开发支持集：** 下表是隔离Dev候选，不是获批普通覆盖。旧扫描已移除，不保名字扫描双轨；整体Dev未激活时实际callback不创建owner／输出。
+**4871已核普通支持集：** PM已采用下表的准确执行机制用于普通Attack，普通装配与Dev标志分离。旧扫描已移除，不保名字扫描双轨；未完成启动安装时仍不创建owner／输出。
 
 | 机制／实际接缝 | 执行证据与返回意义 |
 | --- | --- |
@@ -100,7 +100,7 @@
 
 **调制、形态、恢复与扩展：** 一次局部年龄×心情／jitter与实时G照共同规则，不因攻击自动套Break。OneShot自然尾，不承诺下一击剪尾；瞬时执行不提供持续攻击依据，Sustained下次合同失效复检结束。命中反应／伤害结果须独立结果事实，不能只继承Attack便取得命中保证。近战两目标成对readiness，其他机制逐目标隔离，缺一个不吞全局PatchAll异常；未核机制不猜True，来源重连不重放旧击。
 
-**SR实际与验证：** SR按Verb子类的无参bool TryCastShot扫描、名字排除Ability、true取Pawn caster；External216 GameTicks、共享216，外部跳过周期p，无声／失败尝试也收钟。US修上述误含／漏项、保准确攻击者域和自然尾，四结果及节奏另有合同。实际`Patch_Verb_Attack→Notify_Attack→同session→准确条目／请求`由DcNativeTests覆盖近战早退／挥击false／异常、投射包装只通知一次、支持机制、工具／NonPawn排除、未激活门与攻击者／受害者分离；不是游戏命中或听感测量。4871接缝已定点读回，普通范围、完整合同审阅和成果人验仍pending。
+**SR实际与验证：** SR按Verb子类的无参bool TryCastShot扫描、名字排除Ability、true取Pawn caster；External216 GameTicks、共享216，外部跳过周期p，无声／失败尝试也收钟。US修上述误含／漏项、保准确攻击者域和自然尾，四结果及节奏另有合同。实际`Patch_Verb_Attack→Notify_Attack→同session→准确条目／请求`由DcNativeTests覆盖近战早退／挥击false／异常、投射包装只通知一次、支持机制、工具／NonPawn排除、未激活门与攻击者／受害者分离；不是游戏命中或听感测量。4871接缝已定点读回，普通支持集已采用，完整合同审阅和成果人验仍pending。
 ## 三包共同的SR体验差异与比较条件
 
 SR CurrentMood把任意InMentalState当Break，并采用心情显式值覆盖年龄；US当前是年龄×心情独立单次乘算，不能称旧心情和新年龄表现等价。精神状态不等于崩溃是已定修正，不重新复制SR错误。SR官方素材为OneShot自然尾，无US持续单槽；其共享SubSoundDef距离写入不移植，US只改自有实例。
@@ -141,7 +141,7 @@ Select/Eat/Attack在SR均用各自准确域映射与共同年龄／彩蛋／来�
 
 **合同与事实：** `us.core/MoveState`读取服务Pawn自己的pather.Moving；无pather为Unknown，有且未移动为False。不是位置每帧变化、被搬运、车辆载客或世界旅行；当前原生范围只有受服务地图Pawn。自身移动和是否玩家命令分开，停止移动不制造一个“停止事件”。
 
-**固定、参数、设置：** 固定自身pathing不可被scope伪造。共同enabled、scope、硬tick、局部倍率、响应按完整Move键和作者／玩家合法层；没有速度→音量或脚步替换专属参数。开发候选需要器官，未暗加只限玩家／清醒；ActiveCommand若显式选用仍要求真实受控命令。推荐默认候选允许AI／玩家的自身移动，正式资格仍待用户，不把移动事实改成玩家命令事实。
+**固定、参数、设置：** 固定自身pathing不可被scope伪造。共同enabled、scope、硬tick、局部倍率、响应按完整Move键和作者／玩家合法层；没有速度→音量或脚步替换专属参数。开发候选需要器官，未暗加只限玩家／清醒；ActiveCommand若显式选用仍要求真实受控命令。普通缺省允许AI／玩家的自身移动，不把移动事实改成玩家命令事实。
 
 **机会、竞争、音源：** 只用已有状态机会，移动更快／多个声音包不会增加调度；A改下一软等待，硬截止不缩放。可与Eat／Work／Joy同时True，按明确候选总序选一，不因Move没音退Work。音源为移动者准确域Move条目及合法层；共享Pawn profile不混其他Race，显式AudioId复用不继承父动作设置或后备。
 
@@ -149,15 +149,15 @@ Select/Eat/Attack在SR均用各自准确域映射与共同年龄／彩蛋／来�
 
 **SR实际与当前链：** SR同pather判据，Sleep/Eat/Social/Joy先于Move，Move先于Work；Random504／p.012及共享216，周期相位、人口、速度、Talking均会改变实际密度。US保自身移动与准确域／自然尾；统一状态等待和总序另候选，不承诺旧504等频。`CompTick→UsPawnFacts.Capture→同session→Move条目／请求／输出`是本包实际链；纯核心／平台替身／原生证据见事实页，实际搬运反例及听感待相应验收。
 
-**请用户判断：** 推荐保自身移动资格，审与移动中工作／摄入重叠时选哪包及停止后的旧尾；总序／频率集中裁定，合同／成果均pending。
+**人验重点：** 自身移动资格与普通总序／节奏已定；核移动中工作／摄入重叠的实际中选与停止后的旧尾，合同／成果人验均pending。
 
 ## Equip：装备加入通知，装备者与物品不换位
 
 **合同／主体／范围：** 观察`Pawn_EquipmentTracker.Notify_EquipmentAdded(ThingWithComps)`正常返回，主体为tracker.pawn装备者，eq为加入的装备；方法给装备verb设置caster、通知PickedUp和Equipped，非地上物品自己发声。此来源不是装备尝试、库存拾取、服装穿戴、卸下或所有关系变化；这些要有各自证据，不能统称已装备。当前只支持Pawn设备tracker，不宣称所有可装备对象宿主。
 
-**事实与回应资格分开：** 旧Core Equip玩家Job限制是回应政策，不是tracker关系定义。当前适配观察正常返回且物品确在equipment集合；官方Equip另选显式PlayerCoreEquip开发资格：playerForced＋准确JobDefOf.Equip＋玩家控制，未选择资格则具名拒绝，不因范围未定自动开放AI／加载回应。独立根可明确消费关系事实。推荐先保用户熟悉的玩家Core换装回应，但把关系事实与资格分开供独立根／扩展使用；扩大到自动换装须由PM／用户决定。
+**事实与回应资格分开：** 旧Core Equip玩家Job限制是回应政策，不是tracker关系定义。当前适配观察正常返回且物品确在equipment集合；官方普通Equip采用PlayerCoreEquip资格：playerForced＋准确JobDefOf.Equip＋玩家控制，保原未选Dev资格的具名拒绝，不自动开放AI／加载回应。独立根可明确消费关系事实。推荐先保用户熟悉的玩家Core换装回应，但把关系事实与资格分开供独立根／扩展使用；扩大到自动换装须由PM／用户决定。
 
-GLOBAL Dev菜单已显式传此待裁资格，标签注明`Equip=PlayerCoreEquip (pending)`；完整入口与同参数示例见[规格§20](us-kernel-0.6-spec-zh.md)。七参数构造器仍为Unselected，普通激活门不变。实际菜单回调到policy、真实EquipmentAdded经Harmony到同owner有独立定向fixture；菜单登记／原生物体／音频为明确平台替身，未据此签游戏菜单操作通过。
+GLOBAL Dev菜单仍显式传此资格，标签注明`Equip=PlayerCoreEquip (explicit Dev)`；完整入口与同参数示例见[规格§20](us-kernel-0.6-spec-zh.md)。七参数Dev构造器仍为Unselected；普通factory独立采用PlayerCoreEquip，不借Dev标志激活。实际菜单回调到policy、真实EquipmentAdded经Harmony到同owner有独立定向fixture；菜单登记／原生物体／音频为明确平台替身，未据此签游戏菜单操作通过。
 
 **可调、有效配置、来源：** 共同enabled／scope、硬tick、局部音量／音高、响应按完整`us.core/Equip`及合法层解析；没有通过scope=Any偷删固定来源证据。来源A快照保作者值，缺A不选B；关系物品不进配置。玩家在既有动作行改本包与层级，真实保存／恢复走同生产settings；不新增面板结构或自动加载回应默认。
 
@@ -165,9 +165,9 @@ GLOBAL Dev菜单已显式传此待裁资格，标签注明`Equip=PlayerCoreEquip
 
 **调制、两形态、故障：** 局部年龄／心情／jitter及G照共同规则；穿上某物不会自动启用某种情绪响应。OneShot自然尾，不因马上卸下精准裁剪；瞬时加入事件本身不构成“持续持有装备”，Sustained到下次事件条件失效复检结束，持有期间持续须另有关系状态合同。原方法抛异常不发布正常返回；缺观察实现隔离该能力，未知关系不猜成功。来源恢复不重放旧装备加入。
 
-**SR实际对照：** SR同postfix取tracker.pawn，Notify_Equip强制玩家Core Equip job；ActiveCommand／玩家控制、器官／Talking和地图视野门。External216／共享216，外部不抽周期p、尝试仍消耗旧钟；US四结果与A机制有意不同，不把216当实频。准确装备者域和自然尾保留目标。实际链`Patch_Pawn_EquipmentAdded→Notify_Equip→session`；真实原生加载／换装／声音及新资格候选的成果仍pending。
+**SR实际对照：** SR同postfix取tracker.pawn，Notify_Equip强制玩家Core Equip job；ActiveCommand／玩家控制、器官／Talking和地图视野门。External216／共享216，外部不抽周期p、尝试仍消耗旧钟；US四结果与A机制有意不同，不把216当实频。准确装备者域和自然尾保留目标。实际链`Patch_Pawn_EquipmentAdded→Notify_Equip→session`；真实原生加载／换装／声音及资格成果人验仍pending。
 
-**请用户判断：** 推荐先以显式候选维持玩家Core Equip体验；是否把AI、系统或加载加入也作为普通回应，以及服装／卸下是否另供合同，均不能从本hook自动获准。合同人审／成果人验各pending。
+**已定与人验：** 普通回应限玩家Core Equip；AI、系统／加载加入及服装／卸下不在本合同支持集，扩展须另有明确合同。合同人审／成果人验各pending。
 
 ## Call：正向闲置并原地等待，不做兜底叫声
 
@@ -197,7 +197,7 @@ GLOBAL Dev菜单已显式传此待裁资格，标签注明`Equip=PlayerCoreEquip
 
 **固定事实／参与者：** `us.core/SocialState`当前支持joyKind==Social，或准确JobDef StandAndBeSociallyActive、GotoAndBeSociallyActive、Lovin；Stand/Lovin的4871 Core Def与当前driver依据已核；GotoAndBeSociallyActive的Def依据仍为4850记录，4871 Core Def检索未找到该条，保留此具体内容版本缺口。这是当前Job声明的整个社交过程，包括走向社交点／准备，不等于已说一句话、成功互动或关系改变。角色SocialParticipant，只给当前这个当事Pawn；没有自动替对方也建一次回应。名字包含Chat/Visit/Entertain的其他Job不自动承认。
 
-**参数／覆盖候选：** 共同`us.core/Social`字段及合法来源层适用，Dev候选AnyOccurrence、器官／Talking，无隐藏玩家命令或仅友方限制；暂无参与者选择、互动成功或具体阶段专属开关。joyKind Social是内容的正向语义声明，不能由音频名称补证。上述准确支持集是提交审阅的开发范围；未知机制要扩事实和证据，不用名称片段自动拓宽。
+**参数／覆盖候选：** 共同`us.core/Social`字段及合法来源层适用，普通AnyOccurrence、器官／Talking，无隐藏玩家命令或仅友方限制；暂无参与者选择、互动成功或具体阶段专属开关。joyKind Social是内容的正向语义声明，不能由音频名称补证。上述准确支持集是提交审阅的开发范围；未知机制要扩事实和证据，不用名称片段自动拓宽。
 
 **机会／重叠／音源：** 只消费同owner状态机会。Social和Joy可同时True，由候选优先仲裁，不故意把Joy事实改False；Social没声不临时补Joy。音源属本参与者准确域Social条目，另一参与者若实际有自己的机会独立结算；共享profile／同AudioId不混域。局部年龄×心情／jitter和G不从对方心情取值。
 
@@ -260,9 +260,9 @@ GLOBAL Dev菜单已显式传此待裁资格，标签注明`Equip=PlayerCoreEquip
 
 **固定来源／主体／结果：** 4871已核四个实际执行入口：MentalBreakWorker.TryStart基类返回mentalStateHandler启动结果；Catatonic override添加崩溃Hediff后true；RunWild override改变Pawn种类／阵营和相关状态后true；WildDecree override发出崩溃命令后true，即使没有成功进入附带Wander状态仍是该正向崩溃执行。HumanityBreak经base启动，成功后加Inhumanized，观察base一次，不把包装再记一遍。角色BreakSubject，实际pawn正常返回true且在当前地图时通知；不是周围听众。
 
-**支持候选／排除：** 仅基类会漏三个不调用base的直达override，D-C已按明确目标补齐隔离Dev候选；不扫描所有名称。false／异常不发布。任意TryStartMentalState、SocialFighting、婴儿MentalFit均不是本事件；Crying/Giggling专属回应已退役，但不禁原版状态／婴儿声音或这些Pawn的其他合同。若第三方override不经已核目标，要显式提供自己的正向来源。
+**普通支持集／排除：** 仅基类会漏三个不调用base的直达override，普通采用已按明确目标补齐的四成功来源；不扫描所有名称。false／异常不发布。任意TryStartMentalState、SocialFighting、婴儿MentalFit均不是本事件；Crying/Giggling专属回应已退役，但不禁原版状态／婴儿声音或这些Pawn的其他合同。若第三方override不经已核目标，要显式提供自己的正向来源。
 
-**参数／资格／来源：** `us.core/MentalBreak`共同enabled、scope、硬tick、局部倍率及响应按合法层；Dev候选AnyOccurrence、器官／Talking，不暗加清醒／玩家控制，无“任意精神状态算崩溃”开关。固定成功来源不可被设置删除。需持续崩溃者另提明确状态依据，不能把瞬时启动永远保True；已取消的Crying/Giggling也不作为全局禁止第三方合同的名字黑名单。
+**参数／资格／来源：** `us.core/MentalBreak`共同enabled、scope、硬tick、局部倍率及响应按合法层；普通AnyOccurrence、器官／Talking，不暗加清醒／玩家控制，无“任意精神状态算崩溃”开关。固定成功来源不可被设置删除。需持续崩溃者另提明确状态依据，不能把瞬时启动永远保True；已取消的Crying/Giggling也不作为全局禁止第三方合同的名字黑名单。
 
 **机会／音源／调制：** 正常成功事件进入崩溃者同owner，A当次p、自身／共享硬截止、同tick适用；不因关键事件I=0就推断全部保护豁免。只选崩溃者准确域MentalBreak条目／声明后备，不按任意精神状态切音源。US当前年龄×心情独立响应，不把任意InMentalState当Break覆盖所有动作的年龄；局部jitter一次，G实时。
 

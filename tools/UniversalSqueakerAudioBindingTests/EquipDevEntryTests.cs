@@ -81,8 +81,8 @@ internal static partial class Program
             "actual menu policy dispatches the player's exact Core Equip entry/audio/domain through the production owner");
         Check(owner.DiagnosticText.Contains("Pawn_EquipmentTracker.Notify_EquipmentAdded:Returned,wearer=" + actor.ThingID + ",item=" + item.ThingID),
             "actual request retains returned phase and exact wearer/item evidence");
-        Check(menu.Name.Contains("Dev") && menu.Name.Contains("Equip=PlayerCoreEquip") && menu.Name.Contains("pending"),
-            "actual menu label names the pending PlayerCoreEquip Dev qualification");
+        Check(menu.Name.Contains("Dev") && menu.Name.Contains("Equip=PlayerCoreEquip (explicit Dev)"),
+            "actual menu label names PlayerCoreEquip as an explicit Dev input, not a pending ordinary qualification");
         long? confirmed = owner.State.ConfirmedTick;
         long shared = owner.State.SharedDeadline, action = owner.State.ActionDeadline("us.core/Equip"), next = owner.State.NextStateTick;
         Check(confirmed == 2000 && shared == 2040 && action == 2120, "menu keeps the existing W20 H40 I120 protection inputs");

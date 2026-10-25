@@ -482,7 +482,7 @@ r2阶段新增合同与固定输入附页，强化纯核心／平台适配边界
 
 ## 18. 已采用的首批范围
 
-D1三态、D2的OneShot单机会/同tick名额与四结果/R60、Work与Wounded同批优先且无新增共用豁免、D6单提供者入口与格式号省略永久为1已获批准。该S1阶段没有批准Sustained新启动/替换、D3完整日常频率或D4调制；当前已批机制与技术实现按第20节，数值发行默认仍未冻结。实际接口、普通包/扩展示例、受控入口及证据边界见[OneShot S1](us-kernel-0.6-s1-zh.md)。
+D1三态、D2的OneShot单机会/同tick名额与四结果/R60、Work与Wounded同批优先且无新增共用豁免、D6单提供者入口与格式号省略永久为1已获批准。该S1阶段没有批准Sustained新启动/替换、D3完整日常频率或D4调制；当前机制与已采用的普通默认见第20节。实际接口、普通包/扩展示例、受控入口及证据边界见[OneShot S1](us-kernel-0.6-s1-zh.md)。
 
 ## 19. S2实现状态与后续责任
 
@@ -494,22 +494,52 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 
 ## 20. S4-A/B 与 S5 当前使用方式
 
-### 唯一生产 owner 与临时激活门
+### 唯一生产 owner 与普通启动
 
-普通接通工程已将运行输入抽为不可变 `UsResponsePolicy`，原 `UsDevelopmentPolicy` 构造和公开Respond/Review重载保留，通过同一owner适配。逐动作I／scope缺省可先于作者、玩家折叠提供；普通原生速度与既有共享可听人口快照只进入状态软等待因子。基础W采用600游戏tick（1倍速10秒）的方向已定，不能据此发行旧Dev或O1整表。当前完整普通默认、共享权限和资格仍待明确采用，普通启动尚未安装该输入，所以下述未装配零派发边界仍然存在；不是已接通普通声音的完成声明。
+普通Release由`GameBootstrap`在主线程定义、最终原生音源、comp挂载与配置发布就绪后安装`UsResponsePolicy.CreateOrdinary()`。合法已选音频包无需Dev、打开设置或再次启包；音频-only无需另选行为来源。首页`OrdinaryActive`表示该输入已安装，不代表当前一定有可播音源或已经听见。关闭／不可读配置、资格Unknown、缺具体实现和不可播声音仍沿原链拒绝；未完成初始化时保留`PolicySelectionRequired`。
+
+用户已定基础W600与SR校准方向；PM据此采用以下细化。所有I和H均为游戏tick，不随速度／人口缩放。普通H216；首相为uint Pawn ID模600，仅新owner首次安排。状态chance1；全部事件p_base1并保持min(1,A)，没有额外概率豁免。
+
+| 官方动作 | 普通硬I tick | 检查共享H | 缺省scope |
+| --- | ---: | --- | --- |
+| Eat | 144 | 是 | AnyOccurrence |
+| Call | 900 | 是 | AnyOccurrence |
+| Move | 504 | 是 | AnyOccurrence |
+| Sleep | 1200 | 是 | AnyOccurrence |
+| Social | 504 | 是 | AnyOccurrence |
+| Joy | 504 | 是 | AnyOccurrence |
+| Work | 720 | 是 | AnyOccurrence |
+| Wounded | 216 | 是 | AnyOccurrence |
+| Attack | 216 | 是 | AnyOccurrence |
+| Equip | 216 | 是 | ActiveCommand＋PlayerCoreEquip |
+| Select | 18 | 否 | AnyOccurrence＋三项可调资格 |
+| Draft | 36 | 否 | ActiveCommand |
+| Undraft | 36 | 否 | ActiveCommand |
+| Death | 0 | 否 | AnyOccurrence |
+| MentalBreak | 0 | 否 | AnyOccurrence |
+
+所有官方动作仍写共享H；总序保持Death>Wounded>MentalBreak>Attack>Draft>Undraft>Equip>Select>Sleep>Eat>Social>Joy>Move>Work>Call。默认OneShot；Select不接隐藏器官／Talking门，Death只免Talking仍查器官，其余保器官／Talking。Work沿已定精确Core事实集；Attack只含下文已核执行机制；MentalBreak只含四成功来源。Select三项默认true、Eat WholeProcess/Any/Any、无匹配安静及失败不补低项不变。
+
+逐动作I／scope缺省先于作者与玩家有效折叠，不改写其显式值。状态软W仅在原有单点合成`ceil(600 * max(1,TickRateMultiplier) * max(1,共享可听人数/10) / A)`；人口复用当前地图的共享快照，不逐Pawn全图扫描。人数≤10、1倍速、A1、持续状态、门与输出均通过且无事件干扰时，基础周期13.6个1倍速秒；受R60重检刻度影响，Call约15.6、Sleep约20.6秒。这是合同算术，不是实测或每10秒必叫；Move/Social/Joy比SR更疏是已采用的取舍。
 
 `CompSqueaker.CompTick`、十五包适用通知和`NotifyExternalByKey`均进入`SqueakerRuntime`，每Pawn只有一份`PawnResponseAdapter`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。自定义通知须先用XML或一次C#明确声明；未知字符串拒绝，不补默认计划。完整新作者／保存／删除合同见[r2导读](us-kernel-0.6-refactor-zh.md)。
 
-产品数值默认尚未冻结。本开发版本未选择整体策略时返回可读状态`PolicySelectionRequired`，零派发、零每Pawn候选初始化，不回旧链。开发模式菜单`S4AB-S5 GLOBAL Dev candidate: W20 H40 I120 spread120 p1 N/speed1; Equip=PlayerCoreEquip (pending)`一次性注入全局隔离候选，显式选择待裁的玩家Core Equip回应资格；重复点同一工具不会清保护。若不用菜单，也可在新的开发进程中显式调用同一组候选输入：
+### 显式Dev入口仍可使用已有owner
+
+原`UsDevelopmentPolicy`构造及公开Respond/Review重载保留；Dev模式菜单`S4AB-S5 GLOBAL Dev candidate`仍选择原高频输入，也可调用：
 
 ```csharp
 SqueakerRuntime.SelectDevelopmentPolicy(
     new UsDevelopmentPolicy(20, 40, 120, 120, 120, 1, 1,
-        equipQualification: UsEquipQualification.PlayerCoreEquip)); // 待裁Dev资格
+        equipQualification: UsEquipQualification.PlayerCoreEquip)); // 显式Dev资格
 SqueakerMod.Settings.SetActivity(1.5);
 ```
 
-这些数值是高频验证输入，不是日常推荐值。参数顺序为基础W、共用硬间隔、普通动作硬间隔、Wounded硬间隔、初始错峰宽度、事件基准p、状态基础等待因子。固定W是本候选的分布；初始错峰只设下一机会，不虚构派发。人口／速度因子由本候选显式提供为1，未暗读旧滑块；将来若启用，该状态等待因子只进入W_base一次，不改事件p_base或硬截止。活动A独立以`activity`保存，有限正数，1中性；`SetActivity`沿原保存队列排队，实际机会采新值，不重建session或重抽已安排等待。临时开发策略不写公开Config，无每Pawn模式开关；数值默认冻结后移除该门。
+这些数值是高频验证输入，不是普通默认。参数顺序为基础W、共用硬间隔、普通动作硬间隔、Wounded硬间隔、初始错峰宽度、事件基准p、状态基础等待因子；此Dev输入保持N/speed1。公开入口仍要求DevMode、进程内只允许选择一份不同策略，同引用重复调用幂等。普通owner已存在不再成为新拒绝前提：原位替换其后续输入和StatePolicy，不改owner／状态身份、硬截止、同tick占额、已排等待，不重新错峰或制造响应。现有维护路径于下一pass复核活动持续音授权；OneShot自然尾音不截断。新owner采用当时选中输入，普通会话／地图／新读档清理只释放实例，不卸载进程策略。
+
+活动A独立以`activity`保存，有限正数、1中性；`SetActivity`立即发布并沿原0.35秒队列保存，不重建session或重抽已安排等待。Dev输入仍不写公开Config，无每Pawn模式开关。
+
+窗口将实际不可变策略引用纳入既有读模型与Host失效条件，不为Dev选择再发布一份配置，也不丢草稿／滚动。地图销毁沿既有`MapDeiniter.Deinit`接缝释放该地图owner和人口登记；Pawn离图／销毁与新建／读档清理保留原路径，进程普通输入继续可供后续新owner使用。
 
 第八项明确Equip资格。省略该项仍为`Unselected`，官方Equip会具名拒绝，不自动放开AI／非Core／加载回应。`PlayerCoreEquip`要求玩家控制、playerForced且准确JobDefOf.Equip，不改变正常返回和真实装备成员关系的来源要求。
 
@@ -691,11 +721,11 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 ### 每包当前支持什么，必须在实际调用中成立
 
-- Wounded是受损Pawn的PostApplyDamage正常返回，0不自动变正伤；当前伤口另读。Death是Kill进入前，不是死亡完成或任意Destroy。Equip是tracker正常加入且实际成员关系，装备者与物品不换位；PlayerCoreEquip另为显式Dev回应资格候选。
-- Attack显式Dev支持近战成对scope＋实际挥击marker、投射物、已核束流／喷射、点火和明确轰击启动；false近战须有marker才算，早退不算，执行不保证命中。工具／跳跃／支援部署／任意生成等排除／待扩展逐机制在导读列出，正式覆盖pending。整体Dev不激活就不采用该支持集为普通产品行为。
+- Wounded是受损Pawn的PostApplyDamage正常返回，0不自动变正伤；当前伤口另读。Death是Kill进入前，不是死亡完成或任意Destroy。Equip是tracker正常加入且实际成员关系，装备者与物品不换位；普通资格采用PlayerCoreEquip＋ActiveCommand。
+- 普通Attack支持近战成对scope＋实际挥击marker、投射物、已核束流／喷射、点火和明确轰击启动；false近战须有marker才算，早退不算，执行不保证命中。工具／跳跃／支援部署／任意生成等排除／待扩展逐机制在导读列出，不因普通装配扩大支持集。
 - Call取正向IsIdle＋Wait/Wait_Wander＋自身未动，不作兜底；Sleep用driver.asleep；Move用自己的pather.Moving。Social有明确kind／准确Def过程支持集，Joy取明确joyKind，两者可同真交同owner；不按名称片段或非工作猜测。Social Goto Def的当前Core内容缺口在事实页明示。
 - Work已按获准4871 Core全清单补齐：20 WorkType、105 WorkGiver，102做工入口映射78准确Job/driver，3患者休息入口排除。过程包含准备Toils，要求同Pawn/Job/driver、未ended且当前Toil有效，具体分支和共享来源限制见[完整Core范围](us-core-work-scope-zh.md)。工作事实与ActiveCommand等回应scope独立，继承子消费同一命令/有效配置，不重排Move/Social竞争或增加引擎。
-- Draft／Undraft只认原玩家gizmo正常执行后的真实状态方向；MentalBreak用基类及三个已核直达override的正向成功来源，Humanity包装只观察base一次，不把任意MentalState当崩溃。扩围是显式Dev候选，逐目标readiness和具名诊断，不吞全局PatchAll异常。
+- Draft／Undraft只认原玩家gizmo正常执行后的真实状态方向；普通MentalBreak采用基类及三个已核直达override的正向成功来源，Humanity包装只观察base一次，不把任意MentalState当崩溃。逐目标readiness和具名诊断保留，不吞全局PatchAll异常。
 
 [OfficialFifteen.xml](examples/0.6/OfficialFifteen.xml)给每包完整ActionId和直接Core Click音频映射，不选行为来源、不激活Dev、不给发行总序／频率。真实语音包替换自己的SoundDef；US不复制SR音频。所选合同显式携带主体角色；喂食与Sleep重叠时，Sleep仍Sleeper、Eat才ActualIngester，直接AudioId复用不抹条目／包／供音域。
 
@@ -703,10 +733,10 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 官方Crying/Giggling、专属MentalFit通知／patch／日志事件／开关和无消费者残余已经删除；不保旧数值enum槽，不改原版婴儿声音／状态，不禁这些Pawn的其他合同。独立作者仍可注册自己的正向合同，甚至使用独立命名空间的同名尾部；没有全局类型／名字黑名单。冻结17字符串历史语料只服务旧路由不变性，活跃官方枚举／目录／metadata及覆盖分母均15。
 
-指定安装程序集已核到1.6.4871 rev591；公开正文只给身份、符号和结论，反编译原文不分发。4871定点源码、目标引用编译、生产纯源、真实Harmony＋平台double、Scribe替身往返、原生游戏／听感各自成立，不能互相替代。当前全部15包库存、现有适配纵切与人审入口已具备；原七过程造成的Core Work范围缺口已按本轮批准清单补齐；这不代替US-C3其余范围及两个人工关口。合同人审／成果人验仍逐包pending，普通政策／覆盖范围和首次来源选择由PM用户处理。原D-C证据使用固定0.7；后续迁移及当前固定0.8 A002消费见§24。
+指定安装程序集已核到1.6.4871 rev591；公开正文只给身份、符号和结论，反编译原文不分发。4871定点源码、目标引用编译、生产纯源、真实Harmony＋平台double、Scribe替身往返、原生游戏／听感各自成立，不能互相替代。当前全部15包库存、现有适配纵切与人审入口已具备；原七过程造成的Core Work范围缺口已按批准清单补齐；这不代替US-C3其余范围及两个人工关口。普通资格与节奏采用§20；首次来源仍显式选择，合同人审／成果人验逐包pending。原D-C证据使用固定0.7；后续迁移及当前固定0.8消费见§24。
 
 ## 24 固定FL0.8技术消费，不预定下一版页面
 
-当前依赖为FL源码7eb8073492a1380aa18c67cc30960d19645efbd1 final的固定0.8 Dev，范围[0.8.0,0.9.0)、Private=false、单carrier。生产Host/三个Manifest、主窗口/Overlay/确认、公开Palette颜色、显式Live编辑和实际绑定/请求/生命周期已经迁移，完整用法与检查入口见[消费者说明](fl08-consumer-migration-zh.md)。原24色值和旧有效边框/警告处理保为30明确语义角色；活跃主题只写颜色，不撤销页面度量。普通getters与业务settings保存的所有权/原条件不变。
+当前本地匹配输入为固定FL `36fa7ad628c529c3e65cc2c24d3cb47bc46c4465` Release `0.8.0-local.residualcost1`，范围[0.8.0,0.9.0)、Private=false、单carrier；旧7eb final Dev及先前配对保各自历史身份。生产Host/三个Manifest、主窗口/Overlay/确认、公开Palette颜色、显式Live编辑和实际绑定/请求/生命周期已迁移，完整用法与检查入口见[消费者说明](fl08-consumer-migration-zh.md)。颜色应用不撤销页面度量，普通getters与业务settings保存的所有权/原条件不变。
 
-这是现有消费者技术迁移，不改变15包事实、已裁Select三资格/Eat三轴、Dev政策门或声音决策；不固化Dashboard/页面数/Help新方案。后续UI/UX定稿与实现另行安排。原生1.6/真实Config/Scribe/字体/音频/听感及逐包两个人工关口仍待验；固定FL未交付1.7 adapter。CI已移除旧0.7 pin，并在批准坐标缺失时先拒绝；真实0.8 Release资产与源码配对仍待维护者交付，不能以本地Dev包代替远端通过。
+依赖迁移本身不改变15包事实、已裁Select三资格/Eat三轴或声音决策；普通装配按§20，当前UI合同另见[UI页面](ui-contract-0.6-zh.md)。原生1.6/真实Config/Scribe/字体/音频/听感及逐包两个人工关口仍待验；本地Release构建不等于远端CI／发布或原生性能通过。

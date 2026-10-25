@@ -438,7 +438,7 @@ public static class VoicePacksPageModel
                 effective.Paused ? effective.Failure :
                     ("US.Kernel." + SqueakerRuntime.PolicyStatus).Translate().ToString());
             rows.Add(new ActionScopeRowView(action.Key, Kernel.BuiltInActionKeys.Contains(action.Key) ? SqueakLabels.Action(action.Key) : action.Key,
-                ActionScopeRules.GroupFor(action.Key), own.Scope ?? action.Scope, action.Key, own.Scope.HasValue,
+                ActionScopeRules.GroupFor(action.Key), own.Scope ?? value.Scope ?? action.Scope, action.Key, own.Scope.HasValue,
                 value.Enabled == false ? BehaviorScope.Disabled : value.Scope ?? action.Scope,
                 hasPresetAnchor: anchor != "", presetResetReady: reset.Item2, resetPresetTarget: reset.Item3, explanation: explanation));
         }

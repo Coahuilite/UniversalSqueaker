@@ -176,6 +176,7 @@ public sealed class GameSettingsWindow : UiWindowHost
     /// </summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        source?.SynchronizeRuntimePolicy();
         if (contentRect.size != lastContentRect.size)
         {
             bool wide = WindowChromeLayout.UsesWideLayout(contentRect.width, contentRect.height);

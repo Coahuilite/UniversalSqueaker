@@ -355,7 +355,7 @@
   <US.Help.Attenuation.Presets.Text>Three mutually exclusive buttons apply a distance range outright - Conservative 15-65, Balanced 15-50, Radical 15-40 - and the chart and status line update with them. Editing the range by hand switches the label to Custom.</US.Help.Attenuation.Presets.Text>
   <US.Help.Attenuation.Status.Label>Preset / Range Read-out</US.Help.Attenuation.Status.Label>
   <US.Help.Attenuation.Status.Text>Read-only line under the chart: it names the active preset (Custom after a manual drag) and the current distance range. It changes nothing by itself.</US.Help.Attenuation.Status.Text>
-  <US.Help.BasicTuning.Overview>Playback participation, Talking scaling and the independent Pawn Eat/Select options. Ordinary timing and competition remain a pending policy; only an explicitly activated Dev candidate dispatches.</US.Help.BasicTuning.Overview>
+  <US.Help.BasicTuning.Overview>Playback participation, Talking scaling, global activity and the independent Pawn Eat/Select options. Ordinary responses initialize at startup; the current conditions and selected audio still decide whether a response can play.</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>Easter Egg Sounds</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>When on, Easter egg entries join the normal pool and can be drawn like any other clip; when off, only ordinary entries are eligible.</US.Help.BasicTuning.Egg.Text>
   <US.Help.BasicTuning.ScaleCooldown.Label>Time-Speed Scaling</US.Help.BasicTuning.ScaleCooldown.Label>
@@ -366,7 +366,7 @@
   <US.Help.BasicTuning.ScalePopulation.Text>When many US-connected pawns are within earshot, periodic squeaks thin out: the intervals lengthen and the probability of a random squeak attempt passing falls, both in proportion to the audible count divided by ten (the factor is never below one), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
-  <US.Help.Timing.Overview>Shows whether a Dev policy is explicitly active. Hard intervals and opportunity timing come from that candidate and the effective action configuration; the retired global cooldown and population controls are not applied.</US.Help.Timing.Overview>
+  <US.Help.Timing.Overview>Shows the actual ordinary or explicit development plan. Ordinary state waits start at 600 game ticks before activity, speed and audible-population factors. Hard action/shared limits remain unscaled; effective author and player overrides still apply.</US.Help.Timing.Overview>
   <US.Help.Timing.Interval.Label>Call Interval Master</US.Help.Timing.Interval.Label>
   <US.Help.Timing.Interval.Text>The hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). 1.0x uses the default rhythm; raise it to thin out dense crowds. The default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>Cooldown Multiplier</US.Help.Timing.Multiplier.Label>
@@ -588,7 +588,7 @@
   <US.Help.Theme.Overview>Choose among the official Core and DLC palettes for colour validation. The shipped default is Core.</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>Palette</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>A switch changes colour and nothing else - the page keeps its layout, focus and scroll. The choice is saved with the settings and returned by Restore defaults; author-supplied custom themes stay supported by the library.</US.Help.Theme.Switch.Text>
-  <US.Kernel.PolicyRequired>US responses are not enabled: ordinary playback rules are still pending. You can still choose packs and edit settings.</US.Kernel.PolicyRequired>
+  <US.Kernel.PolicyRequired>The response runtime is not ready. You can still choose packs and edit settings; check diagnostics for unavailable prerequisites.</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>An explicitly enabled development playback plan is active, not an ordinary default. Sound still depends on the response conditions.</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>Kernel: last observed decision</US.Kernel.LastObservedDecision>

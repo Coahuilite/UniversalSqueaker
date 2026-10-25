@@ -8,7 +8,7 @@
 
 ## 使用同一个Work合同
 
-普通作者继续为`us.core/Work`映射一条或多条声音，不需每种Job另录、不增临时七类/完整版模式。当前整体Dev选择门保留，ActiveCommand/顺序/节奏是独立待裁政策；事实成立不保证当前回应资格或仲裁中选。
+普通作者继续为`us.core/Work`映射一条或多条声音，不需每种Job另录、不增临时七类/完整版模式。普通启动已独立装配，Work缺省AnyOccurrence、I720，现总序和W600/H216见[普通默认](us-kernel-0.6-spec-zh.md#唯一生产-owner-与普通启动)；作者／玩家可保显式ActiveCommand。事实成立仍不保证仲裁中选或可播声音，原生人验未关闭。
 
 捕获条件是准确Job/driver、driver.pawn为当前Pawn、driver.job与当前Job同一、未ended、当前Toil有效。观察整个过程，包括准备/走到目标/取材料/等待/执行，不承诺已挥工具、产出或成功。Pawn_JobTracker先置ended再Cleanup/ClearDriver，因此退出窗口仍保旧Toil也为False；无Job/已核但无Toil为False。未知Job/缺实现/主体或driver不符为具名Unknown，不靠名称片段、workGiver非空或反射方法存在猜True。
 

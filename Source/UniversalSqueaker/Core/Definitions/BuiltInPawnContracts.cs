@@ -4,7 +4,7 @@ using UniversalSqueaker.Responses;
 
 namespace UniversalSqueaker.Authoring;
 
-/// <summary>The expanded order is an explicitly selected Dev candidate, never the daily default.</summary>
+/// <summary>Canonical conditions, roles and scope capabilities; runtime policy supplies ordinary timing/defaults.</summary>
 public static class BuiltInPawnContracts
 {
     public static IReadOnlyList<string> CandidateOrder { get; } = Array.AsReadOnly(new[]
@@ -18,7 +18,7 @@ public static class BuiltInPawnContracts
 
     public static string FactKey(string key) => key == CoreActions.Eat ? EatPolicy.Process : key + (IsEvent(key) ? "Event" : "State");
 
-    // Canonical scope capabilities for the explicit Dev contracts. Settings and UI query the
+    // Canonical scope capabilities for the official contracts. Settings and UI query the
     // same definition; presentation labels cannot change a saved value or runtime default.
     public static ActionScopeSupport SupportedScopes(string key) => key switch
     {
@@ -28,6 +28,7 @@ public static class BuiltInPawnContracts
         _ => throw new ArgumentException("NoOfficialScopeContract:" + key, nameof(key))
     };
 
+    // Retained declaration/Dev default. Ordinary runtime inputs can supply another supported scope.
     public static BehaviorScope DefaultScope(string key) => key == CoreActions.Work
         || SupportedScopes(key) == ActionScopeSupport.ActiveCommand ? BehaviorScope.ActiveCommand : BehaviorScope.AnyOccurrence;
 

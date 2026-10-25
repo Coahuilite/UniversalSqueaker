@@ -63,6 +63,9 @@ internal static class GameBootstrap
                 SqueakXenotypeCatalog.Current,
                 SqueakFallbackProfileStore.SupportedRaceDefNames().Concat(SqueakerRuntime.DeclaredRaces));
             Settings.ApplyToRuntime();
+            // Definitions, final native audio, comp admission and the configuration snapshot are ready.
+            // Ordinary activation is process setup, never a side effect of selecting a pack or opening UI.
+            SqueakerRuntime.InstallOrdinaryPolicy(UsResponsePolicy.CreateOrdinary());
             // Any new-format repair queued during loading is flushed only after main-thread binding.
             persistence.Flush(true);
             Settings.ApplySettingsRuntimeSideEffects(false);

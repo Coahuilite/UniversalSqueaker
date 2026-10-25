@@ -13,7 +13,7 @@ public sealed class ResponseSession
     public string Subject { get; }
     public DecisionState State { get; }
     public DecisionOutcome LastOutcome { get; private set; }
-    private readonly StatePolicy policy;
+    private StatePolicy policy;
     private readonly ResponseDecision decision = new();
     private readonly SustainedPlayback sustained = new();
     private readonly Dictionary<string, EffectiveBehavior> effectiveActions = new(StringComparer.Ordinal);
@@ -33,6 +33,9 @@ public sealed class ResponseSession
         State = new DecisionState(firstOpportunity);
         this.policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
+
+    // Future settlements use the new input; all already-reserved state and owned audio stay here.
+    internal void UsePolicy(StatePolicy policy) => this.policy = policy ?? throw new ArgumentNullException(nameof(policy));
 
     public string ActiveAction => sustained.ActiveKey;
     public string LastEndReason => sustained.LastEndReason;

@@ -20,6 +20,25 @@ public sealed class UsResponsePolicy
     private readonly IReadOnlyDictionary<string, BehaviorScope> scopes;
     private readonly HashSet<string> sharedExemptions;
 
+    /// <summary>Ordinary Release defaults, folded before explicit author and player values.</summary>
+    internal static UsResponsePolicy CreateOrdinary() => new(new StatePolicy(216, 600), 600,
+        UsEquipQualification.PlayerCoreEquip,
+        new Dictionary<string, long>(StringComparer.Ordinal)
+        {
+            [CoreActions.Eat] = 144, [CoreActions.Call] = 900, [CoreActions.Move] = 504,
+            [CoreActions.Sleep] = 1200, [CoreActions.Social] = 504, [CoreActions.Joy] = 504,
+            [CoreActions.Work] = 720, [CoreActions.Wounded] = 216, [CoreActions.Attack] = 216,
+            [CoreActions.Equip] = 216, [CoreActions.Select] = 18, [CoreActions.Draft] = 36,
+            [CoreActions.Undraft] = 36, [CoreActions.Death] = 0, [CoreActions.MentalBreak] = 0
+        },
+        new Dictionary<string, BehaviorScope>(StringComparer.Ordinal)
+        {
+            [CoreActions.Work] = BehaviorScope.AnyOccurrence,
+            [CoreActions.Attack] = BehaviorScope.AnyOccurrence,
+            [CoreActions.Equip] = BehaviorScope.ActiveCommand
+        },
+        new[] { CoreActions.Select, CoreActions.Draft, CoreActions.Undraft, CoreActions.Death, CoreActions.MentalBreak });
+
     internal UsResponsePolicy(UsDevelopmentPolicy development)
     {
         this.development = development;

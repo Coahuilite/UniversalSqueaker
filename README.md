@@ -1,6 +1,6 @@
 # Universal Squeaker
 
-0.6 r2: [current author/configuration contract](docs/us-kernel-0.6-refactor-zh.md) — complete neutral Core, one synchronous response owner and explicit notification declarations. Ordinary policy and native/human acceptance remain pending.
+0.6 r2: [current author/configuration contract](docs/us-kernel-0.6-refactor-zh.md) — complete neutral Core, one synchronous response owner and explicit notification declarations. Ordinary responses now initialize automatically without developer mode; native/human acceptance remains pending.
 
 **English** | [中文](./README.zh-CN.md)
 
@@ -25,7 +25,7 @@ Current Dev builds explicitly consume a fixed FerriteLib **0.8** package (`[0.8.
 
 ## Documentation
 
-This branch is **0.6.0 Dev**: the single production owner covers [all fifteen contracts and the settled configurable Select qualifications](docs/us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界), with real author examples and per-package SR comparisons. Ordinary coverage/policy, native behavior and human acceptance remain separate gates. The [documentation index](docs/README.md) distinguishes retained 0.5 guides from current 0.6 interfaces.
+This branch is **0.6.0 Dev**: the single production owner covers [all fifteen contracts and the settled configurable Select qualifications](docs/us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界), with real author examples and per-package SR comparisons. The adopted ordinary defaults are documented in the specification; native behavior and all-fifteen human acceptance remain open. The [documentation index](docs/README.md) distinguishes retained 0.5 guides from current 0.6 interfaces.
 
 - [Current r2 behavior and settings](docs/us-kernel-0.6-refactor-zh.md)
 - [Current 0.6 r2 authoring](docs/us-kernel-0.6-authoring-zh.md)

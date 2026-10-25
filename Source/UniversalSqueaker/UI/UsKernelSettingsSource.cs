@@ -26,6 +26,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     private int cachedRevision = -1;
     private long cachedConfiguration = -1;
     private Authoring.DefinitionCatalog? cachedDefinitions;
+    private UsResponsePolicy? cachedPolicy, observedPolicy;
     private bool uiCostActive;
     private long uiViewReads, uiViewBuilds, uiViewTicks, uiViewMaxTicks, uiCreateTicks;
 
@@ -86,14 +87,16 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         {
             int revision = revisionSource != null ? revisionSource() : Time.frameCount;
             long configuration = settings.CaptureBehaviorConfiguration().Id;
+            var policy = SqueakerRuntime.CurrentPolicy;
             if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
-                || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions))
+                || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions) || !ReferenceEquals(cachedPolicy, policy))
             {
                 if (uiCostActive) uiViewBuilds++;
                 cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state, ImageOf);
                 cachedRevision = revision;
                 cachedConfiguration = configuration;
                 cachedDefinitions = SqueakerRuntime.Definitions;
+                cachedPolicy = policy;
             }
 
             return cachedView;
@@ -264,6 +267,17 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     public void AttachHost(UiHost host)
     {
         this.host = host;
+        observedPolicy = SqueakerRuntime.CurrentPolicy;
+    }
+
+    // A process-only Dev choice is not a settings edit. Refresh the existing view/layout clocks
+    // together, without publishing another configuration or discarding this window's context.
+    internal void SynchronizeRuntimePolicy()
+    {
+        var policy = SqueakerRuntime.CurrentPolicy;
+        if (ReferenceEquals(observedPolicy, policy)) return;
+        observedPolicy = policy;
+        host?.Invalidate();
     }
 
     /// <summary>The switch's own checked state: what the instrument actually honoured, never the request.</summary>
