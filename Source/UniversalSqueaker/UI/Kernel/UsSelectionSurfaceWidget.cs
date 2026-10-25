@@ -141,6 +141,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (rect.Width <= 1f || rect.Height <= 1f) return;
+        using var cost = UsUiCostMetrics.ObserveDraw(ctx, modeRow: false);
         // TryGetBool, as a CONVENTION and NOT as a fix. An earlier revision of this comment claimed the read
         // failed because 'selected' is a READ-ONLY registration; that is wrong, and the correction is worth
         // keeping: BindReadOnly and BindValue land in the same values table and TryGet<T> reads that same

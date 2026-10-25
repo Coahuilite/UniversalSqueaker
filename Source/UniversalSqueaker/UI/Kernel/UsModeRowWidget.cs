@@ -49,6 +49,7 @@ public sealed class UsModeRowWidget : IUiWidget
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (rect.Width <= 1f || rect.Height <= 1f) return;
+        using var cost = UsUiCostMetrics.ObserveDraw(ctx, modeRow: true);
 
         string binding = BindingKey();
         ctx.Bindings.TryGet(binding, out SqueakVoicePackMode current);

@@ -52,6 +52,7 @@ public sealed class GameSettingsWindow : UiWindowHost
     private const int UiCostSamplePasses = 32;
     private bool uiCostSampling;
     private int uiCostFirstPass;
+    private UsUiCostMetrics? uiCostMetrics;
 
     /// <summary>SA1.3: ONE Remix confirmation flow per parent window. Created with the host (the mode
     /// write below is the only writer it gates) and released at PostClose: closing the parent can never
@@ -130,7 +131,9 @@ public sealed class GameSettingsWindow : UiWindowHost
         // the mode write registers against it, released in PostClose so no dialog or staged commit can
         // outlive the page that created it.
         remixFlow = new RemixConfirmationFlow(Find.WindowStack);
-        UiHost host = UsKernelSettingsHost.Create(source, remixFlow);
+        uiCostMetrics = sampleCosts ? new UsUiCostMetrics(VerseFerriteTextMetrics.Instance) : null;
+        UiHost host = uiCostMetrics == null ? UsKernelSettingsHost.Create(source, remixFlow)
+            : UsKernelSettingsHost.Create(source, uiCostMetrics, out _, remixFlow);
         // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
         // subscription and are measured with THIS host's ruler.
         //
@@ -144,6 +147,7 @@ public sealed class GameSettingsWindow : UiWindowHost
             uiCostSampling = true;
             uiCostFirstPass = host.Session.Frame;
             source.BeginUiCostSample(System.Diagnostics.Stopwatch.GetTimestamp() - started);
+            uiCostMetrics!.Begin(UiFitAudit.Enabled);
         }
         // DT1: the dev panel's default target - registered with the host, cleared in PreClose.
         UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = host;
@@ -241,6 +245,7 @@ public sealed class GameSettingsWindow : UiWindowHost
         // Drain both phase accumulators before disabling sampling/disposal, including early Close.
         audit?.EndTimingObservation(partial);
         source?.EndUiCostSample(Host.Session.Frame - uiCostFirstPass, partial);
+        uiCostMetrics?.Complete(Host.Session.Frame - uiCostFirstPass, partial);
         uiCostSampling = false;
     }
 
