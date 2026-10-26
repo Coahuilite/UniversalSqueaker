@@ -51,7 +51,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private long lastObservation;
     private bool diagnosticFaultReported;
     private bool endFaultReported;
-    private long reviewedConfiguration = -1;
+    private BehaviorConfiguration? reviewedConfiguration;
     private BehaviorConfiguration? configuration;
     private IReadOnlyDictionary<string, EffectiveBehavior> effectiveActions => owner.EffectiveActions;
     private string resultEvidence = "";
@@ -97,7 +97,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         owner.UsePolicy(policy.State);
         // The next existing maintenance pass reviews active authorization, even if configuration
         // is unchanged. Selection itself captures no facts and creates no response opportunity.
-        reviewedConfiguration = -1;
+        reviewedConfiguration = null;
     }
 
     private ResponseFrame Capture(BehaviorConfiguration accepted, string? eventKey, bool activeCommand = false, string? registeredAction = null,
@@ -170,11 +170,12 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
             || !SqueakerMod.Settings.CaptureBehaviorConfiguration().SystemEnabled)
         { EndSustained("SubjectOrServiceUnavailable"); return; }
         var configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
-        bool changed = configuration.Id != reviewedConfiguration;
+        // Revision numbers are publisher-local; a replacement snapshot may reuse the same number.
+        bool changed = !ReferenceEquals(configuration, reviewedConfiguration);
         if (owner.ActiveAction != "" && (force || changed || owner.ReviewDue(Find.TickManager.TicksGame)))
         {
             owner.Review(new RuntimeView(catalog, configuration, SqueakerRuntime.Audio), Capture(configuration, null), candidate, force || changed);
-            reviewedConfiguration = configuration.Id;
+            reviewedConfiguration = configuration;
             ReportEndFault();
         }
         owner.Maintain();

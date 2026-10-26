@@ -9,7 +9,7 @@ using UniversalSqueaker.Responses;
 namespace UniversalSqueaker;
 
 /// <summary>Audited work processes, including their preparation Toils, not a workGiver label test.
-/// Core WorkGiver return branches are audited; response scope/order remains separate and Dev-gated.</summary>
+/// Core WorkGiver return branches are audited; response scope/order comes from the selected runtime policy.</summary>
 internal static class UsWorkObservation
 {
     private static readonly (string Job, string Driver, Type? Type, string? Origin)[] supported = new[] {

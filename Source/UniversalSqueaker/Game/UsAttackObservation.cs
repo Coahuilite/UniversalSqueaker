@@ -8,8 +8,8 @@ using UniversalSqueaker.Responses;
 
 namespace UniversalSqueaker;
 
-/// <summary>Explicit 1.6 mechanisms, used only behind the existing process Dev selection.
-/// This support list remains a coverage candidate, not an approved ordinary default.</summary>
+/// <summary>Approved explicit 1.6 execution mechanisms. Ordinary policy or an explicit Dev policy
+/// activates observation; execution is not a hit or an arbitrary Verb-name match.</summary>
 internal static class UsAttackObservation
 {
     private static readonly List<FactDiagnostic> missing = new();
