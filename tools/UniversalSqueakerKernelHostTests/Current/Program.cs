@@ -100,7 +100,13 @@ internal static partial class Program
         internal readonly UiHost Host;
         internal readonly VerseUiExecution Execution;
         internal readonly Fl08PublicObservation.PaintedControlExecution Observation;
-        internal Page(UiHost host, VerseUiExecution? execution = null) { Host = host; Execution = execution ?? new VerseUiExecution(); Observation = new(host, Execution); }
+        private readonly bool traceLayoutWork = Environment.GetEnvironmentVariable("US_TRACE_EXISTING_LAYOUT") == "1";
+        private long loggedTiming;
+        internal Page(UiHost host, VerseUiExecution? execution = null)
+        {
+            Host = host; Execution = execution ?? new VerseUiExecution(); Observation = new(host, Execution);
+            if (traceLayoutWork) { Host.Diagnostics.TimingSampleFrames = 1; Host.Diagnostics.TimingEnabled = true; }
+        }
         internal void Draw(UiLayoutRect viewport, EventType phase = EventType.Repaint, UiLayoutPoint? pointer = null)
         {
             Event? previous = Event.current;
@@ -111,6 +117,21 @@ internal static partial class Program
                 UsKernelSettingsHost.PreparePage(Host, viewport.Size);
                 Host.DrawFrame(viewport, Execution.CaptureFrame(), Observation);
                 NoTrips(Host);
+                if (traceLayoutWork)
+                {
+                    // Observe the existing calls only. Older fixed carriers do not expose work totals.
+                    foreach (var found in Host.Diagnostics.Snapshot())
+                    {
+                        if (found.Sequence <= loggedTiming) continue;
+                        loggedTiming = found.Sequence;
+                        if (found.Kind != UiDiagnosticKind.Timing || !found.Timing.HasValue || found.Timing.Value.Name != "arrange") continue;
+                        var timing = found.Timing.Value;
+                        Console.WriteLine("EXISTING-LAYOUT host=" + Host.Session.Identity + " afterFrame=" + Host.Session.Frame
+                            + " phase=" + phase + " viewport=" + viewport.Width + "x" + viewport.Height
+                            + " samples=" + timing.Samples + " ms=" + timing.TotalMilliseconds.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)
+                            + " " + (found.Reason.Length == 0 ? "work-total=unavailable" : found.Reason));
+                    }
+                }
             }
             finally { Event.current = previous; }
         }

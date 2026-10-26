@@ -1,6 +1,6 @@
 # 使用固定 FL 0.8 构建当前 US
 
-当前联合候选显式配对 FerriteLib `36fa7ad628c529c3e65cc2c24d3cb47bc46c4465`，ProductVersion `0.8.0-local.residualcost1+36fa7ad628c529c3e65cc2c24d3cb47bc46c4465`，配置 Release；继承事件映射、Repeat 与后续等义热路径修复。原已发布 [v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 为 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，历史 f362／6f／2309 本地候选不改签。API0.8.0、AssemblyVersion0.8.0.0、生产 Require 范围 `[0.8.0,0.9.0)` 与 `Private=false` 不变。生产只核 API 范围；完整 SHA 编译收据核对属于 Host runner／stage，不是普通游戏启动门。该输入提供 1.6 adapter，未交付 1.7 adapter；原生性能／视觉、声音和全部十五包装人验仍开放。
+当前增量管线联合候选显式配对 FerriteLib `833c14f4dcfd07daaf81532a3d90701888e75c9e`，ProductVersion `0.8.0-local.incremental4+833c14f4dcfd07daaf81532a3d90701888e75c9e`，配置 Release；继承事件映射、Repeat 与后续热路径修复。`704c4c1 / local.incremental3` 是未放行历史输入，不作最终配对。用户正在体验的 A009 r2（US `68b30e3`／FL `36fa7ad`、`local.residualcost1`）及其包／收据保持独立，不改签为新管线结果。原已发布 [v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 仍为 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，本地候选不改变 CI 的维护者固定输入。API0.8.0、AssemblyVersion0.8.0.0、生产 Require 范围 `[0.8.0,0.9.0)` 与 `Private=false` 不变。生产只核 API 范围；完整 SHA 编译收据核对属于 Host runner／stage，不是普通游戏启动门。该输入提供 1.6 adapter，未交付 1.7 adapter；原生性能／视觉、声音和全部十五包装人验仍开放。
 
 ## 安装运行前置
 
@@ -50,6 +50,10 @@ XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / W
 
 搜索和原即时数值控件保持显式 Live。合格 primary release 请求一次，确认取消零写；已有草稿在隐藏／恢复和外部模型冲突时仍由原 editor 持有。普通 Select／Eat／scope／response 立即发布，并由单一保存 owner 按 0.35 秒 realtime debounce 写盘；真正原子 TryCommit 仍 persist-first，Committed 后的发布修复不重复写文件。详见[公开合同](us-public-contracts-and-help-zh.md)。
 
+固定 `local.incremental4` 将同步验证、候选准备与几何发布串在同一管线；普通 Release 默认使用，不依赖 Dev／诊断页。US 保持原 Host、manifest、getter／legacy Measure 和显式同步调用，不增加 pure／订阅声明前提，也不跳过 Repaint 或原生控件。有效稳态可复用完整结果；定义／成员／尺寸／服务、实际输入、滚动范围及不支持的传播变化仍走必要完整事务，失败与生命周期沿原合同恢复。合法多根页若任一根／子树消费剩余高度，实际增高／缩小时保守返回完整事务，重新分配后根 Fill 预算；idle／等高不触发此保护，不要求作者改单根 XML。
+
+现有 manifest 场景保留原调用序列与断言，用于真实 US Host／嵌入页面的固定输入对照。各次运行证据保留实际载荷身份；旧 `704c4c1` 日志不重标为 `833c14f4` 通过。未观察到的 sparse 候选不以库内小例子代签 US 稀疏修改收益。旧 `36fa` 没有新 `work-total` 字段，不能伪造其 full／copy 前值；该限制与原生日志／FPS 边界分别保留。
+
 ## 当前验证入口与边界
 
 `tools/UniversalSqueakerKernelHostTests` 当前入口为 `--fixed-fl`，或 `--lane=<分组关键词>`，例如 `--lane=preservation`、`--lane=confirmation`、`--lane=proxy`。原有检查迁回的入口为 `--lane=existing`（诊断与R4-B预设）、`--lane=existing-GroupFold`（按原诊断方法筛选）、`--lane=roots`（受改旧根反例）、`--lane=old-v4`（原双语真实页面尺寸检查）。调用时同时显式选择 `FerriteLibArtifactPath` 与已构建的 `UsProductArtifactPath`；`UsProductAlreadyBuilt=true` 避免覆写候选。
@@ -60,8 +64,12 @@ Core、完整十五合同、CoreWork、通知／四回执、稀疏配置、生�
 
 Release 夹具不启用 Dev-only `GeometryEnabled`：既有控件定位读取公开 arranged 节点与 scroll 状态，原生 press/release 仍走同一 `VerseUiExecution`。目录／fallback 的既有夹具仅在同一执行器外记录真实 text paint 和 `PrepareControl` 分配；该记录不是 Dev input-query 矩形／命中快照，也不扩大原生游戏覆盖。并行的文字／矩形／颜色平台记录必须一起重置，不能用错位索引判定产品颜色。
 
+仅需读取既有场景工作摘要时，可为该 runner 进程设置 `US_TRACE_EXISTING_LAYOUT=1`，再使用原 `--lane=manifest` 入口。它只在原 Page.Draw 调用之后输出已有 arrange timing 事件，不增加页面、操作、断言或测量调用。`work-total` 是同 Host/session 累计同步工作，包含原显式 MeasureAndArrange；相邻值作差，不把它当 GUI 帧、分配字节或 FPS。旧载荷无计数时明确输出 unavailable。正常检查与普通玩家运行不自动启用该 trace。
+
 ## 真实 RC 获取与远端 CI 分工
 
 两个 workflow 已移除旧 0.7 固定值，先要求维护者配置 `FERRITELIB_CARRIER_REPOSITORY / FERRITELIB_CARRIER_TAG / FERRITELIB_CARRIER_COMMIT`；空输入在 checkout 前拒绝，源码按完整 commit 获取。既有 acquire 流程仍检查明确 tag 对应的 `FerriteLib-<tag>.zip`、平台 digest、闭集、版本、Release 配置和源码配对，不从默认分支再造 runtime。
 
 实际 `v0.8.0-rc1` 资产已沿该入口下载并完成完整性／Release／源码配对检查。本地以该 Release DLL 跑现有 37 门并标准 stage；本地结果与维护者随后执行的远端 CI、原生及人工验收分开。CI 保留 main，并在 0.6.x push／PR-base 上运行同一 gates job；隐私 workflow 已覆盖所有分支。US 的远端推送、tag 和发布仍由维护者独占。
+
+该 RC 阶段记录不代表本次 `local.incremental4` 跑过完整 37 门。当前已知旧 V4 `Missing content-scroll` 夹具缺口单列保留；本次只运行实际受影响的既有消费者入口，不以其他入口成功覆盖它。
