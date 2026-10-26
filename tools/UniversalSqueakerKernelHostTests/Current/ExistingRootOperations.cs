@@ -229,13 +229,17 @@ internal static partial class Program
     private static void LongAuthorFilterTruncatesTheDisplayOnly()
     {
         const string shortAuthor = "AuthorA";
-        string longAuthor = new string('A', 200); // 1600px raw; the cap at the stub's 1920 screen is 480
+        string longAuthor = new string('A', 200); // 1600px raw, beyond the settings-window display cap
         var stub = new StubMetrics();
         var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { shortAuthor, longAuthor } };
         using UiHost host = UsKernelSettingsHost.Create(fake, stub);
         host.Bindings.Invoke("set-tab", "Packs");
+        // The author control belongs to the initially collapsed advanced filters.
+        host.Bindings.Invoke("voice-filters");
         host.Bindings.Invoke("set-pack-filter", shortAuthor);
-        Rect viewport = new(0f, 0f, 800f, 600f);
+        // Keep the actual full-width trigger below the display cap while leaving room for cap + 12px.
+        // At the stub's default screen: cap=640, trigger=700-24(root padding)-80(label)=596.
+        Rect viewport = new(0f, 0f, 700f, 600f);
         float cap = OptionDisplayCap();
         float rawNeeded = stub.MeasureWidth(longAuthor, UiFont.Small) + 12f;
 
@@ -245,11 +249,11 @@ internal static partial class Program
         SetTranslatorResolver(ReadKeyedTable("English"));
         try
         {
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(800f, 600f)));
+            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
             host.DrawChecked(viewport); // prime the view cache and popup state
             UiFitAudit.Reset();
             reports.Clear();
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(800f, 600f)));
+            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
             host.DrawChecked(viewport);
             Assert(
                 reports.FindAll(r => r.ElementPath.Contains("filter-bar")).Count == 0,
@@ -258,7 +262,7 @@ internal static partial class Program
 
             Rect anchor = new(300f, 200f, 143f, 24f);
             host.Session.OpenPopup("pack-filter", VerseUiExecution.Rect(anchor));
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(800f, 600f)));
+            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
             host.DrawChecked(viewport);
             Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer popupLayer),
                 "the opened pack-filter must publish its popup layer");
@@ -275,7 +279,7 @@ internal static partial class Program
 
             UiFitAudit.Reset();
             reports.Clear();
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(800f, 600f)));
+            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
             host.DrawChecked(viewport); // repaint with the popup open: the row is measured against its band
             Assert(
                 reports.FindAll(r => r.ElementPath.Length == 0 || r.ElementPath.Contains("filter-bar")).Count == 0,
@@ -302,10 +306,10 @@ internal static partial class Program
 
     private static void PopupOverflowReportCarriesElementIdentity()
     {
-        string overCapAuthor = new string('A', 200); // StubMetrics Small: 1600px, twice the pinned 800px cap
+        string overCapAuthor = new string('A', 200); // StubMetrics Small: 1600px, beyond the 640px cap
         int pinnedWidth = Verse.UI.screenWidth;
         int pinnedHeight = Verse.UI.screenHeight;
-        Verse.UI.screenWidth = 4000; // half the settings window hits its 1600 ceiling -> an 800px display cap
+        Verse.UI.screenWidth = 4000; // the current 1280px window ceiling keeps the display cap at 640px
         Verse.UI.screenHeight = 2000;
         try
         {
@@ -313,7 +317,10 @@ internal static partial class Program
             var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { overCapAuthor } };
             using UiHost host = UsKernelSettingsHost.Create(fake, stub);
             host.Bindings.Invoke("set-tab", "Packs");
-            Rect viewport = new(0f, 0f, 800f, 600f);
+            host.Bindings.Invoke("voice-filters");
+            // The current 1280px window ceiling gives a 640px display cap, so a capped row must
+            // overflow this viewport's 588px padded text band; the old 800px viewport no longer did.
+            Rect viewport = new(0f, 0f, 600f, 600f);
 
             var reports = new List<UiOverflowReport>();
             UiFitAudit.Attach(stub, reports.Add);
@@ -321,12 +328,12 @@ internal static partial class Program
             SetTranslatorResolver(ReadKeyedTable("English"));
             try
             {
-                host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(800f, 600f)));
+                host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
                 host.DrawChecked(viewport);
                 host.Session.OpenPopup("pack-filter", VerseUiExecution.Rect(new Rect(300f, 200f, 143f, 24f)));
                 UiFitAudit.Reset();
                 reports.Clear();
-                host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(800f, 600f)));
+                host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
                 host.DrawChecked(viewport);
 
                 Assert(reports.Count > 0, "a popup row wider than the capped popup must be reported at all");
@@ -355,7 +362,8 @@ internal static partial class Program
     private static void PopupWidthFollowsWidestOptionThenViewport()
     {
         Rect anchor = new(300f, 200f, 143f, 24f);
-        Rect viewport = new(0f, 0f, 800f, 600f);
+        // As in the long-author case, the real trigger must leave room for option-driven growth.
+        Rect viewport = new(0f, 0f, 700f, 600f);
         var stub = new StubMetrics();
         float perChar = stub.MeasureWidth("A", UiFont.Small);
         Assert(perChar > 0f, "the stub must measure a character, or every width clause below is vacuous");
@@ -403,15 +411,15 @@ internal static partial class Program
         Assert(overCapWidth < stub.MeasureWidth(overCap, UiFont.Small) + 12f,
             "the popup must not follow the raw over-cap label: " + overCapWidth);
 
-        // Viewport clause. Pin the screen so half the settings window reaches the 800px viewport, which
-        // makes the truncated display wider than the popup's own 788px text band (800 - 6px per side) and
-        // drives the viewport clamp. The carrier's UI stub is the documented surface for exactly this pin.
+        // Viewport clause. The window's current 1280px ceiling caps display at 640px even on a large
+        // screen. Use a 600px viewport to exercise the same clamp rather than the old 800px assumption.
         int pinnedWidth = Verse.UI.screenWidth;
         int pinnedHeight = Verse.UI.screenHeight;
         try
         {
-            Verse.UI.screenWidth = 4000; // 0.5 * the screen width hits the 1600px ceiling -> a 800px cap
+            Verse.UI.screenWidth = 4000;
             Verse.UI.screenHeight = 2000;
+            viewport.width = 600f;
             float viewportCap = OptionDisplayCap();
             Assert(viewportCap >= viewport.width,
                 "the viewport clause needs the truncation cap at or above the viewport: " + viewportCap);
@@ -623,6 +631,7 @@ internal static partial class Program
         var fake = new RecordingSettingsSource { RichData = true, Authors = authors };
         using UiHost host = UsKernelSettingsHost.Create(fake, stub);
         host.Bindings.Invoke("set-tab", "Packs");
+        host.Bindings.Invoke("voice-filters");
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(viewport.width, viewport.height)));
         host.DrawChecked(viewport); // prime the view cache before the popup opens
         host.Session.OpenPopup("pack-filter", VerseUiExecution.Rect(anchor));
