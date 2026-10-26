@@ -191,6 +191,7 @@ public sealed class ActionPlan
     public readonly string BaseAction;
     public readonly Condition Condition;
     public readonly long Interval;
+    public readonly double InteractionIntervalSeconds;
     public readonly bool CheckShared;
     public readonly bool WriteShared;
     public readonly double Chance;
@@ -203,12 +204,14 @@ public sealed class ActionPlan
     public readonly BehaviorScope Scope;
     public ActionPlan(string key, int priority, Condition condition, long interval, bool checkShared = true, bool writeShared = true, double chance = 1, string? baseAction = null,
         bool skipTalking = true, double volume = 1, double pitch = 1, bool sustained = false, bool requiresVocal = false, string? subjectRole = null,
-        BehaviorScope scope = BehaviorScope.AnyOccurrence)
+        BehaviorScope scope = BehaviorScope.AnyOccurrence, double interactionIntervalSeconds = 0)
     {
         if (interval < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(interval));
         }
+        if (double.IsNaN(interactionIntervalSeconds) || double.IsInfinity(interactionIntervalSeconds) || interactionIntervalSeconds < 0)
+            throw new ArgumentOutOfRangeException(nameof(interactionIntervalSeconds));
 
         if (double.IsNaN(chance) || chance < 0 || chance > 1)
         {
@@ -223,6 +226,7 @@ public sealed class ActionPlan
         Priority = priority;
         Condition = condition;
         Interval = interval;
+        InteractionIntervalSeconds = interactionIntervalSeconds;
         CheckShared = checkShared;
         WriteShared = writeShared;
         Chance = chance;
@@ -261,6 +265,9 @@ public sealed class StatePolicy
 public sealed class DecisionState
 {
     private readonly Dictionary<string, long> deadlines = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, double> interactionDeadlines = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, long> consumedOperations = new(StringComparer.Ordinal);
+    public string LastGate { get; internal set; } = "";
     public long SharedDeadline { get; internal set; }
     public long NextStateTick { get; internal set; }
     public long AttemptTick { get; internal set; } = long.MinValue;
@@ -268,10 +275,22 @@ public sealed class DecisionState
     public string ConfirmedAction { get; internal set; } = "";
 
     public long ActionDeadline(string key) => deadlines.TryGetValue(key, out var value) ? value : long.MinValue;
+    public double InteractionDeadline(string key) => interactionDeadlines.TryGetValue(key, out var value) ? value : double.NegativeInfinity;
+    internal bool Consume(InteractionOpportunity opportunity)
+    {
+        if (consumedOperations.TryGetValue(opportunity.EventFact, out long previous) && opportunity.OperationId <= previous) return false;
+        consumedOperations[opportunity.EventFact] = opportunity.OperationId;
+        return true;
+    }
     internal void Protect(ActionPlan action, DecisionInput input, StatePolicy policy)
     {
         long now = input.Tick;
-        deadlines[action.Key] = TickDeadline.Add(now, action.Interval);
+        if (input.Interaction is InteractionOpportunity opportunity)
+        {
+            double seconds = input.InteractionIntervals.TryGetValue(action.Key, out double configured) ? configured : action.InteractionIntervalSeconds;
+            interactionDeadlines[action.Key] = opportunity.MonotonicSeconds > double.MaxValue - seconds ? double.MaxValue : opportunity.MonotonicSeconds + seconds;
+        }
+        else deadlines[action.Key] = TickDeadline.Add(now, action.Interval);
         if (action.WriteShared)
         {
             SharedDeadline = Math.Max(SharedDeadline, TickDeadline.Add(now, policy.SharedInterval));
@@ -387,6 +406,9 @@ public sealed class DecisionInput
     public string SubjectRole = "Subject";
     public long Tick;
     public bool StateOpportunity;
+    public InteractionOpportunity? Interaction;
+    public string EventFact = "";
+    public IReadOnlyDictionary<string, double> InteractionIntervals = new Dictionary<string, double>();
     public bool Eligible = true;
     public ISet<string> BlockedActions = new HashSet<string>(StringComparer.Ordinal);
     public IDictionary<string, string> BlockedActionReasons = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -426,6 +448,7 @@ public sealed class ResponseDecision
 {
     public DecisionOutcome Run(DecisionState state, StatePolicy policy, DecisionInput input, IResponseRandom random, IResponseOutput backend)
     {
+        state.LastGate = "";
         if (input.StateOpportunity && input.Tick < state.NextStateTick)
         {
             return new DecisionOutcome("", "NotDue");
@@ -442,6 +465,24 @@ public sealed class ResponseDecision
             return Stop(state, policy, input, "", "InvalidIdentity");
         }
 
+        bool interaction = input.Interaction.HasValue;
+        if (input.StateOpportunity && input.EventFact != "")
+            return Stop(state, policy, input, "", "StateOpportunityCannotCarryEventFact");
+        if (!interaction && (input.Facts.Read("us.core/SelectEvent") == Truth.True
+            || input.Facts.Read("us.core/DraftEvent") == Truth.True || input.Facts.Read("us.core/UndraftEvent") == Truth.True))
+            return Stop(state, policy, input, "", "AcceptedInteractionRequired:UpdateResponseOpportunity");
+        if (!input.StateOpportunity && string.IsNullOrWhiteSpace(input.EventFact))
+            return Stop(state, policy, input, "", "EventFactRequired:UpdateResponseOpportunity");
+        if (!interaction && InteractionOpportunity.IsOfficialInteractionFact(input.EventFact))
+            return Stop(state, policy, input, "", "AcceptedInteractionRequired:UpdateResponseOpportunity");
+        if (input.Interaction is InteractionOpportunity opportunity)
+        {
+            if (input.StateOpportunity || input.EventFact != opportunity.EventFact || string.IsNullOrWhiteSpace(opportunity.EventFact) || opportunity.OperationId <= 0
+                || double.IsNaN(opportunity.MonotonicSeconds) || double.IsInfinity(opportunity.MonotonicSeconds) || opportunity.MonotonicSeconds < 0)
+                return Stop(state, policy, input, "", "InvalidInteractionOpportunity");
+            // Consume before conditions/random/backend: recursion and delayed older roots cannot replay.
+            if (!state.Consume(opportunity)) return Stop(state, policy, input, "", "InteractionConsumedOrStale");
+        }
         if (!input.Eligible)
         {
             return Stop(state, policy, input, "", "Ineligible");
@@ -452,7 +493,7 @@ public sealed class ResponseDecision
             return Stop(state, policy, input, "", "InvalidSoftRhythm");
         }
 
-        if (state.AttemptTick == input.Tick)
+        if (!interaction && state.AttemptTick == input.Tick)
         {
             return Stop(state, policy, input, "", "TickOccupied");
         }
@@ -464,13 +505,13 @@ public sealed class ResponseDecision
         }
         if (input.BlockedActions.Contains(action.Key))
         {
-            state.AttemptTick = input.Tick;
+            if (!interaction) state.AttemptTick = input.Tick;
             string reason = input.BlockedActionReasons.TryGetValue(action.Key, out var detail) ? detail : "ActionOrScopeRejected";
             return Stop(state, policy, input, action.Key, reason, diagnostics);
         }
         if (action.RequiresVocal && !input.HasVocalOrgans)
         {
-            state.AttemptTick = input.Tick;
+            if (!interaction) state.AttemptTick = input.Tick;
             return Stop(state, policy, input, action.Key, "NoVocalOrgans", diagnostics);
         }
         if (action.Sustained && action.Key == input.ActiveSustainedKey)
@@ -481,12 +522,18 @@ public sealed class ResponseDecision
         }
 
         // Only a new attempt reserves this tick; maintenance still requires current authorization.
-        state.AttemptTick = input.Tick;
+        if (!interaction) state.AttemptTick = input.Tick;
 
-        if (input.Tick < state.ActionDeadline(action.Key) || (action.CheckShared && input.Tick < state.SharedDeadline))
+        if (!interaction && (input.Tick < state.ActionDeadline(action.Key) || action.CheckShared && input.Tick < state.SharedDeadline))
         {
+            state.LastGate = input.Tick < state.ActionDeadline(action.Key) ? "OwnGameTickInterval" : "SharedGameTickInterval";
             return Stop(state, policy, input, action.Key, "HardDeadline", diagnostics);
         }
+        if (interaction && input.InteractionIntervals.TryGetValue(action.Key, out double seconds)
+            && (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0))
+            return Stop(state, policy, input, action.Key, "InteractionClockRequiredOrInvalidInterval", diagnostics);
+        if (input.Interaction is InteractionOpportunity clock && clock.MonotonicSeconds < state.InteractionDeadline(action.Key))
+            return Stop(state, policy, input, action.Key, "InteractionDeadline", diagnostics);
 
         bool enteredBackend = false;
         try
@@ -538,6 +585,7 @@ public sealed class ResponseDecision
         diagnostics = failures.AsReadOnly();
         foreach (var action in input.Actions.OrderByDescending(x => x.Priority).ThenBy(x => x.Key, StringComparer.Ordinal))
         {
+            if (!input.StateOpportunity && !action.Condition.RequiredFacts().Contains(input.EventFact, StringComparer.Ordinal)) continue;
             Truth result;
             try
             {

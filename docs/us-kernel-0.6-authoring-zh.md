@@ -1,5 +1,7 @@
 # 为0.6 r2制作声音包与扩展
 
+当前响应时钟／必需机会事实、混合消费者及旧字段拒绝以[显式机会合同](response-opportunities-0.6-zh.md)为准；普通交互仅真实秒，模拟仅游戏tick，不保legacy或附加tick门。发布前破坏性更新持续至用户明确确认面向玩家公开发布（US06-PREPUBLICATION-COMPAT-20261019 r4），不由GitHub可见／push／tag终止。
+
 先准备普通 SoundDef，再把完整动作ID映射到该声音。声音引用只写真实 defName；US 在定义就绪后绑定最终资源对象与实际提供者，不要求作者填写或伪造 AudioId owner。
 
 ```xml

@@ -41,7 +41,7 @@ internal static class Program
         Check(actions.Length == 1 && actions[0].Condition.RequiredFacts().GetEnumerator().MoveNext(), "declared action retains its fixed notification condition");
         DecisionInput Input(long tick, string domain = "RaceA") => new()
         {
-            Subject = "stable-subject", Domain = domain, Tick = tick, Actions = actions,
+            Subject = "stable-subject", Domain = domain, Tick = tick, EventFact = contract.FactId, Actions = actions,
             Facts = catalog.Capture("stable-subject", new Dictionary<string, Truth> { [contract.FactId] = Truth.True }),
             AudioCatalog = new UniversalSqueaker.Kernel.AudioCatalog(new[] { new AudioCandidate("example/entry", "example/audio", contract.ActionId, domain, 1) })
         };
@@ -127,22 +127,26 @@ internal static class Program
             foreach (string fact in action.Condition.RequiredFacts()) values[fact] = Truth.True;
             values["us.core/PlayerControlled"] = values["us.core/Awake"] = values["us.core/NotDowned"] = values["us.core/PlayerEquipCommand"] = Truth.True;
             var frame = new ResponseFrame { Subject = owner.Subject, Domain = new BehaviorDomain("Pawn", "", "RaceA"), Tick = tick,
-                StateOpportunity = true, ActiveCommand = true, Facts = new FactSnapshot(values),
+                StateOpportunity = !BuiltInPawnContracts.IsEvent(action.Key),
+                EventFact = BuiltInPawnContracts.IsEvent(action.Key) ? BuiltInPawnContracts.FactKey(action.Key) : "",
+                Interaction = UsResponsePolicy.IsOfficialInteraction(action.Key)
+                    ? new InteractionOpportunity(BuiltInPawnContracts.FactKey(action.Key), tick, tick / 60d) : null,
+                ActiveCommand = true, Facts = new FactSnapshot(values),
                 AvailableFacts = new HashSet<string>(definitions.FactKeys, StringComparer.Ordinal), SoundGate = new Gate() };
             var outcome = owner.Respond(new RuntimeView(definitions, configuration, audio), frame, policy, output, output);
             Check(outcome.Action == action.Key && outcome.Receipt?.Result == PlaybackResult.Dispatched, "full neutral fold/choice/settlement " + action.Key);
             Check(output.LastRequest?.SubjectRole == action.SubjectRole && output.LastRequest?.Audio.Action == action.Key,
                 "exact request role/audio identity " + action.Key);
-            Check(owner.EffectiveActions.Count == 15, "bounded current-subject fold contains all fifteen, not a persistent Pawn/action/domain matrix " + action.Key);
+            Check(owner.EffectiveActions.Count == (frame.StateOpportunity ? 15 : 1), "bounded current opportunity fold contains only explicit event consumers or the state candidates " + action.Key);
             tick = owner.State.NextStateTick;
         }
-        var relaxed = new BehaviorValues { SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false, HardIntervalTicks = 0, Volume = 0 };
+        var relaxed = new BehaviorValues { SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false, InteractionIntervalSeconds = 0, Volume = 0 };
         var configured = new BehaviorConfiguration("", new[] { new BehaviorPlayerOverride("Pawn", "", "RaceA", "", CoreActions.Select, relaxed) }, true, 1, 1);
         var select = Array.Find(definitions.Actions, x => x.Key == CoreActions.Select)!;
         var effective = configured.Resolve(new BehaviorDomain("Pawn", "", "RaceA"), select.Key, BehaviorContract.Defaults(select, policy), definitions.BehaviorSources,
             _ => true, select.Condition.RequiredFacts());
         var read = effective.Read();
-        Check(read.Volume == 0 && read.HardIntervalTicks == 0 && read.SelectRequireAwake == false, "sparse false/zero survive new configuration fold");
+        Check(read.Volume == 0 && read.InteractionIntervalSeconds == 0 && read.SelectRequireAwake == false, "sparse false/zero survive new configuration fold");
         Check(BehaviorContract.EffectiveCondition(select, read).Evaluate(new FactSnapshot(new Dictionary<string, Truth> { ["us.core/SelectEvent"] = Truth.Unknown })) == Truth.Unknown,
             "relaxed optional Pawn qualifications cannot cancel fixed Select acceptance/feedback fact");
         var layered = new BehaviorConfiguration("", new[] {

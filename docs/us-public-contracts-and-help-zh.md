@@ -1,5 +1,7 @@
 # 输入被处理、文件已提交、声音已派发，是三件事
 
+当前响应时钟／必需机会事实、混合消费者及旧字段拒绝以[显式机会合同](response-opportunities-0.6-zh.md)为准；普通交互仅真实秒，模拟仅游戏tick，不保legacy或附加tick门。发布前破坏性更新持续至用户明确确认面向玩家公开发布（US06-PREPUBLICATION-COMPAT-20261019 r4），不由GitHub可见／push／tag终止。
+
 通知一次实际完成的工作时，使用已经声明的合同：
 
 ```csharp
@@ -63,6 +65,6 @@ US的统一底部面板保留当前话题与section概述，流程为：
 | `SectionHelpKeyOf`／`SectionHelpKey`／`help-section-key` | `SectionHelpRefOf`／`SectionHelpRef`／`help-section-ref` |
 | Resolve的`helpHoverKey` | `currentHelpRef`；包括session的有效grace，不是本帧原始命中 |
 
-本包实际消费固定 FL **7eb8073 final**。XML／API 已迁至 `HelpRef / CurrentHelpRef / CurrentHelpSource / PublishHelp / HelpGracePasses / BeginHelpPass / ActiveTabBind` 与真实 binding 的 `*Bind` 后缀。`UiChoice<T>.HelpRef` 为空时不发布专属帮助；统一面板直接读 session，不要求可选 `HoveredOptionHelpOutputBind`。注册仍由 `UiBindings` 完成，访问／代理使用完整 `IUiBindingAccess`。新中立执行器、typed choices、项地址和生命周期用法见[固定消费者导读](fl08-consumer-migration-zh.md)，不保旧签名双轨。
+当前固定输入为 FL **833c14f4 / local.incremental4**；下列public API迁移起于原7eb8073阶段，现继续沿用。XML／API 已迁至 `HelpRef / CurrentHelpRef / CurrentHelpSource / PublishHelp / HelpGracePasses / BeginHelpPass / ActiveTabBind` 与真实 binding 的 `*Bind` 后缀。`UiChoice<T>.HelpRef` 为空时不发布专属帮助；统一面板直接读 session，不要求可选 `HoveredOptionHelpOutputBind`。注册仍由 `UiBindings` 完成，访问／代理使用完整 `IUiBindingAccess`。新中立执行器、typed choices、项地址和生命周期用法见[固定消费者导读](fl08-consumer-migration-zh.md)，不保旧签名双轨。
 
 这些更正不改变全部15合同、CoreWork清单、已裁Select／Eat参数、单主体owner或同步四回执；普通政策、真实Config/Scribe、原生图像／声音和逐包双人工关口保持原状态。

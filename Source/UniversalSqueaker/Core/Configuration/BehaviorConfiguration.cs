@@ -119,6 +119,7 @@ public sealed class BehaviorConfiguration
             // Fill absent fields only after every sparse contribution has been folded.
             var completed = defaults.Copy(); completed.Overlay(result); result = completed;
             foreach (string key in defaults.PresentKeys()) if (!origins.ContainsKey(key)) origins[key] = "package:" + action;
+            if (result.UnsupportedTiming != "") throw new ArgumentException(result.UnsupportedTiming);
             if (!result.Valid || !result.ApplicableTo(family)) throw new ArgumentException("InvalidEffectiveBehavior");
             if (result.Phase == EatPhase.Execution) dependencies.Add(EatPolicy.Execution);
             if (result.NutritionScope.HasValue && result.NutritionScope != EatNutritionScope.Any) dependencies.Add(EatPolicy.Nutrition);

@@ -21,7 +21,7 @@ internal static partial class Program
             Id = id, Domain = domain, Contributions = new List<BehaviorContribution>
             {
                 new() { Action = ordinary, Values = new BehaviorValues { Enabled = true, Volume = volume } },
-                new() { Action = child, Values = new BehaviorValues { Enabled = true, Volume = .25, HardIntervalTicks = 50 } }
+                new() { Action = child, Values = new BehaviorValues { Enabled = true, Volume = .25, InteractionIntervalSeconds = 50 } }
             }
         };
         var sources = new[] { Source("author/Pawn", race, 0), Source("author/Armor", armor, 7), Source("author/Bench", bench, 9) };
@@ -48,9 +48,9 @@ internal static partial class Program
             var plain = loaded.ResolveBehaviorSource(race, ordinary, missing, _ => true, out bool paused);
             var injured = loaded.ResolveBehaviorSource(race, child, missing, _ => true, out _);
             Check(!paused && plain.Enabled == true && plain.Scope == BehaviorScope.Disabled && plain.Volume == 0 && injured.Enabled == true
-                && injured.Volume == .25 && injured.HardIntervalTicks == 50 && injured.AgeEnabled == false
+                && injured.Volume == .25 && injured.InteractionIntervalSeconds == 50 && injured.AgeEnabled == false
                 && injured.ResponseParameters["age.overrideVolume"] == 0,
-                "DA actual Scribe reload preserves separate full actions, author snapshot and player false/zero", ref failures);
+                "DA production settings/Scribe-double reload preserves separate full actions, author snapshot and player false/zero", ref failures);
             var configuration = loaded.CaptureBehaviorConfiguration();
             Check(!UniversalSqueaker.Responses.BehaviorContract.Authorized(configuration,
                     configuration.Resolve(race, ordinary, new BehaviorValues(), missing, _ => true), plain,

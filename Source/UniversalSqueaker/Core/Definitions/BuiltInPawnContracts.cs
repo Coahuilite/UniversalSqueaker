@@ -61,7 +61,8 @@ public static class BuiltInPawnContracts
             }
             int priority = fullDevCandidate ? CandidateOrder.Count - i : key == CoreActions.Wounded ? 30 : key == CoreActions.Work ? 20 : 0;
             yield return new ActionPlan(key, priority, new Condition("ref", FactKey(key)),
-                key == CoreActions.Wounded ? woundedInterval : interval, skipTalking: key == CoreActions.Death || key == CoreActions.Select,
+                key == CoreActions.Select || key == CoreActions.Draft || key == CoreActions.Undraft ? 0
+                    : key == CoreActions.Wounded ? woundedInterval : interval, skipTalking: key == CoreActions.Death || key == CoreActions.Select,
                 requiresVocal: key != CoreActions.Select, subjectRole: Role(key),
                 scope: DefaultScope(key));
         }

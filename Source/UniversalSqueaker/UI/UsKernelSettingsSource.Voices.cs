@@ -9,10 +9,22 @@ namespace UniversalSqueaker.UI;
 public sealed partial class UsKernelSettingsSource
 {
     public string RowDiagnostic { get; private set; } = "";
+    public string EffectiveInterval(string action, string race, string child, bool interaction, IUiTranslation t)
+    {
+        var effective = SqueakerRuntime.Explain(settings.CaptureBehaviorConfiguration(), action, race, child);
+        var values = effective.Read();
+        string field = interaction ? "interactionIntervalSeconds" : "simulationIntervalTicks";
+        string number = interaction ? (values.InteractionIntervalSeconds ?? 0).ToString("R", CultureInfo.InvariantCulture)
+            : (values.SimulationIntervalTicks ?? 0).ToString(CultureInfo.InvariantCulture);
+        return t.Translate(interaction ? "US.UI.Field.interaction-seconds" : "US.UI.Field.interval") + ": " + number
+            + " · " + (effective.Origins.TryGetValue(field, out string origin) ? origin : "package:" + action)
+            + (effective.Paused ? "\n" + effective.Failure : "");
+    }
     public string ReadActionField(string field, string action, string race, string child)
     {
         var value = settings.ReadPlayerActionOverride(action, race, child);
-        object? result = field switch { "enabled" => value.Enabled, "interval" => value.HardIntervalTicks,
+        object? result = field switch { "enabled" => value.Enabled, "interval" => value.SimulationIntervalTicks,
+            "interaction-seconds" => value.InteractionIntervalSeconds,
             "volume" => value.Volume, "pitch" => value.Pitch, "talking" => value.TalkingEnabled,
             "age" => value.AgeEnabled, "mood" => value.MoodEnabled, _ => null };
         return result is IFormattable number ? number.ToString(null, CultureInfo.InvariantCulture) : result?.ToString() ?? "";
@@ -32,14 +44,15 @@ public sealed partial class UsKernelSettingsSource
         if (text != "")
         {
             if (field == "interval") { valid = long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed); ticks = parsed; }
-            else if (field == "volume" || field == "pitch") { valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed); scalar = parsed; }
+            else if (field == "volume" || field == "pitch" || field == "interaction-seconds") { valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed); scalar = parsed; }
             else { valid = bool.TryParse(text, out bool parsed); boolean = parsed; }
         }
         if (!valid) { RowDiagnostic = "US.UI.RowInvalid"; return; }
         switch (field)
         {
             case "enabled": value.Enabled = boolean; break;
-            case "interval": value.HardIntervalTicks = ticks; break;
+            case "interval": value.SimulationIntervalTicks = ticks; break;
+            case "interaction-seconds": value.InteractionIntervalSeconds = scalar; break;
             case "volume": value.Volume = scalar; break;
             case "pitch": value.Pitch = scalar; break;
             case "talking": value.TalkingEnabled = boolean; break;

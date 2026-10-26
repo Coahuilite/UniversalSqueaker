@@ -195,8 +195,16 @@ public partial class CompSqueaker : ThingComp
         return new SqueakDiagnosticSnapshot(SqueakerRuntime.Observe(Pawn), SampleVocalCapability(), lastEvaluation, lastSignificantOutcome, lastDispatched, SqueakerRuntime.DiagnosticText(Pawn));
     }
 
+    private int responseDiagnosticBudget = 64;
     internal void RecordKernelOutcome(Responses.DecisionOutcome outcome, SoundDef? sound, Responses.PlaybackRequest? request)
     {
+        if (SqueakLog.Mode != SqueakDevLoggingMode.Enabled) responseDiagnosticBudget = 64;
+        else if (responseDiagnosticBudget > 0)
+        {
+            responseDiagnosticBudget--;
+            Log.Message("usdiag response " + SqueakerRuntime.DiagnosticText(Pawn)
+                + (responseDiagnosticBudget == 0 ? " diagnosticBudget=exhausted" : ""));
+        }
         var mapped = outcome.Receipt?.Result == Responses.PlaybackResult.Dispatched
             ? SqueakTriggerOutcome.Dispatched : SqueakTriggerOutcome.EligibilityRejected;
         var source = request?.Audio.SourceTier switch

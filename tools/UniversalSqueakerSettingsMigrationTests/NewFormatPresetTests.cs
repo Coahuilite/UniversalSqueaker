@@ -40,10 +40,10 @@ internal static partial class Program
                 "short action spelling is not another internal identity", ref failures);
 
             var doc = new XmlDocument();
-            doc.LoadXml("<li key='us.core/Work' enabled='false' volume='0' hardIntervalTicks='0'><parameter key='mood.low' value='0'/><participation key='us.core/Age' apply='false'/></li>");
+            doc.LoadXml("<li key='us.core/Work' enabled='false' volume='0' simulationIntervalTicks='0'><parameter key='mood.low' value='0'/><participation key='us.core/Age' apply='false'/></li>");
             var parsed = new PresetActionValues(); parsed.LoadDataFromXmlCustom(doc.DocumentElement!);
             Check(parsed.ActionId == CoreActions.Work && parsed.Values.Enabled == false && parsed.Values.Volume == 0
-                && parsed.Values.HardIntervalTicks == 0 && parsed.Values.Scope == null && !parsed.Values.Participation["us.core/Age"],
+                && parsed.Values.SimulationIntervalTicks == 0 && parsed.Values.Scope == null && !parsed.Values.Participation["us.core/Age"],
                 "template XML uses the current source value grammar with false/zero/absence/participation", ref failures);
             var preset = new UsBehaviorPresetDef { defName = "TemplateA", races = new List<PresetRaceEntry>
             {
@@ -63,7 +63,7 @@ internal static partial class Program
             selection.XenotypeDomainKeys.Add(BehaviorPresetImporter.XenotypeDomainKey("R1", "SharedX"));
             var imported = settings.ImportBaselinePreset(preset, selection);
             var own = settings.ReadPlayerActionOverride(CoreActions.Work, "R1", "SharedX");
-            Check(imported.ActionsImported == 1 && own.Enabled == false && own.Volume == 0 && own.HardIntervalTicks == 0
+            Check(imported.ActionsImported == 1 && own.Enabled == false && own.Volume == 0 && own.SimulationIntervalTicks == 0
                 && own.Pitch == 2 && own.TalkingEnabled == false && own.Scope == null,
                 "explicit incremental import overlays only template-present fields over the exact player's current row", ref failures);
             Check(settings.behaviorSourcesXml == authorBytes && settings.ReadPlayerActionOverride(CoreActions.Work, "R2", "SharedX").Volume == null

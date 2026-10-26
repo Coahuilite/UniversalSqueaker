@@ -23,9 +23,10 @@ public sealed class ResponseFrame
     public BehaviorDomain Domain = null!;
     public long Tick;
     public bool StateOpportunity;
+    public InteractionOpportunity? Interaction;
+    public string EventFact = "";
     public string SubjectRole = "Subject";
     public string? ActionFilter;
-    public bool IngestionResultOpportunity;
     public bool Eligible = true;
     public bool ActiveCommand;
     public bool HasVocalOrgans = true;
@@ -55,7 +56,8 @@ public static class BehaviorContract
     public static BehaviorValues DeclaredDefaults(ActionPlan action) => new()
     {
         Scope = action.Scope, Enabled = true,
-        HardIntervalTicks = BuiltInActionKeys.Contains(action.Key) ? null : action.Interval,
+        SimulationIntervalTicks = BuiltInActionKeys.Contains(action.Key) ? null : action.Interval,
+        InteractionIntervalSeconds = BuiltInActionKeys.Contains(action.Key) ? null : action.InteractionIntervalSeconds,
         TalkingEnabled = !action.SkipTalking, Volume = 1, Pitch = 1,
         Phase = UsesEat(action.Condition) ? EatPhase.WholeProcess : null,
         NutritionScope = UsesEat(action.Condition) ? EatNutritionScope.Any : null,
@@ -67,11 +69,20 @@ public static class BehaviorContract
     public static BehaviorValues Defaults(ActionPlan action, UsDevelopmentPolicy policy)
         => policy.RuntimePolicy.Defaults(action);
     public static BehaviorValues Defaults(ActionPlan action, UsResponsePolicy policy) => policy.Defaults(action);
+    public static string InvalidTimingUnit(string action, BehaviorValues behavior)
+        => UsResponsePolicy.IsOfficialInteraction(action) && behavior.SimulationIntervalTicks.HasValue
+            ? "InteractionUsesRealSeconds:RemoveSimulationIntervalTicks:" + action
+            : BuiltInActionKeys.Contains(action) && !UsResponsePolicy.IsOfficialInteraction(action) && behavior.InteractionIntervalSeconds.HasValue
+                ? "SimulationUsesGameTicks:RemoveInteractionIntervalSeconds:" + action : "";
     public static string InvalidParameters(ActionPlan action, BehaviorValues behavior)
-        => !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue)
+    {
+        string timing = InvalidTimingUnit(action.Key, behavior);
+        if (timing != "") return timing;
+        return !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue)
             ? "EatParametersRequireIngestionContract"
             : !SelectConditions.UsesSelection(action.Condition) && SelectPolicy.HasParameters(behavior)
                 ? "SelectParametersRequireSelectionContract" : "";
+    }
     public static bool Authorized(BehaviorConfiguration configuration, EffectiveBehavior effective, BehaviorValues behavior, ResponseFrame frame)
         => configuration.SystemEnabled && !effective.Paused && behavior.Enabled != false && behavior.Scope != BehaviorScope.Disabled
             && (behavior.Scope != BehaviorScope.ActiveCommand || frame.ActiveCommand && frame.Facts.Read("us.core/PlayerControlled") == Truth.True);

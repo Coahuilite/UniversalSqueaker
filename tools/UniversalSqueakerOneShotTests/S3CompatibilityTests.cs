@@ -14,7 +14,7 @@ internal static partial class Program
         if (!definitions.DeclareNotification(contract)) throw new Exception("declaration rejected");
         return new DecisionInput
         {
-            Subject = "p1", Domain = "Ratkin", Tick = tick,
+            Subject = "p1", Domain = "Ratkin", Tick = tick, EventFact = contract.FactId,
             Actions = System.Array.FindAll(definitions.Actions, x => x.Key == key),
             Facts = definitions.Capture("p1", new Dictionary<string, Truth> { [contract.FactId] = Truth.True }),
             AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("external", "audio/External", key, "Ratkin", 1) })};
@@ -31,8 +31,7 @@ internal static partial class Program
             {
                 var state = new DecisionState(1000);
                 var driver = new Driver { Result = receipt };
-                var registered = Input();
-                registered.StateOpportunity = false;
+                var registered = Input(state: false);
                 var external = DeclaredNotificationInput(1000);
                 var first = engine.Run(state, policy, externalFirst ? external : registered, driver, driver);
                 var second = engine.Run(state, policy, externalFirst ? registered : external, driver, driver);
@@ -43,8 +42,7 @@ internal static partial class Program
         var shared = new DecisionState(1000);
         var d = new Driver();
         engine.Run(shared, policy, DeclaredNotificationInput(1000), d, d);
-        var nextRegistered = Input(1001);
-        nextRegistered.StateOpportunity = false;
+        var nextRegistered = Input(1001, state: false);
         Check(engine.Run(shared, policy, nextRegistered, d, d).Reason == "HardDeadline" && d.Calls == 1,
             "S4 declared notification writes the same candidate hard protection as registered events");
         Check(engine.Run(shared, policy, DeclaredNotificationInput(1119), d, d).Reason == "HardDeadline" && d.Calls == 1,
@@ -53,8 +51,7 @@ internal static partial class Program
             "S4 exact public-string tick boundary re-enters one owner, no tick-to-seconds estimate");
         var reverse = new DecisionState(1000);
         var r = new Driver();
-        var registeredFirst = Input();
-        registeredFirst.StateOpportunity = false;
+        var registeredFirst = Input(state: false);
         engine.Run(reverse, policy, registeredFirst, r, r);
         Check(engine.Run(reverse, policy, DeclaredNotificationInput(1001), r, r).Reason == "HardDeadline" && r.Calls == 1,
             "S4 registered shared hard protection covers valid declared notifications");

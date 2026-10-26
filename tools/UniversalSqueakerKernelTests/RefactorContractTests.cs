@@ -44,14 +44,14 @@ public static partial class UnitTests
     {
         var domain = new BehaviorDomain("Pawn", "", "RaceA", "X");
         var rows = new[] {
-            new BehaviorPlayerOverride("Pawn", "", "", "", CoreActions.Call, new BehaviorValues { Scope = BehaviorScope.Disabled, Volume = 0, HardIntervalTicks = 300 }),
+            new BehaviorPlayerOverride("Pawn", "", "", "", CoreActions.Call, new BehaviorValues { Scope = BehaviorScope.Disabled, Volume = 0, SimulationIntervalTicks = 300 }),
             new BehaviorPlayerOverride("Pawn", "", "RaceA", "", CoreActions.Call, new BehaviorValues { Pitch = 2 }),
             new BehaviorPlayerOverride("Pawn", "", "RaceA", "X", CoreActions.Call, new BehaviorValues { Scope = BehaviorScope.AnyOccurrence }),
             new BehaviorPlayerOverride("Pawn", "", "RaceA", "X", CoreActions.Call, new BehaviorValues()) };
         var empty = new BehaviorSourceDirectory(Array.Empty<BehaviorSource>());
         var configuration = new BehaviorConfiguration("", rows, true, 1, 1);
         var value = configuration.Resolve(domain, CoreActions.Call, new BehaviorValues { Enabled = true }, empty, _ => true).Read();
-        Check(value.Scope == BehaviorScope.AnyOccurrence && value.Volume == 0 && value.HardIntervalTicks == 300 && value.Pitch == 2,
+        Check(value.Scope == BehaviorScope.AnyOccurrence && value.Volume == 0 && value.SimulationIntervalTicks == 300 && value.Pitch == 2,
             "same sparse authority folds profile/race/child field-wise; empty row is identity and zero remains present", ref failures);
         Check(configuration.Resolve(new BehaviorDomain("Pawn", "", "Other", "X"), CoreActions.Call, new BehaviorValues(), empty, _ => true).Read().Pitch == null,
             "same child name in another race cannot borrow the local response field", ref failures);

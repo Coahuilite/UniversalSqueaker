@@ -25,7 +25,11 @@ public class ActionTuningRecord : IExposable
     public List<ResponseTuningValue> responses = new();
     public List<ResponseParameterValue> responseParameters = new();
     public bool hasEnabled, enabled = true;
-    public bool hasHardIntervalTicks; public long hardIntervalTicks;
+    public bool hasSimulationIntervalTicks; public long simulationIntervalTicks;
+    private bool unsupportedLegacyTicks;
+    private long retainedLegacyTicks;
+    internal bool HasUnsupportedTiming => unsupportedLegacyTicks;
+    public bool hasInteractionIntervalSeconds; public double interactionIntervalSeconds;
     public bool hasTalkingEnabled, talkingEnabled;
     public bool hasVolume; public double volume = 1;
     public bool hasPitch; public double pitch = 1;
@@ -35,12 +39,15 @@ public class ActionTuningRecord : IExposable
     public bool hasSelectRequirePlayerControlled, selectRequirePlayerControlled = true;
     public bool hasSelectRequireAwake, selectRequireAwake = true;
     public bool hasSelectRequireNotDowned, selectRequireNotDowned = true;
-    public bool CarriesBehaviorFields => hasEnabled || hasHardIntervalTicks || hasTalkingEnabled || hasVolume || hasPitch
+    public bool CarriesBehaviorFields => unsupportedLegacyTicks || hasEnabled || hasSimulationIntervalTicks || hasInteractionIntervalSeconds || hasTalkingEnabled || hasVolume || hasPitch
         || hasEatPhase || hasNutritionScope || hasDrugScope
         || hasSelectRequirePlayerControlled || hasSelectRequireAwake || hasSelectRequireNotDowned;
     internal void ClearBehaviorFields()
     {
-        hasEnabled = hasHardIntervalTicks = hasTalkingEnabled = hasVolume = hasPitch = hasEatPhase = hasNutritionScope = hasDrugScope = false;
+        hasEnabled = hasSimulationIntervalTicks = hasTalkingEnabled = hasVolume = hasPitch = hasEatPhase = hasNutritionScope = hasDrugScope = false;
+        hasInteractionIntervalSeconds = false;
+        unsupportedLegacyTicks = false;
+        retainedLegacyTicks = 0;
         hasSelectRequirePlayerControlled = hasSelectRequireAwake = hasSelectRequireNotDowned = false;
     }
 
@@ -56,7 +63,10 @@ public class ActionTuningRecord : IExposable
         Scribe_Values.Look(ref hasScope, "hasScope", false);
         Scribe_Values.Look(ref scope, "scope", BehaviorScope.AnyOccurrence);
         Scribe_Values.Look(ref hasEnabled, "hasEnabled", false); Scribe_Values.Look(ref enabled, "enabled", true);
-        Scribe_Values.Look(ref hasHardIntervalTicks, "hasHardIntervalTicks", false); Scribe_Values.Look(ref hardIntervalTicks, "hardIntervalTicks", 0L);
+        Scribe_Values.Look(ref hasSimulationIntervalTicks, "hasSimulationIntervalTicks", false); Scribe_Values.Look(ref simulationIntervalTicks, "simulationIntervalTicks", 0L);
+        // Keep rejected bytes representable on unrelated saves; only explicit row Reset/replacement removes them.
+        Scribe_Values.Look(ref unsupportedLegacyTicks, "hasHardIntervalTicks", false); Scribe_Values.Look(ref retainedLegacyTicks, "hardIntervalTicks", 0L);
+        Scribe_Values.Look(ref hasInteractionIntervalSeconds, "hasInteractionIntervalSeconds", false); Scribe_Values.Look(ref interactionIntervalSeconds, "interactionIntervalSeconds", 0d);
         Scribe_Values.Look(ref hasTalkingEnabled, "hasTalkingEnabled", false); Scribe_Values.Look(ref talkingEnabled, "talkingEnabled", false);
         Scribe_Values.Look(ref hasVolume, "hasVolume", false); Scribe_Values.Look(ref volume, "volume", 1d);
         Scribe_Values.Look(ref hasPitch, "hasPitch", false); Scribe_Values.Look(ref pitch, "pitch", 1d);
@@ -100,7 +110,9 @@ public class ActionTuningRecord : IExposable
         hasScope = value.hasScope,
         scope = value.scope,
         hasEnabled = value.hasEnabled, enabled = value.enabled,
-        hasHardIntervalTicks = value.hasHardIntervalTicks, hardIntervalTicks = value.hardIntervalTicks,
+        hasSimulationIntervalTicks = value.hasSimulationIntervalTicks, simulationIntervalTicks = value.simulationIntervalTicks,
+        unsupportedLegacyTicks = value.unsupportedLegacyTicks, retainedLegacyTicks = value.retainedLegacyTicks,
+        hasInteractionIntervalSeconds = value.hasInteractionIntervalSeconds, interactionIntervalSeconds = value.interactionIntervalSeconds,
         hasTalkingEnabled = value.hasTalkingEnabled, talkingEnabled = value.talkingEnabled,
         hasVolume = value.hasVolume, volume = value.volume, hasPitch = value.hasPitch, pitch = value.pitch,
         hasEatPhase = value.hasEatPhase, eatPhase = value.eatPhase,

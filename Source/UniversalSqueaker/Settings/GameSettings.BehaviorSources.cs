@@ -164,6 +164,9 @@ public partial class GameSettings
     {
         diagnostic = "";
         if (IsConfigurationUnreadable) { diagnostic = "ConfigurationUnreadable"; return false; }
+        if (values.UnsupportedTiming != "") { diagnostic = values.UnsupportedTiming; return false; }
+        string timing = Responses.BehaviorContract.InvalidTimingUnit(action, values);
+        if (timing != "") { diagnostic = timing; return false; }
         if (!Authoring.AuthorXml.ActionId(action) || target != target.Trim() || child != child.Trim()
             || !new ActionTuningRecord { serviceFamily = family, targetNamespace = targetNamespace, raceDefName = family == "Pawn" ? target : "", objectTarget = family == "NonPawn" ? target : "", xenotypeDefName = child }.IsValidLayer(out _) || !values.Valid || !values.ApplicableTo(family))
         { diagnostic = "InvalidPlayerOverride"; return false; }
@@ -193,7 +196,8 @@ public partial class GameSettings
             targetNamespace = targetNamespace, raceDefName = family == "Pawn" ? target : "", objectTarget = family == "NonPawn" ? target : "", xenotypeDefName = child };
         row.hasEnabled = values.Enabled.HasValue; row.enabled = values.Enabled ?? true;
         row.hasScope = values.Scope.HasValue; row.scope = values.Scope ?? BehaviorScope.AnyOccurrence;
-        row.hasHardIntervalTicks = values.HardIntervalTicks.HasValue; row.hardIntervalTicks = values.HardIntervalTicks ?? 0;
+        row.hasSimulationIntervalTicks = values.SimulationIntervalTicks.HasValue; row.simulationIntervalTicks = values.SimulationIntervalTicks ?? 0;
+        row.hasInteractionIntervalSeconds = values.InteractionIntervalSeconds.HasValue; row.interactionIntervalSeconds = values.InteractionIntervalSeconds ?? 0;
         row.hasTalkingEnabled = values.TalkingEnabled.HasValue; row.talkingEnabled = values.TalkingEnabled ?? false;
         row.hasVolume = values.Volume.HasValue; row.volume = values.Volume ?? 1;
         row.hasPitch = values.Pitch.HasValue; row.pitch = values.Pitch ?? 1;
@@ -225,9 +229,12 @@ public partial class GameSettings
         // Old probability/interval multipliers are not converted into new chance or hard ticks.
         var player = new BehaviorValues
         {
+            UnsupportedTiming = record.HasUnsupportedTiming ? "UnsupportedBehaviorTiming:" + record.actionKey
+                + ":hardIntervalTicks; explicitly replace/reset this row using simulationIntervalTicks or interactionIntervalSeconds" : "",
             Scope = record.hasScope ? record.scope : null,
             Enabled = record.hasEnabled ? record.enabled : null,
-            HardIntervalTicks = record.hasHardIntervalTicks ? record.hardIntervalTicks : null,
+            SimulationIntervalTicks = record.hasSimulationIntervalTicks ? record.simulationIntervalTicks : null,
+            InteractionIntervalSeconds = record.hasInteractionIntervalSeconds ? record.interactionIntervalSeconds : null,
             TalkingEnabled = record.hasTalkingEnabled ? record.talkingEnabled : null,
             Volume = record.hasVolume ? record.volume : null, Pitch = record.hasPitch ? record.pitch : null,
             Phase = record.hasEatPhase ? record.eatPhase : null,

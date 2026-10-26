@@ -63,15 +63,17 @@ public sealed class ResponseSession
         var modulation = new Dictionary<string, ModulationPlan>(StringComparer.Ordinal);
         var blocked = new HashSet<string>(StringComparer.Ordinal);
         var reasons = new Dictionary<string, string>(StringComparer.Ordinal);
+        var interactionIntervals = new Dictionary<string, double>(StringComparer.Ordinal);
         effectiveActions.Clear();
         foreach (var action in view.Definitions.Actions)
         {
-            if (frame.IngestionResultOpportunity && !BehaviorContract.ConsumesIngestionResult(action)
+            if (!frame.StateOpportunity && !action.Condition.RequiredFacts().Contains(frame.EventFact, StringComparer.Ordinal)
                 || frame.ActionFilter != null && action.Key != frame.ActionFilter) continue;
-            var effective = view.Configuration.Resolve(frame.Domain, action.Key, BehaviorContract.Defaults(action, selectedPolicy),
+            var effective = view.Configuration.Resolve(frame.Domain, action.Key, selectedPolicy.Defaults(action),
                 view.Definitions.BehaviorSources, frame.AvailableFacts.Contains, action.Condition.RequiredFacts());
             effectiveActions.Add(action.Key, effective);
             var behavior = effective.Read();
+            if (behavior.InteractionIntervalSeconds.HasValue) interactionIntervals[action.Key] = behavior.InteractionIntervalSeconds.Value;
             string invalid = BehaviorContract.InvalidParameters(action, behavior);
             if (!BehaviorContract.Authorized(view.Configuration, effective, behavior, frame) || invalid != "")
             {
@@ -87,7 +89,7 @@ public sealed class ResponseSession
                     ? "EquipQualificationRequired" : "ExplicitPlayerCoreEquipQualification";
             }
             plans.Add(new ActionPlan(action.Key, action.Priority, BehaviorContract.EffectiveCondition(action, behavior),
-                behavior.HardIntervalTicks ?? action.Interval, selectedPolicy.ChecksShared(action), action.WriteShared,
+                behavior.SimulationIntervalTicks ?? action.Interval, selectedPolicy.ChecksShared(action), action.WriteShared,
                 frame.StateOpportunity ? action.Chance : action.Chance * selectedPolicy.EventProbability, action.BaseAction,
                 behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking,
                 behavior.Volume ?? 1, behavior.Pitch ?? 1, action.Sustained, action.RequiresVocal, action.SubjectRole, action.Scope));
@@ -99,7 +101,9 @@ public sealed class ResponseSession
             Subject = frame.Subject, Domain = frame.Domain.Target, ChildDomain = frame.Domain.Child,
             Family = frame.Domain.Family == "Pawn" ? SubjectFamily.PawnRace : SubjectFamily.NonPawn,
             TargetNamespace = frame.Domain.Namespace, SubjectRole = frame.SubjectRole, Tick = frame.Tick,
-            StateOpportunity = frame.StateOpportunity, Eligible = frame.Eligible,
+            StateOpportunity = frame.StateOpportunity, Eligible = frame.Eligible, Interaction = frame.Interaction,
+            EventFact = frame.EventFact,
+            InteractionIntervals = interactionIntervals,
             HasVocalOrgans = frame.HasVocalOrgans, TalkingChance = frame.TalkingChance,
             Activity = view.Configuration.Activity, StateWaitFactor = selectedPolicy.StateWaitFactor * frame.StateWaitFactor,
             Facts = frame.Facts, Actions = plans.ToArray(), ActionModulation = modulation,

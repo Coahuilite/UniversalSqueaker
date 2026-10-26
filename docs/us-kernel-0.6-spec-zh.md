@@ -176,7 +176,7 @@ JobDriver_Ingest的准备／执行／Finalize、工厂不等进入、FoodFeedPat
 
 ## 6. 发声机会、门控、选择与冷却
 
-D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换；Call自身成立与最低优先级是已定约束。具体15包总排序仍是明示候选，不等于发行默认。
+D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换；Call自身成立与最低优先级是已定约束。普通十五包排序及权限见§20，不由某次Dev输入替代。
 
 ### 6.1 一份状态机会，真实事件另行唤醒
 
@@ -184,7 +184,7 @@ D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换�
 - 到期读取当时事实，按明示优先选择一个成立动作。等的是 Pawn 的机会，不预订旧 Call／Work 请求。
 - 真实事件立即进入同一决策入口，不等待状态附加等待或失败重检；仍须通过自身和适用共用限制。
 - 状态变化不重抽等待、不清冷却；没有可靠通知时，变化在下一机会才被观察。这是低频采样，不宣称零轮询或入态即时响应。
-- 每个 Pawn 同 tick 最多进入一次新播放尝试；先占名额再调用后端。已有 Sustainer 维护不占新播放名额，失败不释放名额供同 tick 连环试播。
+- 每个 Pawn 的模拟机会同 tick 最多进入一次新播放尝试；已接受交互按独立root／单调秒，见[新版机会合同](response-opportunities-0.6-zh.md)；先占名额再调用后端。已有 Sustainer 维护不占新播放名额，失败不释放名额供同 tick 连环试播。
 - 同批已知候选按明确优先择一；同级用公开稳定次序，不用注册顺序。后到且此前未知的事件不追溯改写已派发结果；未中选事件不排队补播。
 
 选择表示“哪项动作最符合本次语义”，不表示“哪项最容易成功播放”。首选规则是选中后门控／选音／准备失败便结束本次，不改判低优先动作或 Call。动作内已明确的音源后备照常允许。
@@ -200,11 +200,11 @@ D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换�
 | 事件／状态的随机资格 | 只在所属策略的明确点采样一次；同一频率因素不重复作用 |
 | 播放前动态检查 | 核对对象仍有效与位置可用，不重跑合同、抽样或资源首检 |
 
-官方 Pawn 各包资格须逐项显式审阅。Select 的通用机制不含玩家控制／清醒／未倒地；官方Pawn Select三项默认已由用户裁定为true，分别以公开可调参数表达；不取消固定接受／反馈／最终主体，也不把这些条件塞入NonPawn或独立根。其余政策仍由隔离Dev输入承载。视野／定位属于服务边界，Death Talking等例外与新扩展许可须明示；不得把 allowExternalActions 自动作为所有已注册扩展的总闸。
+官方 Pawn 各包资格须逐项显式审阅。Select 的通用机制不含玩家控制／清醒／未倒地；官方Pawn Select三项默认已由用户裁定为true，分别以公开可调参数表达；不取消固定接受／反馈／最终主体，也不把这些条件塞入NonPawn或独立根。其余普通资格／数值沿§20已裁输入；显式Dev是另一种受控输入。视野／定位属于服务边界，Death Talking等例外与新扩展许可须明示；不得把 allowExternalActions 自动作为所有已注册扩展的总闸。
 
 ### 6.3 计时状态与结算
 
-新规则硬限制使用游戏 tick，附加等待非负。发布前裁定已退役旧概率、Realtime及倍率乘硬截止政策；合法字符串能力、身份、许可和scope保留并接同一owner，不再接第二旧时钟。旧字段没有被改名冒充A，新A独立保存。
+当前机会合同使用一种动作间隔：模拟机会取游戏tick，已接受交互取单调真实秒；共享H、状态W/R仍为游戏tick。缺必需事件／root事实明确拒绝，不回退旧时钟。混合消费者按本次明确机会选单位，见[完整新合同](response-opportunities-0.6-zh.md)。旧字段不暗迁或重解释，A仍独立保存。
 
 | 状态 | 归属／起算 |
 | --- | --- |
@@ -212,11 +212,12 @@ D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换�
 | 共用硬截止 `H_shared` | Pawn；约束遵守共用限制的动作，不是全种族／全玩家共享 |
 | 状态附加等待 `W` | Pawn 下一份日常机会；安排时抽一次，不逐 tick 重抽 |
 | 失败重检等待 `R` | 推进同一份状态机会；有独立于滑块、严格大于 1 tick 的下限 |
-| 同 tick 名额 | Pawn；防止多来源同步突发，与跨 tick 冷却分开 |
+| 模拟同 tick 名额 | Pawn；模拟失败不退额，交互不占也不清 |
+| 交互root消费与秒截止 | Pawn＋事实通道的最大已消费root，以及Pawn＋完整动作ID的秒截止；新root与重复／过期重放分开 |
 
-动作与共用截止同时适用时取较晚值，不串行相加。首选保留“豁免共用检查不等于免写其他动作的共用保护”的旧语义，具体内置动作权限与 D2 一并冻结。
+模拟动作与适用共用截止取较晚值，不串行相加；交互只查自己的秒截止，不比较或叠加tick动作门。首选保留“豁免共用检查不等于免写其他动作的共用保护”的旧语义，具体内置动作权限与 D2 一并冻结。
 
-令本次 tick 为 `t`：
+以下模拟机会公式令本次游戏tick为`t`；交互结算见新版机会合同：
 
 - 新派发：从本次派发 tick 更新硬截止，不等声音结束。状态来源按 `max(t, 适用 H_shared) + W` 安排下一机会，并满足最小唤醒间隔。
 - 明确未派发：不刷新硬截止，状态机会安排到 `max(t + R, 适用 H_shared)` 之后。
@@ -431,7 +432,7 @@ S3实际入口、字段、17动作对账和保存故障边界见[S3实施页](us
 | V03 单一机会 | 多包、多动作不增加状态任务；失败推进同一未来机会，所有分支均不逐 tick 重试 |
 | V04 事件与切状态 | 状态等待不挡真实受伤入口；事件仍服从硬限制，Work 在下次机会按新事实判断 |
 | V05 结果结算 | 明确未提交、正常派发、已有实例与不明分别更新；诊断异常不撤销已派发；不明不立即补播 |
-| V06 仲裁与重叠 | 同 tick 至多一次新尝试；低优先持续请求不打断高优先在播者；OneShot 不伪称已抢停 |
+| V06 仲裁与重叠 | 模拟同 tick 至多一次新尝试，交互另按root和真实秒；低优先持续请求不打断高优先在播者；OneShot 不伪称已抢停 |
 | V07 作者接入 | 普通 Ratkin XML 可供给，XML 可组合已提供条件；新 C# 事实经公共入口使用且不修改 Kernel |
 | V08 资源绑定 | Ratkin 15 声音准确绑定；独立重名只隔离受影响资源；合法字段／整根 patch 使用最终内容；缺绑定不退裸名 |
 | V09 局部故障 | 缺 Biotech 不连坐 Race；坏 Work 不清全部包；未知必需合同不被删除后放行 |
@@ -457,7 +458,7 @@ D1、D2单机会/四结果、D3独立A机制、D4固定独立合成、D5持续�
 | 编号 | 首选方案及影响 | 应在何时确认 |
 | --- | --- | --- |
 | D1 合同结果（已采用） | 三态与 All／Any／Not 的第 4.1 节语义；未知不放行，初始化缺依赖另隔离 | 合同／XML 求值切片前 |
-| D2 发声决策（已采用） | 每 Pawn 一份状态机会、稳定优先、选后失败不跨动作补位、同 tick 一次尝试；明确未派发不收硬冷却、不明保留保护；逐动作资格保持，数值排序／关键豁免仍须明示 | 第一个状态＋事件切片前 |
+| D2 发声决策（已采用） | 每 Pawn 一份状态机会、稳定优先、选后失败不跨动作补位、模拟同 tick 一次尝试；明确未派发不收硬冷却、不明保留保护；逐动作资格保持，数值排序／关键豁免仍须明示 | 第一个状态＋事件切片前 |
 | D3 全局活跃度（机制已采用） | 状态等待反比缩放，事件接纳率缩放；硬限制不缩放；只在下一排程／事件用新值；人口／速度进入单一软节奏计算点 | 发行默认前冻结等待分布、A界面范围、事件基准、人口／速度和关键例外 |
 | D4 局部调制（已采用） | 独立响应乘算、来源参与逐字段覆盖、固定阶段、一次抖动；明确区别于旧心情覆盖年龄 | 现用中性缺省、显式阈值和公开数值校验；不内置隐藏风格 |
 | D5 后端执行 | 四类结果、实例归属与原版更新实时应用总控；不回退共享 Def 写入 | 原生适配实现／验收前；目标 1.6 技术验证不可由文档代替 |
@@ -498,40 +499,40 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 
 普通Release由`GameBootstrap`在主线程定义、最终原生音源、comp挂载与配置发布就绪后安装`UsResponsePolicy.CreateOrdinary()`。合法已选音频包无需Dev、打开设置或再次启包；音频-only无需另选行为来源。首页`OrdinaryActive`表示该输入已安装，不代表当前一定有可播音源或已经听见。关闭／不可读配置、资格Unknown、缺具体实现和不可播声音仍沿原链拒绝；未完成初始化时保留`PolicySelectionRequired`。
 
-用户已定基础W600与SR校准方向；PM据此采用以下细化。所有I和H均为游戏tick，不随速度／人口缩放。普通H216；首相为uint Pawn ID模600，仅新owner首次安排。状态chance1；全部事件p_base1并保持min(1,A)，没有额外概率豁免。
+用户已定基础W600与SR校准方向；PM据此采用以下细化。模拟I和共享H均为游戏tick；Select／Draft／Undraft的动作间隔仅用真实秒，不再叠加tick门，见[新版机会合同](response-opportunities-0.6-zh.md)。模拟I/H不随速度／人口缩放。普通H216；首相为uint Pawn ID模600，仅新owner首次安排。状态chance1；全部事件p_base1并保持min(1,A)，没有额外概率豁免。
 
-| 官方动作 | 普通硬I tick | 检查共享H | 缺省scope |
+| 官方动作 | 普通动作间隔（明确单位） | 检查共享H | 缺省scope |
 | --- | ---: | --- | --- |
-| Eat | 144 | 是 | AnyOccurrence |
-| Call | 900 | 是 | AnyOccurrence |
-| Move | 504 | 是 | AnyOccurrence |
-| Sleep | 1200 | 是 | AnyOccurrence |
-| Social | 504 | 是 | AnyOccurrence |
-| Joy | 504 | 是 | AnyOccurrence |
-| Work | 720 | 是 | AnyOccurrence |
-| Wounded | 216 | 是 | AnyOccurrence |
-| Attack | 216 | 是 | AnyOccurrence |
-| Equip | 216 | 是 | ActiveCommand＋PlayerCoreEquip |
-| Select | 18 | 否 | AnyOccurrence＋三项可调资格 |
-| Draft | 36 | 否 | ActiveCommand |
-| Undraft | 36 | 否 | ActiveCommand |
-| Death | 0 | 否 | AnyOccurrence |
-| MentalBreak | 0 | 否 | AnyOccurrence |
+| Eat | 144游戏tick | 是 | AnyOccurrence |
+| Call | 900游戏tick | 是 | AnyOccurrence |
+| Move | 504游戏tick | 是 | AnyOccurrence |
+| Sleep | 1200游戏tick | 是 | AnyOccurrence |
+| Social | 504游戏tick | 是 | AnyOccurrence |
+| Joy | 504游戏tick | 是 | AnyOccurrence |
+| Work | 720游戏tick | 是 | AnyOccurrence |
+| Wounded | 216游戏tick | 是 | AnyOccurrence |
+| Attack | 216游戏tick | 是 | AnyOccurrence |
+| Equip | 216游戏tick | 是 | ActiveCommand＋PlayerCoreEquip |
+| Select | 0.3真实秒 | 否 | AnyOccurrence＋三项可调资格 |
+| Draft | 0.6真实秒 | 否 | ActiveCommand |
+| Undraft | 0.6真实秒 | 否 | ActiveCommand |
+| Death | 0游戏tick | 否 | AnyOccurrence |
+| MentalBreak | 0游戏tick | 否 | AnyOccurrence |
 
 所有官方动作仍写共享H；总序保持Death>Wounded>MentalBreak>Attack>Draft>Undraft>Equip>Select>Sleep>Eat>Social>Joy>Move>Work>Call。默认OneShot；Select不接隐藏器官／Talking门，Death只免Talking仍查器官，其余保器官／Talking。Work沿已定精确Core事实集；Attack只含下文已核执行机制；MentalBreak只含四成功来源。Select三项默认true、Eat WholeProcess/Any/Any、无匹配安静及失败不补低项不变。
 
 逐动作I／scope缺省先于作者与玩家有效折叠，不改写其显式值。状态软W仅在原有单点合成`ceil(600 * max(1,TickRateMultiplier) * max(1,共享可听人数/10) / A)`；人口复用当前地图的共享快照，不逐Pawn全图扫描。人数≤10、1倍速、A1、持续状态、门与输出均通过且无事件干扰时，基础周期13.6个1倍速秒；受R60重检刻度影响，Call约15.6、Sleep约20.6秒。这是合同算术，不是实测或每10秒必叫；Move/Social/Joy比SR更疏是已采用的取舍。
 
-`CompSqueaker.CompTick`、十五包适用通知和`NotifyExternalByKey`均进入`SqueakerRuntime`，每Pawn只有一份`PawnResponseAdapter`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。自定义通知须先用XML或一次C#明确声明；未知字符串拒绝，不补默认计划。完整新作者／保存／删除合同见[r2导读](us-kernel-0.6-refactor-zh.md)。
+`CompSqueaker.CompTick`、十五包适用通知和显式声明的`TryProcess`均进入`SqueakerRuntime`，每Pawn只有一份`PawnResponseAdapter`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。自定义通知须先用XML或一次C#明确声明；未知字符串拒绝，不补默认计划。完整新作者／保存／删除合同见[r2导读](us-kernel-0.6-refactor-zh.md)。
 
 ### 显式Dev入口仍可使用已有owner
 
-原`UsDevelopmentPolicy`构造及公开Respond/Review重载保留；Dev模式菜单`S4AB-S5 GLOBAL Dev candidate`仍选择原高频输入，也可调用：
+`UsDevelopmentPolicy`及公开Respond/Review均使用新版显式机会；不保旧无事实回退。Dev模式菜单`S4AB-S5 GLOBAL Dev candidate`仍选择原高频输入，也可调用：
 
 ```csharp
 SqueakerRuntime.SelectDevelopmentPolicy(
     new UsDevelopmentPolicy(20, 40, 120, 120, 120, 1, 1,
-        equipQualification: UsEquipQualification.PlayerCoreEquip)); // 显式Dev资格
+        equipQualification: UsEquipQualification.PlayerCoreEquip, interactionIntervalSeconds: 0)); // 显式Dev输入，不是普通秒缺省
 SqueakerMod.Settings.SetActivity(1.5);
 ```
 
@@ -626,7 +627,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 ### 同一身份进入配置、准确域与请求
 
-行为来源使用完整键，例如`<action key="example/InjuredSelect" enabled="true" hardIntervalTicks="50" volume="0.25"/>`。现有玩家动作行／响应API也接受完整键；`ResetActionTuningRow`只清该准确行的玩家字段，不清来源意图或作者快照。旧枚举格式在其适配边界映射为`us.core/<name>`，不会把`example/Select`或继承动作尾名当内置键。新完整服务层持久化及Eat参数见§22。
+行为来源使用完整键，例如`<action key="example/InjuredSelect" enabled="true" interactionIntervalSeconds="0.5" volume="0.25"/>`。现有玩家动作行／响应API也接受完整键；`ResetActionTuningRow`只清该准确行的玩家字段，不清来源意图或作者快照。旧枚举／隐式字符串不作兼容映射；完整ID及明确机会决定执行，不从`example/Select`或继承动作尾名推断时钟。新完整服务层持久化及Eat参数见§22。
 
 `UsVoicePackDef.declaration`可用`race`简写Pawn Race；也可用`family=Pawn`、`target`及可选`child`表达准确Race/Xeno。不要同时给`race`和`target`。目标须是实际Pawn定义；子域须已加载且Biotech可用，实际运行还服从resolver给该Pawn解析的合法子域。子域选择不替代主域启用。
 
@@ -656,7 +657,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 字段按“包装缺省 → 选中主域作者 → 选中合法子域作者 → 玩家服务对象profile → 玩家主域 → 玩家合法子域”稀疏折叠；所有作者先于玩家，最终才补缺省。false、0是贡献，不是继承。完整ActionId是身份，父固定条件继承不复制父参数。未配置的可选能力不成为依赖；非法显式值暂停相应配置，不修成默认。固定条件必需事实仍在依赖集中，不能由Whole参数抹掉固定Execution限制。
 
-玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat／三项Select资格；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，新格式只存完整ActionId，不读旧短键。
+玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、simulationIntervalTicks／interactionIntervalSeconds、talkingEnabled、volume、pitch及三轴Eat／三项Select资格；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，新格式只存完整ActionId，不读旧短键。
 
 `SqueakerMod.TryCommitBehaviorOverride(family, namespace, target, child, fullActionId, values, out diagnostic)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率不恢复；独立模板恢复目标保留。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
 

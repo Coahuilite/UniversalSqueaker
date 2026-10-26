@@ -1,5 +1,7 @@
 # Universal Squeaker
 
+Accepted Select now uses 0.3 real seconds; Draft/Undraft use 0.6 each, while simulation keeps game ticks. This single explicit-opportunity contract rejects missing facts and obsolete timing fields rather than falling back. See [timing and upgrade guidance](docs/response-opportunities-0.6-zh.md).
+
 0.6 r2: [current author/configuration contract](docs/us-kernel-0.6-refactor-zh.md) — complete neutral Core, one synchronous response owner and explicit notification declarations. Ordinary responses now initialize automatically without developer mode; native/human acceptance remains pending.
 
 **English** | [中文](./README.zh-CN.md)

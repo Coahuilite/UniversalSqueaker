@@ -28,8 +28,8 @@ public sealed class UsResponsePolicy
             [CoreActions.Eat] = 144, [CoreActions.Call] = 900, [CoreActions.Move] = 504,
             [CoreActions.Sleep] = 1200, [CoreActions.Social] = 504, [CoreActions.Joy] = 504,
             [CoreActions.Work] = 720, [CoreActions.Wounded] = 216, [CoreActions.Attack] = 216,
-            [CoreActions.Equip] = 216, [CoreActions.Select] = 18, [CoreActions.Draft] = 36,
-            [CoreActions.Undraft] = 36, [CoreActions.Death] = 0, [CoreActions.MentalBreak] = 0
+            [CoreActions.Equip] = 216, [CoreActions.Select] = 0, [CoreActions.Draft] = 0,
+            [CoreActions.Undraft] = 0, [CoreActions.Death] = 0, [CoreActions.MentalBreak] = 0
         },
         new Dictionary<string, BehaviorScope>(StringComparer.Ordinal)
         {
@@ -75,11 +75,18 @@ public sealed class UsResponsePolicy
     {
         var values = BehaviorContract.DeclaredDefaults(action);
         if (development != null && BuiltInActionKeys.Contains(action.Key))
-            values.HardIntervalTicks = action.Key == CoreActions.Wounded ? development.WoundedInterval : development.Interval;
-        else if (intervals.TryGetValue(action.Key, out long interval)) values.HardIntervalTicks = interval;
+            values.SimulationIntervalTicks = action.Key == CoreActions.Wounded ? development.WoundedInterval : development.Interval;
+        else if (intervals.TryGetValue(action.Key, out long interval)) values.SimulationIntervalTicks = interval;
+        if (IsOfficialInteraction(action.Key))
+        {
+            values.SimulationIntervalTicks = null;
+            values.InteractionIntervalSeconds = development == null ? action.Key == CoreActions.Select ? 0.3 : 0.6 : development.InteractionIntervalSeconds;
+        }
         if (scopes.TryGetValue(action.Key, out var scope)) values.Scope = scope;
         return values;
     }
 
     internal bool ChecksShared(ActionPlan action) => action.CheckShared && !sharedExemptions.Contains(action.Key);
+    internal static bool IsOfficialInteraction(string key)
+        => key == CoreActions.Select || key == CoreActions.Draft || key == CoreActions.Undraft;
 }

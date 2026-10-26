@@ -39,13 +39,16 @@ internal static partial class Program
                 var driver = new Driver { Result = result };
                 var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000,
                     StateOpportunity = !BuiltInPawnContracts.IsEvent(key), Actions = catalog.Actions,
+                    EventFact = BuiltInPawnContracts.IsEvent(key) ? BuiltInPawnContracts.FactKey(key) : "",
+                    Interaction = UsResponsePolicy.IsOfficialInteraction(key)
+                        ? new InteractionOpportunity(BuiltInPawnContracts.FactKey(key), 1, 100) : null,
                     Facts = catalog.Capture("p1", facts), TalkingChance = key == "us.core/Death" ? 0 : 1,
                     AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("entry", "core/" + key, key, "Ratkin", 1) })};
                 var state = new DecisionState(1000);
                 var outcome = new ResponseDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
                 Check(outcome.Action == key && outcome.Receipt?.Result == result && driver.Calls == 1,
                     key + " uses real decision and each backend receipt, Death skips only Talking");
-                Check(driver.Purposes.Count == 0 && state.AttemptTick == 1000, key + " one candidate consumes no unnecessary roll");
+                Check(driver.Purposes.Count == 0 && state.AttemptTick == (input.Interaction.HasValue ? long.MinValue : 1000), key + " one candidate consumes no unnecessary roll and reserves only its opportunity channel");
                 Check((state.ConfirmedTick == 1000) == (result == PlaybackResult.Dispatched), key + " confirmed receipt separation");
                 input.HasVocalOrgans = false;
                 var noOrgans = new Driver { Result = result };
@@ -70,7 +73,7 @@ internal static partial class Program
         var race = new BehaviorDomain("Pawn", "", "Ratkin");
         var child = new BehaviorDomain("Pawn", "", "Ratkin", "Xeno");
         var neighbor = new BehaviorDomain("Pawn", "", "Kiiro");
-        var a = Source("author.a/Behavior", race, "us.core/Work", new BehaviorValues { Enabled = false, TalkingEnabled = false, HardIntervalTicks = 0, Volume = 0 }, "extension/Required");
+        var a = Source("author.a/Behavior", race, "us.core/Work", new BehaviorValues { Enabled = false, TalkingEnabled = false, SimulationIntervalTicks = 0, Volume = 0 }, "extension/Required");
         var b = Source("author.b/Behavior", race, "us.core/Work", new BehaviorValues { Enabled = true, Volume = 9 });
         var xeno = Source("author.x/Behavior", child, "us.core/Work", new BehaviorValues { Enabled = true, Volume = 3, Pitch = 2 });
         var other = Source("author.n/Behavior", neighbor, "us.core/Work", new BehaviorValues { Enabled = false });
@@ -82,11 +85,11 @@ internal static partial class Program
         state.Forget(inherited);
         Check(!state.AdoptUniqueDevCandidate(inherited, directory), "explicit inheritance never adopts a new local source");
         string saved = state.ToXml();
-        Check(saved.Contains("enabled=\"False\"") && saved.Contains("hardIntervalTicks=\"0\"") && !saved.Contains("tick") && !saved.Contains("player"), "author-only snapshot contains false and zero existence, no runtime or player state");
+        Check(saved.Contains("enabled=\"False\"") && saved.Contains("simulationIntervalTicks=\"0\"") && !saved.Contains("tick") && !saved.Contains("player"), "author-only snapshot contains false and zero existence, no runtime or player state");
         state = BehaviorSourceState.FromXml(saved);
         var missing = new BehaviorSourceDirectory(new[] { b, other });
         var value = state.Resolve(race, "us.core/Work", missing, Array.Empty<BehaviorValues>(), _ => true, out bool paused);
-        Check(value.Enabled == false && value.TalkingEnabled == false && value.HardIntervalTicks == 0 && value.Volume == 0 && !paused,
+        Check(value.Enabled == false && value.TalkingEnabled == false && value.SimulationIntervalTicks == 0 && value.Volume == 0 && !paused,
             "A absent with B present preserves A false/zero snapshot, no takeover");
         value = state.Resolve(child, "us.core/Work", missing, new[] { new BehaviorValues { Enabled = false, Volume = 7 } }, _ => true, out paused);
         Check(value.Enabled == false && value.Volume == 7 && value.Pitch == 2, "all author parent/child fold before player parent: sparse field permissions");
@@ -137,7 +140,7 @@ internal static partial class Program
         var audio = new VoicePackDeclaration();
         audio.LoadDataFromXmlCustom(document.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
         Check(audioInputs.AddPack("example", "US_ExampleDrugAudio", audio, _ => "audio/Eat"), "real composite audio loaded");
-        var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000, Actions = catalog.Actions, AudioCatalog = new AudioCatalog(audioInputs.Entries),
+        var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000, StateOpportunity = true, Actions = catalog.Actions, AudioCatalog = new AudioCatalog(audioInputs.Entries),
             Facts = catalog.Capture("p1", new Dictionary<string, Truth> { ["us.core/IngestionProcess"] = Truth.True, ["us.core/IngestibleDrug"] = Truth.True, ["us.core/IngestionExecution"] = Truth.True }) };
         var driver = new Driver();
         Check(new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver).Action == "example/DrugChewing"
@@ -279,7 +282,11 @@ internal static partial class Program
             foreach (var receipt in (PlaybackResult[])Enum.GetValues(typeof(PlaybackResult)))
             {
                 var driver = new Driver { Result = receipt };
-                var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000, StateOpportunity = true,
+                var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000,
+                    StateOpportunity = !BuiltInPawnContracts.IsEvent(key),
+                    EventFact = BuiltInPawnContracts.IsEvent(key) ? BuiltInPawnContracts.FactKey(key) : "",
+                    Interaction = UsResponsePolicy.IsOfficialInteraction(key)
+                        ? new InteractionOpportunity(BuiltInPawnContracts.FactKey(key), 1, 100) : null,
                     TalkingChance = .8, Actions = catalog.Actions,
                     Facts = catalog.Capture("p1", BuiltInPawnContracts.CandidateOrder.ToDictionary(BuiltInPawnContracts.FactKey, x => x == key ? Truth.True : Truth.False)),
                     AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("a", "audio/first", key, "Ratkin", 1), new AudioCandidate("b", "audio/second", key, "Ratkin", 3) })};

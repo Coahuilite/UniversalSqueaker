@@ -169,7 +169,7 @@ internal static partial class Program
             "automatic care remains a true Work fact but the unchanged ActiveCommand response qualification refuses");
         doctor.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
         Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", child,
-            new BehaviorValues { Scope = BehaviorScope.ActiveCommand, HardIntervalTicks = 9, Volume = .3 }, () => true, out _), "inherited full Work action uses production sparse settings writer");
+            new BehaviorValues { Scope = BehaviorScope.ActiveCommand, SimulationIntervalTicks = 9, Volume = .3 }, () => true, out _), "inherited full Work action uses production sparse settings writer");
         doctor.CurJob.playerForced = true; Find.TickManager.TicksGame += 100; doctor.Comp.CompTick(); Request(doctor, child, "Care");
         Check(doctor.Comp.LastCandidateRequest!.Audio.Volume == .3 && RuntimeSession(doctor).State.ActionDeadline(child) == Find.TickManager.TicksGame + 9,
             "new care process keeps child scope/config/entry and its independent complete-key protection");

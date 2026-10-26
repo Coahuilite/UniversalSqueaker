@@ -19,7 +19,7 @@ internal static partial class Program
         var domain = new BehaviorDomain("Pawn", "", "Ratkin");
         var neighbor = new BehaviorDomain("Pawn", "", "Kiiro");
         var a = new BehaviorSource { Id = "author.a/Def", Domain = domain, Contributions = new List<BehaviorContribution>
-            { new() { Action = "us.core/Work", Values = new BehaviorValues { Enabled = false, TalkingEnabled = false, HardIntervalTicks = 0, Volume = 0 }, RequiredFacts = new[] { "missing/Implementation" } } } };
+            { new() { Action = "us.core/Work", Values = new BehaviorValues { Enabled = false, TalkingEnabled = false, SimulationIntervalTicks = 0, Volume = 0 }, RequiredFacts = new[] { "missing/Implementation" } } } };
         var b = a.Copy(); b.Id = "author.b/Def"; b.Contributions[0].Values.Enabled = true;
         var n = a.Copy(); n.Id = "author.n/Def"; n.Domain = neighbor;
         var directory = new BehaviorSourceDirectory(new[] { a, b, n });
@@ -76,7 +76,7 @@ internal static partial class Program
             var missing = new BehaviorSourceDirectory(new[] { b, n });
             Check(settings.TryRefreshBehaviorSources(missing, Persist, out _), "S3 missing A keeps binding while B exists", ref failures);
             var resolved = settings.ResolveBehaviorSource(domain, "us.core/Work", missing, _ => true, out bool paused);
-            Check(resolved.Enabled == false && resolved.TalkingEnabled == false && resolved.HardIntervalTicks == 0 && resolved.Volume == 0 && !paused,
+            Check(resolved.Enabled == false && resolved.TalkingEnabled == false && resolved.SimulationIntervalTicks == 0 && resolved.Volume == 0 && !paused,
                 "S3 runtime settings parser consumes last author false/zero without B takeover", ref failures);
             a.Contributions[0].Values.Volume = 2;
             var returned = new BehaviorSourceDirectory(new[] { a, b, n });

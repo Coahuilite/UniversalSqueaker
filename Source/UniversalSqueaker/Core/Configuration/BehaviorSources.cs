@@ -42,6 +42,8 @@ public sealed class BehaviorDomain : IEquatable<BehaviorDomain>
 /// <summary>Sparse parameter contribution. Null is absence; false and zero are present values.</summary>
 public sealed class BehaviorValues
 {
+    // Rejection evidence only, never an executable old-format contribution or a serialized new field.
+    internal string UnsupportedTiming = "";
     public bool? Enabled;
     public bool? TalkingEnabled;
     public bool? AgeEnabled;
@@ -50,7 +52,8 @@ public sealed class BehaviorValues
     public Dictionary<string, bool> ResponseEnabled = new(StringComparer.Ordinal);
     public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
     public BehaviorScope? Scope;
-    public long? HardIntervalTicks;
+    public long? SimulationIntervalTicks;
+    public double? InteractionIntervalSeconds;
     public double? Volume;
     public double? Pitch;
     public EatPhase? Phase;
@@ -67,9 +70,11 @@ public sealed class BehaviorValues
     }
     public void Overlay(BehaviorValues value)
     {
+        if (value.UnsupportedTiming != "") UnsupportedTiming = value.UnsupportedTiming;
         Enabled = value.Enabled ?? Enabled;
         Scope = value.Scope ?? Scope;
-        HardIntervalTicks = value.HardIntervalTicks ?? HardIntervalTicks;
+        SimulationIntervalTicks = value.SimulationIntervalTicks ?? SimulationIntervalTicks;
+        InteractionIntervalSeconds = value.InteractionIntervalSeconds ?? InteractionIntervalSeconds;
         TalkingEnabled = value.TalkingEnabled ?? TalkingEnabled;
         AgeEnabled = value.AgeEnabled ?? AgeEnabled;
         MoodEnabled = value.MoodEnabled ?? MoodEnabled;
@@ -102,11 +107,12 @@ public sealed class BehaviorValues
         SelectRequireAwake = value.SelectRequireAwake ?? SelectRequireAwake;
         SelectRequireNotDowned = value.SelectRequireNotDowned ?? SelectRequireNotDowned;
     }
-    public bool Valid => (!Scope.HasValue || Enum.IsDefined(typeof(BehaviorScope), Scope.Value))
+    public bool Valid => UnsupportedTiming == "" && (!Scope.HasValue || Enum.IsDefined(typeof(BehaviorScope), Scope.Value))
         && (!Phase.HasValue || Enum.IsDefined(typeof(EatPhase), Phase.Value))
         && (!NutritionScope.HasValue || Enum.IsDefined(typeof(EatNutritionScope), NutritionScope.Value))
         && (!DrugScope.HasValue || Enum.IsDefined(typeof(EatDrugScope), DrugScope.Value))
-        && (!HardIntervalTicks.HasValue || HardIntervalTicks.Value >= 0)
+        && (!SimulationIntervalTicks.HasValue || SimulationIntervalTicks.Value >= 0)
+        && (!InteractionIntervalSeconds.HasValue || Finite(InteractionIntervalSeconds.Value) && InteractionIntervalSeconds.Value >= 0)
         && (!Volume.HasValue || Finite(Volume.Value) && Volume.Value >= 0 && Volume.Value <= float.MaxValue)
         && (!Pitch.HasValue || Finite(Pitch.Value) && Pitch.Value > 0 && Pitch.Value <= float.MaxValue)
         && ResponseParameters.All(x => Exact(x.Key) && Finite(x.Value))
@@ -121,7 +127,8 @@ public sealed class BehaviorValues
     {
         if (Enabled.HasValue) yield return "enabled";
         if (Scope.HasValue) yield return "scope";
-        if (HardIntervalTicks.HasValue) yield return "hardIntervalTicks";
+        if (SimulationIntervalTicks.HasValue) yield return "simulationIntervalTicks";
+        if (InteractionIntervalSeconds.HasValue) yield return "interactionIntervalSeconds";
         if (TalkingEnabled.HasValue) yield return "talkingEnabled";
         if (Volume.HasValue) yield return "volume";
         if (Pitch.HasValue) yield return "pitch";
@@ -253,6 +260,7 @@ public sealed class BehaviorSourceState
 
     private static bool Valid(BehaviorContribution value, string family) => Authoring.AuthorXml.ActionId(value.Action)
         && value.Values.Valid && value.Values.ApplicableTo(family) && value.Values.Participation.Count == 0
+        && Responses.BehaviorContract.InvalidTimingUnit(value.Action, value.Values) == ""
         && value.RequiredFacts.All(x => !string.IsNullOrWhiteSpace(x));
 
     public BehaviorValues Resolve(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
@@ -329,6 +337,7 @@ public sealed class BehaviorSourceState
         int playerIndex = 0;
         foreach (var player in playerLayers)
         {
+            if (player.UnsupportedTiming != "") throw new ArgumentException(player.UnsupportedTiming);
             if (!player.Valid || !player.ApplicableTo(domain.Family))
             {
                 throw new ArgumentException("InvalidPlayerBehaviorContribution");
@@ -448,7 +457,10 @@ public sealed class BehaviorSourceState
         };
         foreach (XmlElement action in node.ChildNodes.OfType<XmlElement>())
         {
-            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "phase", "nutritionScope", "drugScope", "selectRequirePlayerControlled", "selectRequireAwake", "selectRequireNotDowned", "requires");
+            if (action.HasAttribute("hardIntervalTicks"))
+                throw new ArgumentException("UnsupportedBehaviorTiming:" + id + ":" + action.GetAttribute("key")
+                    + ":hardIntervalTicks; explicitly update to simulationIntervalTicks or interactionIntervalSeconds; no automatic conversion");
+            CheckAttributes(action, "key", "enabled", "scope", "simulationIntervalTicks", "interactionIntervalSeconds", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "phase", "nutritionScope", "drugScope", "selectRequirePlayerControlled", "selectRequireAwake", "selectRequireNotDowned", "requires");
             if (action.Name != "action")
             {
                 throw new ArgumentException("Invalid behavior action shape");
@@ -473,8 +485,11 @@ public sealed class BehaviorSourceState
                     case "scope":
                         values.Scope = (BehaviorScope)Enum.Parse(typeof(BehaviorScope), text);
                         break;
-                    case "hardIntervalTicks":
-                        values.HardIntervalTicks = long.Parse(text, CultureInfo.InvariantCulture);
+                    case "simulationIntervalTicks":
+                        values.SimulationIntervalTicks = long.Parse(text, CultureInfo.InvariantCulture);
+                        break;
+                    case "interactionIntervalSeconds":
+                        values.InteractionIntervalSeconds = double.Parse(text, CultureInfo.InvariantCulture);
                         break;
                     case "talkingEnabled":
                         values.TalkingEnabled = bool.Parse(text);
@@ -561,7 +576,8 @@ public sealed class BehaviorSourceState
             var v = contribution.Values;
             Field(action, "enabled", v.Enabled);
             Field(action, "scope", v.Scope);
-            Field(action, "hardIntervalTicks", v.HardIntervalTicks);
+            Field(action, "simulationIntervalTicks", v.SimulationIntervalTicks);
+            Field(action, "interactionIntervalSeconds", v.InteractionIntervalSeconds);
             Field(action, "talkingEnabled", v.TalkingEnabled);
             Field(action, "ageEnabled", v.AgeEnabled);
             Field(action, "moodEnabled", v.MoodEnabled);

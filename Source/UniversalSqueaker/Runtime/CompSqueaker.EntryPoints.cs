@@ -8,13 +8,10 @@ public partial class CompSqueaker
         SqueakerRuntime.TryTick(Pawn);
     }
 
-    /// <summary>Built-in and public string calls never fall back to another decision owner.</summary>
-    internal void NotifyExternalByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source)
-        => NotifyObservedByKey(actionKey, origin, source, "CallerSupplied");
-
-    internal void NotifyObservedByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source, string evidence)
+    internal void NotifyObservedByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source, string evidence,
+        Responses.InteractionOpportunity? interaction = null)
     {
         SynchronizePeriodicMembership();
-        SqueakerRuntime.TryObservedEvent(Pawn, actionKey, origin, source, evidence);
+        SqueakerRuntime.TryObservedEvent(Pawn, actionKey, origin, source, evidence, interaction);
     }
 }

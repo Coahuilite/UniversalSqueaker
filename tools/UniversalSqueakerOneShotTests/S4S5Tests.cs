@@ -35,7 +35,7 @@ internal static partial class Program
         Check(new ResponseDecision().Run(state, new StatePolicy(40, 20), input, driver, driver).Reason == "NotDue" && state.NextStateTick == 1050,
             "S4 changing A does not redraw or rescale an already arranged wait");
         var eventInput = Input(1000, false);
-        eventInput.Actions = new[] { new ActionPlan("us.core/Work", 1, new Condition("all"), 120, chance: .25) };
+        eventInput.Actions = new[] { new ActionPlan("us.core/Wounded", 1, new Condition("ref", "us.core/WoundedEvent"), 120, chance: .25) };
         eventInput.Activity = 4;
         eventInput.StateWaitFactor = 100;
         var saturated = new Driver();

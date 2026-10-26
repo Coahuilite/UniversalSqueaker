@@ -432,7 +432,10 @@ public static class VoicePacksPageModel
             if (anchor != "") options += "\n" + "US.Tuning.ResetToPreset".Translate() + ": "
                 + (reset.Item2 ? reset.Item3 : "US.Tuning.ResetPresetUnavailable".Translate().ToString());
             string explanation = string.Format(System.Globalization.CultureInfo.CurrentCulture, "US.Response.Details".Translate().ToString(), action.Key, value.Enabled, value.Scope,
-                value.HardIntervalTicks?.ToString() ?? "US.Response.PolicyPending".Translate().ToString(), value.Volume, value.Pitch,
+                UsResponsePolicy.IsOfficialInteraction(action.Key)
+                    ? (value.InteractionIntervalSeconds ?? 0).ToString("R", System.Globalization.CultureInfo.CurrentCulture) + " s"
+                    : Kernel.BuiltInActionKeys.Contains(action.Key) ? (value.SimulationIntervalTicks ?? action.Interval).ToString() + " game tick"
+                    : "US.UI.IntervalByOpportunity".Translate().ToString(), value.Volume, value.Pitch,
                 string.Join(", ", effective.Dependencies), options,
                 string.Join("; ", effective.Origins.Select(x => x.Key + "=" + x.Value)),
                 effective.Paused ? effective.Failure :

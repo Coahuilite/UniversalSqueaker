@@ -109,12 +109,13 @@ public sealed class ActionDeclaration
     public bool Sustained;
     public int Priority;
     public long Interval;
+    public double InteractionIntervalSeconds;
     public double Chance = 1;
     public bool CheckShared = true, WriteShared = true;
     public bool RequiresVocal, TalkingEnabled;
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback", "priority", "intervalTicks", "chance", "checkShared", "writeShared", "requiresVocal", "talkingEnabled");
+        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback", "priority", "intervalTicks", "interactionIntervalSeconds", "chance", "checkShared", "writeShared", "requiresVocal", "talkingEnabled");
         string playback = node.SelectSingleNode("playback")?.InnerText ?? "OneShot";
         if (playback != "OneShot" && playback != "Sustained")
         {
@@ -126,6 +127,7 @@ public sealed class ActionDeclaration
         BaseAction = node.SelectSingleNode("baseAction") == null ? "" : AuthorXml.Required(node, "baseAction");
         Priority = int.Parse(node.SelectSingleNode("priority")?.InnerText ?? "0", CultureInfo.InvariantCulture);
         Interval = long.Parse(node.SelectSingleNode("intervalTicks")?.InnerText ?? "0", CultureInfo.InvariantCulture);
+        InteractionIntervalSeconds = double.Parse(node.SelectSingleNode("interactionIntervalSeconds")?.InnerText ?? "0", CultureInfo.InvariantCulture);
         Chance = double.Parse(node.SelectSingleNode("chance")?.InnerText ?? "1", CultureInfo.InvariantCulture);
         CheckShared = bool.Parse(node.SelectSingleNode("checkShared")?.InnerText ?? "true");
         WriteShared = bool.Parse(node.SelectSingleNode("writeShared")?.InnerText ?? "true");
@@ -475,7 +477,7 @@ public sealed class DefinitionCatalog
                     declaration.Interval, declaration.CheckShared, declaration.WriteShared, declaration.Chance,
                     declaration.BaseAction, !declaration.TalkingEnabled, sustained: declaration.Sustained,
                     requiresVocal: declaration.RequiresVocal || parent?.RequiresVocal == true,
-                    subjectRole: parent?.SubjectRole));
+                    subjectRole: parent?.SubjectRole, interactionIntervalSeconds: declaration.InteractionIntervalSeconds));
                 return true;
             }
             catch (Exception error)

@@ -604,7 +604,7 @@
   <US.Help.Select.Label>选择回应资格</US.Help.Select.Label>
   <US.Help.Select.Text>官方Pawn Select默认要求玩家可控、清醒且未倒地。三项可在当前Pawn服务、Race或Xenotype层独立调整；“继承”仅清除本层该字段。回应始终要求原版接受选择，并向最终选择主体发出反馈。基础恢复只清除Pawn服务层的字段；Race或Xenotype覆盖用对应动作行恢复。</US.Help.Select.Text>
   <US.Response.Details>合同：{0}
-有效许可：{1}；范围：{2}；硬保护 tick：{3}；本地音量／音调：{4}／{5}
+有效许可：{1}；范围：{2}；动作间隔：{3}；本地音量／音调：{4}／{5}
 固定／所选依赖：{6}{7}
 字段来源：{8}
 配置／政策：{9}</US.Response.Details>
@@ -665,7 +665,11 @@
   <US.UI.No>否</US.UI.No>
   <US.UI.RowInvalid>此次修改未保存。请输入有效的半角数字／小数点，或留空继承。</US.UI.RowInvalid>
   <US.UI.Field.enabled>启用</US.UI.Field.enabled>
-  <US.UI.Field.interval>最短间隔（tick）</US.UI.Field.interval>
+  <US.UI.Field.interval>模拟间隔（游戏 tick）</US.UI.Field.interval>
+  <US.UI.IntervalInteraction>已接受交互 · 真实秒</US.UI.IntervalInteraction>
+  <US.UI.IntervalSimulation>模拟机会 · 游戏 tick</US.UI.IntervalSimulation>
+  <US.UI.IntervalByOpportunity>在间隔编辑区选择机会类别</US.UI.IntervalByOpportunity>
+  <US.UI.Field.interaction-seconds>交互间隔（真实秒）</US.UI.Field.interaction-seconds>
   <US.UI.Field.volume>音量倍数</US.UI.Field.volume>
   <US.UI.Field.pitch>音调倍数</US.UI.Field.pitch>
   <US.UI.Field.talking>谈话调制参与</US.UI.Field.talking>
@@ -691,7 +695,8 @@
   <US.UI.Help.Field.age>控制当前动作是否启用已声明的年龄响应。它不会创建作者未定义的年龄响应。</US.UI.Help.Field.age>
   <US.UI.Help.Field.mood>控制当前动作是否启用已声明的心情响应。它不会新增作者未定义的心情响应。</US.UI.Help.Field.mood>
   <US.UI.ToolCategory>当前类别</US.UI.ToolCategory>
-  <US.UI.Help.Field.interval>当前动作的最短间隔，以 tick 为单位。留空继承；0 是明确值，不表示继承。最终响应仍受其他已定义条件限制。</US.UI.Help.Field.interval>
+  <US.UI.Help.Field.interval>模拟机会的动作最短间隔，以游戏 tick 为单位；它不拦已接受交互。自定义合同若同时消费两类机会，分别声明各类的间隔；机会选择器只切换当前编辑值，不改变合同或运行时钟。留空继承本层，0 显式关闭该间隔；编辑不会清除已预留截止。旧 hardIntervalTicks 记录会准确拒绝：明确恢复或替换对应行／来源，用新单位重新填写，不自动转换旧数字。</US.UI.Help.Field.interval>
+  <US.UI.Help.Field.interaction-seconds>实际接受 root 操作之间的最短真实秒数，暂停和变速不改变它。普通选择默认 0.3 秒，征召／解除征召各 0.6 秒，不再叠加动作游戏 tick 间隔。独立或子合同自己持有参数，未明确配置时秒间隔为 0，不自动继承官方缺省。留空继承，0 关闭该间隔。重复或过期 root 不会重播，编辑也不清除已预留截止。旧调用须提供实际事件事实与已接受 root／单调时间，不回退旧路径。</US.UI.Help.Field.interaction-seconds>
   <US.UI.Help.Fields.Title>当前动作与目标的设置</US.UI.Help.Fields.Title>
   <US.UI.Help.Source.Title>行为来源</US.UI.Help.Source.Title>
   <US.UI.SourceBound>已指定</US.UI.SourceBound>

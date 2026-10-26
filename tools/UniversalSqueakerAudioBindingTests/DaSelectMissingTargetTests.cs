@@ -92,13 +92,14 @@ internal static partial class Program
         var selector = new Selector(); selector.Select(pawn);
         Check(selector.IsSelected(pawn) && !SqueakerRuntime.IsControlled(pawn),
             "vanilla selection remains intact but an incomplete observer emits no Select event or owner");
-        pawn.Comp.Notify_Select();
+        pawn.Comp.Notify_Select(UsInteractionObservation.Accepted(UsSelectObservation.FactKey, UsInteractionObservation.NewRoot()));
         var session = RuntimeSession(pawn);
         Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == 0
             && session.LastOutcome.Diagnostics.Any(x => x.Key == UsSelectObservation.FactKey && x.Reason == UsSelectObservation.FailureReason),
             "direct Select notification cannot manufacture the unavailable fact; ordinary, child and independent Select contracts stay silent with named evidence");
         Find.TickManager.TicksGame += 200;
-        pawn.Comp.NotifyExternalByKey(root, SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        session.Tick(CoreActions.Select, registeredAction: root,
+            interaction: UsInteractionObservation.Accepted(UsSelectObservation.FactKey, UsInteractionObservation.NewRoot()));
         Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == 0,
             "an explicit registered Select-dependent author call cannot bypass the unavailable capability");
         Find.TickManager.TicksGame += 200;

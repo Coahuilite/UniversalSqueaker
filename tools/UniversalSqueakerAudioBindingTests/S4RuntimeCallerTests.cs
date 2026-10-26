@@ -157,7 +157,7 @@ internal static partial class Program
         var replacement = SoundStarter.Spawned.Last();
         Check(session.LastOutcome.Action == MaintainedWound && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && original.EndCalls == 1 && !replacement.Ended,
             "prepared higher-priority contract ends old once and confirms a distinct handle");
-        Find.TickManager.TicksGame = 2330; SqueakerRuntime.TryObservedEvent(pawn, CoreActions.Call, SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent, "FixtureCurrentCall");
+        Find.TickManager.TicksGame = 2330; session.Tick();
         Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && !replacement.Ended && SoundStarter.Spawned.Count == baseline + 2,
             "lower-priority contract cannot interrupt active sustained output");
         Find.TickManager.TicksGame = 2400; session.Maintain(force: true);

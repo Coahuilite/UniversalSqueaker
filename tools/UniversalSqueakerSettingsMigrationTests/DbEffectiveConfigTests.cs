@@ -39,11 +39,11 @@ internal static partial class Program
                 && settings.TryChangeBehaviorSource(child, xeno.Id, directory, xml => settings.TryWriteBehaviorCandidate(path, xml, Serialize, out _), out _),
                 "DB parent and legal child author source persisted before player layers", ref failures);
             Check(settings.TryReplaceBehaviorOverride("Pawn", "", "", "", "us.core/Eat",
-                new BehaviorValues { Enabled = false, Volume = 0, HardIntervalTicks = 0, Phase = EatPhase.WholeProcess, NutritionScope = EatNutritionScope.Any, DrugScope = EatDrugScope.Any },
+                new BehaviorValues { Enabled = false, Volume = 0, SimulationIntervalTicks = 0, Phase = EatPhase.WholeProcess, NutritionScope = EatNutritionScope.Any, DrugScope = EatDrugScope.Any },
                 Save, out _), "DB player Pawn service profile commits false/zero/independent Eat defaults", ref failures);
             var captured = settings.CaptureBehaviorConfiguration();
             var effective = captured.Resolve(child, "us.core/Eat", defaults, directory, _ => true);
-            Check(!effective.Paused && effective.Read().Enabled == false && effective.Read().Volume == 0 && effective.Read().HardIntervalTicks == 0
+            Check(!effective.Paused && effective.Read().Enabled == false && effective.Read().Volume == 0 && effective.Read().SimulationIntervalTicks == 0
                 && effective.Read().Phase == EatPhase.WholeProcess && effective.Origins["volume"] == "player:Pawn::profile" && effective.Dependencies.Count == 0,
                 "DB all authors precede player Pawn; Any/Whole adds no optional capability requirement", ref failures);
             Check(settings.TryReplaceBehaviorOverride("Pawn", "", race.Target, "", "us.core/Eat", new BehaviorValues { Volume = .4 }, Save, out _)

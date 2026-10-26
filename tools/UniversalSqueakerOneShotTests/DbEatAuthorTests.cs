@@ -46,6 +46,7 @@ internal static partial class Program
             "DB AfterIngestion XML is independent result root, never requires ended process");
         var driver = new Driver();
         var input = new DecisionInput { Subject = "p1", SubjectRole = "ActualIngester", Domain = "Ratkin", Tick = 1000,
+            EventFact = EatPolicy.Result,
             Actions = new[] { after }, AudioCatalog = new AudioCatalog(audioInputs.Entries), Facts = facts };
         Check(new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(0, 20), input, driver, driver).Receipt?.Result == PlaybackResult.Dispatched
             && driver.LastRequest?.Ingestion?.Item == "food1" && driver.LastRequest?.Ingestion?.Nutrition == 0,

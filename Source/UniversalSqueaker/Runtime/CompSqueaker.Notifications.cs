@@ -10,13 +10,15 @@ public partial class CompSqueaker
     internal void Notify_Wounded(float? totalDamageDealt = null) => NotifyExternal(CoreActions.Wounded,
         SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent,
         totalDamageDealt.HasValue ? "Pawn.PostApplyDamage:Returned,totalDamageDealt=" + totalDamageDealt.Value.ToString(CultureInfo.InvariantCulture) : "CallerSupplied:Wounded");
-    internal void Notify_Select() => NotifyExternal(CoreActions.Select, SqueakTriggerOrigin.Select,
-        SqueakInvocationSource.PlayerSelection, "Selector:AcceptedFeedback");
+    internal void Notify_Select(Responses.InteractionOpportunity opportunity)
+        => NotifyObservedByKey(CoreActions.Select, SqueakTriggerOrigin.Select, SqueakInvocationSource.PlayerSelection,
+            "Selector:AcceptedFeedback", opportunity);
     internal void Notify_Death() => NotifyExternal(CoreActions.Death, SqueakTriggerOrigin.Death,
         SqueakInvocationSource.StateEvent, "Pawn.Kill:Entering");
-    internal void Notify_Draft(bool drafted) => NotifyExternal(drafted ? CoreActions.Draft : CoreActions.Undraft,
-        drafted ? SqueakTriggerOrigin.Draft : SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand,
-        "DraftGizmo:Changed:" + !drafted + "->" + drafted);
+    internal void Notify_Draft(bool drafted, Responses.InteractionOpportunity opportunity)
+        => NotifyObservedByKey(drafted ? CoreActions.Draft : CoreActions.Undraft,
+            drafted ? SqueakTriggerOrigin.Draft : SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand,
+            "DraftGizmo:Changed:" + !drafted + "->" + drafted, opportunity);
     internal void Notify_Attack(string mechanism = "CallerSupplied") => NotifyExternal(CoreActions.Attack,
         SqueakTriggerOrigin.Attack, Pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent,
         "AttackExecution:" + mechanism);

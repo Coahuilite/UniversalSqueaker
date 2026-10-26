@@ -77,6 +77,7 @@ internal static class UsHelpCatalog
         {
             new HelpItem("us/action-fields/enabled", "US.UI.Field.enabled", "US.UI.Help.Field.enabled"),
             new HelpItem("us/action-fields/interval", "US.UI.Field.interval", "US.UI.Help.Field.interval"),
+            new HelpItem("us/action-fields/interaction-seconds", "US.UI.Field.interaction-seconds", "US.UI.Help.Field.interaction-seconds"),
             new HelpItem("us/action-fields/volume", "US.UI.Field.volume", "US.UI.Help.Field.volume"),
             new HelpItem("us/action-fields/pitch", "US.UI.Field.pitch", "US.UI.Help.Field.pitch"),
             new HelpItem("us/action-fields/talking", "US.UI.Field.talking", "US.UI.Help.Field.talking"),

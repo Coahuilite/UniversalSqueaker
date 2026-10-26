@@ -70,7 +70,7 @@ internal static partial class Program
             => Check(settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", action, values, () => true, out _), "DB player full ActionId publish " + action);
         Set(injured, new BehaviorValues { Enabled = false });
         Set(precise, new BehaviorValues { Enabled = false });
-        Set(after, new BehaviorValues { HardIntervalTicks = 0, ResponseEnabled = new Dictionary<string, bool> { ["example/ResultMetadata"] = true } });
+        Set(after, new BehaviorValues { SimulationIntervalTicks = 0, ResponseEnabled = new Dictionary<string, bool> { ["example/ResultMetadata"] = true } });
         void Advance() => Find.TickManager.TicksGame += 200;
         void Tick() { Advance(); SqueakerRuntime.TryTick(pawn); }
         Thing Food(bool nutrition, bool drug) => new() { def = new ThingDef { defName = "DBFood", ingestible = new object(), IsNutritionGivingIngestible = nutrition, IsDrug = drug } };
@@ -158,7 +158,7 @@ internal static partial class Program
         var execution = SoundStarter.Spawned.Last(); chew.Finish();
         Check(execution.Ended && Fact(EatPolicy.Process) == Truth.True, "DB Execution sustained ends on exact phase exit while Whole process remains");
         MaintainSubject(pawn, false); sound.sustain = false;
-        Set(injured, new BehaviorValues { HardIntervalTicks = 7, Volume = .25 });
+        Set(injured, new BehaviorValues { SimulationIntervalTicks = 7, Volume = .25 });
         Set("us.core/Eat", new BehaviorValues { Phase = EatPhase.WholeProcess });
         pawn.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 }); Tick();
         Check(session.LastOutcome.Action == injured && session.DiagnosticText.Contains("localVolume=0.25")
@@ -167,7 +167,7 @@ internal static partial class Program
         pawn.health.hediffSet.hediffs.Clear();
         Set(precise, new BehaviorValues { Phase = EatPhase.WholeProcess });
         pawn.health.hediffSet.hediffs.Add(new Hediff_Injury { Severity = 1 });
-        Advance(); pawn.Comp.NotifyExternalByKey(precise, SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        Advance(); session.Tick(registeredAction: precise);
         Check(session.LastOutcome.Receipt == null && session.LastOutcome.Reason == "NoTrueAction",
             "DB explicit child call with injury true still cannot loosen fixed execution by Whole parameter");
         pawn.health.hediffSet.hediffs.Clear();
@@ -183,7 +183,7 @@ internal static partial class Program
         Advance(); food.Ingested(pawn, 1);
         Check(session.LastOutcome.Receipt == null && session.LastOutcome.Reason == "EatParametersRequireIngestionContract",
             "DB invalid explicit active-phase parameter on independent result root is rejected, never silently ignored");
-        Set(after, new BehaviorValues { HardIntervalTicks = 0 });
+        Set(after, new BehaviorValues { SimulationIntervalTicks = 0 });
         starts = SoundStarter.Played.Count; Advance(); food.ThrowIngest = true;
         try { food.Ingested(pawn, 1); } catch (InvalidOperationException) { }
         Check(SoundStarter.Played.Count == starts, "DB ingestion exception never publishes result");

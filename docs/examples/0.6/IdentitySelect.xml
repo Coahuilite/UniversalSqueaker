@@ -16,8 +16,8 @@
   <UniversalSqueaker.UsBehaviorSourceDef>
     <defName>US_ExampleIdentitySelectBehavior</defName>
     <declaration family="Pawn" target="Ratkin">
-      <action key="us.core/Select" enabled="true" hardIntervalTicks="0"/>
-      <action key="example/InjuredSelect" enabled="true" hardIntervalTicks="50" volume="0.25"/>
+      <action key="us.core/Select" enabled="true" interactionIntervalSeconds="0.3"/>
+      <action key="example/InjuredSelect" enabled="true" interactionIntervalSeconds="0.5" volume="0.25"/>
     </declaration>
   </UniversalSqueaker.UsBehaviorSourceDef>
 </Defs>

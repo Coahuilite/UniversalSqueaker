@@ -24,8 +24,8 @@
     <defName>US_ExampleEatBehavior</defName>
     <declaration family="Pawn" namespace="" target="Ratkin">
       <action key="us.core/Eat" phase="WholeProcess" nutritionScope="Any" drugScope="Any" />
-      <action key="example/InjuredEat" phase="Execution" nutritionScope="NutritionGiving" drugScope="ExcludeDrugs" volume="0.5" hardIntervalTicks="60" />
-      <action key="example/AfterIngestion" volume="0.75" hardIntervalTicks="120" />
+      <action key="example/InjuredEat" phase="Execution" nutritionScope="NutritionGiving" drugScope="ExcludeDrugs" volume="0.5" simulationIntervalTicks="60" />
+      <action key="example/AfterIngestion" volume="0.75" simulationIntervalTicks="120" />
     </declaration>
   </UniversalSqueaker.UsBehaviorSourceDef>
 </Defs>

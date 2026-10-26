@@ -246,8 +246,18 @@ public static partial class UsKernelSettingsHost
             editKeys.Add(key);
             string Address(string leaf) => UsWriteBindings.ItemKey("action-edit-keys", key, leaf);
             b.BindReadOnly<bool>(Address("current-row"), () => CurrentEditKey() == key);
+            string timingKind = UsResponsePolicy.IsOfficialInteraction(action) ? "Interaction" : "Simulation";
+            b.BindReadOnly<bool>(Address("timing-kind-choice"), () => !Kernel.BuiltInActionKeys.Contains(action));
+            b.BindChoices<string>(Address("timing-kind-options"), () => new[] {
+                new UiChoice<string>(T("IntervalInteraction"), "Interaction"), new UiChoice<string>(T("IntervalSimulation"), "Simulation") });
+            writes.ItemValue<string>("action-edit-keys", key, "timing-kind", () => timingKind, value => {
+                if (value == "Interaction" || value == "Simulation") { timingKind = value; bumper.Bump(); }
+            });
+            b.BindReadOnly<bool>(Address("interaction-row"), () => timingKind == "Interaction");
+            b.BindReadOnly<bool>(Address("simulation-row"), () => timingKind == "Simulation");
+            b.BindReadOnly<string>(Address("timing-effective"), () => production.EffectiveInterval(action, race, child, timingKind == "Interaction", t));
             b.BindChoices<string>(Address("sparse-bool-options"), () => new[] { new UiChoice<string>(T("SourceInherit"), ""), new UiChoice<string>(T("Yes"), "True"), new UiChoice<string>(T("No"), "False") });
-            foreach (string field in new[] { "enabled", "interval", "volume", "pitch", "talking", "age", "mood" })
+            foreach (string field in new[] { "enabled", "interaction-seconds", "interval", "volume", "pitch", "talking", "age", "mood" })
             {
                 string f = field;
                 writes.ItemValue<string>("action-edit-keys", key, "action-field-" + f,

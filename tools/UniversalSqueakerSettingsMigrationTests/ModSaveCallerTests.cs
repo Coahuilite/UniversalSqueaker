@@ -133,7 +133,7 @@ internal static partial class Program
 
             settings.SetGlobalVolume(.25f);
             Check(mod.TryCommitBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
-                new BehaviorValues { Enabled = false, Volume = 0, HardIntervalTicks = 0, Phase = EatPhase.Execution,
+                new BehaviorValues { Enabled = false, Volume = 0, SimulationIntervalTicks = 0, Phase = EatPhase.Execution,
                     NutritionScope = EatNutritionScope.NonNutritionGiving, DrugScope = EatDrugScope.OnlyDrugs }, out _)
                 && !mod.IsSettingsDirty && mod.PhysicalSaveCount == committedWrites + 1,
                 "DB actual Mod player operation commits new row and original pending generation once", ref failures);

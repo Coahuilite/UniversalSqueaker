@@ -53,6 +53,8 @@ internal static partial class Program
 
     private static DecisionInput Input(long tick = 1000, bool state = true, bool work = true, bool wounded = false, bool call = true)
     {
+        // r3: simulation event opportunities carry the actual Wounded fact, never a borrowed Work state.
+        if (!state) { work = false; wounded = true; call = false; }
         var catalog = new DefinitionCatalog(120, 120);
         var audioInputs = new AudioInputBuilder(catalog);
         return new DecisionInput
@@ -61,6 +63,7 @@ internal static partial class Program
             Domain = "Ratkin",
             Tick = tick,
             StateOpportunity = state,
+            EventFact = state ? "" : "us.core/WoundedEvent",
             Actions = catalog.Actions,
             Facts = new FactSnapshot(new Dictionary<string, Truth>
             {
@@ -375,7 +378,7 @@ internal static partial class Program
         var selectSource = new BehaviorSourceDeclaration();
         selectSource.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsBehaviorSourceDef/declaration")!);
         Check(selectSource.Source.Contributions.Single(x => x.Action == selectAction.Key).Values.Volume == .25
-            && selectSource.Source.Contributions.Single(x => x.Action == selectAction.Key).Values.HardIntervalTicks == 50,
+            && selectSource.Source.Contributions.Single(x => x.Action == selectAction.Key).Values.InteractionIntervalSeconds == .5,
             "DA public XML full-key source parameters load without parent-key substitution");
     }
 

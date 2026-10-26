@@ -5,6 +5,7 @@ using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
+using UniversalSqueaker.Authoring;
 
 namespace UniversalSqueaker;
 
@@ -12,6 +13,8 @@ namespace UniversalSqueaker;
 [HarmonyPatch]
 public static class Patch_DraftGizmo_Toggle
 {
+    [ThreadStatic] private static int depth;
+    [ThreadStatic] private static long root;
     private static bool Prepare() => UsPawnEventObservation.Prepare("us.core/DraftEvent");
     private static MethodBase TargetMethod() => UsPawnEventObservation.Draft!;
     private static readonly ConditionalWeakTable<Command_Toggle, object> WrappedCommands = new();
@@ -30,9 +33,16 @@ public static class Patch_DraftGizmo_Toggle
                 Action? original = toggle.toggleAction;
                 toggle.toggleAction = () =>
                 {
-                    bool before = pawn.Drafted;
-                    original?.Invoke();
-                    if (pawn.Drafted != before) pawn.GetComp<CompSqueaker>()?.Notify_Draft(pawn.Drafted);
+                    if (depth == 0) root = UsInteractionObservation.NewRoot();
+                    depth++;
+                    try
+                    {
+                        bool before = pawn.Drafted;
+                        original?.Invoke();
+                        if (pawn.Drafted != before) pawn.GetComp<CompSqueaker>()?.Notify_Draft(pawn.Drafted,
+                            UsInteractionObservation.Accepted(BuiltInPawnContracts.FactKey(pawn.Drafted ? CoreActions.Draft : CoreActions.Undraft), root));
+                    }
+                    finally { depth--; }
                 };
             }
             yield return gizmo;

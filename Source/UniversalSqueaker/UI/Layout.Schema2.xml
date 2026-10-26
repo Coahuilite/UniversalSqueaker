@@ -349,12 +349,19 @@
       <Widget Id="pack-detail-enabled" Kind="input/checkbox" Bind="enabled" SelectedBind="enabled" Appearance="switch" LabelKey="US.UI.SelectedForDomain" Height="30" HelpRef="us/pack-cards/enable" />
     </Column>
     <Column Id="sparse-action-row" VisibleBind="current-row" Gap="6" Padding="0">
+      <Widget Id="sparse-timing-kind" Kind="input/dropdown" VisibleBind="timing-kind-choice" Bind="timing-kind" OptionsBind="timing-kind-options" Width="300" Height="28" />
+      <Widget Id="sparse-timing-effective" Kind="text/wrapped" Bind="timing-effective" />
       <Row Id="sparse-enabled-row" Gap="12" Padding="0">
         <Widget Id="sparse-enabled-label" Kind="text/wrapped" TextKey="US.UI.Field.enabled" />
         <Widget Id="sparse-enabled" Kind="input/dropdown" Bind="action-field-enabled" OptionsBind="sparse-bool-options" Width="220" Height="28" />
         <Widget Id="explain-enabled" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-enabled" PayloadBind="explain-enabled-topic" HelpRef="us/action-fields/enabled" Width="80" Height="28" />
       </Row>
-      <Row Id="sparse-interval-row" Gap="12" Padding="0">
+      <Row Id="sparse-interaction-seconds-row" VisibleBind="interaction-row" Gap="12" Padding="0">
+        <Widget Id="sparse-interaction-seconds-label" Kind="text/wrapped" TextKey="US.UI.Field.interaction-seconds" />
+        <Widget Id="sparse-interaction-seconds" Kind="input/text-field" Bind="action-field-interaction-seconds" PlaceholderKey="US.UI.InheritBlank" Width="220" Height="28" />
+        <Widget Id="explain-interaction-seconds" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-interaction-seconds" PayloadBind="explain-interaction-seconds-topic" HelpRef="us/action-fields/interaction-seconds" Width="80" Height="28" />
+      </Row>
+      <Row Id="sparse-interval-row" VisibleBind="simulation-row" Gap="12" Padding="0">
         <Widget Id="sparse-interval-label" Kind="text/wrapped" TextKey="US.UI.Field.interval" />
         <Widget Id="sparse-interval" Kind="input/text-field" Bind="action-field-interval" PlaceholderKey="US.UI.InheritBlank" Width="220" Height="28" />
         <Widget Id="explain-interval" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-interval" PayloadBind="explain-interval-topic" HelpRef="us/action-fields/interval" Width="80" Height="28" />

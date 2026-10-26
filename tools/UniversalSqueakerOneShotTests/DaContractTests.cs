@@ -61,6 +61,7 @@ internal static partial class Program
                 "DA exact behavior domain cannot borrow a different subject family/namespace/target");
 
         var input = new DecisionInput { Subject = "p1", SubjectRole = "SelectedSubject", Domain = "Ratkin", Tick = 1000,
+            EventFact = "us.core/SelectEvent", Interaction = new InteractionOpportunity("us.core/SelectEvent", 1, 100),
             HasVocalOrgans = false, TalkingChance = 0, Facts = facts,
             Actions = catalog.Actions.Where(x => x.Key == "us.core/Select").ToArray(),
             AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("ordinary", "audio/shared", "us.core/Select", "Ratkin", 1) })};
@@ -100,6 +101,7 @@ internal static partial class Program
             Check(catalog.AddAction(new ActionDeclaration { Key = key, Condition = new Condition("ref", "us.core/SelectEvent") }),
                 "DC retirement is not a global third-party contract-name blacklist " + key);
             var input = new DecisionInput { Subject = "p1", SubjectRole = "DeclaredSubject", Domain = "Ratkin", Tick = 1000,
+                EventFact = "us.core/SelectEvent", Interaction = new InteractionOpportunity("us.core/SelectEvent", 1, 100),
                 Facts = new FactSnapshot(new Dictionary<string, Truth> { ["us.core/SelectEvent"] = Truth.True }),
                 Actions = catalog.Actions.Where(x => x.Key == key).ToArray(),
                 AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("independent-entry", "audio/direct", key, "Ratkin", 1) })};
@@ -129,6 +131,7 @@ internal static partial class Program
         {
             bool pawn = identity == "Ratkin" || identity == "Kiiro";
             var input = new DecisionInput { Subject = identity + "1", SubjectRole = "SelectedSubject", Tick = 1000,
+                EventFact = "us.core/SelectEvent", Interaction = new InteractionOpportunity("us.core/SelectEvent", 1, 100),
                 Family = pawn ? SubjectFamily.PawnRace : SubjectFamily.NonPawn, TargetNamespace = pawn ? "" : identity,
                 Domain = pawn ? identity : "A", HasVocalOrgans = false, TalkingChance = 0,
                 Facts = new FactSnapshot(new Dictionary<string, Truth> { ["us.core/SelectEvent"] = Truth.True }),
@@ -158,6 +161,7 @@ internal static partial class Program
             for (int i = 0; i < count; i++)
             {
                 var input = new DecisionInput { Subject = "p1", SubjectRole = "SelectedSubject", Domain = "Ratkin", ChildDomain = "X", Tick = 1000,
+                    EventFact = "accepted", Interaction = new InteractionOpportunity("accepted", 1, 100),
                     Facts = new FactSnapshot(new Dictionary<string, Truth> { ["accepted"] = Truth.True }),
                     Actions = new[] { new ActionPlan("us.core/Select", 1, new Condition("ref", "accepted"), 120, skipTalking: true, requiresVocal: false) },
                     AudioContext = new SelectionContext(xeno, "wrong/action", AgeBucket.Adult, true),
@@ -178,6 +182,7 @@ internal static partial class Program
             var domain = AudioDomain.NonPawn(ns, "A");
             var input = new DecisionInput { Subject = ns + "1", SubjectRole = "SelectedSubject", Family = SubjectFamily.NonPawn,
                 TargetNamespace = ns, Domain = "A", Tick = 1000, HasVocalOrgans = false,
+                StateOpportunity = true,
                 Actions = new[] { new ActionPlan("vendor/Select", 1, new Condition("all"), 0, skipTalking: true, requiresVocal: false) },
                 AudioCatalog = new AudioCatalog(Array.Empty<AudioCandidate>(), BuiltInFallbackTable.Empty, new[] { new VoicePackEntry(ns, domain, 1,
                     new Dictionary<string, IReadOnlyList<ActionSoundSet>> { ["vendor/Select"] = new[] { new ActionSoundSet(new[] { "audio/shared" }, null, 1) } }) }),

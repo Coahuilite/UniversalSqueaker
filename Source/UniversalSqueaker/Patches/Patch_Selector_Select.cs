@@ -52,8 +52,9 @@ public static class Patch_Selector_Select
     {
         internal readonly Selector Selector;
         internal readonly bool FeedbackRequested;
+        internal readonly long Root;
         internal object? FeedbackSubject;
-        internal Attempt(Selector selector, bool feedback) { Selector = selector; FeedbackRequested = feedback; }
+        internal Attempt(Selector selector, bool feedback, long root) { Selector = selector; FeedbackRequested = feedback; Root = root; }
     }
     [ThreadStatic] private static Stack<Attempt>? attempts;
 
@@ -62,7 +63,7 @@ public static class Patch_Selector_Select
 
     private static void Prefix(Selector __instance, bool __1, out Attempt __state)
     {
-        __state = new Attempt(__instance, __1);
+        __state = new Attempt(__instance, __1, attempts?.Count > 0 ? attempts.Peek().Root : UsInteractionObservation.NewRoot());
         (attempts ??= new Stack<Attempt>()).Push(__state);
     }
 
@@ -76,7 +77,7 @@ public static class Patch_Selector_Select
     {
         // The actual feedback call resolves proxies. Membership alone is not feedback evidence.
         if (__state?.FeedbackRequested == true && __state.FeedbackSubject is Pawn pawn && __instance.IsSelected(pawn))
-            pawn.GetComp<CompSqueaker>()?.Notify_Select();
+            pawn.GetComp<CompSqueaker>()?.Notify_Select(UsInteractionObservation.Accepted(UsSelectObservation.FactKey, __state.Root));
     }
 
     private static Exception? Finalizer(Exception? __exception, Attempt? __state)

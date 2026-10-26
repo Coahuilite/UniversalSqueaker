@@ -1,5 +1,7 @@
 # Universal Squeaker
 
+已接受的选择现使用0.3真实秒，征召／解除征召各0.6真实秒；模拟机会仍用游戏tick。新版显式机会合同拒绝缺失事实和废弃计时字段，不回退旧路径；见[间隔与升级说明](docs/response-opportunities-0.6-zh.md)。
+
 0.6 r2：[当前作者／配置合同](docs/us-kernel-0.6-refactor-zh.md)采用完整中立Core、同步单owner及明确通知声明。普通回应现于启动就绪时自动装配，无需Dev；原生与人工接受仍待完成。
 
 [English](./README.md) | **中文**

@@ -7,9 +7,9 @@ public static class ResponseDebugActions
 {
 #if US_DEV
     private static readonly UsDevelopmentPolicy fixture = new(20, 40, 120, 120, 120, 1, 1,
-        equipQualification: UsEquipQualification.PlayerCoreEquip);
+        equipQualification: UsEquipQualification.PlayerCoreEquip, interactionIntervalSeconds: 0);
 
-    [DebugAction("Universal Squeaker", "S4AB-S5 GLOBAL Dev candidate: W20 H40 I120 spread120 p1 N/speed1; Equip=PlayerCoreEquip (explicit Dev)", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+    [DebugAction("Universal Squeaker", "S4AB-S5 GLOBAL Dev candidate: W20 H40 simI120 interactionSeconds0 spread120 p1 N/speed1; Equip=PlayerCoreEquip (explicit Dev)", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
     public static void SelectCandidate()
     {
         SqueakerRuntime.SelectDevelopmentPolicy(fixture);

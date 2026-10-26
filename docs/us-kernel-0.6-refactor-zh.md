@@ -1,5 +1,7 @@
 # 0.6 r2：一条响应链与明确的新作者合同
 
+当前响应时钟／必需机会事实、混合消费者及旧字段拒绝以[显式机会合同](response-opportunities-0.6-zh.md)为准；普通交互仅真实秒，模拟仅游戏tick，不保legacy或附加tick门。发布前破坏性更新持续至用户明确确认面向玩家公开发布（US06-PREPUBLICATION-COMPAT-20261019 r4），不由GitHub可见／push／tag终止。
+
 当前源码目标是 RimWorld **1.6.4871 / net472**。r2 是未发布开发线的破坏性合同切换：完整 ActionId、一次通知声明和新 Config 格式一起生效；不提供旧 reader、短键猜测或旧计划回退。全部十五包、Core 常用 Work 和既有选音算法保留。普通Release在主线程就绪时自动安装正式策略，适用已选音频包无需Dev或行为来源；普通W600/H216、十五动作I、资格和总序见[当前普通默认](us-kernel-0.6-spec-zh.md#唯一生产-owner-与普通启动)。来源仍须显式选择，不自动采用唯一来源；原生发声／听感仍待验。
 
 ## 作者先声明一次，再通知实际主体
@@ -45,7 +47,7 @@ public static class WorkFinished
 
 ## 同步输出前预留，原 owner 按四收据结算
 
-同 tick 先预留，再做一次原生输出，最后结算 `Dispatched / AlreadyActive / Rejected / Indeterminate`。重入、准备失败、原生抛错、旧持续音 End 前后故障保持各自含义，不复制整份状态后提交，不加入 Pending 或异步效果队列。
+模拟同 tick 或交互root先预留，再做一次原生输出，最后结算 `Dispatched / AlreadyActive / Rejected / Indeterminate`。重入、准备失败、原生抛错、旧持续音 End 前后故障保持各自含义，不复制整份状态后提交，不加入 Pending 或异步效果队列。
 
 配置编辑不重抽已安排等待、不清硬截止。当前事实、发声能力、准确域、可播放性、preflight 及全局输出仍在本次机会或持续维护读取。持续音配置关闭后须按当前授权结束；普通 OneShot 的自然尾音不被过程退出硬切。局部 L 在本次请求固定，后续自有 Sample 读取当前 G 与距离；不改共享 SoundDef。
 
@@ -79,9 +81,9 @@ Scribe 同步执行，临时序列化字段在 `finally` 恢复。generation、�
 | Select | 实际接受、反馈意图、最终主体固定；玩家可控 AND 清醒 AND 未倒地三项独立可调，默认 true |
 | Wounded | 受损处理正常返回；与当前 injury 事实分开 |
 | Death | Kill 进入的临终反馈，不代表死亡完成 |
-| Attack | 明确实际执行接缝；执行不等命中，支持集仍为隔离 Dev 候选 |
+| Attack | 明确实际执行接缝；执行不等命中，普通支持集为已裁明确执行根 |
 | Move | 主体自身路径移动，不是被搬运位移 |
-| Equip | 正常装备加入与实际 wearer；GLOBAL `PlayerCoreEquip` 仍为待裁 Dev 资格 |
+| Equip | 正常装备加入与实际 wearer；普通资格为已裁 `PlayerCoreEquip`＋ActiveCommand |
 | Call | 正向闲置／原地等待，不是未知动作或失败兜底 |
 | Eat | WholeProcess／Any／Any；真摄入者、三轴独立、严格 Unknown；结果事件仅路由显式消费者 |
 | Sleep | 当前 driver.asleep，不由躺床或不清醒推导 |

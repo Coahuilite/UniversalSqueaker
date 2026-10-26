@@ -24,6 +24,10 @@ internal static partial class Program
             var driver = new Driver();
             var values = action.Condition.RequiredFacts().ToDictionary(x => x, _ => Truth.True);
             var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", SubjectRole = "SourceSubject", Tick = 1000,
+                StateOpportunity = !BuiltInPawnContracts.IsEvent(action.Key),
+                EventFact = BuiltInPawnContracts.IsEvent(action.Key) ? BuiltInPawnContracts.FactKey(action.Key) : "",
+                Interaction = UsResponsePolicy.IsOfficialInteraction(action.Key)
+                    ? new InteractionOpportunity(BuiltInPawnContracts.FactKey(action.Key), 1, 100) : null,
                 HasVocalOrgans = true, TalkingChance = 1, Facts = new FactSnapshot(values), Actions = new[] { action }, AudioCatalog = new AudioCatalog(audioInputs.Entries)};
             var result = new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(0, 20), input, driver, driver);
             Check(result.Receipt?.Result == PlaybackResult.Dispatched && driver.LastRequest?.Action == action.Key

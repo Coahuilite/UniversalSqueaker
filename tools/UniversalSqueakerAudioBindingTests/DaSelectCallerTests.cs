@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using UniversalSqueaker;
@@ -43,8 +44,8 @@ internal static partial class Program
         var domain = new BehaviorDomain("Pawn", "", "Ratkin");
         var source = new UsBehaviorSourceDef { defName = "US_DaSource", modContentPack = ratkin.modContentPack };
         source.declaration.Sources.Add(new BehaviorSource { Domain = domain, Contributions = new List<BehaviorContribution> {
-            new() { Action = "us.core/Select", Values = new BehaviorValues { Enabled = true, HardIntervalTicks = 0 } },
-            new() { Action = childId, Values = new BehaviorValues { Enabled = true, HardIntervalTicks = 50, Volume = .25 } }
+            new() { Action = "us.core/Select", Values = new BehaviorValues { Enabled = true, InteractionIntervalSeconds = 0 } },
+            new() { Action = childId, Values = new BehaviorValues { Enabled = true, InteractionIntervalSeconds = 50, Volume = .25 } }
         } });
         source.declaration.Sources.Add(new BehaviorSource { Domain = new BehaviorDomain("Pawn", "", "Ratkin", xeno.defName),
             Contributions = new List<BehaviorContribution> { new() { Action = "us.core/Select", Values = new BehaviorValues { Volume = .75 } } } });
@@ -112,10 +113,12 @@ internal static partial class Program
         RelaxSelect();
         pawn.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
         pawn.Comp.Vocal = true;
+        double beforeChild = (double)Stopwatch.GetTimestamp() / Stopwatch.Frequency;
         Find.TickManager.TicksGame += 200; selector.Select(proxy);
+        double afterChild = (double)Stopwatch.GetTimestamp() / Stopwatch.Frequency;
         Check(session.LastOutcome.Action == childId && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
-            && session.State.ActionDeadline(childId) == Find.TickManager.TicksGame + 50
-            && session.State.ActionDeadline("us.core/Select") < Find.TickManager.TicksGame
+            && session.State.InteractionDeadline(childId) >= beforeChild + 50 && session.State.InteractionDeadline(childId) <= afterChild + 50
+            && session.State.InteractionDeadline("us.core/Select") <= beforeChild
             && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaRatkin/injured")
             && session.DiagnosticText.Contains("localVolume=0.25") && !session.DiagnosticText.Contains("US_DaKiiro/"),
             "DA actual injury extension uses its full source settings/cooldown/direct shared AudioId and never Kiiro candidates");

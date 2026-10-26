@@ -7,7 +7,7 @@
 
 ## NOW — 0.6.0 r2 candidate and product gates
 
-- Audit all fifteen response wrappers and their shared clocks/opportunities/receipts/configuration/lifecycle from the paused repeated-Select feedback. The existing game-tick I and occupied-tick slot are two independent blockers; PM accepted the separation direction but has not approved final fields/consumption. Deliver one concrete common revision for decision, preserve old explicit tick units/public calls, and fix independent implementation errors without clearing owner/protection. Ordinary auto-installation, W600/H216, adopted qualifications and existing activity remain unchanged pending that decision.
+- Implement adopted WO-US06-RESPONSE-CONTRACT-AUDIT-20261027 r3: one explicit opportunity contract, real-second accepted interactions and game-tick simulation, stale-root rejection, event consumers only, sparse timing/UI/save/docs and bounded diagnostics. Remove superseded legacy and interaction tick-gate branches, preserve F3 and stable owner/protection. Local audio checks are closing at a committed checkpoint. Await the serial compact/filter UI dispatch before a final fixed833c combined stage/pair; do not issue an audio-only install package. All-fifteen native/audio acceptance remains open.
 
 - Current fixed input is FL833c14f4/local.incremental4. The maintainer accepted the paired pipeline performance; do not revalidate or modify FL. Keep A009/older candidates unchanged. After authorized response fixes settle, deliver one independent complete pair, not micro-pack tests; native audio/all-fifteen and remaining visual/IME/Config acceptance stay open. UI architecture, initial size,1100x640 breakpoint and palettes are not this task's scope; external integration is PM-owned.
 

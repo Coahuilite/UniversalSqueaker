@@ -112,7 +112,7 @@ internal static partial class Program
         {
             pack.declaration.Entries.Add(new VoiceEntry { Key = action.Split('/')[1], Action = action, Sound = "Ratkin1" });
             Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", action,
-                new BehaviorValues { HardIntervalTicks = 7 }, () => true, out _), "DB routing independent result interval " + action);
+                new BehaviorValues { SimulationIntervalTicks = 7 }, () => true, out _), "DB routing independent result interval " + action);
         }
         Initialize();
         Find.TickManager.TicksGame += 100;

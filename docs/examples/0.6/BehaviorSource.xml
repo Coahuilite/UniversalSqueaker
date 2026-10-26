@@ -3,7 +3,7 @@
   <UniversalSqueaker.UsBehaviorSourceDef>
     <defName>US_ExampleBehavior</defName>
     <declaration family="Pawn" namespace="" target="Ratkin" child="" semantics="1">
-      <action key="us.core/Work" enabled="false" hardIntervalTicks="0" talkingEnabled="false" volume="0" />
+      <action key="us.core/Work" enabled="false" simulationIntervalTicks="0" talkingEnabled="false" volume="0" />
       <action key="us.core/Select" enabled="true" scope="AnyOccurrence" requires="us.core/Responsive" />
     </declaration>
   </UniversalSqueaker.UsBehaviorSourceDef>

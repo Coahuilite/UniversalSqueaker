@@ -610,7 +610,7 @@
   <US.Help.Select.Label>Selection qualifications</US.Help.Select.Label>
   <US.Help.Select.Text>Official Pawn Select requires player control, awake and not downed by default. Adjust each qualification independently for the current Pawn profile, Race or Xenotype layer; Inherit clears only that layer's field. A response still requires an accepted selection with feedback for the final selected subject. Basics restore clears only the Pawn-profile fields; restore the exact action row to clear Race or Xenotype overrides.</US.Help.Select.Text>
   <US.Response.Details>Contract: {0}
-Effective enabled: {1}; scope: {2}; hard protection ticks: {3}; local volume/pitch: {4}/{5}
+Effective enabled: {1}; scope: {2}; action interval: {3}; local volume/pitch: {4}/{5}
 Fixed/selected dependencies: {6}{7}
 Field origins: {8}
 Configuration/policy: {9}</US.Response.Details>
@@ -671,7 +671,11 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.No>No</US.UI.No>
   <US.UI.RowInvalid>This edit was not saved. Enter a valid number with a decimal point, or leave blank to inherit.</US.UI.RowInvalid>
   <US.UI.Field.enabled>Enabled</US.UI.Field.enabled>
-  <US.UI.Field.interval>Minimum interval (ticks)</US.UI.Field.interval>
+  <US.UI.Field.interval>Simulation interval (game ticks)</US.UI.Field.interval>
+  <US.UI.IntervalInteraction>Accepted interaction · real seconds</US.UI.IntervalInteraction>
+  <US.UI.IntervalSimulation>Simulation opportunity · game ticks</US.UI.IntervalSimulation>
+  <US.UI.IntervalByOpportunity>Choose the opportunity in the interval editor</US.UI.IntervalByOpportunity>
+  <US.UI.Field.interaction-seconds>Interaction interval (real seconds)</US.UI.Field.interaction-seconds>
   <US.UI.Field.volume>Volume multiplier</US.UI.Field.volume>
   <US.UI.Field.pitch>Pitch multiplier</US.UI.Field.pitch>
   <US.UI.Field.talking>Talking participation</US.UI.Field.talking>
@@ -697,7 +701,8 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Help.Field.age>Controls declared age responses for this action. It does not create age responses that an author has not defined.</US.UI.Help.Field.age>
   <US.UI.Help.Field.mood>Controls declared mood responses for this action. It does not add mood responses that an author has not defined.</US.UI.Help.Field.mood>
   <US.UI.ToolCategory>Current tool</US.UI.ToolCategory>
-  <US.UI.Help.Field.interval>Minimum interval for this action, in ticks. Blank inherits; zero is explicit, not inheritance. Other defined response conditions still apply.</US.UI.Help.Field.interval>
+  <US.UI.Help.Field.interval>Minimum action interval for simulation opportunities, in game ticks. It never gates accepted interactions. A custom contract consuming both types has one interval for each type; the opportunity chooser only changes which value you edit, not the contract or runtime clock. Blank inherits at this layer; zero explicitly disables this interval. Edits do not clear reserved deadlines. Unsupported old hardIntervalTicks records are rejected: explicitly reset or replace the named row/source using the new unit, without converting its number automatically.</US.UI.Help.Field.interval>
+  <US.UI.Help.Field.interaction-seconds>Minimum real seconds between accepted root operations, unaffected by pause or game speed. Ordinary Select defaults to 0.3 seconds; Draft and Undraft each default to 0.6. No additional game-tick action interval applies. Independent or derived contracts own their parameters and default to zero seconds unless explicitly configured. Blank inherits; zero disables this interval. Duplicate or stale roots do not replay; edits do not clear reserved deadlines. Old callers must supply the actual event fact and accepted root/time; no legacy fallback exists.</US.UI.Help.Field.interaction-seconds>
   <US.UI.Help.Fields.Title>Settings for this action and target</US.UI.Help.Fields.Title>
   <US.UI.Help.Source.Title>Behaviour sources</US.UI.Help.Source.Title>
   <US.UI.SourceBound>Specified</US.UI.SourceBound>

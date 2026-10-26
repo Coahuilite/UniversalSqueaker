@@ -43,6 +43,7 @@
     <Compile Include="../../Source/UniversalSqueaker/Game/ResponseDebugActions.cs" Link="Production/ResponseDebugActions.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/UsAttackObservation.cs" Link="Production/UsAttackObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/UsPawnEventObservation.cs" Link="Production/UsPawnEventObservation.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsInteractionObservation.cs" Link="Production/UsInteractionObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/UsWorkObservation.cs" Link="Production/UsWorkObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/CompSqueaker.Notifications.cs" Link="Production/CompSqueaker.Notifications.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_Verb_Attack.cs" Link="Production/Patch_Verb_Attack.cs" />

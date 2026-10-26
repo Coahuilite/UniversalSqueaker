@@ -57,17 +57,29 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private string resultEvidence = "";
     private string ingestionEvidence = "";
     private string observationEvidence = "";
+    private InteractionOpportunity? observedInteraction;
+    private string observedEventFact = "";
+    private string requestedAction = "";
     internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
         + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
         + " actionUntil=" + state.ActionDeadline(LastOutcome.Action) + " nextState=" + state.NextStateTick
+        + " gate=" + (state.LastGate == "" ? LastOutcome.Reason : state.LastGate)
+        + " simulationAttemptTick=" + state.AttemptTick
+        + " opportunity=" + (observedInteraction.HasValue ? "AcceptedInteraction" : requestedAction == "" ? "SimulationState" : "SimulationEvent")
+        + " operation=" + observedInteraction?.OperationId + " eventFact=" + observedEventFact
+        + " monotonicSeconds=" + (observedInteraction?.MonotonicSeconds.ToString("R", System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable")
+        + " secondsUntil=" + state.InteractionDeadline(LastOutcome.Action).ToString("R", System.Globalization.CultureInfo.InvariantCulture)
         + " active=" + owner.ActiveAction + " ended=" + owner.LastEndReason
         + " subject=" + owner.Subject + " nativeLabel=" + pawn.ThingID + " role=" + lastRequest?.SubjectRole
         + " family=" + lastRequest?.Family + " domain=" + lastRequest?.Domain + " child=" + lastRequest?.ChildDomain
         + " sourceDomain=" + lastRequest?.Audio.SourceDomain + " tier=" + lastRequest?.Audio.SourceTier + " pack=" + lastRequest?.Audio.PackKey
         + " requestedEntry=" + lastRequest?.Audio.EntryKey + " requestedAudio=" + lastRequest?.Audio.AudioId
         + " localPitch=" + lastRequest?.Pitch + " localVolume=" + lastRequest?.Audio.Volume
-        + " configView=" + configuration?.Id + " effective=" + string.Join(";", effectiveActions.Where(x => x.Key == LastOutcome.Action).Select(x => x.Key + ":" + string.Join(",", x.Value.Origins.Select(v => v.Key + "=" + v.Value)) + ":requires=" + string.Join(",", x.Value.Dependencies)))
+        + " configView=" + configuration?.Id + " effective=" + string.Join(";", effectiveActions.Where(x => x.Key == (LastOutcome.Action == "" ? requestedAction : LastOutcome.Action)).Select(x => x.Key
+            + (observedInteraction.HasValue ? ":intervalUnit=realSeconds:interval=" + x.Value.Read().InteractionIntervalSeconds
+                : ":intervalUnit=gameTicks:interval=" + x.Value.Read().SimulationIntervalTicks)
+            + ":" + string.Join(",", x.Value.Origins.Select(v => v.Key + "=" + v.Value)) + ":requires=" + string.Join(",", x.Value.Dependencies)))
         + " ingestion=" + ingestionEvidence
         + " result=" + resultEvidence
         + " observation=" + observationEvidence
@@ -101,7 +113,8 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     }
 
     private ResponseFrame Capture(BehaviorConfiguration accepted, string? eventKey, bool activeCommand = false, string? registeredAction = null,
-        UsIngestionObservation.Result? result = null, string? notificationFact = null)
+        UsIngestionObservation.Result? result = null, string? notificationFact = null,
+        InteractionOpportunity? interaction = null)
     {
         var snapshot = GameRuntime.Current;
         var context = snapshot.ResolveContext(pawn, accepted);
@@ -122,7 +135,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         {
             Subject = owner.Subject, Domain = new BehaviorDomain("Pawn", "", pawn.def.defName, context.Xenotype?.defName ?? ""),
             Tick = Find.TickManager.TicksGame, StateOpportunity = eventKey == null, ActionFilter = registeredAction,
-            IngestionResultOpportunity = result != null,
+            EventFact = eventKey == null ? "" : notificationFact ?? (result != null ? EatPolicy.Result : BuiltInPawnContracts.FactKey(eventKey)), Interaction = interaction,
             SubjectRole = eventKey == CoreActions.Select ? "SelectedSubject" : eventKey == CoreActions.Attack ? "Attacker"
                 : eventKey == CoreActions.Wounded ? "DamageRecipient" : result != null ? "ActualIngester" : "Subject",
             ActiveCommand = activeCommand || eventKey == null && values["us.core/ActiveCommand"] == Truth.True,
@@ -141,7 +154,8 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     }
 
     internal void Tick(string? eventKey = null, bool activeCommand = false, string? registeredAction = null,
-        UsIngestionObservation.Result? ingestionResult = null, string evidence = "", string? notificationFact = null)
+        UsIngestionObservation.Result? ingestionResult = null, string evidence = "", string? notificationFact = null,
+        InteractionOpportunity? interaction = null)
     {
         long now = Find.TickManager.TicksGame;
         if (eventKey == null && now < owner.State.NextStateTick) return;
@@ -149,7 +163,8 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
             ? "StateOpportunity:job=" + pawn.CurJob?.def?.defName + ",driver=" + pawn.jobs?.curDriver?.GetType().FullName : "Event:" + eventKey;
         configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
         var view = new RuntimeView(catalog, configuration, SqueakerRuntime.Audio);
-        var frame = Capture(configuration, eventKey, activeCommand, registeredAction, ingestionResult, notificationFact);
+        var frame = Capture(configuration, eventKey, activeCommand, registeredAction, ingestionResult, notificationFact, interaction);
+        observedInteraction = interaction; observedEventFact = frame.EventFact; requestedAction = eventKey ?? "";
         draws.Clear(); preparedSound = null; lastRequest = null;
         LastOutcome = owner.Respond(view, frame, candidate, this, this);
         lastObservation = now;
@@ -445,8 +460,11 @@ public static class SqueakerRuntime
         var action = catalog.Actions.First(x => x.Key == actionId);
         var policy = CurrentPolicy;
         var defaults = policy == null ? BehaviorContract.DeclaredDefaults(action) : BehaviorContract.Defaults(action, policy);
-        return race == "" ? configuration.ResolveProfile("Pawn", "", actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts())
+        var effective = race == "" ? configuration.ResolveProfile("Pawn", "", actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts())
             : configuration.Resolve(new BehaviorDomain("Pawn", "", race, child), actionId, defaults, catalog.BehaviorSources, ImplementationAvailable, action.Condition.RequiredFacts());
+        string invalid = BehaviorContract.InvalidParameters(action, effective.Read());
+        return !effective.Paused && invalid != "" ? new EffectiveBehavior(effective.Read(), true, invalid,
+            effective.Origins.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal), effective.Dependencies) : effective;
     }
     internal static string DiagnosticText(Pawn pawn) => sessions.TryGetValue(pawn.thingIDNumber, out var session)
         ? session.DiagnosticText : PolicyStatus;
@@ -600,9 +618,10 @@ public static class SqueakerRuntime
         return true;
     }
 
-    internal static bool TryObservedEvent(Pawn pawn, string key, SqueakTriggerOrigin origin, SqueakInvocationSource source, string evidence)
+    internal static bool TryObservedEvent(Pawn pawn, string key, SqueakTriggerOrigin origin, SqueakInvocationSource source, string evidence,
+        InteractionOpportunity? interaction = null)
     {
-        if (!catalog.Actions.Any(x => x.Key == key)) return false;
+        if (!Kernel.BuiltInActionKeys.Contains(key) || !BuiltInPawnContracts.IsEvent(key) || !catalog.HasAction(key)) return false;
         var session = SessionFor(pawn);
         if (session == null)
         {
@@ -612,11 +631,8 @@ public static class SqueakerRuntime
         var invocation = new SqueakTriggerInvocation(origin, source);
         if (SqueakerMod.Settings.CaptureBehaviorConfiguration().SystemEnabled && pawn.GetComp<CompSqueaker>().ControlledInvocationAllowed(invocation))
         {
-            session.Tick(key, invocation.IsActiveCommand,
-                // A native notification publishes facts, not a forced wrapper identity.
-                // Independent roots and narrowed children using that fact enter the same arbitration.
-                // An explicit public call naming an author action still targets that definition.
-                !Kernel.BuiltInActionKeys.Contains(key) ? key : null, evidence: evidence);
+            // Explicit fact consumers, including independent roots/children, share this owner.
+            session.Tick(key, invocation.IsActiveCommand, evidence: evidence, interaction: interaction);
         }
 
         // Only declared contracts reach the owner. Unknown strings never synthesize a default plan.
