@@ -73,13 +73,30 @@ public sealed partial class UsKernelSettingsSource
         (state.TuningLayer == 2 && state.TuningXenotypeDefName == "") ? null :
         new BehaviorDomain("Pawn", "", state.TuningRaceDefName, state.TuningLayer == 2 ? state.TuningXenotypeDefName : "");
 
-    public string SelectedSource => SourceDomain is BehaviorDomain domain ?
-        BehaviorSourceState.FromXml(settings.behaviorSourcesXml).Read(domain).SourceId : "";
+    private const string RejectedSourceChoice = "\0rejected-behavior-source";
+    private bool TryReadSource(out BehaviorBinding binding, out string failure)
+    {
+        binding = new BehaviorBinding(); failure = "";
+        if (SourceDomain is not BehaviorDomain domain) return true;
+        try { binding = BehaviorSourceState.FromXml(settings.behaviorSourcesXml).Read(domain); return true; }
+        catch (Exception error) { failure = error.GetType().Name + ":" + error.Message; return false; }
+    }
+    public string SelectedSource
+    {
+        get
+        {
+            return !TryReadSource(out var binding, out _) || binding.RejectedTimingXml != ""
+                ? RejectedSourceChoice : binding.SourceId;
+        }
+    }
 
     public IReadOnlyList<UiChoice<string>> SourceChoices(IUiTranslation t)
     {
         if (SourceDomain == null) return Array.Empty<UiChoice<string>>();
         var choices = new List<UiChoice<string>> { new(t.Translate("US.UI.SourceInherit"), "") };
+        if (!TryReadSource(out var binding, out _) || binding.RejectedTimingXml != "")
+            choices.Add(new UiChoice<string>(t.Translate("US.UI.SourceRejectedChoice")
+                + (binding.SourceId == "" ? "" : " · " + binding.SourceId), RejectedSourceChoice));
         if (SourceDomain is BehaviorDomain domain)
             choices.AddRange(SqueakerRuntime.BehaviorSources.Candidates(domain).Select(x => new UiChoice<string>(x.Id, x.Id)));
         return choices;
@@ -87,6 +104,7 @@ public sealed partial class UsKernelSettingsSource
 
     public void CommitSource(string sourceId)
     {
+        if (sourceId == RejectedSourceChoice) return; // Display-only, never a stored source identity.
         if (SourceDomain is not BehaviorDomain domain || SqueakerMod.Instance == null) return;
         bool committed = SqueakerMod.Instance.TryCommitBehaviorSource(domain, sourceId == "" ? null : sourceId, out string diagnostic);
         state.SourceChangeDiagnostic = committed ? diagnostic.StartsWith("Committed:", StringComparison.Ordinal)
@@ -101,17 +119,20 @@ public sealed partial class UsKernelSettingsSource
         string note;
         if (SourceDomain is BehaviorDomain domain)
         {
-            var binding = BehaviorSourceState.FromXml(settings.behaviorSourcesXml).Read(domain);
+            bool readable = TryReadSource(out var binding, out string failure);
             string intent = binding.Intent switch { BehaviorSourceIntent.Bound => "US.UI.SourceBound",
                 BehaviorSourceIntent.Inherit => "US.UI.SourceInherit", _ => "US.UI.SourceUnconfigured" };
-            note = t.Translate("US.UI.SourceStatus") + ": " + t.Translate(intent)
-                + (binding.SourceId == "" ? "" : " · " + binding.SourceId);
+            note = !readable || binding.RejectedTimingXml != "" ? t.Translate("US.UI.SourceTimingRejected") + "\n"
+                + (failure != "" ? failure : binding.RejectedTimingReason)
+                : t.Translate("US.UI.SourceStatus") + ": " + t.Translate(intent)
+                    + (binding.SourceId == "" ? "" : " · " + binding.SourceId);
         }
         else note = t.Translate("US.UI.SourceChooseDomain");
         if (state.SourceChangeDiagnostic != "")
         {
             string[] parts = state.SourceChangeDiagnostic.Split(new[] { '\n' }, 2);
             note += "\n" + t.Translate(parts[0]);
+            if (parts.Length > 1 && parts[1] != "") note += "\n" + parts[1];
         }
         return note;
     }

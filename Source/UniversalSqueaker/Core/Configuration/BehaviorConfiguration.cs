@@ -79,7 +79,7 @@ public sealed class BehaviorConfiguration
             foreach (var row in this.players.Where(x => x.ValidScope && x.Target != ""))
                 configuredDomains.Add(new BehaviorDomain(row.Family, row.Namespace, row.Target, row.Child).Identity);
         }
-        catch (Exception error) { failure = "UnreadableBehaviorConfig:" + error.GetType().Name; }
+        catch (Exception error) { failure = "UnreadableBehaviorConfig:" + error.GetType().Name + ":" + error.Message; }
     }
     public EffectiveBehavior Resolve(BehaviorDomain domain, string action, BehaviorValues defaults, BehaviorSourceDirectory directory,
         Func<string, bool> implementationAvailable, IEnumerable<string>? fixedFacts = null)

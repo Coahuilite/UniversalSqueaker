@@ -666,6 +666,8 @@
   <US.UI.RowInvalid>此次修改未保存。请输入有效的半角数字／小数点，或留空继承。</US.UI.RowInvalid>
   <US.UI.Field.enabled>启用</US.UI.Field.enabled>
   <US.UI.Field.interval>模拟间隔（游戏 tick）</US.UI.Field.interval>
+  <US.UI.SourceTimingRejected>来源计时已拒绝：选择继承，或重新选择更新后的来源，仅为当前域提交恢复</US.UI.SourceTimingRejected>
+  <US.UI.SourceRejectedChoice>已拒绝的来源（需恢复）</US.UI.SourceRejectedChoice>
   <US.UI.IntervalInteraction>已接受交互 · 真实秒</US.UI.IntervalInteraction>
   <US.UI.IntervalSimulation>模拟机会 · 游戏 tick</US.UI.IntervalSimulation>
   <US.UI.IntervalByOpportunity>在间隔编辑区选择机会类别</US.UI.IntervalByOpportunity>

@@ -171,7 +171,13 @@ public sealed class BehaviorBinding
     public BehaviorSourceIntent Intent;
     public string SourceId = "";
     public BehaviorSource? Snapshot;
-    public BehaviorBinding Copy() => new() { Domain = Domain, Intent = Intent, SourceId = SourceId, Snapshot = Snapshot?.Copy() };
+    // A known, well-shaped old timing snapshot is retained for rejection/replacement, never executed.
+    public string RejectedTimingXml = "";
+    public string[] RejectedTimingActions = Array.Empty<string>();
+    public string RejectedTimingReason => RejectedTimingXml == "" ? "" : "UnsupportedBehaviorTiming:" + SourceId
+        + ":" + string.Join(",", RejectedTimingActions) + ":hardIntervalTicks; select Inherit or explicitly rebind an updated source";
+    public BehaviorBinding Copy() => new() { Domain = Domain, Intent = Intent, SourceId = SourceId, Snapshot = Snapshot?.Copy(),
+        RejectedTimingXml = RejectedTimingXml, RejectedTimingActions = (string[])RejectedTimingActions.Clone() };
 }
 
 /// <summary>Complete startup candidates, independently of audio enablement. Duplicates never win by order.</summary>
@@ -238,6 +244,7 @@ public sealed class BehaviorSourceState
     {
         foreach (var binding in Bindings.Where(x => x.Intent == BehaviorSourceIntent.Bound))
         {
+            if (binding.RejectedTimingXml != "") continue; // Recovery is an explicit domain transaction, not startup refresh.
             var current = directory.Find(binding.Domain, binding.SourceId);
             if (current == null || current.Semantics != 1)
             {
@@ -279,6 +286,12 @@ public sealed class BehaviorSourceState
             var binding = Read(layer);
             if (binding.Intent != BehaviorSourceIntent.Bound)
             {
+                continue;
+            }
+            if (binding.RejectedTimingActions.Contains(action, StringComparer.Ordinal))
+            {
+                paused = true;
+                reportPause?.Invoke(binding.RejectedTimingReason);
                 continue;
             }
             var current = directory.Find(layer, binding.SourceId);
@@ -364,7 +377,13 @@ public sealed class BehaviorSourceState
             node.SetAttribute("intent", binding.Intent.ToString());
             node.SetAttribute("source", binding.SourceId);
             root.AppendChild(node);
-            if (binding.Snapshot != null)
+            if (binding.RejectedTimingXml != "")
+            {
+                var rejected = new XmlDocument { XmlResolver = null };
+                rejected.LoadXml(binding.RejectedTimingXml);
+                node.AppendChild(document.ImportNode(rejected.DocumentElement!, true));
+            }
+            else if (binding.Snapshot != null)
             {
                 WriteSource(document, node, binding.Snapshot);
             }
@@ -412,7 +431,22 @@ public sealed class BehaviorSourceState
             var snapshot = node["snapshot"];
             if (snapshot != null)
             {
-                binding.Snapshot = ReadSource(snapshot, domain, binding.SourceId);
+                var legacy = snapshot.ChildNodes.OfType<XmlElement>().Where(x => x.Name == "action" && x.HasAttribute("hardIntervalTicks")).ToArray();
+                if (legacy.Length == 0) binding.Snapshot = ReadSource(snapshot, domain, binding.SourceId);
+                else
+                {
+                    // Validate everything except the precisely known rejected attribute. Unknown shapes
+                    // still throw; removing it here never creates executable defaults for that action.
+                    var shape = (XmlElement)snapshot.CloneNode(true);
+                    foreach (XmlElement action in shape.ChildNodes.OfType<XmlElement>()) action.RemoveAttribute("hardIntervalTicks");
+                    var validated = ReadSource(shape, domain, binding.SourceId);
+                    if (validated.Semantics != 1 || validated.Contributions.Any(x => !Valid(x, domain.Family)))
+                        throw new ArgumentException("Invalid author snapshot:" + binding.SourceId);
+                    binding.RejectedTimingXml = snapshot.OuterXml;
+                    binding.RejectedTimingActions = legacy.Select(x => x.GetAttribute("key")).ToArray();
+                    validated.Contributions.RemoveAll(x => binding.RejectedTimingActions.Contains(x.Action, StringComparer.Ordinal));
+                    binding.Snapshot = validated;
+                }
             }
             if (binding.Snapshot?.Semantics == 1 && binding.Snapshot.Contributions.Any(x => !Valid(x, domain.Family)))
             {

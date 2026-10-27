@@ -672,6 +672,8 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.RowInvalid>This edit was not saved. Enter a valid number with a decimal point, or leave blank to inherit.</US.UI.RowInvalid>
   <US.UI.Field.enabled>Enabled</US.UI.Field.enabled>
   <US.UI.Field.interval>Simulation interval (game ticks)</US.UI.Field.interval>
+  <US.UI.SourceTimingRejected>Source timing rejected — select Inherit, or reselect an updated source to commit recovery for this domain only</US.UI.SourceTimingRejected>
+  <US.UI.SourceRejectedChoice>Rejected source (recovery required)</US.UI.SourceRejectedChoice>
   <US.UI.IntervalInteraction>Accepted interaction · real seconds</US.UI.IntervalInteraction>
   <US.UI.IntervalSimulation>Simulation opportunity · game ticks</US.UI.IntervalSimulation>
   <US.UI.IntervalByOpportunity>Choose the opportunity in the interval editor</US.UI.IntervalByOpportunity>
