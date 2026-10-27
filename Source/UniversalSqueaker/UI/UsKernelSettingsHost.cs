@@ -681,9 +681,14 @@ public static partial class UsKernelSettingsHost
         writes.Value<string>(id + "-source-query", () => browse.SourceQuery, value => { browse.SourceQuery = value; browse.SourcePage = 0; bump(); });
         writes.Action<string>(id + "-browse", op =>
         {
-            if (op == "prev") browse.Page = Math.Max(0, browse.Page - 1);
+            UsBrowseListView Current()
+            {
+                source.BuildView();
+                return id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList;
+            }
+            if (op == "prev") browse.Page = Math.Max(0, Current().Page - 1);
             else if (op == "next") { source.BuildView(); var v = id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList; browse.Page = Math.Min(v.Pages - 1, v.Page + 1); }
-            else if (op == "sources-prev") browse.SourcePage = Math.Max(0, browse.SourcePage - 1);
+            else if (op == "sources-prev") browse.SourcePage = Math.Max(0, Current().SourcePage - 1);
             else if (op == "sources-next") { source.BuildView(); var v = id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList; browse.SourcePage = Math.Min(v.SourcePages - 1, v.SourcePage + 1); }
             else if (op == "sources") browse.SourcesOpen = !browse.SourcesOpen;
             else if (op == "clear") { browse.Clear(); if (id == "table") browse.Group = UsBoardBrowsePolicy.BoardGroup.All; if (id == "directory") { state.BoardFilter = UsBoardBrowsePolicy.BoardFilter.None; state.BoardXenoExpanded = true; } }
