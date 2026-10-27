@@ -292,6 +292,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     private VoicePacksViewState BuildRichView()
     {
+        // Existing fixture facts now feed the public bounded-list projection as production does.
+        state.TableList = UsBrowseListView.Project(FallbackTableAutoRace.Length == 0 ? Array.Empty<UsBrowseItem>()
+            : new[] { new UsBrowseItem(FallbackTableAutoRace, FallbackTableAutoRace) }, state.TableBrowse, false);
         bool filterSanguophage = string.Equals(state.RaceFilter, "sanguophage", StringComparison.Ordinal);
         var sang = new VoicePackDomainView(
             // The two Packs layers compose their title from the xenotype name plus the race context, so

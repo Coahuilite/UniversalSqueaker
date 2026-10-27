@@ -337,7 +337,7 @@ public sealed class UsRaceBoardView
         int summaryTotal = 0,
         int summaryWithPacks = 0,
         int summaryEnabled = 0,
-        int xenotypeBandIndex = 0)
+        int xenotypeBandIndex = 0, int filteredCount = 0, int page = 0, int pages = 1)
     {
         XenotypeBandIndex = xenotypeBandIndex < 0 ? 0
             : (xenotypeBandIndex > (rows?.Count ?? 0) ? (rows?.Count ?? 0) : xenotypeBandIndex);
@@ -351,6 +351,7 @@ public sealed class UsRaceBoardView
         TotalXenotypes = totalXenotypes;
         Group = group;
         Filter = filter;
+        FilteredCount = filteredCount; Page = page; Pages = pages;
     }
 
     public readonly IReadOnlyList<RaceBoardRow> Rows;
@@ -364,6 +365,7 @@ public sealed class UsRaceBoardView
     public readonly int XenotypeBandIndex;
     public readonly int TotalRaces;
     public readonly int TotalXenotypes;
+    public readonly int FilteredCount, Page, Pages;
     public readonly UsBoardBrowsePolicy.BoardGroup Group;
     public readonly UsBoardBrowsePolicy.BoardFilter Filter;
 

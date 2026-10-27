@@ -477,8 +477,9 @@ internal static class UiSourceInvariantTests
         // all-loaded-race board (us/race-board) and the final-fallback editor migrated out of the
         // tuning composite (us/fallback-editor); each is used by exactly one manifest element, so the
         // parity assertion above keeps the new number honest in both directions.
-        Assert(registeredKinds.Count == 15,
-            "the registered us/* kind set must have 15 members (14 settings + 1 overlay), got "
+        // FILTER-COMPACT adds the shared bounded directory/source-list presentation.
+        Assert(registeredKinds.Count == 16,
+            "the registered us/* kind set must have 16 members (15 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 

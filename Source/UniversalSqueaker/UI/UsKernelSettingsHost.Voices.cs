@@ -166,7 +166,7 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<bool>("voice-packs", () => !s.BrowseDefinitions);
         b.BindReadOnly<bool>("voice-definitions", () => s.BrowseDefinitions);
         writes.Command("browse-packs", () => { s.BrowseDefinitions = false; bumper.Bump(); });
-        writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; s.BoardGroup = UsBoardBrowsePolicy.BoardGroup.All; bumper.Bump(); });
+        writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; bumper.Bump(); });
         b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.WideLayout || !s.DetailOpen));
         b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.WideLayout || s.DetailOpen));
         b.BindReadOnly<bool>("voice-compact-back", () => !s.WideLayout && s.DetailOpen);
@@ -186,7 +186,8 @@ public static partial class UsKernelSettingsHost
         writes.Command("voice-filters", () => { s.FiltersOpen = !s.FiltersOpen; bumper.Bump(); });
         writes.Command("voice-refresh", () => { s.EnabledFilterIdentity = ""; bumper.Bump(); });
         b.BindReadOnly<bool>("voice-stable-filter", () => s.DomainFilter.EnabledOnly);
-        b.BindReadOnly<string>("voice-summary", () => { source.BuildView(); return string.Format(T("Summary"), s.PackSelected, s.PackTotal, s.OrphanSelectionCount); });
+        b.BindReadOnly<string>("voice-summary", () => { source.BuildView(); return string.Format(T("Summary"), s.PackSelected, s.PackTotal, s.OrphanSelectionCount)
+            + (SqueakerRuntime.PolicyStatus == "OrdinaryActive" ? " · " + T("OrdinaryReady") : ""); });
         b.BindReadOnly<string>("voice-page-count", () => { int count = source.BuildView().PackCards.Count; return string.Format(T("PageCount"), Math.Min(s.PackPage + 1, Math.Max(1, (count + 19) / 20)), Math.Max(1, (count + 19) / 20)); });
         b.BindReadOnly<bool>("voice-pager", () => source.BuildView().PackCards.Count > 20);
         writes.Command("voice-prev", () => { s.PackPage = Math.Max(0, s.PackPage - 1); s.DetailOpen = false; bumper.Bump(); });

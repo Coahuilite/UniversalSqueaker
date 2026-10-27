@@ -47,6 +47,7 @@ internal static class Patch_USMainMenuEntry
 [HarmonyPatch(typeof(Dialog_Options), nameof(Dialog_Options.DoWindowContents))]
 internal static class Patch_USOptionsEntry
 {
+    private static readonly Lazy<Texture2D> Microphone = new(() => ContentFinder<Texture2D>.Get("UI/Icons/USMicrophone", false));
     private static readonly FieldInfo? HasModSettings = AccessTools.Field(typeof(Dialog_Options), "hasModSettings");
     private static void Postfix(Dialog_Options __instance, Rect inRect)
     {
@@ -74,7 +75,9 @@ internal static class Patch_USOptionsEntry
                 SoundDefOf.Click.PlayOneShotOnCamera();
                 SqueakerMod.Instance.OpenSettings();
             }
-            Widgets.Label(new Rect(rect.x + 10f, rect.y, rect.width - 20f, rect.height), "US.UI.Entry".Translate());
+            Texture2D icon = Microphone.Value;
+            if (icon != null) GUI.DrawTexture(new Rect(rect.x + 10f, rect.y + (rect.height - 20f) * .5f, 20f, 20f), icon);
+            Widgets.Label(new Rect(rect.x + 40f, rect.y, rect.width - 50f, rect.height), "US.UI.Entry".Translate());
         }
         finally { GUI.color = color; GUI.enabled = enabled; Text.Font = font; Text.Anchor = anchor; }
     }

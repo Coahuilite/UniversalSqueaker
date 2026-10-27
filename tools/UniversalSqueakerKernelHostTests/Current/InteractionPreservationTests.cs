@@ -141,7 +141,7 @@ internal static class InteractionPreservationTests
         var inputs = geometry.Where(x => x.ElementId == "fallback-editor" || x.Path.Contains("/fallback-editor/@")).ToArray();
         Program.Check(inputs.Length > 1, "actual fallback editor exposes interactive rows");
         // Open then dismiss its native race popup: this establishes the actual subtree as Cancel subject.
-        Program.Click(page, View, inputs[0].Rect);
+        Program.Click(page, View, inputs.Single(x => x.ControlKey.IndexOf("vf1-race", StringComparison.Ordinal) >= 0).Rect);
         Program.Check(page.Host.Session.OpenPopupId != null && page.Host.TryHandleCancel(), "fallback popup gets first Cancel"); page.Draw(View);
         Program.Check(page.Host.TryHandleCancel(), "next Cancel reaches actual fallback entry layer"); page.Draw(View);
         Program.Check(source.ViewState.FallbackSelectedEntryAction.Length == 0 && !source.ViewState.FallbackTableCanceled, "entry return leaves selected table");
@@ -165,7 +165,7 @@ internal static class InteractionPreservationTests
             try
             {
                 using var page = new Program.Page(UsKernelSettingsHost.Create(source, Program.Metrics));
-                var view = new UiLayoutRect(0, 0, 896, 604); // WO minimum logical-screen content, not native rendering.
+                var view = new UiLayoutRect(0, 0, 800, 560); // Compact WO: 864x640 minus FL chrome/insets, not native rendering.
                 page.Draw(view);
                 Program.Press(page, view, "topic-link");
                 page.Draw(view);

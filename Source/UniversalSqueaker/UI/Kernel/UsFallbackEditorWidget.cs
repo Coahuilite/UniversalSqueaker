@@ -8,13 +8,11 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// The final native fallback table editor (UIR-004, WO-US-UI-REFACTOR-20261014). Extracted VERBATIM in
-/// behaviour from the tuning tree's third area when the fallback moved to the audio-packs page - the
-/// last audible answer belongs beside the packs it falls back from - so the editor and the routing
-/// still read ONE answer from the live store.
+/// Final native fallback table editor. Independent bounded browsers project the live store and
+/// published definitions; selection is page state, while explicit commands keep the existing owner.
 ///
 /// <para>
-/// The race picker over the supported tables (maintainer ∪ player), the closed 17-key entry list with
+/// The race picker over the supported tables (maintainer ∪ player), the closed 15-key entry list with
 /// per-row state, a query-filtered sound picker labelled with the CURRENT production availability (an
 /// unprobed sound says "unknown", never "missing"), create-from-loaded-pawn-races, restore-default and
 /// deletion through ONE ordinary UiKit confirmation window. Every binding key it touches is the page
@@ -50,6 +48,9 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
 
     public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
+        foreach (string id in new[] { "table", "candidate", "sound" }) UsBrowseControls.Validate(bindings, elementPath, id);
+        bindings.ValidateValue<string>("fallback-pending-race", elementPath);
+        bindings.ValidateAction<string>("select-fallback-candidate", elementPath);
         // The full fallback surface moved with the editor: a missing key must fail at creation, not
         // half-draw the table (the same rule the scope-tree comment recorded for these keys).
         bindings.ValidateValue<IReadOnlyList<FallbackRaceView>>("fallback-races", elementPath);
@@ -91,19 +92,20 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
 
     private static float EditorHeight(UiWidgetContext ctx, float width)
     {
-        // Mirrors DrawEditor line for line: race line + status line + create line are drawn for every
-        // shape; the entry list, the SOUND QUERY field, the picker row and the button row only when a
-        // race is selected. A measure that forgets a drawn row clips it.
+        // Mirrors the bounded table/candidate browsers, selected-table status and optional editor.
         // UIR-004: the status line is the one band whose TEXT is a full sentence (the no-tables and
         // restart notices), so its height is wrap-aware - measured through the same seam and font that
         // DrawEditor uses, never a fixed band, because the card page fit audit runs this editor at the
         // game's minimum box in both shipped languages.
         float height = 2 * (RowHeight + RowGap) + StatusBandHeight(ctx, width) + RowGap;
+        height += UsBrowseControls.Height(ctx, "table", true) + UsBrowseControls.Height(ctx, "candidate", true);
         string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
         if (selectedRace.Length > 0)
         {
             height += UniversalSqueaker.Kernel.BuiltInActionKeys.All.Count * RowHeight + RowGap;
-            height += 2 * (RowHeight + RowGap) + RowHeight + RowGap; // query + picker + buttons
+            height += RowHeight + RowGap; // restore/delete
+            string selectedEntry = ctx.Bindings.Get<string>("fallback-selected-entry") ?? "";
+            if (selectedEntry.Length > 0) height += UsBrowseControls.Height(ctx, "sound", true) + RowHeight + RowGap;
         }
 
         return height;
@@ -116,8 +118,15 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
         IReadOnlyList<FallbackRaceView> races = ctx.Bindings.TryGet("fallback-races", out IReadOnlyList<FallbackRaceView> rs)
             ? rs : Array.Empty<FallbackRaceView>();
         string status = ctx.Bindings.TryGet("fallback-status", out string st) ? st ?? "" : "";
-        return status.Length > 0 ? UsKernelDraw.Keyed(ctx, status)
+        string selected = ctx.Bindings.Get<string>("fallback-selected-race") ?? "";
+        var tableView = ctx.Bindings.Get<UsBrowseListView>("table-browse-view");
+        bool hidden = selected.Length > 0;
+        foreach (var row in tableView.Rows) if (row.Value == selected) hidden = false;
+        string selection = selected.Length == 0 ? "" : UsKernelDraw.Keyed(ctx, "US.Browse.Editing") + ": " + selected
+            + (hidden ? " · " + UsKernelDraw.Keyed(ctx, "US.Browse.HiddenSelection") : "");
+        string notice = status.Length > 0 ? UsKernelDraw.Keyed(ctx, status)
             : races.Count == 0 ? UsKernelDraw.Keyed(ctx, "US.VF1.NoTable") : "";
+        return selection + (notice.Length > 0 ? "\n" + notice : "");
     }
 
     private static float StatusBandHeight(UiWidgetContext ctx, float width)
@@ -133,10 +142,11 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
         string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
 
         var racePairs = new List<KeyValuePair<string, string>>();
-        foreach (FallbackRaceView race in races)
+        y += UsBrowseControls.Draw(x, y, width, ctx, "table", true, true);
+        foreach (UsBrowseItem race in ctx.Bindings.Get<UsBrowseListView>("table-browse-view").Rows)
         {
             racePairs.Add(new KeyValuePair<string, string>(
-                race.Label + "  " + race.DefName + (race.IsPlayerTable ? "  (*)" : ""), race.DefName));
+                race.Label + "  " + race.Value, race.Value));
         }
 
         UsKernelDraw.Label(ctx.Drawing, new UiLayoutRect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Race"),
@@ -156,15 +166,23 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
 
         // Create row: query + candidate dropdown (candidates = loaded pawn races, so a race with no
         // VoicePack at all is a legal new table).
-        UsKernelDraw.Label(ctx.Drawing, new UiLayoutRect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Create"),
-            ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
-        UsKernelDraw.LiveTextField(new UiLayoutRect(x + 64f, y, 120f, RowHeight), ctx, "fallback-new-race-query");
+        y += UsBrowseControls.Draw(x, y, width, ctx, "candidate", true, true);
 
         IReadOnlyList<FilterOptionView> candidates = ctx.Bindings.GetOptions<FilterOptionView>("fallback-candidate-options");
         var candidatePairs = new List<KeyValuePair<string, string>>();
         foreach (FilterOptionView option in candidates) candidatePairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
-        UsKernelDraw.Dropdown(new UiLayoutRect(x + 190f, y, Math.Max(1f, width - 190f), RowHeight), "vf1-candidate", ctx, "", candidatePairs,
-            selected => ctx.Bindings.Invoke("create-fallback-table", selected));
+        string pending = ctx.Bindings.Get<string>("fallback-pending-race") ?? "";
+        string candidateDisplay = pending;
+        if (pending.Length > 0 && !candidatePairs.Exists(pair => pair.Value == pending))
+        {
+            candidateDisplay = DisplayOnlyCurrentValue;
+            candidatePairs.Add(new KeyValuePair<string, string>(pending + " · " + UsKernelDraw.Keyed(ctx, "US.Browse.OffPage"), candidateDisplay));
+        }
+        UsKernelDraw.Dropdown(new UiLayoutRect(x, y, Math.Max(1f, width - 124f), RowHeight), "vf1-candidate", ctx, candidateDisplay, candidatePairs,
+            selected => { if (selected != DisplayOnlyCurrentValue) ctx.Bindings.Invoke("select-fallback-candidate", selected); });
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(x + width - 120f, y, 120f, RowHeight), ctx,
+            UsKernelDraw.Keyed(ctx, "US.VF1.Create"), ctx.Theme, false, controlId: "create-fallback-table", itemKey: pending)
+            && pending.Length > 0) ctx.Bindings.Invoke("create-fallback-table", pending);
         y += RowHeight + RowGap;
 
         if (races.Count == 0 || selectedRace.Length == 0) return;
@@ -173,7 +191,7 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
             ? en : Array.Empty<FallbackEntryView>();
         // UIR-004: the entry-list band claims the state-vocabulary help item once per pass;
         // the row loop below re-claims on hover through the same key.
-                string selectedEntry = ctx.Bindings.TryGet("fallback-selected-entry", out string fs) ? fs ?? "" : "";
+        string selectedEntry = ctx.Bindings.TryGet("fallback-selected-entry", out string fs) ? fs ?? "" : "";
         foreach (FallbackEntryView entry in entries)
         {
             var rowRect = new UiLayoutRect(x, y, width, RowHeight - 2f);
@@ -199,14 +217,8 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
 
         if (selectedEntry.Length > 0)
         {
-            // The sound query is the user's REAL search input (r5 wiring gap): the candidate list is
-            // display-capped at 40 AFTER filtering, so typing a name or defName is how any legal Core
-            // sound becomes reachable. The value binding already existed on the Host; this is the
-            // control, with the same focus seam as the race-query field.
-            UsKernelDraw.Label(ctx.Drawing, new UiLayoutRect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.SoundSearch"),
-                ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
-            UsKernelDraw.LiveTextField(new UiLayoutRect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), ctx, "fallback-sound-query");
-            y += RowHeight + RowGap;
+            // Filter the complete Core inventory before paging; every matching sound remains reachable.
+            y += UsBrowseControls.Draw(x, y, width, ctx, "sound", false, true);
 
             // Three distinct answers (r5): pick a sound = override; "Unset (no sound)" = the EXPLICIT
             // silent marker (the key stays present with the delete value); "Restore inheritance"
@@ -233,6 +245,11 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
             };
             if (selectedRow.State == FallbackEntryView.Unset)
                 soundPairs.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, "US.VF1.State.Unset"), DisplayOnlyCurrentValue));
+            else if (currentSound.Length > 0 && !soundPairs.Exists(pair => pair.Value == currentSound))
+            {
+                soundPairs.Add(new KeyValuePair<string, string>(selectedRow.SoundLabel + "  " + currentSound, DisplayOnlyCurrentValue));
+                currentSound = DisplayOnlyCurrentValue;
+            }
             UsKernelDraw.Dropdown(new UiLayoutRect(x, y, Math.Max(1f, width - 150f - RowGap), RowHeight), "vf1-sound", ctx, currentSound, soundPairs,
                 selected =>
                 {

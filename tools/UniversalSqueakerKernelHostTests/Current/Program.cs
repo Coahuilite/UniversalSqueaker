@@ -200,7 +200,7 @@ internal static partial class Program
             // Same two layout scenarios and five destinations as before. WO r3 moves Overview's
             // directory into Voices and the low-frequency workspaces into explicit secondary pages.
             // Content boxes come from the WO's 1920x1080 and 1024x768 logical-screen examples.
-            foreach ((float width, float height) in new[] { (1216f, 720f), (896f, 604f) })
+            foreach ((float width, float height) in new[] { (1216f, 720f), (800f, 560f) })
             {
             var source = new RecordingSettingsSource { RichData = true };
             source.ViewState.WideLayout = width == 1216f;

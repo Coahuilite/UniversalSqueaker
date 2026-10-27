@@ -149,8 +149,8 @@ internal static class Program
     // exactly the seam defect the deletion closes.
 
     /// <summary>
-    /// Existing opening-size scenarios migrated to WO-US06-UIUX-20261025 r3:
-    /// W=min(1280,max(960,round(.8*Ws)),Ws-64), H=min(820,Hs-64), in logical units.
+    /// Existing opening-size scenarios migrated to WO-US06-FILTER-COMPACT-20261027 r3:
+    /// W=min(1280,max(864,round(.8*Ws)),Ws-64); H=min(max(640,min(820,Hs-128)),Hs-64).
     /// Expected boxes were calculated from that independent contract, not captured from the helpers.
     /// Help still cannot change the outer size; the detailed page replaces the old bottom band.
     /// </summary>
@@ -162,13 +162,13 @@ internal static class Program
         // helpers: a gate that re-derives the answer from the code under test agrees with any change to it.
         foreach ((float screen, float screenHeight, float expectedWidth, float expectedHeight) in new[]
                  {
-                     (1024f, 768f, 960f, 704f),
-                     (1280f, 800f, 1024f, 736f),
+                     (1024f, 768f, 864f, 640f),
+                     (1280f, 800f, 1024f, 672f),
                      (1920f, 1080f, 1280f, 820f),
                      (2560f, 1440f, 1280f, 820f),
                      (3840f, 2160f, 1280f, 820f),
                      // A short ultra-wide screen keeps independent width/height caps, not 4:3.
-                     (2560f, 900f, 1280f, 820f),
+                     (2560f, 900f, 1280f, 772f),
                  })
         {
             float width = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
@@ -212,13 +212,13 @@ internal static class Program
         Assert(Math.Abs(WindowChromeLayout.VanillaBaselineWidth - 650f) < tolerance
                 && Math.Abs(WindowChromeLayout.VanillaBaselineHeight - 600f) < tolerance,
             "the vanilla baseline is the game's own 650x600 dialog");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWidthFloor - 960f) < tolerance
-                && Math.Abs(WindowChromeLayout.SettingsHeightFloor - 600f) < tolerance,
-            "US uses the approved 960 width floor; the retained 600 native height baseline is not an aspect policy");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(1024f, 768f) - 960f) < tolerance,
-            "1024x768 opens at the approved 960 width floor");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 704f) < tolerance,
-            "1024x768 leaves the independent 64-unit height clearance: 704");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWidthFloor - 864f) < tolerance
+                && Math.Abs(WindowChromeLayout.SettingsHeightFloor - 640f) < tolerance,
+            "US uses the approved 864x640 preference, clamped by available screen space");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(1024f, 768f) - 864f) < tolerance,
+            "1024x768 opens at the approved 864 width");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 640f) < tolerance,
+            "1024x768 opens at the approved 640 height");
 
         // Existing below-minimum inputs remain defensive arithmetic, not supported game modes.
         // The explicit screen-clearance term wins over the preferred floor there.

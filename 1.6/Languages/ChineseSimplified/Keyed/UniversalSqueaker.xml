@@ -524,11 +524,11 @@
   <US.Board.StDormant>休眠</US.Board.StDormant>
   <US.Board.StTargetUnloaded>目标未加载</US.Board.StTargetUnloaded>
   <US.Board.StSavedMissing>已保存的选择缺失</US.Board.StSavedMissing>
-  <US.Help.RaceBoard.Group.Text>"玩家种族"以HAR模组种族优先,其次原版智人与异种目录,再次其他第三方人形;"生物"覆盖动物、机械族与异常实体;"全部"为完整已加载目录。分组只改变显示,绝不改变任何声音设置。</US.Help.RaceBoard.Group.Text>
-  <US.Help.RaceBoard.Filters.Text>在当前分组内继续收窄:基于HAR框架的种族、原版(Core/DLC)种族、或原版生物。再次按下当前筛选即清除。来源与HAR是每行上彼此独立的两个事实。</US.Help.RaceBoard.Filters.Text>
+  <US.Help.RaceBoard.Group.Text>默认范围包含类人种族与合法异种；仅种族和仅异种分别显示准确身份。动物与其他生命类型需主动选择，HAR只影响排序、不越过生命分类。全部显示完整合法目录。浏览不改变声音设置。</US.Help.RaceBoard.Group.Text>
+  <US.Help.RaceBoard.Filters.Text>关键词、生命类别和Def实际来源共同筛选。来源显示模组名，同名以packageId区分；来源列表可以搜索、翻页。清除返回本列表默认条件，各列表互相独立。</US.Help.RaceBoard.Filters.Text>
   <US.Help.RaceBoard.Search.Text>按目录行的显示名、def名或来源模组包匹配。仅显示层面——不改变任何选择,不改变任何声音。</US.Help.RaceBoard.Search.Text>
-  <US.Help.RaceBoard.Counts.Text>当前屏幕显示多少种族,对比完整已加载目录的数量,并附异种数。任何筛选都不会隐藏目录更大这一事实。</US.Help.RaceBoard.Counts.Text>
-  <US.Help.RaceBoard.XenoDir.Text>展开已加载XenotypeDef目录——游戏认识的全部异种,无论是否有语音包指向它。异种是独立目标轴;除非有真实包声明,看板绝不宣称某异种"属于"某种族。</US.Help.RaceBoard.XenoDir.Text>
+  <US.Help.RaceBoard.Counts.Text>符合数对比完整合法库存，先筛选排序再分为有界结果页。上一页、下一页可到达每个符合项；筛选翻页不选择、不写入设置。</US.Help.RaceBoard.Counts.Text>
+  <US.Help.RaceBoard.XenoDir.Text>异种显示自身XenotypeDef的来源，不是基因或语音包来源。默认包含合法目标；仅异种不夹Race行。没有Biotech时没有合法异种目标。</US.Help.RaceBoard.XenoDir.Text>
   <US.Help.RaceBoard.XenoRow.Text>一个已加载异种:来源,以及有多少语音包精确指向该目标。"打开"跳转到已按它筛选的音频包页——无包时给出诚实空结果。仅一个明确包时提供"启用",与包页为同一份准确写入。</US.Help.RaceBoard.XenoRow.Text>
   <!-- OVT-002: 浏览带(分组、筛选、搜索、计数)与身份/来源标记。 -->
   <US.Board.Group.Player>玩家种族</US.Board.Group.Player>
@@ -668,6 +668,7 @@
   <US.UI.Field.interval>模拟间隔（游戏 tick）</US.UI.Field.interval>
   <US.UI.SourceTimingRejected>来源计时已拒绝：选择继承，或重新选择更新后的来源，仅为当前域提交恢复</US.UI.SourceTimingRejected>
   <US.UI.SourceRejectedChoice>已拒绝的来源（需恢复）</US.UI.SourceRejectedChoice>
+  <US.UI.OrdinaryReady>普通已接通</US.UI.OrdinaryReady>
   <US.UI.IntervalInteraction>已接受交互 · 真实秒</US.UI.IntervalInteraction>
   <US.UI.IntervalSimulation>模拟机会 · 游戏 tick</US.UI.IntervalSimulation>
   <US.UI.IntervalByOpportunity>在间隔编辑区选择机会类别</US.UI.IntervalByOpportunity>
@@ -722,4 +723,22 @@
   <US.UI.CloseHelp>关闭帮助</US.UI.CloseHelp>
   <US.Theme.BlackGold.Note>近黑底与清楚浅色正文，金色只强调动作和选中。绿色成功、琥珀警告与红色错误保持区分。</US.Theme.BlackGold.Note>
   <US.Theme.BlackGold.Label>黑金</US.Theme.BlackGold.Label>
+  <US.Browse.Group.PlayerRaces>类人与异种</US.Browse.Group.PlayerRaces>
+  <US.Browse.Group.Races>仅类人种族</US.Browse.Group.Races>
+  <US.Browse.Group.Xenotypes>仅异种</US.Browse.Group.Xenotypes>
+  <US.Browse.Group.Creatures>动物</US.Browse.Group.Creatures>
+  <US.Browse.Group.Other>其他种族</US.Browse.Group.Other>
+  <US.Browse.Group.All>全部</US.Browse.Group.All>
+  <US.Browse.AllSources>全部来源</US.Browse.AllSources>
+  <US.Browse.Source>来源</US.Browse.Source>
+  <US.Browse.Sources>个来源</US.Browse.Sources>
+  <US.Browse.Clear>清除</US.Browse.Clear>
+  <US.Browse.Counts>符合 {0} / 合法总数 {1}</US.Browse.Counts>
+  <US.Browse.Editing>正在编辑</US.Browse.Editing>
+  <US.Browse.HiddenSelection>不在本页结果内；编辑目标保留</US.Browse.HiddenSelection>
+  <US.Browse.List.directory>定义目录</US.Browse.List.directory>
+  <US.Browse.List.table>已有回退表</US.Browse.List.table>
+  <US.Browse.List.candidate>新建表候选</US.Browse.List.candidate>
+  <US.Browse.List.sound>Core 声音</US.Browse.List.sound>
+  <US.Browse.OffPage>不在本页结果内</US.Browse.OffPage>
 </LanguageData>

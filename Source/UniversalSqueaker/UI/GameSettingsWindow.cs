@@ -76,7 +76,8 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     protected override string Title => mod.SettingsCategory();
 
-    protected override string Subtitle => Translator.Translate("US.Settings.Window.Subtitle");
+    protected override string Subtitle => "";
+    protected override float TitleBarHeight => WindowChromeLayout.TitleBarHeight;
 
     protected override string CloseText => Translator.Translate("US.Settings.Window.Close");
 

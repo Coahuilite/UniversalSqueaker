@@ -5,7 +5,7 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Page-local UI ephemeral state. It is not persisted and is reset on settings session begin/end.
-/// The view model is rebuilt from settings/catalog each frame; this state only remembers what the
+/// The view model is rebuilt on published input/session revisions; this state remembers what the
 /// user is looking at (selected domain, search text) and the baseline-preset import checkboxes.
 /// Neither scroll nor the help hover claim lives here: both moved to the session — scroll positions
 /// via <c>UiSession.ScrollPositions</c>, the hover claim via <c>UiSession.CurrentHelpRef</c> (FL P3).
@@ -54,12 +54,19 @@ public sealed class VoicePacksPageState
 
     // OVT-002: the board browse state (session-only view state - never persisted, never a
     // sound/selection write). Default: the PLAYER RACES group, no chip, no search, xenotype
-    // directory collapsed. A default with no HAR loaded still shows vanilla humanlike + xenotypes;
+    // directory expanded. A default with no HAR loaded still shows vanilla humanlike + xenotypes;
     // it never degrades to an animal-first screen.
-    public UsBoardBrowsePolicy.BoardGroup BoardGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
+    public readonly UsBrowseListState DirectoryBrowse = new();
+    public readonly UsBrowseListState TableBrowse = new(), CandidateBrowse = new(), SoundBrowse = new();
+    public UsBrowseListView DirectoryList = UsBrowseListView.Empty, TableList = UsBrowseListView.Empty,
+        CandidateList = UsBrowseListView.Empty, SoundList = UsBrowseListView.Empty;
+    public string PendingFallbackRace = "";
+    internal object? SoundDefinitions;
+    internal IReadOnlyList<UsBrowseItem> CoreSounds = Array.Empty<UsBrowseItem>();
+    public UsBoardBrowsePolicy.BoardGroup BoardGroup { get => DirectoryBrowse.Group; set => DirectoryBrowse.Group = value; }
     public UsBoardBrowsePolicy.BoardFilter BoardFilter = UsBoardBrowsePolicy.BoardFilter.None;
-    public string BoardSearch = "";
-    public bool BoardXenoExpanded = false;
+    public string BoardSearch { get => DirectoryBrowse.Query; set => DirectoryBrowse.Query = value; }
+    public bool BoardXenoExpanded = true;
     // US-PACK1 (§4.2): the MANUAL card-expansion set (pack key = card identity). It is the user's own
     // browsing state and the ONLY thing cancel-pack-results collapses. The query's xenotype-hit
     // auto-expansion is never stored here - it is derived from SearchText per projection, so clearing
@@ -98,14 +105,15 @@ public sealed class VoicePacksPageState
     public string TuningSelectedAction = "";
     public string FallbackSelectedRace = "";
     public string FallbackSelectedEntryAction = "";
-    public string FallbackSoundQuery = "";
+    public string FallbackSoundQuery { get => SoundBrowse.Query; set { SoundBrowse.Query = value; SoundBrowse.Page = 0; } }
     public string FallbackStatusKey = "";
     public string FallbackStatusArg = "";
 
-    public string FallbackNewRaceQuery = "";
+    public string FallbackNewRaceQuery { get => CandidateBrowse.Query; set { CandidateBrowse.Query = value; CandidateBrowse.Page = 0; } }
 
     public VoicePacksPageState()
     {
+        TableBrowse.Group = UsBoardBrowsePolicy.BoardGroup.All;
     }
 
     public void Reset()
@@ -144,7 +152,11 @@ public sealed class VoicePacksPageState
         BoardGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
         BoardFilter = UsBoardBrowsePolicy.BoardFilter.None;
         BoardSearch = "";
-        BoardXenoExpanded = false;
+        BoardXenoExpanded = true;
+        DirectoryBrowse.Clear(); TableBrowse.Clear(); CandidateBrowse.Clear(); SoundBrowse.Clear();
+        TableBrowse.Group = UsBoardBrowsePolicy.BoardGroup.All;
+        DirectoryList = TableList = CandidateList = SoundList = UsBrowseListView.Empty;
+        PendingFallbackRace = ""; SoundDefinitions = null; CoreSounds = Array.Empty<UsBrowseItem>();
         FallbackStatusArg = "";
         DomainSelectionCanceled = false;
         FallbackTableCanceled = false;

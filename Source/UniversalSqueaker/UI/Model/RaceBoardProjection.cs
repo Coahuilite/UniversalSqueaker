@@ -25,7 +25,7 @@ public static class RaceBoardProjection
         UsBoardBrowsePolicy.BoardGroup group = UsBoardBrowsePolicy.BoardGroup.PlayerRaces,
         UsBoardBrowsePolicy.BoardFilter filter = UsBoardBrowsePolicy.BoardFilter.None,
         string search = "",
-        bool xenotypeDirectoryExpanded = false)
+        bool xenotypeDirectoryExpanded = false, string sourcePackageId = "", int requestedPage = 0, int pageSize = int.MaxValue)
     {
         var all = new List<RaceBoardRow>(bundle?.Races.Count ?? 0);
         IReadOnlyList<UsRaceBoardFacts> facts = bundle?.Races ?? Array.Empty<UsRaceBoardFacts>();
@@ -155,6 +155,7 @@ public static class RaceBoardProjection
             if (!UsBoardBrowsePolicy.InGroup(id, group)) continue;
             if (!UsBoardBrowsePolicy.InFilter(id, filter)) continue;
             if (!UsBoardBrowsePolicy.MatchesSearch(id, search)) continue;
+            if (sourcePackageId.Length > 0 && id.SourcePackageId != sourcePackageId) continue;
             shown.Add(all[i]);
         }
 
@@ -162,7 +163,7 @@ public static class RaceBoardProjection
 
         var xenoShown = new List<XenotypeBoardRow>();
         bool xenoBandVisible = xenotypeDirectoryExpanded
-            && group != UsBoardBrowsePolicy.BoardGroup.Creatures
+            && (group == UsBoardBrowsePolicy.BoardGroup.PlayerRaces || group == UsBoardBrowsePolicy.BoardGroup.Xenotypes || group == UsBoardBrowsePolicy.BoardGroup.All)
             && filter == UsBoardBrowsePolicy.BoardFilter.None;
         IReadOnlyList<UsXenotypeBoardFacts> xenoFacts = bundle.Xenotypes;
         if (xenoBandVisible)
@@ -171,6 +172,7 @@ public static class RaceBoardProjection
             {
                 UsXenotypeBoardFacts x = xenoFacts[i];
                 if (!UsBoardBrowsePolicy.MatchesXenotypeSearch(x.Identity, search ?? "")) continue;
+                if (sourcePackageId.Length > 0 && x.Identity.SourcePackageId != sourcePackageId) continue;
 
                 xenoShown.Add(new XenotypeBoardRow(
                     x.Identity.DefName,
@@ -197,8 +199,29 @@ public static class RaceBoardProjection
             bandIndex = i + 1;
         }
 
+        int filteredCount = shown.Count + xenoShown.Count;
+        int pages = pageSize == int.MaxValue ? 1 : Math.Max(1, (filteredCount + pageSize - 1) / pageSize);
+        int page = Math.Max(0, Math.Min(requestedPage, pages - 1));
+        if (pageSize != int.MaxValue)
+        {
+            // One bounded page over the ordered race prefix, xenotype band, then remaining races.
+            var pagedRaces = new List<RaceBoardRow>();
+            var pagedXenos = new List<XenotypeBoardRow>();
+            int start = page * pageSize, end = start + pageSize, index = 0, pagedBand = 0;
+            for (int i = 0; i <= shown.Count; i++)
+            {
+                if (i == bandIndex)
+                {
+                    pagedBand = pagedRaces.Count;
+                    foreach (XenotypeBoardRow x in xenoShown)
+                    { if (index >= start && index < end) pagedXenos.Add(x); index++; }
+                }
+                if (i < shown.Count) { if (index >= start && index < end) pagedRaces.Add(shown[i]); index++; }
+            }
+            shown = pagedRaces; xenoShown = pagedXenos; bandIndex = pagedBand;
+        }
         return new UsRaceBoardView(shown, xenoShown, xenoBandVisible, all.Count, xenoFacts.Count, group, filter,
-            totalAll, withPacksAll, enabledAll, bandIndex);
+            totalAll, withPacksAll, enabledAll, bandIndex, filteredCount, page, pages);
     }
 
     /// <summary>The board summary counts (plain numbers; the host composes the keyed sentence).</summary>

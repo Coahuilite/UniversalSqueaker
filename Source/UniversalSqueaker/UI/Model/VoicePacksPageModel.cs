@@ -129,9 +129,16 @@ public static class VoicePacksPageModel
 
         // UIR-002: the ALL-loaded-race board, computed AFTER the fallback projection so the board reads
         // the SAME fallback answer the editor and the routing use — one fact, one place. Read-only.
-        UsRaceBoardView raceBoard = RaceBoardProjection.Build(
-            RaceBoardSource.Collect(settings, fallbackRaces, biotech), mode,
-            state.BoardGroup, state.BoardFilter, state.BoardSearch, state.BoardXenoExpanded);
+        UsRaceBoardFactsBundle boardFacts = RaceBoardSource.Collect(settings, fallbackRaces, biotech);
+        state.DirectoryList = UsBrowseListView.Project(
+            boardFacts.Races.Select(x => new UsBrowseItem(x.DefName, x.Label, x.Identity.SourcePackageId, x.Identity.SourcePackageName))
+            .Concat(boardFacts.Xenotypes.Select(x => new UsBrowseItem(x.Identity.DefName, x.Identity.Label, x.Identity.SourcePackageId, x.Identity.SourcePackageName))),
+            state.DirectoryBrowse, false);
+        UsRaceBoardView raceBoard = RaceBoardProjection.Build(boardFacts, mode,
+            state.BoardGroup, state.BoardFilter, state.BoardSearch, state.BoardXenoExpanded,
+            state.DirectoryBrowse.SourcePackageId, state.DirectoryBrowse.Page, 8);
+        state.DirectoryList.Filtered = raceBoard.FilteredCount;
+        state.DirectoryList.Page = raceBoard.Page; state.DirectoryList.Pages = raceBoard.Pages;
 
         var eat = settings.ReadEatParameters(tuningRace, tuningXeno);
         var select = settings.ReadSelectParameterOverrides(tuningRace, tuningXeno);
@@ -1438,7 +1445,7 @@ public static class VoicePacksPageModel
 
     /// <summary>The editor's projection over the LIVE store. Supported races = every table the
     /// store resolved (maintainer data ∪ player files, per the VF1 support-set rule); entries are
-    /// the closed 17-key set; sound candidates are loaded SoundDefs filtered by the query and
+    /// the closed 15-key set; sound candidates are loaded SoundDefs filtered by the query and
     /// labelled with the current production availability state - an unprobed sound says "unknown",
     /// never "missing" (menu context has no map). Create candidates come from the loaded pawn
     /// ThingDefs, so a race with no VoicePack at all (Monolyn) is a legal new table.</summary>
@@ -1551,17 +1558,32 @@ public static class VoicePacksPageModel
             }
         }
 
-        string soundQuery = (state.FallbackSoundQuery ?? "").Trim();
-        // VF1定稿: candidates are the loaded CORE SoundDefs (Rimsage-confirmed: ModContentPack.IsCoreMod).
-        // The cap is a DISPLAY cap on the filtered answer, not a reachability limit: the query filters
-        // BEFORE the cap, so any legal candidate is reachable by typing its name or defName - no
-        // advanced search is added.
-        foreach (SoundDef def in DefDatabase<SoundDef>.AllDefs)
+        UsDefinitionSnapshot definitions = RaceDefinitionCatalog.Current;
+        UsBrowseItem RaceItem(string id, string label)
         {
-            if (def == null || string.IsNullOrEmpty(def.defName)) continue;
-            if (def.modContentPack == null || !def.modContentPack.IsCoreMod) continue;
-            if (soundQuery.Length > 0
-                && !UsChecklistFilter.QueryMatches(soundQuery, def.defName, def.label ?? "")) continue;
+            UsRaceIdentity race = definitions.Races.FirstOrDefault(x => x.DefName == id);
+            if (string.IsNullOrEmpty(race.DefName)) race = new UsRaceIdentity(id, label, UsRaceSourceKind.Unknown, "", "", false, UsRaceLifeKind.Other);
+            return new UsBrowseItem(id, label, race.SourcePackageId, race.SourcePackageName, race);
+        }
+        state.TableList = UsBrowseListView.Project(races.Select(x => RaceItem(x.DefName, x.Label)), state.TableBrowse, true);
+        var tableIds = new HashSet<string>(races.Select(x => x.DefName), StringComparer.Ordinal);
+        state.CandidateList = UsBrowseListView.Project(definitions.Races.Where(x => !tableIds.Contains(x.DefName))
+            .Select(x => new UsBrowseItem(x.DefName, x.Label, x.SourcePackageId, x.SourcePackageName, x)), state.CandidateBrowse, true);
+        foreach (UsBrowseItem item in state.CandidateList.Rows)
+            candidateOptions.Add(new FilterOptionView(item.Label + "  " + item.Value, item.Value));
+
+        // Full Core inventory is captured once per published definition snapshot, never per Draw.
+        if (!ReferenceEquals(state.SoundDefinitions, definitions))
+        {
+            state.CoreSounds = DefDatabase<SoundDef>.AllDefs.Where(x => x != null && !string.IsNullOrEmpty(x.defName)
+                && x.modContentPack != null && x.modContentPack.IsCoreMod)
+                .Select(x => new UsBrowseItem(x.defName, x.label ?? x.defName, x.modContentPack.PackageId, x.modContentPack.Name)).ToArray();
+            state.SoundDefinitions = definitions;
+        }
+        state.SoundList = UsBrowseListView.Project(state.CoreSounds, state.SoundBrowse, false);
+        foreach (UsBrowseItem item in state.SoundList.Rows)
+        {
+            SoundDef? def = DefDatabase<SoundDef>.GetNamedSilentFail(item.Value);
             SqueakSoundAvailabilityState availability = SqueakSoundAvailabilityCache.PeekState(def);
             string suffix = availability switch
             {
@@ -1569,25 +1591,7 @@ public static class VoicePacksPageModel
                 SqueakSoundAvailabilityState.Failed => " (x)",
                 _ => "",
             };
-            soundOptions.Add(new FilterOptionView((def.label ?? def.defName) + "  " + def.defName + suffix, def.defName));
-            if (soundOptions.Count >= 40) break;
-        }
-
-        string raceQuery = (state.FallbackNewRaceQuery ?? "").Trim();
-        foreach (ThingDef def in DefDatabase<ThingDef>.AllDefs)
-        {
-            if (def == null || def.race == null || def.category != ThingCategory.Pawn) continue;
-            bool supported = false;
-            for (int i = 0; i < races.Count; i++)
-            {
-                if (string.Equals(races[i].DefName, def.defName, StringComparison.Ordinal)) { supported = true; break; }
-            }
-
-            if (supported) continue;
-            if (raceQuery.Length > 0
-                && !UsChecklistFilter.QueryMatches(raceQuery, def.defName, def.label ?? "")) continue;
-            candidateOptions.Add(new FilterOptionView((def.label ?? def.defName) + "  " + def.defName, def.defName));
-            if (candidateOptions.Count >= 20) break;
+            soundOptions.Add(new FilterOptionView(item.Label + "  " + item.Value + suffix, item.Value));
         }
     }
 
@@ -1697,6 +1701,7 @@ public static class VoicePacksPageModel
         }
 
         state.FallbackSelectedRace = raceDefName!;
+        state.PendingFallbackRace = "";
         state.FallbackTableCanceled = false; // US-ESC1: the created table is a fresh selection, not a cancelled one.
         state.TuningContextActive = true;
         state.FallbackStatusKey = "US.VF1.Status.CreatedRestart";

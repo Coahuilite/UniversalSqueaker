@@ -25,6 +25,7 @@
          full state matrix runs with real plain inputs in the zero-game harness. -->
     <Compile Include="..\..\Source\UniversalSqueaker\Catalog\UsDefinitionIdentity.cs" Link="UsDefinitionIdentity.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\UsBoardBrowsePolicy.cs" Link="UsBoardBrowsePolicy.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\UsBrowseList.cs" Link="UsBrowseList.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\RaceBoardView.cs" Link="RaceBoardView.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\RaceBoardProjection.cs" Link="RaceBoardProjection.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Models\SqueakVoicePackDomain.cs" Link="SqueakVoicePackDomain.cs" />

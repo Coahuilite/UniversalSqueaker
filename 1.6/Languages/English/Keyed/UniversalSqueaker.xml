@@ -529,11 +529,11 @@
   <US.Board.StDormant>dormant</US.Board.StDormant>
   <US.Board.StTargetUnloaded>target not loaded</US.Board.StTargetUnloaded>
   <US.Board.StSavedMissing>saved choice missing</US.Board.StSavedMissing>
-  <US.Help.RaceBoard.Group.Text>Player races leads with HAR mod races, then vanilla humanlike and the xenotype directory, then other third-party humanlike. Creatures covers animals, mechanoids and Anomaly entities; All is the whole loaded directory. The group changes only what is shown - never a sound setting.</US.Help.RaceBoard.Group.Text>
-  <US.Help.RaceBoard.Filters.Text>Narrow the current group: races built on the HAR framework, vanilla (Core/DLC) races, or vanilla creatures. Press the active chip again to clear it. Source and HAR are separate facts shown on every row.</US.Help.RaceBoard.Filters.Text>
+  <US.Help.RaceBoard.Group.Text>The default scope contains humanlike races and legal xenotypes. Races only and Xenotypes only keep those identities separate. Animals and other life kinds require an explicit scope; HAR affects sorting, not admission. All shows the complete legal directory. Browsing never changes audio settings.</US.Help.RaceBoard.Group.Text>
+  <US.Help.RaceBoard.Filters.Text>Keyword, life category and actual Def source package act together. Source names are readable; package IDs distinguish namesakes. Search and page the source list; Clear returns this list to its own default. Each list keeps independent filters.</US.Help.RaceBoard.Filters.Text>
   <US.Help.RaceBoard.Search.Text>Matches the display name, the def name or the source package of the directory rows. Display only - it changes no selection and no sound.</US.Help.RaceBoard.Search.Text>
-  <US.Help.RaceBoard.Counts.Text>How many races are on screen now versus the FULL loaded directory, plus the xenotype count. A filter never hides that the directory is larger.</US.Help.RaceBoard.Counts.Text>
-  <US.Help.RaceBoard.XenoDir.Text>Opens the loaded XenotypeDef directory - every xenotype the game knows, whether or not a voice pack names it. Xenotypes are their own target axis; the board never claims a xenotype "belongs" to a race unless a real pack declares it.</US.Help.RaceBoard.XenoDir.Text>
+  <US.Help.RaceBoard.Counts.Text>The count shows all matching results against the complete eligible inventory, before the bounded result page. Previous and Next reach every matching item. Filtering and paging do not select or write settings.</US.Help.RaceBoard.Counts.Text>
+  <US.Help.RaceBoard.XenoDir.Text>Xenotypes come from their own loaded Def source, not their genes or voice pack. The default includes legal targets; Xenotypes only contains no Race rows. Without Biotech there are no legal xenotype targets.</US.Help.RaceBoard.XenoDir.Text>
   <US.Help.RaceBoard.XenoRow.Text>One loaded xenotype: its source and how many packs name exactly this target. Open jumps to the audio-packs page filtered to it - with an honest empty result when no pack exists. A single unambiguous pack offers Enable, the same exact write as the packs page.</US.Help.RaceBoard.XenoRow.Text>
   <!-- OVT-002: the browse band (groups, chips, search, counts) and the identity/source chips. -->
   <US.Board.Group.Player>Player races</US.Board.Group.Player>
@@ -674,6 +674,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Field.interval>Simulation interval (game ticks)</US.UI.Field.interval>
   <US.UI.SourceTimingRejected>Source timing rejected — select Inherit, or reselect an updated source to commit recovery for this domain only</US.UI.SourceTimingRejected>
   <US.UI.SourceRejectedChoice>Rejected source (recovery required)</US.UI.SourceRejectedChoice>
+  <US.UI.OrdinaryReady>Ordinary ready</US.UI.OrdinaryReady>
   <US.UI.IntervalInteraction>Accepted interaction · real seconds</US.UI.IntervalInteraction>
   <US.UI.IntervalSimulation>Simulation opportunity · game ticks</US.UI.IntervalSimulation>
   <US.UI.IntervalByOpportunity>Choose the opportunity in the interval editor</US.UI.IntervalByOpportunity>
@@ -728,4 +729,22 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.CloseHelp>Close help</US.UI.CloseHelp>
   <US.Theme.BlackGold.Note>Near-black surfaces and clear pale text; gold marks actions and selection. Green success, amber warning and red error remain distinct.</US.Theme.BlackGold.Note>
   <US.Theme.BlackGold.Label>Black &amp; gold</US.Theme.BlackGold.Label>
+  <US.Browse.Group.PlayerRaces>Humanoids + xenotypes</US.Browse.Group.PlayerRaces>
+  <US.Browse.Group.Races>Humanoid races only</US.Browse.Group.Races>
+  <US.Browse.Group.Xenotypes>Xenotypes only</US.Browse.Group.Xenotypes>
+  <US.Browse.Group.Creatures>Animals</US.Browse.Group.Creatures>
+  <US.Browse.Group.Other>Other races</US.Browse.Group.Other>
+  <US.Browse.Group.All>All</US.Browse.Group.All>
+  <US.Browse.AllSources>All sources</US.Browse.AllSources>
+  <US.Browse.Source>Source</US.Browse.Source>
+  <US.Browse.Sources>sources</US.Browse.Sources>
+  <US.Browse.Clear>Clear</US.Browse.Clear>
+  <US.Browse.Counts>{0} matching / {1} eligible</US.Browse.Counts>
+  <US.Browse.Editing>Editing</US.Browse.Editing>
+  <US.Browse.HiddenSelection>outside this result page; editing target retained</US.Browse.HiddenSelection>
+  <US.Browse.List.directory>Definition directory</US.Browse.List.directory>
+  <US.Browse.List.table>Existing fallback tables</US.Browse.List.table>
+  <US.Browse.List.candidate>New table candidates</US.Browse.List.candidate>
+  <US.Browse.List.sound>Core sounds</US.Browse.List.sound>
+  <US.Browse.OffPage>outside this result page</US.Browse.OffPage>
 </LanguageData>

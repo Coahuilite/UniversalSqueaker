@@ -143,6 +143,7 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
         var xenotypes = new List<UsXenotypeBoardFacts>(directory.Xenotypes.Count);
         for (int i = 0; i < directory.Xenotypes.Count; i++)
         {
+            if (!biotechActive) break;
             UsXenotypeIdentity xeno = directory.Xenotypes[i];
             if (string.IsNullOrEmpty(xeno.DefName)) continue;
 

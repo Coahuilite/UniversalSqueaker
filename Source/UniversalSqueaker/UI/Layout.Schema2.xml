@@ -30,9 +30,8 @@
     <Column Id="business-body" Fill="true" Padding="0" Gap="0">
     <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices">
       <Widget Id="voice-summary" Kind="text/wrapped" Bind="voice-summary" />
-      <Row Id="playback-status" Gap="8" Padding="0">
+      <Row Id="playback-status" Gap="8" Padding="0" VisibleBind="kernel-needs-policy">
         <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" Tone="Warning" Emphasis="Normal" VisibleBind="kernel-needs-policy" HelpRef="us/timing/policy" />
-        <Widget Id="kernel-ordinary-note" Kind="text/wrapped" TextKey="US.Kernel.OrdinaryActive" VisibleBind="kernel-ordinary-active" HelpRef="us/timing/policy" />
         <Widget Id="playback-status-details" Kind="input/button" TextKey="US.UI.StatusDetails" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" Width="100" Height="28" />
       </Row>
       <Row Id="home-output" Gap="12" Padding="0">
@@ -89,20 +88,7 @@
         </Scroll>
       </Row>
       <Scroll Id="definition-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="voice-definitions">
-        <Column Id="definition-filters" Gap="4" Padding="0" VisibleBind="voice-filters-open">
-          <Row Id="race-board-groups" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="race-board-group-player" Kind="input/button" TextKey="US.Board.Group.Player" ActionBind="board-group" PayloadBind="board-group-player" SelectedBind="board-group-is-player" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
-            <Widget Id="race-board-group-creatures" Kind="input/button" TextKey="US.Board.Group.Creatures" ActionBind="board-group" PayloadBind="board-group-creatures" SelectedBind="board-group-is-creatures" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
-            <Widget Id="race-board-group-all" Kind="input/button" TextKey="US.Board.Group.All" ActionBind="board-group" PayloadBind="board-group-all" SelectedBind="board-group-is-all" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/group" />
-          </Row>
-          <Row Id="race-board-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
-            <Widget Id="race-board-filter-har" Kind="input/button" TextKey="US.Board.Filter.Har" ActionBind="board-filter" PayloadBind="board-filter-har" SelectedBind="board-filter-is-har" Width="84" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
-            <Widget Id="race-board-filter-vanilla-races" Kind="input/button" TextKey="US.Board.Filter.VanillaRaces" ActionBind="board-filter" PayloadBind="board-filter-vanilla-races" SelectedBind="board-filter-is-vanilla-races" Width="128" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
-            <Widget Id="race-board-filter-vanilla-creatures" Kind="input/button" TextKey="US.Board.Filter.VanillaCreatures" ActionBind="board-filter" PayloadBind="board-filter-vanilla-creatures" SelectedBind="board-filter-is-vanilla-creatures" Width="172" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
-          </Row>
-        </Column>
-        <Widget Id="race-board-counts" Kind="text/wrapped" Bind="race-board-counts" Emphasis="Muted" HelpRef="us/race-board/counts" />
-        <Widget Id="race-board-xeno-toggle" Kind="input/button" TextKey="US.Board.XenoDir" ActionBind="board-xeno-toggle" Width="200" Height="26" HelpRef="us/race-board/xenodir" />
+        <Widget Id="definition-filters" Kind="us/directory-filters" TitleHidden="true" />
         <Widget Id="race-board-cards" Kind="us/race-board" TitleHidden="true" />
       </Scroll>
       <Row Id="voice-pager" Padding="0" Gap="8" VisibleBind="voice-pager">
@@ -327,7 +313,7 @@
         <Column Id="pack-card-row-header-gutter" Width="6" Gap="0" Padding="0" />
         <Column Id="pack-card-row-header-text" Gap="2" Padding="0">
           <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/card" />
-          <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpRef="us/pack-cards/card" />
+            <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" VisibleBind="has-meta" Emphasis="Muted" HelpRef="us/pack-cards/card" />
         </Column>
         <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedBind="expanded" ActionBind="toggle-pack-card" PayloadBind="payload" Width="116" Height="26" AlignY="Middle" Emphasis="Muted" HelpRef="us/pack-cards/expand" />
       </Row>

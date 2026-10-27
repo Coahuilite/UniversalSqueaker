@@ -63,6 +63,7 @@ public static class UsKernelWidgetRegistrar
             // runtime-variable row set with two distinct write exits (navigation + exact enable). One
             // consumer kind, and both exits are the page's typed bindings; no raw IMGUI, no second engine.
             UsRaceBoardWidget.Register();
+            UsDirectoryFiltersWidget.Register();
             // UIR-004: the final-fallback table editor, migrated from the tuning tree's third area to
             // the Packs page. Its bindings/commands are the page's pre-existing ones - this is the SAME
             // editor under its own return layer, not a second authority.

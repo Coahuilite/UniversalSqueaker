@@ -12,6 +12,8 @@ US attaches third-party voices to accurate race/xenotype domains, with layered t
 
 Open **US Voices** from the startup menu, the vanilla Options category column, or Mod Settings. The default voice-management page keeps mode, volume, search and exact pack targets together; **Settings & tools** opens your last editor in this window, with equal-width direct tabs. Context help expands below the business page only when requested. Appearance offers Original dark, Royalty and Black & gold from one embedded colour resource. The two native entries can be hidden independently. See the [current UI contract](docs/ui-contract-0.6-zh.md) for compact/wide layouts and native acceptance boundaries.
 
+The definition directory starts with humanoid races and legal xenotypes; animals are opt-in. Category, keyword and real Def-source filters combine, with bounded searchable source lists and reachable result pages. Existing fallback tables, new Race candidates and Core sounds keep separate browsing state; selecting a candidate does not create a table. At logical1024×768 the centred window is864×640, with no extra UI scaling. The native Options entry carries the US microphone icon.
+
 ## Requirements and identity
 
 - RimWorld 1.6.

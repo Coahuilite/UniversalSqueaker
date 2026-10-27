@@ -218,10 +218,10 @@ internal static class RaceBoardProjectionTests
 
         UsRaceBoardView creatures = RaceBoardProjection.Build(
             bundle, SqueakVoicePackMode.Fallback, UsBoardBrowsePolicy.BoardGroup.Creatures);
-        Assert(creatures.Rows.Count == 3, "Creatures = animal + mech + entity");
-        Assert(creatures.Rows[0].RaceDefName == "Wild_boar" && creatures.Rows[1].RaceDefName == "Scaler"
-                && creatures.Rows[2].RaceDefName == "Ghoul",
-            "creatures order: animal, mechanoid, entity (tier order, label inside a tier)");
+        Assert(creatures.Rows.Count == 1, "WO r3 animal scope excludes mechanoids/entities");
+        Assert(creatures.Rows[0].RaceDefName == "Wild_boar" && !UsBoardBrowsePolicy.InGroup(scout.Identity, UsBoardBrowsePolicy.BoardGroup.Creatures)
+                && !UsBoardBrowsePolicy.InGroup(entity.Identity, UsBoardBrowsePolicy.BoardGroup.Creatures),
+            "only the animal is in Animals; mechanical/entity facts remain distinct");
 
         UsRaceBoardView all = RaceBoardProjection.Build(
             bundle, SqueakVoicePackMode.Fallback, UsBoardBrowsePolicy.BoardGroup.All);
@@ -261,9 +261,7 @@ internal static class RaceBoardProjectionTests
         Assert(sourceSearch.Rows.Count == 1 && sourceSearch.Rows[0].RaceDefName == "ratkin",
             "SOURCE search matches the package id - the mod author string finds the HAR race");
 
-        // CO review r1 / OVT-002 "机械HAR不丢身份": a mechanoid built on the HAR framework keeps
-        // BOTH axes - it is in the default Player races group (the HAR half does not expire at
-        // the life-kind border), under the HAR chip, AND under Creatures.
+        // Same existing HAR-mech scenario, with the WO r3 life-kind admission rule.
         var mechHar = new UsRaceBoardFacts("skitter", "Skitter", Array.Empty<UsBoardPackFact>(),
             Array.Empty<UsRaceDomainFact>(),
             identity: new UsRaceIdentity("skitter", "Skitter", UsRaceSourceKind.ThirdParty,
@@ -271,14 +269,13 @@ internal static class RaceBoardProjectionTests
         var mechBundle = new UsRaceBoardFactsBundle(new[] { boar, human, mechHar }, Array.Empty<UsXenotypeBoardFacts>());
         UsRaceBoardView playerWithMech = RaceBoardProjection.Build(
             mechBundle, SqueakVoicePackMode.Fallback, UsBoardBrowsePolicy.BoardGroup.PlayerRaces);
-        Assert(playerWithMech.Rows.Count == 2
-                && playerWithMech.Rows[0].RaceDefName == "skitter" && playerWithMech.Rows[1].RaceDefName == "Human",
-            "PM mech-HAR addendum: the mechanoid HAR LEADS the default group - the HAR tier is the framework "
-                + "axis and sorts BEFORE vanilla humanlike, not merely visible after it");
+        Assert(playerWithMech.Rows.Count == 1 && playerWithMech.Rows[0].RaceDefName == "Human"
+                && !UsBoardBrowsePolicy.InGroup(mechHar.Identity, UsBoardBrowsePolicy.BoardGroup.PlayerRaces),
+            "HAR does not admit a non-humanlike race to the default scope");
         UsRaceBoardView creaturesWithMech = RaceBoardProjection.Build(
             mechBundle, SqueakVoicePackMode.Fallback, UsBoardBrowsePolicy.BoardGroup.Creatures);
-        Assert(creaturesWithMech.Rows.Count == 2 && creaturesWithMech.Rows[0].RaceDefName == "skitter",
-            "the same row is ALSO reachable under Creatures (mech-HAR leads its tier by label); axes overlap, one identity");
+        Assert(creaturesWithMech.Rows.Count == 1 && creaturesWithMech.Rows[0].RaceDefName == "Wild_boar",
+            "the explicit Animals scope also respects life kind, not HAR tier");
         UsRaceBoardView harChipMech = RaceBoardProjection.Build(
             mechBundle, SqueakVoicePackMode.Fallback, UsBoardBrowsePolicy.BoardGroup.All,
             UsBoardBrowsePolicy.BoardFilter.Har);

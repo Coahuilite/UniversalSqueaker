@@ -667,6 +667,33 @@ public static partial class UsKernelSettingsHost
     bindings.BindReadOnly<string>("fallback-selected-race", () => source.BuildView().FallbackSelectedRace);
     bindings.BindReadOnly<IReadOnlyList<FallbackEntryView>>("fallback-entries", () => source.BuildView().FallbackEntries);
     bindings.BindReadOnly<string>("fallback-selected-entry", () => state.FallbackSelectedEntryAction);
+    foreach (string listId in new[] { "directory", "table", "candidate", "sound" })
+    {
+        string id = listId;
+        UsBrowseListState browse = id == "directory" ? state.DirectoryBrowse : id == "table" ? state.TableBrowse : id == "candidate" ? state.CandidateBrowse : state.SoundBrowse;
+        bindings.BindReadOnly<UsBrowseListState>(id + "-browse-state", () => browse);
+        bindings.BindReadOnly<UsBrowseListView>(id + "-browse-view", () =>
+        {
+            source.BuildView();
+            return id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList;
+        });
+        writes.Value<string>(id + "-browse-query", () => browse.Query, value => { browse.Query = value; browse.Page = 0; bump(); });
+        writes.Value<string>(id + "-source-query", () => browse.SourceQuery, value => { browse.SourceQuery = value; browse.SourcePage = 0; bump(); });
+        writes.Action<string>(id + "-browse", op =>
+        {
+            if (op == "prev") browse.Page = Math.Max(0, browse.Page - 1);
+            else if (op == "next") { source.BuildView(); var v = id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList; browse.Page = Math.Min(v.Pages - 1, v.Page + 1); }
+            else if (op == "sources-prev") browse.SourcePage = Math.Max(0, browse.SourcePage - 1);
+            else if (op == "sources-next") { source.BuildView(); var v = id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList; browse.SourcePage = Math.Min(v.SourcePages - 1, v.SourcePage + 1); }
+            else if (op == "sources") browse.SourcesOpen = !browse.SourcesOpen;
+            else if (op == "clear") { browse.Clear(); if (id == "table") browse.Group = UsBoardBrowsePolicy.BoardGroup.All; if (id == "directory") { state.BoardFilter = UsBoardBrowsePolicy.BoardFilter.None; state.BoardXenoExpanded = true; } }
+            else if (op.StartsWith("source:", StringComparison.Ordinal)) { browse.SourcePackageId = op.Substring(7); browse.Page = 0; }
+            else if (op.StartsWith("group:", StringComparison.Ordinal) && Enum.TryParse(op.Substring(6), out UsBoardBrowsePolicy.BoardGroup group)) { browse.Group = group; browse.Page = 0; }
+            bump();
+        });
+    }
+    bindings.BindReadOnly<string>("fallback-pending-race", () => state.PendingFallbackRace);
+    writes.Action<string>("select-fallback-candidate", race => { state.PendingFallbackRace = race; bump(); });
 
     bindings.BindOptions<FilterOptionView>("fallback-sound-options", () => source.BuildView().FallbackSoundOptions);
     bindings.BindOptions<FilterOptionView>("fallback-candidate-options", () => source.BuildView().FallbackCandidateOptions);
@@ -911,6 +938,7 @@ public static partial class UsKernelSettingsHost
         writes.Value<string>("board-search", () => state.BoardSearch, value =>
         {
             state.BoardSearch = value ?? "";
+            state.DirectoryBrowse.Page = 0;
             bump();
         });
         writes.Action<string>("board-group", g =>
@@ -1149,6 +1177,7 @@ public static partial class UsKernelSettingsHost
             if (isHeader)
             {
                 bindings.BindReadOnly<string>(Address("meta"), () => Meta(key));
+                bindings.BindReadOnly<bool>(Address("has-meta"), () => Meta(key).Length > 0);
                 bindings.BindReadOnly<string>(Address("coverage"), () => FindCard(key)?.Coverage ?? "");
                 bindings.BindReadOnly<bool>(Address("expanded"), () => source.ViewState.SelectedPackKey == key && source.ViewState.DetailOpen);
                 writes.ItemAction<string>(PackCardKeysKey, key, "toggle-pack-card", _ =>
@@ -1220,6 +1249,8 @@ public static partial class UsKernelSettingsHost
             if (collisions.Length > 0)
                 origin += " · " + (card.Value.DefName != "" && !collisions.Any(other => other.DefName == card.Value.DefName)
                     ? card.Value.DefName : card.Value.Key);
+            if (collisions.Length == 0 && card.Value.Rows.Count == 1
+                && string.Equals(origin, card.Value.Label, StringComparison.OrdinalIgnoreCase)) return "";
             return string.Format(translation.Translate("US.UI.PackListSummary"), origin, card.Value.Rows.Count);
         }
 

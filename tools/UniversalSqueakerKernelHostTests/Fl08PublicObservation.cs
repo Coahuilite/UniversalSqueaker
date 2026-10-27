@@ -33,7 +33,7 @@ internal static class Fl08PublicObservation
     }
     internal sealed class PaintedControl
     {
-        internal string ElementId = "", Path = "";
+        internal string ElementId = "", Path = "", ControlKey = "";
         internal UiLayoutRect Rect; // Last actual text paint, an interior click point, NOT an input-query rectangle.
     }
     // Forward to the SAME native adapter. Record only the public control-allocation and text-paint
@@ -49,7 +49,7 @@ internal static class Fl08PublicObservation
         public void PrepareControl(UiControlKey key)
         {
             var node = host.Session.GetNode(host.Session.ActiveElement)!;
-            Controls.Add(new PaintedControl { ElementId = node.ElementId, Path = node.Path, Rect = lastText });
+            Controls.Add(new PaintedControl { ElementId = node.ElementId, Path = node.Path, ControlKey = key.Key, Rect = lastText });
             native.PrepareControl(key);
         }
         public void Text(UiLayoutRect rect, string text, UiFont font, UiColour colour, UiTextAnchor anchor, bool wrap)

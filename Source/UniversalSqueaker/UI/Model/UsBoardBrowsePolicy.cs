@@ -11,10 +11,8 @@ namespace UniversalSqueaker.UI;
 /// directory, and a def excluded from the current group is still counted in the totals line.
 ///
 /// <para>
-/// The axes OVERLAP by design (OVT-002 "分类维度可重叠"): a mechanoid from a HAR mod keeps its HAR
-/// framework fact AND its mechanoid life kind, is reachable in the default Player races group (the
-/// HAR half of "HAR mod races first" does not expire at the life-kind border), shows up under the
-/// HAR chip, and under Creatures too. Nothing is ever lost because two axes answer differently.
+/// Framework and life kind are independent: HAR controls sorting/chips, never admission to the
+/// default humanlike scope. Animals and other kinds remain reachable through explicit scopes.
 /// </para>
 /// </summary>
 public static class UsBoardBrowsePolicy
@@ -22,14 +20,15 @@ public static class UsBoardBrowsePolicy
     /// <summary>The board's top-level browse groups, in tab order.</summary>
     public enum BoardGroup
     {
-        /// <summary>Default: what a player races as - HAR mod races first (any life kind), vanilla
-        /// humanlike and the xenotype dimension next, other third-party humanlike after. NEVER
-        /// silently falls back to an animal-first screen when no HAR is loaded.</summary>
+        /// <summary>Default: humanlike races plus legal xenotypes.</summary>
         PlayerRaces = 0,
-        /// <summary>Animals, mechanoids and Anomaly entities, distinguishable by kind.</summary>
+        /// <summary>Animals only; other life kinds have their own explicit scope.</summary>
         Creatures = 1,
         /// <summary>Everything the directory holds.</summary>
         All = 2,
+        Races = 3,
+        Xenotypes = 4,
+        Other = 5,
     }
 
     /// <summary>The compact chips inside a group (OVT-002: HAR / vanilla races / vanilla creatures
@@ -76,12 +75,14 @@ public static class UsBoardBrowsePolicy
         switch (group)
         {
             case BoardGroup.PlayerRaces:
-                // Tier <= 2 already holds EVERY HAR identity (PM addendum): the mechanoid HAR sits
-                // in the leading HAR tier, so membership and ORDER agree - no separate visibility
-                // patch, and the life kind never drops the framework identity the player came for.
-                return Tier(race) <= 2;
+            case BoardGroup.Races:
+                return race.IsHumanlike;
+            case BoardGroup.Xenotypes:
+                return false;
             case BoardGroup.Creatures:
-                return race.IsAnimal || race.IsMechanoid || race.IsAnomalyEntity;
+                return race.IsAnimal;
+            case BoardGroup.Other:
+                return !race.IsHumanlike && !race.IsAnimal;
             default:
                 return true;
         }
