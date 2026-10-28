@@ -11,6 +11,12 @@ A003 synchronizes `UnityEngineImGuiStub/ImGuiStubs.cs`, `VerseStub/VerseStubs.cs
 contracts (focus/control-name/text outlet and tooltip); no FL runtime implementation is copied.
 The remaining snapshot stays at the source above.
 
+The CI/rc preparation adds only `GUI.DrawTexture(Rect,Texture)` as the native convenience overload,
+forwarding stretch/alpha=true to the existing four-argument recording/failure outlet. It is a
+consumer-owned extension, not a new producer snapshot. The gate15 exact native-menu/world/window
+boundaries remain in `scripts/stub-coverage-exemptions.txt`; neither that table nor the shell protocol
+fixtures establish real Options/MainMenu, game-window ownership, simulation speed or camera sound.
+
 Project output/intermediate paths are consumer-local. Defaults stay in this repository's
 `dist/fl08-migration-a001`; isolated Host builds may pass `FerriteLibStubOutputRoot`
 and `FerriteLibStubObjRoot` (directories ending with a separator). Both follow the nested

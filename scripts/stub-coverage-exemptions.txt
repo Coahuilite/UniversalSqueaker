@@ -26,9 +26,8 @@
 #   backend - renderer / world-space entry points (Verse.Widgets::Label(TaggedString),
 #             Verse.GenMapUI::DrawText, UnityEngine Camera/Component/Transform). These are the members the
 #             containment whitelist fences, so declaring them in the stub would blur that boundary instead.
-#   gameui  - game-side window plumbing the harness deliberately does not model (no Verse.Mod, no
-#             WindowStack): US's diagnostics windows are driven in game only - the structural limit
-#             recorded in the task-88 report.
+#   gameui  - native menu/options and real Mod/window-owner paths outside the current UiHost fixture.
+#             The shell protocol double does not establish the actual game's window ownership.
 #   utility - Verse's static facade and helpers, reached only from the in-game paths above (Find, Current,
 #             Messages, LongEventHandler, FloatRange, Gen* helpers, TaggedString, Translator).
 #   debug   - the game's dev debug-action surface (LudeonTK): a panel US registers into in game.
@@ -196,8 +195,8 @@ UnityEngine.CoreModule!UnityEngine.Camera::get_orthographicSize() | backend
 UnityEngine.CoreModule!UnityEngine.Component::get_transform() | backend
 UnityEngine.CoreModule!UnityEngine.Transform::get_position() | backend
 
-# (gameui retired entirely: the frozen d5af4d8 double declares Window.get_IsOpen itself - FL-IC2's harness
-# additions - so the last entry here went STALE on this round and was deleted per the ratchet above.)
+# Historical d5af4d8 round: its last gameui entry (Window.get_IsOpen) went STALE and was removed.
+# That dated contraction does not cover the later native Options/MainMenu/window-owner callers below.
 # ------------------------------------------------------------------------------------------------
 # utility (11) - utility - Verse static facade/helpers reached only from the in-game paths above
 # ------------------------------------------------------------------------------------------------
@@ -305,3 +304,27 @@ Assembly-CSharp!Verse.Pawn::get_Drawer() | world
 Assembly-CSharp!Verse.Thing::get_IngestibleNow() | world
 Assembly-CSharp!Verse.ThingDef::get_IsNutritionGivingIngestible() | defs
 Assembly-CSharp!Verse.ThingDef::ingestible:c:RimWorld.IngestibleProperties | defs
+
+# 2026-10-28 exact native-boundary decision (USFL-CI-RC-PREP/A001).
+# Current Host assertions do not execute these callers. No wildcard/nominal native world is modeled.
+# Patch_SettingsEntries.Patch_USOptionsEntry: official native category identity/filter.
+Assembly-CSharp!RimWorld.OptionCategoryDefOf::Mods:c:Verse.OptionCategoryDef | defs
+# Same native row: game-owned Click feedback Def, separate from response-output fixtures.
+Assembly-CSharp!RimWorld.SoundDefOf::Click:c:Verse.SoundDef | audio
+# Patch_USMainMenuEntry.DrawPlayOptions: native listing row construction.
+Assembly-CSharp!Verse.ListableOption::.ctor(String,c:System.Action,String) | gameui
+# Patch_USOptionsEntry: actual loaded ModContentPack category provenance.
+Assembly-CSharp!Verse.ModContentPack::get_IsOfficialMod() | defs
+# Patch_USOptionsEntry: native category's developer-only filter field.
+Assembly-CSharp!Verse.OptionCategoryDef::isDev:Boolean | defs
+# Patch_USMainMenuEntry.DrawPlayOptions: delegate to the native main-menu listing.
+Assembly-CSharp!Verse.OptionListingUtility::DrawOptionListing(v:UnityEngine.Rect,c:System.Collections.Generic.List`1<c:Verse.ListableOption>) | gameui
+# Patch_USOptionsEntry: camera feedback backend, not a response-driver call.
+Assembly-CSharp!Verse.Sound.SoundStarter::PlayOneShotOnCamera(c:Verse.SoundDef,c:Verse.Map) | audio
+# CompSqueaker.NativeStateWaitFactor: live world simulation speed.
+Assembly-CSharp!Verse.TickManager::get_TickRateMultiplier() | world
+# Patch_USOptionsEntry: sanctioned vanilla category-row background outside UiHost.
+Assembly-CSharp!Verse.Widgets::DrawOptionBackground(v:UnityEngine.Rect,Boolean) | gameui
+# GameSettingsWindow.BeforeDraw: real owner content-size comparison, not ShellProbeWindow.
+# The snapshot deliberately omits unknown-epsilon comparisons rather than guessing game behavior.
+UnityEngine.CoreModule!UnityEngine.Vector2::op_Inequality(v:UnityEngine.Vector2,v:UnityEngine.Vector2) | gameui

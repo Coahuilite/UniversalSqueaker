@@ -198,7 +198,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $tag = $env:RELEASE_TAG
           $isRc = $tag -match '-rc[1-9]\d*$'
-          $trialNote = if ($isRc) { "This is a **release candidate**: an early-testing build. Try it and report what breaks. The paired0.6/0.8 baseline was accepted in an overall internal trial; detailed native coverage remains scoped." } else { "This is the stable release. The identity table below names the exact commit." }
+          $trialNote = if ($isRc) { "This is a **release candidate** for RimWorld 1.6. Report issues with the version identity below." } else { "This is the stable release for RimWorld 1.6." }
           $notesPath = "docs/releases/$tag.md"
           $preparedNotes = if (Test-Path -LiteralPath $notesPath) { Get-Content -LiteralPath $notesPath -Raw } else { '' }
           # rc delta: show what changed since the previous tag so testers know the trial delta.
@@ -230,10 +230,8 @@ jobs:
 
           ## Notes
 
-          - This is a testing RC for **RimWorld 1.6**: the voice-management and compact/filter work is implemented; granular native compatibility limits are retained in the notes.
           - Uninstalling is save-safe: no permanent data is written into saves, and settings and profiles live in the RimWorld ``Config/`` folder.
-          - The prerequisite pairing is exact: the rows above name the FerriteLib release, its commit and the carrier DLL's SHA-256 this build was compiled against.
-          - Testing status: CI/build checks apply to their recorded inputs. The ea610fa/833c14f4 baseline received overall internal-trial acceptance, not itemized fifteen-action, IME or Config results; exact cloud-built artifact identity is reported here.
+          - The paired baseline passed overall internal trials. Coverage of individual actions, IME and native Config remains limited.
 
           $preparedNotes
 

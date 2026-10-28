@@ -67,16 +67,17 @@ $script:gateNumber = 0
 $script:results = [Collections.Generic.List[object]]::new()
 $toolBuilds = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $commit = ((git -C $root rev-parse HEAD) -join '').Trim()
+$sourceChanges = @(& git -C $root status --porcelain)
 $carrierIdentity = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll -AttributeName 'AssemblyInformationalVersionAttribute') -join ''
 function Write-VerificationSummary {
-    [ordered]@{ commit=$commit; carrier=$carrierDll; carrierIdentity=$carrierIdentity; carrierSource=$carrierSource;
+    [ordered]@{ commit=$commit; sourceDirty=($sourceChanges.Count -gt 0); sourceChanges=$sourceChanges; carrier=$carrierDll; carrierIdentity=$carrierIdentity; carrierSource=$carrierSource;
         sdkContract='SDK10 + runtime8 (net8 tools); net472 on Windows'; noRestore=[bool]$NoRestore;
         results=@($script:results.ToArray()); notRunGateIds=@(($script:gateNumber+1)..37 | Where-Object { $_ -le 37 -and $_ -gt $script:gateNumber });
         historicalGate16='scripts/verify-historical-inputs.ps1; not a current compiler/runtime input' } |
         ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $logs 'summary.json')
 }
 function Invoke-Check {
-    param([string]$Name, [string]$Retry, [scriptblock]$Action)
+    param([string]$Name, [string]$Retry, [scriptblock]$Action, [switch]$ContinueAfterFailure)
     $script:gateNumber++
     $log = Join-Path $logs ('gate-{0:00}.log' -f $script:gateNumber)
     $watch = [Diagnostics.Stopwatch]::StartNew()
@@ -91,7 +92,9 @@ function Invoke-Check {
     Write-VerificationSummary
     if ($code -ne 0) {
         Write-Host "FAIL ($log)"; Get-Content -LiteralPath $log -Tail 24 | Write-Host
-        Write-Host "[retry] $Retry"; throw "Gate $($script:gateNumber) failed; full log and unrun IDs retained in $logs"
+        Write-Host "[retry] $Retry"
+        if ($ContinueAfterFailure) { return } # Independent groups can run; final status still fails.
+        throw "Gate $($script:gateNumber) failed; full log and unrun IDs retained in $logs"
     }
     Write-Host ("OK ({0:F3}s; {1})" -f $watch.Elapsed.TotalSeconds, $log)
 }
@@ -99,6 +102,11 @@ function Invoke-DotNet([string[]]$Arguments) {
     Write-Host ('$ dotnet ' + ($Arguments -join ' '))
     & dotnet @Arguments
     if ($LASTEXITCODE -ne 0) { throw "dotnet exited $LASTEXITCODE" }
+}
+function Invoke-Executable([string]$Path, [string[]]$Arguments) {
+    Write-Host ('$ ' + $Path + ' ' + ($Arguments -join ' '))
+    & $Path @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "Executable exited $LASTEXITCODE" }
 }
 function Invoke-Tool {
     param([string]$Name, [string]$Configuration='Release', [string[]]$Arguments=@())
@@ -119,9 +127,7 @@ function Invoke-Tool {
     $folder = Join-Path (Split-Path -Parent $project) "bin/$Configuration/$framework"
     if ($framework -eq 'net472') {
         $exe = Join-Path $folder ($nameOnDisk + '.exe')
-        Write-Host ('$ ' + $exe + ' ' + ($Arguments -join ' '))
-        & $exe @Arguments
-        if ($LASTEXITCODE -ne 0) { throw "$Name process exited $LASTEXITCODE" }
+        Invoke-Executable -Path $exe -Arguments $Arguments
     } else { Invoke-DotNet (@((Join-Path $folder ($nameOnDisk + '.dll'))) + $Arguments) }
 }
 Invoke-DotNet -Arguments @('--info') *> (Join-Path $logs 'dotnet-info.log')
@@ -190,11 +196,11 @@ Invoke-Check 'selected FerriteLib carrier configuration and source identity' `
 
 Invoke-Check 'main assembly Dev build (US_DEV, warnings as errors)' `
     "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev `"-p:FerriteLibArtifactPath=$carrierDll`"" `
-    { dotnet build $projectFile -c Dev @buildExtraArgs }
+    { Invoke-DotNet (@('build',$projectFile,'-c','Dev') + $buildExtraArgs) }
 
 Invoke-Check 'main assembly Release build (warnings as errors)' `
     "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release `"-p:FerriteLibArtifactPath=$carrierDll`"" `
-    { dotnet build $projectFile -c Release @buildExtraArgs }
+    { Invoke-DotNet (@('build',$projectFile,'-c','Release') + $buildExtraArgs) }
 
 Invoke-Check 'US payload carries exactly one assembly (no second FerriteLib copy)' `
     "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release `"-p:FerriteLibArtifactPath=$carrierDll`"" `
@@ -344,7 +350,8 @@ Invoke-Check 'harness stub coverage (every game member the US payload or the har
             $stubFindings = @($stubOutput | Where-Object { $_ -match 'MISSING |STALE |NO-REASON |NOT SCANNED' } | Select-Object -First 10)
             throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $stubFindings.Count + " finding line(s) quoted). Findings: " + ($stubFindings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
         }
-    }
+    } -ContinueAfterFailure
+# Gate15 failure does not invalidate independent Core/adapter groups; it still blocks final success/stage.
 # Gate16 retains its identifier in the explicit historical entry, not the current build path.
 $script:gateNumber = 16
 Write-Host '[history gate16] scripts/verify-historical-inputs.ps1; no current project consumes tools/FerriteLib.Stubs'
@@ -374,10 +381,9 @@ foreach ($selectFixtureTarget in @('MissingInternal', 'MissingFeedback')) {
     Invoke-Check "D-A Select missing target $selectFixtureTarget (paired isolation)" `
         "build AudioBindingTests with -p:SelectFixtureTarget=$selectFixtureTarget and isolated output/obj; run --da-select-missing-target" `
         {
-            dotnet build (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
-                "-p:SelectFixtureTarget=$selectFixtureTarget" "-p:OutputPath=$selectFixtureOutput/" "-p:IntermediateOutputPath=$selectFixtureObj/"
-            if ($LASTEXITCODE -ne 0) { throw "Select fixture build failed: $selectFixtureTarget" }
-            & (Join-Path $selectFixtureOutput 'UniversalSqueakerAudioBindingTests.exe') --da-select-missing-target
+            Invoke-DotNet -Arguments @('build',(Join-Path $root 'tools\UniversalSqueakerAudioBindingTests'),'-c','Release','--no-restore','-m:1',
+                "-p:SelectFixtureTarget=$selectFixtureTarget","-p:OutputPath=$selectFixtureOutput/","-p:IntermediateOutputPath=$selectFixtureObj/")
+            Invoke-Executable -Path (Join-Path $selectFixtureOutput 'UniversalSqueakerAudioBindingTests.exe') -Arguments @('--da-select-missing-target')
         }
 }
 # Gates 24/25: D-B production Eat/config consumer and physically missing precision seam.
@@ -389,10 +395,9 @@ Invoke-Check 'D-B missing Chew target isolates precision without disabling Whole
     {
         $eatOutput = Join-Path $logs 'variants/eat/MissingChew'
         $eatObj = Join-Path $logs 'variants/obj/eat/MissingChew'
-        dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
-            -p:EatFixtureTarget=MissingChew "-p:OutputPath=$eatOutput/" "-p:IntermediateOutputPath=$eatObj/"
-        if ($LASTEXITCODE -ne 0) { throw 'Eat missing-target fixture build failed' }
-        & (Join-Path $eatOutput 'UniversalSqueakerAudioBindingTests.exe') --db-eat-missing
+        Invoke-DotNet -Arguments @('build',(Join-Path $root 'tools/UniversalSqueakerAudioBindingTests'),'-c','Release','--no-restore','-m:1',
+            '-p:EatFixtureTarget=MissingChew',"-p:OutputPath=$eatOutput/","-p:IntermediateOutputPath=$eatObj/")
+        Invoke-Executable -Path (Join-Path $eatOutput 'UniversalSqueakerAudioBindingTests.exe') -Arguments @('--db-eat-missing')
     }
 # Gate 26: result notifications cannot turn a still-true state into an event opportunity.
 Invoke-Check 'D-B Result routes only to explicit fixed-contract consumers (truly Eat-only pack included)' `
@@ -414,10 +419,9 @@ Invoke-Check 'D-C physically missing Wounded and melee marker isolates only thos
     {
         $dcOutput = Join-Path $logs 'variants/dc/MissingWoundedAndMeleeMarker'
         $dcObj = Join-Path $logs 'variants/obj/dc/MissingWoundedAndMeleeMarker'
-        dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
-            -p:DcFixtureTarget=MissingWoundedAndMeleeMarker "-p:OutputPath=$dcOutput/" "-p:IntermediateOutputPath=$dcObj/"
-        if ($LASTEXITCODE -ne 0) { throw 'D-C missing-target fixture build failed' }
-        & (Join-Path $dcOutput 'UniversalSqueakerAudioBindingTests.exe') --dc-missing
+        Invoke-DotNet -Arguments @('build',(Join-Path $root 'tools/UniversalSqueakerAudioBindingTests'),'-c','Release','--no-restore','-m:1',
+            '-p:DcFixtureTarget=MissingWoundedAndMeleeMarker',"-p:OutputPath=$dcOutput/","-p:IntermediateOutputPath=$dcObj/")
+        Invoke-Executable -Path (Join-Path $dcOutput 'UniversalSqueakerAudioBindingTests.exe') -Arguments @('--dc-missing')
     }
 # Gates 30/31: approved Core Work return branches and one physically absent implementation.
 Invoke-Check 'Core Work exact processes, current phase/owner/config and care lifecycles' `
@@ -428,10 +432,9 @@ Invoke-Check 'Core Work physically missing Sow leaves unrelated work usable' `
     {
         $workOutput = Join-Path $logs 'variants/work/MissingSow'
         $workObj = Join-Path $logs 'variants/obj/work/MissingSow'
-        dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
-            -p:WorkFixtureTarget=MissingSow "-p:OutputPath=$workOutput/" "-p:IntermediateOutputPath=$workObj/"
-        if ($LASTEXITCODE -ne 0) { throw 'Core Work missing-Sow fixture build failed' }
-        & (Join-Path $workOutput 'UniversalSqueakerAudioBindingTests.exe') --work-missing
+        Invoke-DotNet -Arguments @('build',(Join-Path $root 'tools/UniversalSqueakerAudioBindingTests'),'-c','Release','--no-restore','-m:1',
+            '-p:WorkFixtureTarget=MissingSow',"-p:OutputPath=$workOutput/","-p:IntermediateOutputPath=$workObj/")
+        Invoke-Executable -Path (Join-Path $workOutput 'UniversalSqueakerAudioBindingTests.exe') -Arguments @('--work-missing')
     }
 # Gates 32-37: current r2 entry points already exercised by the refactor's existing fixtures.
 Invoke-Check 'r2 whole production Core without platform references' `
@@ -451,7 +454,8 @@ Invoke-Check 'r2 public player template through the production value loader' `
     { Invoke-Tool -Name 'UniversalSqueakerSettingsMigrationTests' -Configuration 'Release' -Arguments @('--public-template') }
 Invoke-Check 'r2 DLL-only external author examples against the built Release product' `
     'dotnet build tools/UniversalSqueakerExternalAuthorTests -c Release with explicit UniversalSqueakerArtifactPath' `
-    { dotnet build (Join-Path $root 'tools/UniversalSqueakerExternalAuthorTests') -c Release --no-restore --nologo "-p:UniversalSqueakerArtifactPath=$(Join-Path $root 'dist/build/Release/UniversalSqueaker.dll')" }
+    { Invoke-DotNet -Arguments @('build',(Join-Path $root 'tools/UniversalSqueakerExternalAuthorTests'),'-c','Release','--no-restore','--nologo',"-p:UniversalSqueakerArtifactPath=$(Join-Path $root 'dist/build/Release/UniversalSqueaker.dll')") }
+if (@($script:results | Where-Object { $_.exit -ne 0 }).Count -gt 0) { throw "Verification failed; independent groups completed, see $logs/summary.json" }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

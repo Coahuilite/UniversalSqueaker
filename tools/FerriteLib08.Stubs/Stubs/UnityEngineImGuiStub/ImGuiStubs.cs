@@ -171,6 +171,10 @@ public static class GUI
 
     public static System.Exception? DrawTextureFailure;
 
+    // Native GUI's two-argument convenience outlet uses stretch + alpha blending; keep the
+    // same existing recording/failure path, not a second drawing implementation.
+    public static void DrawTexture(Rect rect, Texture texture) => DrawTexture(rect, texture, ScaleMode.StretchToFill, true);
+
     public static void DrawTexture(Rect rect, Texture texture, ScaleMode mode, bool alphaBlend)
     {
         if (DrawTextureFailure != null) throw DrawTextureFailure;
