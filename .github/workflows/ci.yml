@@ -24,6 +24,10 @@ concurrency:
 jobs:
   gates:
     runs-on: windows-latest
+    env:
+      NUGET_PACKAGES: ${{ runner.temp }}/us-nuget
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
     # Keep the complete current gate entry point bounded; a hung runner must not use the default 360 minutes.
     timeout-minutes: 10
     steps:
@@ -48,6 +52,18 @@ jobs:
           ref: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
           path: ci-ferritelib
 
+      - name: Cache NuGet downloads (not build outputs)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-us-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.*') }}
+          restore-keys: ${{ runner.os }}-us-nuget-
+
+      - name: Cache the exact carrier download
+        uses: actions/cache@v4
+        with:
+          path: dist/carrier-download-cache
+          key: ${{ runner.os }}-us-carrier-${{ vars.FERRITELIB_CARRIER_REPOSITORY }}-${{ vars.FERRITELIB_CARRIER_TAG }}-${{ vars.FERRITELIB_CARRIER_COMMIT }}
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -89,31 +105,25 @@ jobs:
             Copy-Item -Destination $sibling -Recurse -Force
           $head = (git -C ci-ferritelib rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0 -or $head -cne $env:FL_CARRIER_COMMIT) { throw 'Pinned FerriteLib checkout identity differs.' }
-          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
+          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling -DownloadCacheDirectory dist/carrier-download-cache
           # US never authors or builds the carrier: nothing in this workflow writes into ci-ferritelib/.
 
-      - name: Restore
-        shell: pwsh
-        run: |
-          # verify-local runs its existing harnesses with --no-restore, so every project
-          # they touch needs an obj/ from a restore on a clean checkout (locally the obj/ already
-          # exists, which is why -NoRestore passes here but would not on the runner). Glob rather
-          # than a hand list so a new tools/ project can never be forgotten.
-          Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
-            ForEach-Object {
-              dotnet restore $_.FullName --nologo
-              if ($LASTEXITCODE -ne 0) { throw "Restore failed: $($_.FullName)" }
-            }
-
-      - name: Verify (37 gates, including current r2 entry points)
+      - name: Verify current groups (stable gate IDs; archived gate16 separate)
         shell: pwsh
         # The carrier is SELECTED, never defaulted: resolve-carrier refuses an empty path since 2026-09-24
         # (a silent pick of the repository-root Release payload was the wrong artifact for a Dev rehearsal).
         # The acquisition step above staged the verified release-asset DLL exactly here - the sibling path
         # the csproj HintPath also resolves - and gate 6 pairs its embedded commit against the pinned
         # ci-ferritelib checkout.
-        run: ./scripts/verify-local.ps1 -NoRestore -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+        run: ./scripts/verify-local.ps1 -FerriteLibSourceRoot ci-ferritelib -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
+      - name: Preserve complete verification logs, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/verify/**
+          if-no-files-found: ignore
       # The privacy gate is a first-upload concern and cheap; run it on every CI pass so a personal
       # path or credential can never ride a commit to main. Full-history mode is reserved for the
       # pre-push manual check (the runner clone is shallow and would not carry the history to scan).

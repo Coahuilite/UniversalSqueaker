@@ -4,7 +4,9 @@ param(
     [string]$FerriteLibArtifactPath,
     # Explicit opt-in for integration against a local Dev/dirty carrier; never release evidence.
     [switch]$DevelopmentCarrier,
-    [switch]$NoRestore
+    [switch]$NoRestore,
+    [string]$FerriteLibSourceRoot,
+    [string]$LogDirectory
 )
 
 Set-StrictMode -Version Latest
@@ -31,9 +33,9 @@ $ErrorActionPreference = "Stop"
 #       the KernelHostTests harness assembly, against US's own exemption ledger
 #       (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose - gate 13 builds both scanned
 #       assemblies. Current 0.8 doubles live in tools/FerriteLib08.Stubs, not the producer tree.
-#  16   frozen stub snapshot integrity: all five tools/FerriteLib.Stubs source files must equal the
-#       sha256 values recorded in fl/frozen-handoff.json (ferritelib 0.7.x@d5af4d8). Runs after 15
-#       as an archived-input integrity gate only; it does not certify the current 0.8 doubles.
+#  16   HISTORICAL ENTRY ONLY — frozen stub snapshot integrity: all five tools/FerriteLib.Stubs source files must equal the
+#       sha256 values recorded in fl/frozen-handoff.json (ferritelib 0.7.x@d5af4d8), only when the
+#       historical entry is explicitly invoked. It does not certify current0.8 doubles.
 # GATE PROVENANCE: 1-5 and 10-16 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
 # its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
 # entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and both scanned
@@ -41,8 +43,8 @@ $ErrorActionPreference = "Stop"
 # stay in the carrier's gate 8, where the scanned tree is the carrier's. The FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and
 # the visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
-# Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
-# next number (this one: 16) instead of shifting the checks below it.
+# Gate IDs are stable; historical gate16 is an explicit separate entry. Numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
+# next number instead of shifting old references.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # r2 gates 32-37 invoke already-existing Core/domain/through/save/template/author checks.
 # No new unit cases are defined here; native game and real Scribe acceptance remain separate.
@@ -52,96 +54,114 @@ $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.cspro
 $carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $uiLogicTestsProject = Join-Path $root 'tools\UniversalSqueakerUiLogicTests\UniversalSqueakerUiLogicTests.csproj'
 $kernelHostTestsProject = Join-Path $root 'tools\UniversalSqueakerKernelHostTests\UniversalSqueakerKernelHostTests.csproj'
-$tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::NewGuid().ToString('N') + '.log')
 $hostConfiguration = if ($DevelopmentCarrier) { 'Dev' } else { 'Release' }
-$buildExtraArgs = @("-p:FerriteLibArtifactPath=$carrierDll")
-if ($NoRestore) { $buildExtraArgs += '--no-restore' }
-
+$buildExtraArgs = @("-p:FerriteLibArtifactPath=$carrierDll", '--no-restore', '--disable-build-servers')
+$carrierSource = if ($FerriteLibSourceRoot) { [IO.Path]::GetFullPath($FerriteLibSourceRoot, $root) }
+    elseif (Test-Path -LiteralPath (Join-Path $root 'ci-ferritelib/.git')) { Join-Path $root 'ci-ferritelib' }
+    else { Join-Path (Split-Path -Parent $root) 'ferritelib' }
+$logs = if ($LogDirectory) { [IO.Path]::GetFullPath($LogDirectory, $root) }
+    else { Join-Path $root ('dist/verify/' + [DateTimeOffset]::Now.ToString('yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)) }
+if (Test-Path -LiteralPath $logs) { throw "Use a new log directory; refusing to replace $logs" }
+$null = New-Item -ItemType Directory -Path $logs
+$script:gateNumber = 0
+$script:results = [Collections.Generic.List[object]]::new()
+$toolBuilds = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$commit = ((git -C $root rev-parse HEAD) -join '').Trim()
+$carrierIdentity = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll -AttributeName 'AssemblyInformationalVersionAttribute') -join ''
+function Write-VerificationSummary {
+    [ordered]@{ commit=$commit; carrier=$carrierDll; carrierIdentity=$carrierIdentity; carrierSource=$carrierSource;
+        sdkContract='SDK10 + runtime8 (net8 tools); net472 on Windows'; noRestore=[bool]$NoRestore;
+        results=@($script:results.ToArray()); notRunGateIds=@(($script:gateNumber+1)..37 | Where-Object { $_ -le 37 -and $_ -gt $script:gateNumber });
+        historicalGate16='scripts/verify-historical-inputs.ps1; not a current compiler/runtime input' } |
+        ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $logs 'summary.json')
+}
 function Invoke-Check {
     param([string]$Name, [string]$Retry, [scriptblock]$Action)
-
-    Write-Host -NoNewline "[run] $Name ... "
-    $previousEap = $ErrorActionPreference
-    $ErrorActionPreference = 'Stop'
-    $failed = $false
-    $failureMessage = $null
-    try { & $Action *> $tempLog } catch { $failed = $true; $failureMessage = $_.Exception.Message } finally { $ErrorActionPreference = $previousEap }
-    $code = $LASTEXITCODE
-    if ($failed -or $code -ne 0) {
-        Write-Host 'FAIL'
-        # A gate that enforces a contract without saying which one turns every red into a scavenger
-        # hunt: an assertion message used to be swallowed by this catch and never reached the console
-        # (port of the carrier's own 5399aa7).
-        if (-not [string]::IsNullOrWhiteSpace($failureMessage)) { Write-Host "    $failureMessage" }
-        if (Test-Path -LiteralPath $tempLog) {
-            Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
-        }
-        Write-Host "  [hint] retry: $Retry"
-        Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
-        exit 1
+    $script:gateNumber++
+    $log = Join-Path $logs ('gate-{0:00}.log' -f $script:gateNumber)
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    $code = 0; $failure = ''
+    @("gate=$($script:gateNumber) name=$Name", "commit=$commit", "carrier=$carrierIdentity path=$carrierDll", "cwd=$((Get-Location).Path)", "start=$([DateTimeOffset]::Now.ToString('o'))", "retry_hint=$Retry") | Set-Content -LiteralPath $log
+    Write-Host -NoNewline "[gate $($script:gateNumber)] $Name ... "
+    try { $global:LASTEXITCODE = 0; & $Action *>> $log; $code = $LASTEXITCODE }
+    catch { $code = if ($LASTEXITCODE -ne 0) { $LASTEXITCODE } else { 1 }; $failure = $_.ToString(); $failure | Add-Content -LiteralPath $log }
+    $watch.Stop()
+    @("exit=$code", "seconds=$($watch.Elapsed.TotalSeconds.ToString('F3',[Globalization.CultureInfo]::InvariantCulture))") | Add-Content -LiteralPath $log
+    $script:results.Add([ordered]@{id=$script:gateNumber;name=$Name;exit=$code;seconds=$watch.Elapsed.TotalSeconds;log=[IO.Path]::GetFileName($log)})
+    Write-VerificationSummary
+    if ($code -ne 0) {
+        Write-Host "FAIL ($log)"; Get-Content -LiteralPath $log -Tail 24 | Write-Host
+        Write-Host "[retry] $Retry"; throw "Gate $($script:gateNumber) failed; full log and unrun IDs retained in $logs"
     }
-    Write-Host 'OK'
+    Write-Host ("OK ({0:F3}s; {1})" -f $watch.Elapsed.TotalSeconds, $log)
 }
-
-# A fresh clone or a git-archive extraction has no obj/ tree, and the six tool lanes below run with a
-# hard-coded --no-restore on purpose (a lane must never silently re-resolve a stale package graph).
-# Without this bootstrap a fresh tree dies inside gate 1 as MSB3644 ("reference assemblies for
-# .NETFramework,Version=v4.7.2 not found"), which reads like a real red - the independent verifier hit
-# exactly that on an archive extraction and had to restore seven projects by hand. Same shape as the
-# carrier's own [setup] restore (d0632ca), sized for US: every project a lane invokes, not just one.
-# -NoRestore keeps its documented meaning: the caller asserts the graph is already restored (CI
-# restores every csproj before calling with it), so nothing happens here in that mode.
+function Invoke-DotNet([string[]]$Arguments) {
+    Write-Host ('$ dotnet ' + ($Arguments -join ' '))
+    & dotnet @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "dotnet exited $LASTEXITCODE" }
+}
+function Invoke-Tool {
+    param([string]$Name, [string]$Configuration='Release', [string[]]$Arguments=@())
+    $project = Join-Path $root "tools/$Name/$Name.csproj"
+    $key = "$project|$Configuration|$carrierDll"
+    if ($toolBuilds.Add($key)) {
+        $properties = @()
+        if ($Name -eq 'UniversalSqueakerKernelHostTests') {
+            $properties += '-p:UsProductAlreadyBuilt=true', '-p:UsVerificationNoRestore=true',
+                "-p:UsProductArtifactPath=$(Join-Path $root "dist/build/$Configuration/UniversalSqueaker.dll")"
+        }
+        Invoke-DotNet (@('build',$project,'-c',$Configuration,'--nologo') + $buildExtraArgs + $properties)
+    } else { Write-Host "[reuse build in this invocation] $Name $Configuration (same source/config/constants/carrier)" }
+    [xml]$xml = Get-Content -LiteralPath $project -Raw
+    $framework = $xml.SelectSingleNode('/Project/PropertyGroup/TargetFramework').InnerText
+    $assembly = $xml.SelectSingleNode('/Project/PropertyGroup/AssemblyName')
+    $nameOnDisk = if ($null -eq $assembly) { $Name } else { $assembly.InnerText }
+    $folder = Join-Path (Split-Path -Parent $project) "bin/$Configuration/$framework"
+    if ($framework -eq 'net472') {
+        $exe = Join-Path $folder ($nameOnDisk + '.exe')
+        Write-Host ('$ ' + $exe + ' ' + ($Arguments -join ' '))
+        & $exe @Arguments
+        if ($LASTEXITCODE -ne 0) { throw "$Name process exited $LASTEXITCODE" }
+    } else { Invoke-DotNet (@((Join-Path $folder ($nameOnDisk + '.dll'))) + $Arguments) }
+}
+Invoke-DotNet -Arguments @('--info') *> (Join-Path $logs 'dotnet-info.log')
+# One restore owner. Never infer freshness from project.assets.json or cache bin/obj.
+# Workflow calls this entry without -NoRestore; explicit manual -NoRestore asserts a prepared graph.
 if (-not $NoRestore) {
     $setupProjects = @($projectFile)
-    $setupProjects += @(Get-ChildItem -LiteralPath (Join-Path $root 'tools') -Recurse -File -Filter *.csproj |
-        Where-Object { $_.FullName -notmatch '[\\/]obj[\\/]' } |
-        ForEach-Object { $_.FullName } |
-        Sort-Object)
-
-    # Restore is what produces obj/project.assets.json; its presence is the same signal --no-restore
-    # lanes depend on, so only the projects missing it are restored and a warm tree pays nothing.
-    $setupPending = @($setupProjects | Where-Object {
-        -not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $_) 'obj\project.assets.json') -PathType Leaf) })
-
-    Write-Host -NoNewline "[setup] restore the project graph ($($setupPending.Count) of $($setupProjects.Count) projects need it) ... "
-    $setupFailedProject = ''
-    foreach ($setupProject in $setupPending) {
-        dotnet restore $setupProject *> $tempLog
-        if ($LASTEXITCODE -ne 0) { $setupFailedProject = $setupProject; break }
-    }
-
-    if ($setupFailedProject.Length -gt 0) {
-        Write-Host 'FAIL'
-        if (Test-Path -LiteralPath $tempLog) {
-            Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
-        }
-        Write-Host "  [hint] retry: dotnet restore $setupFailedProject"
-        Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
-        exit 1
-    }
-
-    Write-Host 'OK'
+    $setupProjects += @(Get-ChildItem -LiteralPath (Join-Path $root 'tools') -Directory | ForEach-Object {
+        Get-ChildItem -LiteralPath $_.FullName -Filter *.csproj -File | ForEach-Object { $_.FullName }
+    })
+    # These two roots restore the entire current stub ProjectReference graph, not the archived0.7 tree.
+    $setupProjects += (Join-Path $root 'tools/FerriteLib08.Stubs/Stubs/VerseStub/VerseStub.csproj'),
+        (Join-Path $root 'tools/FerriteLib08.Stubs/Stubs/UnityEngineInputLegacyModuleStub/UnityEngineInputLegacyModuleStub.csproj')
+    $setupLog = Join-Path $logs 'restore.log'; $watch = [Diagnostics.Stopwatch]::StartNew()
+    $restoreExit = 0
+    try {
+        foreach ($project in $setupProjects) { Invoke-DotNet -Arguments @('restore',$project,'--nologo',"-p:FerriteLibArtifactPath=$carrierDll") *>> $setupLog }
+    } catch { $restoreExit = 1; $_ | Out-String | Add-Content -LiteralPath $setupLog; Write-Host "Restore failed: full log $setupLog"; Write-VerificationSummary; throw }
+    finally { $watch.Stop(); @("restore-exit=$restoreExit", "restore-seconds=$($watch.Elapsed.TotalSeconds)") | Add-Content -LiteralPath $setupLog }
 }
 
 Invoke-Check 'UniversalSqueakerKernelTests (unit asserts + US 0.1.0 corpus replay + determinism)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerKernelTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerKernelTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerKernelTests' -Configuration 'Release' }
 
 Invoke-Check 'UniversalSqueakerConfigCopyTests (store lifecycle A-F)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerConfigCopyTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerConfigCopyTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerConfigCopyTests' -Configuration 'Release' }
 
 Invoke-Check 'UniversalSqueakerSettingsMigrationTests (schema migration + write bridges + baseline)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerSettingsMigrationTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerSettingsMigrationTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerSettingsMigrationTests' -Configuration 'Release' }
 
 Invoke-Check 'UniversalSqueakerLogTests Release (usdiag v1/v2 protocol)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerLogTests' -Configuration 'Release' }
 
 Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Dev' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
+    { Invoke-Tool -Name 'UniversalSqueakerLogTests' -Configuration 'Dev' }
 
 Invoke-Check 'selected FerriteLib carrier configuration and source identity' `
     'select the carrier this build linked with -FerriteLibArtifactPath (read-only; nothing in this repository rebuilds it). Rebuilding the FerriteLib payload is the CARRIER OWNER''S DELIVERY STEP: it REPLACES the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash AND mtime as a pair. A consumer selects the right carrier; it never builds one.' `
@@ -154,12 +174,8 @@ Invoke-Check 'selected FerriteLib carrier configuration and source identity' `
             return
         }
         if ($carrierStamp -ne 'Release') { throw 'Release verification requires a Release carrier. Use -DevelopmentCarrier only for local integration.' }
-        $carrierRoot = Join-Path (Split-Path -Parent $root) 'ferritelib'
-        $carrierRepo = $null
-        foreach ($candidate in @($carrierRoot, (Join-Path $root 'ci-ferritelib'))) {
-            if (Test-Path -LiteralPath (Join-Path $candidate '.git')) { $carrierRepo = $candidate; break }
-        }
-        if ($null -eq $carrierRepo) { throw 'No carrier checkout is available to verify the embedded source commit.' }
+        $carrierRepo = $carrierSource
+        if (-not (Test-Path -LiteralPath (Join-Path $carrierRepo '.git'))) { throw 'The selected fixed carrier source checkout is required.' }
         $carrierInfo = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll -AttributeName 'AssemblyInformationalVersionAttribute') -join ''
         $plus = $carrierInfo.IndexOf('+')
         $payloadCommit = if ($plus -ge 0) { $carrierInfo.Substring($plus + 1).Trim() } else { '' }
@@ -219,7 +235,7 @@ Invoke-Check 'LICENSE present and un-truncated MPL-2.0' `
             throw 'The applied notice declares incompatibility with secondary licenses; series policy keeps that allowed.'
         }
         # The carrier ships the same licence text; a fork between the two copies is a real defect.
-        $carrierLicense = Join-Path (Split-Path -Parent $root) 'ferritelib\LICENSE'
+        $carrierLicense = Join-Path $carrierSource 'LICENSE'
         if (Test-Path -LiteralPath $carrierLicense -PathType Leaf) {
             $ours = (Get-FileHash -LiteralPath $licensePath -Algorithm SHA256).Hash
             $theirs = (Get-FileHash -LiteralPath $carrierLicense -Algorithm SHA256).Hash
@@ -262,13 +278,13 @@ Invoke-Check 'Schema=2 manifests present, well-formed and correctly attributed' 
 
 Invoke-Check 'UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 invariants + Keyed localization contract)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerUiLogicTests -c Release' `
-    { dotnet run --no-restore --project $uiLogicTestsProject -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerUiLogicTests' }
 
 # Real embedded Schema=2 Host creation regression: the production Host adapter runs against the
 # real resource, real US widget registrations and the real typed binding table (recording source).
 Invoke-Check "UniversalSqueakerKernelHostTests $hostConfiguration (real Schema2 Host + layout + diagnostic integration)" `
     "dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c $hostConfiguration `"-p:FerriteLibArtifactPath=$carrierDll`"" `
-    { dotnet run --no-restore --project $kernelHostTestsProject -c $hostConfiguration "-p:FerriteLibArtifactPath=$carrierDll" }
+    { Invoke-Tool -Name 'UniversalSqueakerKernelHostTests' -Configuration $hostConfiguration }
 
 Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whitelist)' `
     'pwsh -NoProfile -File scripts/ui-boundary-audit.ps1' `
@@ -294,7 +310,7 @@ Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whit
 Invoke-Check 'harness stub coverage (every game member the US payload or the harness references resolves on the carrier stubs, or is exempted with a reason)' `
     'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''dist/build/Release/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir dist/fl08-migration-a001/stubs/Release -Exemptions scripts/stub-coverage-exemptions.txt"' `
     {
-        $stubCoverageScan = Join-Path (Split-Path -Parent $root) 'ferritelib\scripts\stub-coverage-scan.ps1'
+        $stubCoverageScan = Join-Path $carrierSource 'scripts/stub-coverage-scan.ps1'
         if (-not (Test-Path -LiteralPath $stubCoverageScan -PathType Leaf)) {
             throw "The carrier's stub-coverage scanner is missing at $stubCoverageScan. It ships with the sibling ferritelib checkout (scripts/stub-coverage-scan.ps1); a scan that cannot run is not a clean result."
         }
@@ -329,58 +345,32 @@ Invoke-Check 'harness stub coverage (every game member the US payload or the har
             throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $stubFindings.Count + " finding line(s) quoted). Findings: " + ($stubFindings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
         }
     }
-# Gate 16 (US-UI1/ESC1 frozen-delivery round): the harness runs against the FROZEN stub snapshot under
-# tools/FerriteLib.Stubs instead of building in the carrier's canonical bin/stubs (FL released the slot;
-# the consumer verifies in its own outputs - INTERACTION-EXECUTION-20261008.md). What keeps that snapshot
-# honest is not trust: every recorded source hash from fl/frozen-handoff.json must match byte-for-byte.
-# This gate preserves that archived input only; gate 15 scans the separate current 0.8 doubles.
-Invoke-Check 'archived 0.7 stub snapshot integrity (not current 0.8 runtime evidence)' `
-    'Get-FileHash -Algorithm SHA256 over tools/FerriteLib.Stubs/Stubs/{VerseStub,UnityEngineStub,UnityEngineImGuiStub,UnityEngineTextRenderingModuleStub}/*.cs against the fl/frozen-handoff.json values' `
-    {
-        $frozenStubs = @(
-            @{ Path = 'tools\FerriteLib.Stubs\Stubs\VerseStub\VerseStubs.cs'; Sha = 'e36efa95fbbeea4ddd1c7b8a6df9d0e46c90049c2d8e5ac9d985be3c78905822' },
-            @{ Path = 'tools\FerriteLib.Stubs\Stubs\VerseStub\VerseStubs.RimWorld.cs'; Sha = 'ad8cee6e7bfec49af374d536fae1549ce0d102a8887c4031081ac941d1e95a42' },
-            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineStub\UnityStubs.cs'; Sha = '5a8d2ac4b4d83989b6e1bfb802ad652c56c6bffe2d32686bc3cf48d112b45086' },
-            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineImGuiStub\ImGuiStubs.cs'; Sha = '81def94dc748fc687f69181bca292eba9ef1e47a00d3603afcb35d5a97b6d75a' },
-            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineTextRenderingModuleStub\TextRenderingStubs.cs'; Sha = '2151e86613a4e6a14ccb42857f5ed25ef679b9dcbf250ce96cdfb0bef5e0934d' }
-        )
-
-        foreach ($entry in $frozenStubs) {
-            $file = Join-Path $root $entry.Path
-            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
-                throw "frozen stub snapshot file missing: $($entry.Path). Re-take the snapshot from the accepted carrier tree (d5af4d8), never edit it in place."
-            }
-
-            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
-            if ($actual -ne $entry.Sha) {
-                throw "frozen stub snapshot drift at $($entry.Path): sha256 $actual, the frozen handoff recorded $($entry.Sha). The snapshot must equal the carrier's bytes; refresh it only from a NEW accepted freeze."
-            }
-        }
-    }
-
+# Gate16 retains its identifier in the explicit historical entry, not the current build path.
+$script:gateNumber = 16
+Write-Host '[history gate16] scripts/verify-historical-inputs.ps1; no current project consumes tools/FerriteLib.Stubs'
 # Gate 17: production-source OneShot decision and real author field-loader/assembly contracts.
 Invoke-Check 'OneShot S1 + author declarations (zero platform references)' `
     'dotnet run --project tools/UniversalSqueakerOneShotTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerOneShotTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerOneShotTests' -Configuration 'Release' }
 # Gate 18: controlled adapters are explicitly separate from the pure gate 17.
 Invoke-Check 'S2 real binding/pool adapter sources over controlled doubles' `
     'dotnet run --project tools/UniversalSqueakerAudioBindingTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' }
 # Gate 19: a separate process owns the failed-startup batch fixture.
 Invoke-Check 'S2 incomplete original-observation batch fails closed' `
     'dotnet run --project tools/UniversalSqueakerAudioBindingTests -c Release -- --partial-observation' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --partial-observation }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--partial-observation') }
 # Gates 20/21: fixed accepted-feedback chain and the settled three independent player qualifications.
 Invoke-Check 'D-A actual Select/extension production chain over platform doubles' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --da-select' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --da-select }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--da-select') }
 Invoke-Check 'D-C Select defaults, sparse player qualifiers and fixed accepted-feedback evidence' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --dc-select-settings' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --dc-select-settings }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--dc-select-settings') }
 # Gates 22/23 compile genuinely absent targets, not a bool override of production readiness.
 foreach ($selectFixtureTarget in @('MissingInternal', 'MissingFeedback')) {
-    $selectFixtureOutput = Join-Path $root "dist\verify-select-readiness\$selectFixtureTarget"
-    $selectFixtureObj = Join-Path $root "dist\verify-select-readiness\obj\$selectFixtureTarget"
+    $selectFixtureOutput = Join-Path $logs "variants/select/$selectFixtureTarget"
+    $selectFixtureObj = Join-Path $logs "variants/obj/select/$selectFixtureTarget"
     Invoke-Check "D-A Select missing target $selectFixtureTarget (paired isolation)" `
         "build AudioBindingTests with -p:SelectFixtureTarget=$selectFixtureTarget and isolated output/obj; run --da-select-missing-target" `
         {
@@ -393,12 +383,12 @@ foreach ($selectFixtureTarget in @('MissingInternal', 'MissingFeedback')) {
 # Gates 24/25: D-B production Eat/config consumer and physically missing precision seam.
 Invoke-Check 'D-B Eat native-shape production owner and independent result root' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --db-eat' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --db-eat }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--db-eat') }
 Invoke-Check 'D-B missing Chew target isolates precision without disabling Whole' `
     'build AudioBindingTests -p:EatFixtureTarget=MissingChew with isolated output/obj; run --db-eat-missing' `
     {
-        $eatOutput = Join-Path $root 'dist/verify-eat-readiness/MissingChew'
-        $eatObj = Join-Path $root 'dist/verify-eat-readiness/obj/MissingChew'
+        $eatOutput = Join-Path $logs 'variants/eat/MissingChew'
+        $eatObj = Join-Path $logs 'variants/obj/eat/MissingChew'
         dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
             -p:EatFixtureTarget=MissingChew "-p:OutputPath=$eatOutput/" "-p:IntermediateOutputPath=$eatObj/"
         if ($LASTEXITCODE -ne 0) { throw 'Eat missing-target fixture build failed' }
@@ -407,23 +397,23 @@ Invoke-Check 'D-B missing Chew target isolates precision without disabling Whole
 # Gate 26: result notifications cannot turn a still-true state into an event opportunity.
 Invoke-Check 'D-B Result routes only to explicit fixed-contract consumers (truly Eat-only pack included)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --db-result-routing' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --db-result-routing }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--db-result-routing') }
 # Gates 27-29: all fifteen actual notification/fact callers, inactive gate and local missing-capability isolation.
 Invoke-Check 'D-C fifteen native-shape production callers and owner lifecycles' `
     'AudioBindingTests --dc-native' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-native }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--dc-native') }
 Invoke-Check 'D-C inactive runtime/unselected qualification and actual GLOBAL Dev Equip menu' `
     'AudioBindingTests -c Release --dc-unselected; -c Dev --equip-dev-entry (separate processes)' `
     {
-        dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-unselected
+        Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--dc-unselected')
         if ($LASTEXITCODE -ne 0) { throw 'D-C unselected fixture failed' }
-        dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Dev -- --equip-dev-entry
+        Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Dev' -Arguments @('--equip-dev-entry')
     }
 Invoke-Check 'D-C physically missing Wounded and melee marker isolates only those mechanisms' `
     'build DcFixtureTarget=MissingWoundedAndMeleeMarker with isolated output/obj; run --dc-missing' `
     {
-        $dcOutput = Join-Path $root 'dist/verify-dc-readiness/MissingWoundedAndMeleeMarker'
-        $dcObj = Join-Path $root 'dist/verify-dc-readiness/obj/MissingWoundedAndMeleeMarker'
+        $dcOutput = Join-Path $logs 'variants/dc/MissingWoundedAndMeleeMarker'
+        $dcObj = Join-Path $logs 'variants/obj/dc/MissingWoundedAndMeleeMarker'
         dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
             -p:DcFixtureTarget=MissingWoundedAndMeleeMarker "-p:OutputPath=$dcOutput/" "-p:IntermediateOutputPath=$dcObj/"
         if ($LASTEXITCODE -ne 0) { throw 'D-C missing-target fixture build failed' }
@@ -432,12 +422,12 @@ Invoke-Check 'D-C physically missing Wounded and melee marker isolates only thos
 # Gates 30/31: approved Core Work return branches and one physically absent implementation.
 Invoke-Check 'Core Work exact processes, current phase/owner/config and care lifecycles' `
     'AudioBindingTests -c Release --work-core' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --work-core }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--work-core') }
 Invoke-Check 'Core Work physically missing Sow leaves unrelated work usable' `
     'build WorkFixtureTarget=MissingSow with isolated output/obj; run --work-missing' `
     {
-        $workOutput = Join-Path $root 'dist/verify-work-readiness/MissingSow'
-        $workObj = Join-Path $root 'dist/verify-work-readiness/obj/MissingSow'
+        $workOutput = Join-Path $logs 'variants/work/MissingSow'
+        $workObj = Join-Path $logs 'variants/obj/work/MissingSow'
         dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
             -p:WorkFixtureTarget=MissingSow "-p:OutputPath=$workOutput/" "-p:IntermediateOutputPath=$workObj/"
         if ($LASTEXITCODE -ne 0) { throw 'Core Work missing-Sow fixture build failed' }
@@ -446,19 +436,19 @@ Invoke-Check 'Core Work physically missing Sow leaves unrelated work usable' `
 # Gates 32-37: current r2 entry points already exercised by the refactor's existing fixtures.
 Invoke-Check 'r2 whole production Core without platform references' `
     'dotnet run --no-restore --project tools/UniversalSqueakerRefactorCoreTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerRefactorCoreTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerRefactorCoreTests' -Configuration 'Release' }
 Invoke-Check 'r2 actual GameRuntime exact canonical-domain adapter' `
     'dotnet run --no-restore --project tools/UniversalSqueakerDomainAdapterTests -c Release' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerDomainAdapterTests') -c Release }
+    { Invoke-Tool -Name 'UniversalSqueakerDomainAdapterTests' -Configuration 'Release' }
 Invoke-Check 'r2 Select/Eat/Attack and declared C# production through-chain' `
     'AudioBindingTests -c Release --refactor-through' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --refactor-through }
+    { Invoke-Tool -Name 'UniversalSqueakerAudioBindingTests' -Configuration 'Release' -Arguments @('--refactor-through') }
 Invoke-Check 'r2 ordinary queued edits versus physical atomic commit (Scribe doubles)' `
     'SettingsMigrationTests -c Release --commit-contract' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerSettingsMigrationTests') -c Release -- --commit-contract }
+    { Invoke-Tool -Name 'UniversalSqueakerSettingsMigrationTests' -Configuration 'Release' -Arguments @('--commit-contract') }
 Invoke-Check 'r2 public player template through the production value loader' `
     'SettingsMigrationTests -c Release --public-template' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerSettingsMigrationTests') -c Release -- --public-template }
+    { Invoke-Tool -Name 'UniversalSqueakerSettingsMigrationTests' -Configuration 'Release' -Arguments @('--public-template') }
 Invoke-Check 'r2 DLL-only external author examples against the built Release product' `
     'dotnet build tools/UniversalSqueakerExternalAuthorTests -c Release with explicit UniversalSqueakerArtifactPath' `
     { dotnet build (Join-Path $root 'tools/UniversalSqueakerExternalAuthorTests') -c Release --no-restore --nologo "-p:UniversalSqueakerArtifactPath=$(Join-Path $root 'dist/build/Release/UniversalSqueaker.dll')" }

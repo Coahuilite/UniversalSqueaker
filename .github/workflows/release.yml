@@ -24,6 +24,10 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      NUGET_PACKAGES: ${{ runner.temp }}/us-nuget
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +52,18 @@ jobs:
           ref: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
           path: ci-ferritelib
 
+      - name: Cache NuGet downloads (not build outputs)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-us-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.*') }}
+          restore-keys: ${{ runner.os }}-us-nuget-
+
+      - name: Cache the exact carrier download
+        uses: actions/cache@v4
+        with:
+          path: dist/carrier-download-cache
+          key: ${{ runner.os }}-us-carrier-${{ vars.FERRITELIB_CARRIER_REPOSITORY }}-${{ vars.FERRITELIB_CARRIER_TAG }}-${{ vars.FERRITELIB_CARRIER_COMMIT }}
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -91,6 +107,10 @@ jobs:
           git merge-base --is-ancestor $commit refs/remotes/origin/main
           if ($LASTEXITCODE -ne 0) { throw "Tag commit $commit is not in origin/main history. Merge to main, then tag." }
 
+      - name: Privacy gate on the complete reachable release history
+        shell: pwsh
+        run: ./scripts/privacy-audit.ps1 -FullHistory
+
       # Same acquisition contract as ci.yml (read its comment): the carrier SOURCE is staged for the
       # sibling reads (licence + stub-coverage scanner) and the COMPILE PAYLOAD is the verified CI-built
       # release asset - never a second FerriteLib runtime build (single carrier). Step outputs carry the
@@ -111,31 +131,27 @@ jobs:
             Copy-Item -Destination $sibling -Recurse -Force
           $head = (git -C ci-ferritelib rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0 -or $head -cne $env:FL_CARRIER_COMMIT) { throw 'Pinned FerriteLib checkout identity differs.' }
-          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
+          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling -DownloadCacheDirectory dist/carrier-download-cache
           # US never authors or builds the carrier: nothing in this workflow writes into ci-ferritelib/.
 
-      - name: Restore
-        shell: pwsh
-        run: |
-          Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
-            ForEach-Object {
-              dotnet restore $_.FullName --nologo
-              if ($LASTEXITCODE -ne 0) { throw "Restore failed: $($_.FullName)" }
-            }
-
-      # Order matters: gates run on the tree exactly as tagged, then the Release payload is built for
-      # staging. The stager reads dist/build/Release and verifies the selected carrier hash.
-      - name: Verify (37 gates, including current r2 entry points)
+      - name: Verify current groups (stable gate IDs; archived gate16 separate)
         shell: pwsh
         # Explicit carrier selection, same reason and same path as ci.yml: the acquisition step above
         # staged the verified release-asset DLL at the sibling path, and resolve-carrier no longer has a
         # default.
-        run: ./scripts/verify-local.ps1 -NoRestore -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+        run: ./scripts/verify-local.ps1 -FerriteLibSourceRoot ci-ferritelib -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
       - name: Build the release payload
         shell: pwsh
         # Build the final Release input; staging independently checks its configuration and identity.
-        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental --nologo '-p:FerriteLibArtifactPath=../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+        run: |
+          $log = 'dist/verify/release-payload.log'
+          @('configuration=Release', 'carrier=../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll', ('commit=' + (git rev-parse HEAD))) | Set-Content -LiteralPath $log
+          dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-restore --disable-build-servers --no-incremental --nologo '-p:FerriteLibArtifactPath=../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll' *>> $log
+          $code = $LASTEXITCODE
+          ('exit=' + $code) | Add-Content -LiteralPath $log
+          Get-Content -LiteralPath $log -Tail 16
+          if ($code -ne 0) { throw "Final Release build failed; full log $log" }
 
       - name: Pack-readiness with release metadata (version axis + non-placeholder description)
         shell: pwsh
@@ -182,7 +198,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $tag = $env:RELEASE_TAG
           $isRc = $tag -match '-rc[1-9]\d*$'
-          $trialNote = if ($isRc) { "This is a **release candidate**: an early-testing build. Try it and report what breaks. UI/UX design and copy work on this line is still in progress." } else { "This is the stable release. The identity table below names the exact commit." }
+          $trialNote = if ($isRc) { "This is a **release candidate**: an early-testing build. Try it and report what breaks. The paired0.6/0.8 baseline was accepted in an overall internal trial; detailed native coverage remains scoped." } else { "This is the stable release. The identity table below names the exact commit." }
+          $notesPath = "docs/releases/$tag.md"
+          $preparedNotes = if (Test-Path -LiteralPath $notesPath) { Get-Content -LiteralPath $notesPath -Raw } else { '' }
           # rc delta: show what changed since the previous tag so testers know the trial delta.
           $all = @(& git tag --list 'v*' --sort=v:refname)
           $idx = [Array]::IndexOf($all, $tag)
@@ -212,10 +230,12 @@ jobs:
 
           ## Notes
 
-          - This is a testing RC for **RimWorld 1.6**: UI/UX design and copy work continues, and this page does not claim complete compatibility coverage.
+          - This is a testing RC for **RimWorld 1.6**: the voice-management and compact/filter work is implemented; granular native compatibility limits are retained in the notes.
           - Uninstalling is save-safe: no permanent data is written into saves, and settings and profiles live in the RimWorld ``Config/`` folder.
           - The prerequisite pairing is exact: the rows above name the FerriteLib release, its commit and the carrier DLL's SHA-256 this build was compiled against.
-          - Testing status: CI/build checks apply to their recorded inputs. Historical native acceptance belongs to its original paired candidate; it does not establish native gameplay, Config, screen or audio acceptance of this refactored Release artifact.
+          - Testing status: CI/build checks apply to their recorded inputs. The ea610fa/833c14f4 baseline received overall internal-trial acceptance, not itemized fifteen-action, IME or Config results; exact cloud-built artifact identity is reported here.
+
+          $preparedNotes
 
           ## Changes
 
@@ -229,9 +249,18 @@ jobs:
           body_path: release-body.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ contains(github.ref_name, '-') && 'false' || 'true' }}
           # Glob, not a literal name: the zip is UniversalSqueaker-<tag>.zip (series convention,
           # see the staging step) and exactly one such zip exists in dist/github per run.
           files: dist/github/UniversalSqueaker-v*.zip
+      - name: Preserve complete verification logs, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/verify/**
+          if-no-files-found: ignore
+
       # Post-push closure (MEMORY.md "First cloud upload" push-order entry): the six-point platform reconciliation reuses the
       # carrier repo's scripts/verify-release.ps1 (-Tag -Repo -AssetPrefix UniversalSqueaker). That
       # step runs AFTER the first push is authorized and is intentionally not wired here, because US

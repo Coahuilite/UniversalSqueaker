@@ -33,6 +33,9 @@ param(
     [string]$SiblingRoot,
     [string]$AssetZipPath,
     [string]$ExpectedDigest,
+    # Optional download-only cache. Release API flags/digest, closed set and source pairing are
+    # still checked on every invocation. Never cache bin/obj or treat a cache hit as approval.
+    [string]$DownloadCacheDirectory,
     # Work PARENT for this run. A fresh exclusive child (us-carrier-<guid>) is created under it and
     # nothing preexisting is ever used as the run directory; the child is auto-cleaned only when the
     # parent lies inside the system temp root. Default: the system temp directory.
@@ -100,6 +103,7 @@ if (Test-Path -LiteralPath $work) { throw "Refusing a non-exclusive work directo
 $runDirCreated = $false
 $null = New-Item -ItemType Directory -Path $work
 $runDirCreated = $true
+$cacheFile = $null
 
 try {
     # ---- 1. release lookup + asset identity (public API read; a token is used only if present) ----
@@ -124,7 +128,16 @@ try {
         $expectedUrl = "https://github.com/$Repo/releases/download/$Tag/$assetName"
         if ($downloadUrl -cne $expectedUrl) { throw "Asset download URL drifted from the exact named route: $downloadUrl" }
         $assetZip = Join-Path $work $assetName
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $assetZip -Headers @{ 'User-Agent' = 'us-acquire-ferritelib-carrier' }
+        if ($DownloadCacheDirectory) {
+            $cacheRoot = Resolve-InputPath $DownloadCacheDirectory
+            $cacheFile = Join-Path $cacheRoot $assetName
+        }
+        if ($cacheFile -and (Test-Path -LiteralPath $cacheFile -PathType Leaf)) {
+            Copy-Item -LiteralPath $cacheFile -Destination $assetZip
+            Write-Host '[carrier] cached download; performing the complete current release/identity validation'
+        } else {
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $assetZip -Headers @{ 'User-Agent' = 'us-acquire-ferritelib-carrier' }
+        }
     }
     $zipHash = (Get-FileHash -LiteralPath $assetZip -Algorithm SHA256).Hash.ToLowerInvariant()
 
@@ -195,6 +208,10 @@ try {
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($head)) { throw "Cannot read the pinned carrier checkout HEAD at $checkoutRoot." }
     if ($head -cne $fullCommit) {
         throw "Pairing mismatch: the asset DLL was built from $fullCommit but the pinned source checkout is at $head. Reconcile the pinned tag before proceeding."
+    }
+    if ($cacheFile -and -not (Test-Path -LiteralPath $cacheFile)) {
+        $null = New-Item -ItemType Directory -Path (Split-Path -Parent $cacheFile) -Force
+        Copy-Item -LiteralPath $assetZip -Destination $cacheFile
     }
 
     # ---- 6. stage the single DLL at the sibling path (+ identity re-read after the copy) -----------

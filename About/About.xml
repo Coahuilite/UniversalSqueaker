@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 模组结构参考：docs/mod-structure-reference-zh.md。显示名与许可待维护者确认后替换；description 已按发布文案撰写（中文权威、英文随后），发布门禁 check-pack-readiness.ps1 -RequireReleaseMetadata 会拒绝占位文本。 -->
+<!-- Structure: docs/mod-structure-reference-zh.md. Version is the numeric tag base; rc1 belongs
+     to the release tag/asset name. This metadata supports RimWorld1.6 only, not1.7. -->
 <ModMetaData>
   <packageId>coahuilite.universalsqueaker</packageId>
   <modVersion>0.6.0</modVersion>

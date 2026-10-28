@@ -13,6 +13,8 @@
 
 ## Development state (0.6.0 r2, 2026-10-24)
 
+The maintainer accepted US ea610fa/FL833c14f4 in an overall internal trial and authorized local US0.6.0-rc1 / FL0.8.0-rc2 preparation. This is not itemized native acceptance or permission to publish. Current RC scope/upgrade notes are in docs/releases/v0.6.0-rc1.md; CI uses actual fixed producer inputs, and cloud ordering/remaining real coordinates are in the release runbook. Preserve the accepted pair.
+
 Decision US06-PREPUBLICATION-COMPAT-20261019 r4 permits breaking US0.6 API/XML/configuration updates until the user explicitly confirms public release to players. GitHub visibility, pushes, tags and candidates do not terminate this authority or authorize publication. FL/SR contracts and user Config/save data remain outside it.
 
 Ordinary Release startup now installs immutable UsResponsePolicy inputs at the existing main-thread definition/audio/configuration-ready boundary. Adopted ordinary defaults are W600/H216, independent fifteen-action intervals and explicit qualifications; see the current specification. Author/player values still fold after these defaults. Native speed and the existing shared audible population affect state soft waits only. Global activity uses the positive-finite, unclamped Output editor and existing publish/save/reset path. The retained Dev API can update an existing owner in place without clearing deadlines, occupied ticks or scheduled waits; active sustained authorization is reviewed by existing maintenance. Physical OneShot readiness is isolated from Sustainer-only hooks. Native playback/listening and all-fifteen human acceptance remain open.

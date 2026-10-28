@@ -11,6 +11,10 @@
 
 当前没有独立 `pack-release.ps1` 或 `pack-steam.ps1`，也没有定义 `US_STEAM` 的构建轴。不要执行旧 runbook 中不存在的 Steam flavor 步骤。
 
+当前准备目标为US `v0.6.0-rc1`（预发布、非Latest），发布文案见[rc1说明](releases/v0.6.0-rc1.md)。ea610fa＋FL833c14f4的整体内部试玩已接受；原报告的逐项原生未知保留为已知限制，不要求为准备RC重放已接受性能或补签整轮人测。
+
+本地使用原owner交付的不可变Release DLL与对应源码，显式传ArtifactPath/SourceRoot，完成当前完整验证、实际待推历史隐私和标准stage。保原已接受整对；不为打包造标签、切main或绕过正式发布main归属检查。
+
 ## 2. 发布前隐私与集成
 
 - 按 [隐私门禁](push-privacy-gate.md) 审查准备传输的完整可达范围；当前树通过不等于历史通过。
@@ -23,6 +27,12 @@
 `.github/workflows/release.yml` 由版本标签触发，接受 `vX.Y.Z` 或 `vX.Y.Z-rcN`，并检查标签、源码版本与 main 归属。它获取固定 FerriteLib release 载体、构建 US、stage 包并上传资产。
 
 获得发布授权后按当前 workflow 执行。核对实际资产、版本、前置载体和源码可获取性；不能只凭 CI 绿色宣布玩家下载内容正确。没有发布动作时不补写远端状态。
+
+依赖云端接续顺序：FL先正常push/PR/main CI与隐私，核最终main SHA，再由正式rc2标签生成CI-built prerelease资产；随后以真实repo/tag/完整SHA/实际资产更新US三项选择，运行US CI/main，最后rc1。尚不存在的RC2资产或merge SHA不阻本地显式输入验证，但不能用本地candidate SHA冒填远端坐标，不能静默兜底旧RC1。远端写入逐项由维护者授权。
+
+当前US选择前置明确拒绝已过时`v0.8.0-rc1`；远端变量尚未更新时，云端因此等待真实新输入，而不是把旧坐标签成新依赖。此门不参与本地显式ArtifactPath验证，不要求虚构未来资产。
+
+rc标签的Release明确`prerelease=true`、非Latest；普通版本轴不塞rc后缀。发布前破坏性授权仍以用户明确确认面向玩家公开发布为终止条件，不以GitHub可见/push/tag或内部试玩结束代替。
 
 ## 4. Workshop
 

@@ -12,8 +12,8 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <summary>
 /// V4 evidence lane (contract V4-REMAINING-CONTRACT-20261004 r1, task-20): the Distance editor, the Presets
 /// workspace, the single context-help surface and the footer, measured at the REAL configuration of a
-/// 1024x768 screen - the one page box the window policy gives (760x524 since BH1 retired the drawer-expanded
-/// width), in BOTH help states (help-open really set, and help closed) - in EN and ZH, with
+/// 1024x768 screen - the one page box the current window policy gives, in BOTH help states
+/// (help-open really set, and help closed) - in EN and ZH, with
 /// production-shaped state.
 ///
 /// Faithful reverts are recorded in the PM V4 evidence: restoring Small for preset rows reddens the
@@ -71,10 +71,13 @@ internal static class V4RemainingLaneTests
                         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         host.Bindings.Set("help-open", helpOpen);
 
-                        // Distance (V4.1).
-                        host.Bindings.Invoke("set-tab", "Overview");
+                        // Same V4.1 scene, using the approved Output page and explicit current topic.
+                        host.Bindings.Invoke("go-page", "Output");
+                        if (helpOpen) host.Bindings.Invoke("explain-topic", "us/attenuation-editor");
+                        host.Session.SetScrollTarget("attenuation-editor");
+                        UsKernelSettingsHost.PreparePage(host, box);
                         host.MeasureAndArrange(box);
-                        Program.SetScrollPositionById(host.Session, "content-scroll", UiLayoutPoint.Zero);
+                        Program.SetScrollPositionById(host.Session, "page-Output-scroll", UiLayoutPoint.Zero);
                         UiFitAudit.Reset();
                         reports.Clear();
                         UiLayoutSnapshot distance = host.MeasureAndArrange(box);
@@ -92,16 +95,16 @@ internal static class V4RemainingLaneTests
                             where + ": the bottom help panel must be arranged exactly while help is open");
                         if (helpOpen)
                         {
-                            Assert(distance.RectById.ContainsKey("body-row")
-                                    && distance.RectById.ContainsKey("nav-column")
-                                    && distance.Viewports.ContainsKey("content-scroll"),
-                                where + ": the open help panel must be arranged with the body row, the nav"
-                                + " column and the centre scroll still arranged - it takes height above the"
+                            Assert(distance.RectById.ContainsKey("business-body")
+                                    && distance.RectById.ContainsKey("tool-nav")
+                                    && distance.Viewports.ContainsKey("page-Output-scroll"),
+                                where + ": the open help panel must keep business body, direct tool navigation"
+                                + " and the Output scroll arranged - it takes height above the"
                                 + " footer, not the settings");
                         }
                         else
                         {
-                            Assert(distance.RectById.TryGetValue("body-row", out UiLayoutRect closedBody),
+                            Assert(distance.RectById.TryGetValue("business-body", out UiLayoutRect closedBody),
                                 where + ": the body row must stay arranged with help closed");
                             Assert(distance.RectById.TryGetValue("footer-band", out UiLayoutRect closedFooter),
                                 where + ": the footer band must stay arranged with help closed");
@@ -112,8 +115,8 @@ internal static class V4RemainingLaneTests
                                 + ", footer y " + Num(closedFooter.Y) + ")");
                         }
 
-                        UiLayoutRect distanceViewport = distance.Viewports["content-scroll"];
-                        bool distanceScrolls = distance.ScrollContents.TryGetValue("content-scroll", out UiLayoutRect distanceContent)
+                        UiLayoutRect distanceViewport = distance.Viewports["page-Output-scroll"];
+                        bool distanceScrolls = distance.ScrollContents.TryGetValue("page-Output-scroll", out UiLayoutRect distanceContent)
                             && distanceContent.Height > 0f && distanceViewport.Height > 0f;
                         Assert(distanceScrolls,
                             where + ": Distance must have non-empty content and a live scroll viewport");
@@ -129,9 +132,11 @@ internal static class V4RemainingLaneTests
                         AssertHelpPanelReservesHeightNotWidth(host, box, where);
 
                         // Presets (V4.2): first the exact default fixture that exposed the xenotype red.
-                        host.Bindings.Invoke("set-tab", "Presets");
+                        host.Bindings.Invoke("go-page", "Presets");
+                        if (helpOpen) host.Bindings.Invoke("explain-topic", "us/preset-list");
+                        UsKernelSettingsHost.PreparePage(host, box);
                         host.MeasureAndArrange(box);
-                        Program.SetScrollPositionById(host.Session, "content-scroll", UiLayoutPoint.Zero);
+                        Program.SetScrollPositionById(host.Session, "page-Presets-scroll", UiLayoutPoint.Zero);
                         UiFitAudit.Reset();
                         reports.Clear();
                         UiLayoutSnapshot presets = host.MeasureAndArrange(box);
@@ -139,8 +144,8 @@ internal static class V4RemainingLaneTests
                         host.DrawChecked(VerseUiExecution.Rect(new UiLayoutRect(0f, 0f, box.X, box.Y)));
                         Assert(presets.RectById.ContainsKey("preset-list"),
                             where + ": the Presets workspace must arrange preset-list");
-                        UiLayoutRect presetViewport = presets.Viewports["content-scroll"];
-                        bool presetScrolls = presets.ScrollContents.TryGetValue("content-scroll", out UiLayoutRect presetContent)
+                        UiLayoutRect presetViewport = presets.Viewports["page-Presets-scroll"];
+                        bool presetScrolls = presets.ScrollContents.TryGetValue("page-Presets-scroll", out UiLayoutRect presetContent)
                             && presetContent.Height > 0f && presetViewport.Height > 0f;
                         Assert(presetScrolls,
                             where + ": Presets must have non-empty content and a live scroll viewport");
@@ -153,18 +158,24 @@ internal static class V4RemainingLaneTests
                             PresetLabel = string.Concat(Enumerable.Repeat("Long readable baseline name ", 20)) };
                         using UiHost longHost = UsKernelSettingsHost.Create(longSource, metrics);
                         longHost.Bindings.Set("help-open", helpOpen);
-                        longHost.Bindings.Invoke("set-tab", "Presets");
+                        longHost.Bindings.Invoke("go-page", "Presets");
+                        if (helpOpen) longHost.Bindings.Invoke("explain-topic", "us/preset-list");
+                        UsKernelSettingsHost.PreparePage(longHost, box);
                         reports.Clear();
                         UiFitAudit.Reset();
                         UiLayoutSnapshot longSnapshot = longHost.MeasureAndArrange(box);
                         longHost.DrawChecked(VerseUiExecution.Rect(new UiLayoutRect(0f, 0f, box.X, box.Y)));
-                        UiLayoutRect longContent = longSnapshot.ScrollContents["content-scroll"];
-                        UiLayoutRect longViewport = longSnapshot.Viewports["content-scroll"];
+                        UiLayoutRect longContent = longSnapshot.ScrollContents["page-Presets-scroll"];
+                        UiLayoutRect longViewport = longSnapshot.Viewports["page-Presets-scroll"];
                         Assert(longContent.Height > longViewport.Height && reports.Count == 0,
                             where + ": actual long preset label must wrap and overflow into a usable scroll viewport");
-                        Program.SetScrollPositionById(longHost.Session, "content-scroll", new UiLayoutPoint(0f, 50f));
+                        // Same nonzero-retention check, with a legal input in the current viewport.
+                        // Public UiLayout.ClampScroll caps Y at content.Height - viewport.Height;
+                        // the old literal50 can now exceed that range in compact ZH/help-closed.
+                        float requestedScroll = Math.Min(50f, (longContent.Height - longViewport.Height) * 0.5f);
+                        Program.SetScrollPositionById(longHost.Session, "page-Presets-scroll", new UiLayoutPoint(0f, requestedScroll));
                         longHost.MeasureAndArrange(box);
-                        Assert(Math.Abs(Program.ScrollPositionById(longHost.Session, "content-scroll").Y - 50f) < 0.01f,
+                        Assert(Math.Abs(Program.ScrollPositionById(longHost.Session, "page-Presets-scroll").Y - requestedScroll) < 0.01f,
                             where + ": overflowing long preset content must retain a nonzero scroll position");
 
                         Console.WriteLine("[v4-workspaces] " + where
@@ -172,6 +183,7 @@ internal static class V4RemainingLaneTests
                             + " content=" + Num(distanceContent.Height) + "/" + Num(distanceViewport.Height)
                             + " presets=" + Describe(presets.RectById["preset-list"])
                             + " presetContent=" + Num(presetContent.Height) + "/" + Num(presetViewport.Height)
+                            + " longContent=" + Num(longContent.Height) + "/" + Num(longViewport.Height) + " requestedScroll=" + Num(requestedScroll)
                             + " fit=0 help=" + (helpOpen ? "open" : "closed"));
                     }
                     finally
@@ -432,9 +444,9 @@ internal static class V4RemainingLaneTests
         UiElementSpec pageRoot = host.Manifest.Roots[0];
         Assert(string.Equals(pageRoot.Id, "page-root", StringComparison.Ordinal),
             where + ": the page's band column must be 'page-root', got '" + pageRoot.Id + "'");
-        UiElementSpec panel = Find(pageRoot, "help-scroll")
-            ?? throw new InvalidOperationException("the manifest must declare the bottom help panel 'help-scroll'");
-        float panelHeight = DeclaredFloat(panel, "Height");
+        UiElementSpec panel = Find(pageRoot, "help-drawer")
+            ?? throw new InvalidOperationException("the manifest must declare the bottom help drawer");
+        float panelHeight;
         float pageGap = DeclaredFloat(pageRoot, "Gap");
         float pagePadding = DeclaredFloat(pageRoot, "Padding");
         float policyPageWidth = WindowChromeLayout.SettingsWindowWidth(MinimumScreenWidth, MinimumScreenHeight)
@@ -442,10 +454,14 @@ internal static class V4RemainingLaneTests
         bool state = host.Bindings.Get<bool>("help-open");
 
         host.Bindings.Set("help-open", true);
+        UsKernelSettingsHost.PreparePage(host, box);
         UiLayoutSnapshot open = host.MeasureAndArrange(box);
+        panel = Find(host.Manifest.Roots[0], "help-drawer")!;
+        panelHeight = DeclaredFloat(panel, "Height");
         host.Bindings.Set("help-open", false);
         UiLayoutSnapshot closed = host.MeasureAndArrange(box);
         host.Bindings.Set("help-open", state);
+        UsKernelSettingsHost.PreparePage(host, box);
 
         Assert(open.RectById.TryGetValue("page-root", out UiLayoutRect openPage),
             where + ": the open pass must arrange the page root");
@@ -464,29 +480,30 @@ internal static class V4RemainingLaneTests
             where + ": the open pass must arrange the bottom help panel");
         Assert(!closed.Viewports.ContainsKey("help-scroll"),
             where + ": the closed pass must not arrange the bottom help panel");
-        Assert(Math.Abs(helpRect.Height - panelHeight) <= 0.5f
+        Assert(Math.Abs(open.RectById["help-drawer"].Height - panelHeight) <= 0.5f && helpRect.Height > 0f
                 && Math.Abs(helpRect.Width - (openPage.Width - pagePadding * 2f)) <= 0.5f,
-            where + ": the panel must hold its declared reservation across the page's inner width, got "
+            where + ": the header plus help scroller must hold the current declared reservation across the inner width, got "
             + Describe(helpRect) + " (declared Height " + Num(panelHeight) + ", inner width "
             + Num(openPage.Width - pagePadding * 2f) + ")");
 
-        Assert(open.RectById.TryGetValue("body-row", out UiLayoutRect openBody),
+        Assert(open.RectById.TryGetValue("business-body", out UiLayoutRect openBody),
             where + ": the open pass must arrange the body row");
-        Assert(closed.RectById.TryGetValue("body-row", out UiLayoutRect closedBody),
+        Assert(closed.RectById.TryGetValue("business-body", out UiLayoutRect closedBody),
             where + ": the closed pass must arrange the body row");
-        Assert(open.RectById.ContainsKey("nav-column") && open.Viewports.ContainsKey("content-scroll")
-                && closed.RectById.ContainsKey("nav-column") && closed.Viewports.ContainsKey("content-scroll"),
+        Assert(open.RectById.ContainsKey("tool-nav") && open.Viewports.ContainsKey("page-Output-scroll")
+                && closed.RectById.ContainsKey("tool-nav") && closed.Viewports.ContainsKey("page-Output-scroll"),
             where + ": the body row, the nav column and the centre scroll must stay arranged in BOTH help states");
-        Assert(Math.Abs(closedBody.Height - (openBody.Height + panelHeight + pageGap)) <= 0.5f,
+        Assert(Math.Abs(closedBody.Height - (openBody.Height + panelHeight + pageGap)) <= 0.5f
+                && panelHeight <= (closedBody.Height + 0.05f) / 3f,
             where + ": closing the panel must hand its whole reservation back to the body row (open "
             + Num(openBody.Height) + " + panel " + Num(panelHeight) + " + gap " + Num(pageGap) + " vs closed "
             + Num(closedBody.Height) + ")");
         Assert(Math.Abs(openBody.Width - closedBody.Width) <= 0.01f
-                && Math.Abs(open.Viewports["content-scroll"].Width
-                    - closed.Viewports["content-scroll"].Width) <= 0.01f,
+                && Math.Abs(open.Viewports["page-Output-scroll"].Width
+                    - closed.Viewports["page-Output-scroll"].Width) <= 0.01f,
             where + ": the help panel may cost the settings no width at all (body " + Num(openBody.Width)
-            + " vs " + Num(closedBody.Width) + ", centre " + Num(open.Viewports["content-scroll"].Width)
-            + " vs " + Num(closed.Viewports["content-scroll"].Width) + ")");
+            + " vs " + Num(closedBody.Width) + ", centre " + Num(open.Viewports["page-Output-scroll"].Width)
+            + " vs " + Num(closed.Viewports["page-Output-scroll"].Width) + ")");
     }
 
     /// <summary>One declared numeric attribute, so a lane never re-spells a manifest number.</summary>

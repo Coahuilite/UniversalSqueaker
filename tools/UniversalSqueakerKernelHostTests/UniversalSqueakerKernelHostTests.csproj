@@ -20,6 +20,7 @@
     <FerriteLibStubOutputRoot Condition="'$(FerriteLibStubOutputRoot)' == ''">$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\</FerriteLibStubOutputRoot>
     <FerriteLibStubObjRoot Condition="'$(FerriteLibStubObjRoot)' == ''">$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stub-obj\</FerriteLibStubObjRoot>
     <UsProductArtifactPath Condition="'$(UsProductArtifactPath)' == ''">$(MSBuildProjectDirectory)\..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</UsProductArtifactPath>
+    <UsRestoreArgument Condition="'$(UsVerificationNoRestore)' == 'true'">--no-restore</UsRestoreArgument>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
@@ -34,7 +35,7 @@
        会静默失败（MSB4276），但直接构建生产项目成功；直接引用保持“使用真实生产代码”且可在
        no-restore 的 focused harness 中稳定复现。 -->
   <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences" Condition="'$(UsProductAlreadyBuilt)' != 'true'">
-    <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) &quot;-p:FerriteLibArtifactPath=$(FerriteLibArtifactFullPath)&quot; --nologo -v quiet"
+    <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) &quot;-p:FerriteLibArtifactPath=$(FerriteLibArtifactFullPath)&quot; $(UsRestoreArgument) --nologo -v quiet"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
@@ -70,15 +71,12 @@
       <StubOutputCommandPath>$([System.String]::Copy('$(FerriteLibStubOutputRoot)').Replace('\', '/'))</StubOutputCommandPath>
       <StubObjCommandPath>$([System.String]::Copy('$(FerriteLibStubObjRoot)').Replace('\', '/'))</StubObjCommandPath>
     </PropertyGroup>
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;"
+    <!-- Verse references Core/IMGUI/TextRendering; InputLegacy references Core. These two roots
+         cover the same five runtime doubles without re-entering every dependency graph five times. -->
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)/Stubs/VerseStub/VerseStub.csproj&quot; -c $(Configuration) $(UsRestoreArgument) --disable-build-servers --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;"
           WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;"
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)/Stubs/UnityEngineInputLegacyModuleStub/UnityEngineInputLegacyModuleStub.csproj&quot; -c $(Configuration) $(UsRestoreArgument) --disable-build-servers --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;"
           WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;"
-          WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;"
-          WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineInputLegacyModuleStub\UnityEngineInputLegacyModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(StubOutputCommandPath)&quot; &quot;-p:FerriteLibStubObjRoot=$(StubObjCommandPath)&quot;" WorkingDirectory="$(FerriteLibHarness)" />
     <ItemGroup>
       <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine\UnityEngine.CoreModule.dll" />
       <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-input\UnityEngine.InputLegacyModule.dll" />

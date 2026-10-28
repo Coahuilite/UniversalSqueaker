@@ -5,11 +5,10 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 r2 candidate and product gates
+## NOW — 0.6.0-rc1 local CI/release preparation
 
-- The response-contract r3 audio checkpoint and selected-domain rejected-source recovery are implemented. PM closed the P1 technical blocker; precise old-snapshot/same-ID/another-rejected-domain and native Config interaction remain unexecuted. Complete the serial FILTER-COMPACT candidate and deliver one combined audio/UI pair; do not issue micro-packages. The current opportunity/upgrade contract is `docs/response-opportunities-0.6-zh.md`.
-
-- FILTER-COMPACT implements independent category/source/query paging, explicit fallback creation, compact864x640 opening and the packaged native-entry microphone. Current UI authority is `docs/ui-contract-0.6-zh.md`. Fixed input remains FL833c14f4/local.incremental4; its performance was accepted and is not revalidated. Native compact layout, icon alignment, all-fifteen/audio, IME and real Config acceptance remain open. PM owns external integration.
+- Close WO-USFL-CI-RC-PREP-20261028: migrate the existing V4 scene to current Output/Presets/help, remove identical repeated tool builds while retaining processes/compile variants, unify restore/cache/log ownership, then run the full existing entry and actual pending-history privacy under the serial build lease. FL owns build/stub first; US edits independently and waits for the explicit fixed Release handoff before execution.
+- The ea610fa/FL833c14f4 pair received overall internal-trial acceptance. Preserve it and its detailed evidence gaps; do not repeat accepted performance or manufacture individual native passes. Prepare an independent clean localRC candidate. Future FL rc2 mainSHA/asset and US remote coordinate changes are PM-owned; no silent RC1 fallback or fabricated SHA. Release scope and upgrade guidance live in docs/releases/v0.6.0-rc1.md.
 
 - D-C covers all fifteen official contracts/facts/callers and SR guides through the single owner; the two dedicated baby-fit responses are retired. Current interfaces, evidence boundaries and explicit fixture migrations live in the public specification, fact ledger and acceptance/migration pages.
 - Official Pawn Select defaults are settled and implemented as three independent adjustable true qualifications. Do not reopen this decision or change fixed accepted-feedback/final-subject evidence. Eat Whole/Any/Any is also settled.

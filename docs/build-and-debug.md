@@ -48,11 +48,21 @@ The [r2 contract](us-kernel-0.6-refactor-zh.md) and [author guide](us-kernel-0.6
 
 ## What verification covers
 
-The current `scripts/verify-local.ps1` defines 37 gates. Keep its commands authoritative instead of copying them into every guide. Use the affected entry points rather than repeating unrelated valid matrices. Coverage includes Kernel/corpus, configuration, logs, selected-carrier/build/package identity, UI logic/Host, adapter contracts and isolated missing-target cases. Gates 32–37 call the existing r2 whole-Core, exact-domain, production through-chain, queued-edit/physical-commit, public-template and DLL-only author checks. The workflows install .NET 8 for the existing net8.0 fixtures and .NET 10 for the build SDK.
+`scripts/verify-local.ps1` retains gate IDs1–37; gate16 is now a separate historical-input entry, so the current entry executes36 groups. Coverage includes Kernel/corpus, configuration, Release/Dev logs and product, selected-carrier/stage identity, current Schema Host/UI, adapter contracts and isolated missing-target builds. Gates32–37 retain whole-Core, exact-domain, through-chain, atomic commit, public-template and DLL-only author coverage. The workflows install .NET8 for the two net8.0 fixtures and .NET10 as SDK; neither is removed.
 
-Gate 15 scans the payload and Host against the explicit 0.8 platform doubles in `tools/FerriteLib08.Stubs`, built into `dist/fl08-migration-a001/stubs/<Configuration>`. Gate 16 retains the archived 0.7 snapshot integrity check; it does not certify the new 0.8 runtime. The producer and its held package are never build targets.
+Gate15 scans the payload and Host against `tools/FerriteLib08.Stubs`. Host builds these through the Verse and InputLegacy roots: their ProjectReferences supply the same five doubles. No current csproj references `tools/FerriteLib.Stubs`; the separate definition-directory harness also references the0.8 sources. Historical gate16 is preserved in `scripts/verify-historical-inputs.ps1`, with its original recorded integrity expectations. It protects archived0.7 sources, not the current product. The producer and its package are never build targets. Standalone Reset/DefinitionDirectory projects remain separately callable; they are not silently counted in the current full-entry groups.
 
-The gate list is an entry point, not a claim that an arbitrary candidate has passed all 31 gates. Reuse evidence only while its inputs remain applicable, and record focused modes' actual arguments and assertion output. Pure logic, runtime doubles and native game behavior are different evidence. A live Host does not prove a widget executed rather than entered recovery; assert the actual affected output and write chain.
+The list is an entry point, not proof that a candidate passed it. Reuse evidence only for applicable inputs. Pure logic, runtime doubles and native game are different evidence; a live Host is not proof that a widget avoided recovery.
+
+### One restore owner, one build per identical tool input
+
+CI/release call verify-local without `-NoRestore`: that entry restores the current graph, then all builds use `--no-restore`, including the Host's nested doubles. A manual `-NoRestore` asserts that the exact graph/properties/SDK are already restored; the mere presence of `project.assets.json` is not freshness evidence. Cache NuGet downloads, not bin/obj.
+
+Within one invocation the ordinary AudioBinding Release is built once; every existing mode still gets a separate process, including failed-startup partial observation. Dev and five genuine missing-target compile variants remain distinct. SettingsMigration similarly reuses its build for ordinary/commit/template processes. The Host consumes the product already built by gates7/8 rather than rebuilding it. Release workflow retains the final clean Release identity build before packaging.
+
+Every group writes a complete `gate-NN.log` under a new `dist/verify/<run>/`, with actual build/run arguments, configuration, fixed carrier, exit and elapsed seconds. `summary.json` keeps successful/failed/unrun IDs; failures keep full logs and print a usable tail. `dotnet-info.log` and `restore.log` identify environment/preparation. `-LogDirectory` selects a fresh explicit directory; CI uploads logs even on failure. Same-run deterministic build-call reduction is not a measured speedup; timings are comparable only on the same inputs and environment.
+
+For immutable local delivery, pass `-FerriteLibSourceRoot <fixed-checkout>` as well as the exact artifact path. Source identity, licence and stub scanner then come from that checkout. CI explicitly supplies its pinned checkout. Download cache keys include the real repo/tag/full commit; cache hits still run fresh release flag/digest, closed payload and source-pair validation. Missing futureRC2 coordinates never silently select RC1 or a moving branch.
 
 ## Focused game verification
 

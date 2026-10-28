@@ -70,7 +70,7 @@ public static partial class UnitTests
             "exact race/child domains are independent in the actual current fold", ref failures);
         Check(config.HasDomain(a.Identity) && config.HasDomain(b.Identity) && !config.HasDomain(new BehaviorDomain("Pawn", "", "Human", "X").Identity),
             "domain membership is exact; native canonical/DLC lookup stays in the game adapter, not a second pure resolver", ref failures);
-        Check(AudioDomains.Collect(new[] { ("RaceA", "X"), ("RaceB", "X"), ("RaceA", "X") }).Count == 2,
+        Check(AudioDomains.Collect(new (string race, string? xeno)[] { ("RaceA", "X"), ("RaceB", "X"), ("RaceA", "X") }).Count == 2,
             "domain collection dedupes exact pairs without merging same-named children", ref failures);
         Check(new BehaviorDomain("NonPawn", "armor", "A").Identity != new BehaviorDomain("NonPawn", "bench", "A").Identity,
             "non-Pawn targets remain namespace-qualified", ref failures);
@@ -84,8 +84,12 @@ public static partial class UnitTests
     private static void TimingModelRules(ref int failures)
     {
         const string key = "fixture/Clock";
-        DecisionInput Input(long tick) => new() { Subject = "stable", Domain = "RaceA", Tick = tick,
-            Actions = new[] { new ActionPlan(key, 1, new Condition("all"), 300) },
+        // Same game-tick receipt/deadline scenario, now an explicit simulation event consumer.
+        // A missing EventFact is invalid under the adopted single opportunity contract.
+        const string eventFact = "fixture/ClockEvent";
+        DecisionInput Input(long tick) => new() { Subject = "stable", Domain = "RaceA", Tick = tick, EventFact = eventFact,
+            Facts = new FactSnapshot(new Dictionary<string, Truth> { [eventFact] = Truth.True }),
+            Actions = new[] { new ActionPlan(key, 1, new Condition("ref", eventFact), 300) },
             AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("fixture/entry", "owner/audio", key, "RaceA", 1) }) };
         foreach (PlaybackResult result in Enum.GetValues(typeof(PlaybackResult)))
         {
@@ -106,7 +110,7 @@ public static partial class UnitTests
         }
         var independent = new DecisionState(1000); var output = new ReceiptDriver { Result = PlaybackResult.Dispatched }; var engine = new ResponseDecision();
         engine.Run(independent, new StatePolicy(216, 20), Input(1000), output, output);
-        var bypass = Input(1001); bypass.Actions = new[] { new ActionPlan("fixture/Other", 2, new Condition("all"), 0, checkShared: false, writeShared: true) };
+        var bypass = Input(1001); bypass.Actions = new[] { new ActionPlan("fixture/Other", 2, new Condition("ref", eventFact), 0, checkShared: false, writeShared: true) };
         bypass.AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("fixture/other", "owner/audio", "fixture/Other", "RaceA", 1) });
         Check(engine.Run(independent, new StatePolicy(216, 20), bypass, output, output).Receipt?.Result == PlaybackResult.Dispatched && independent.SharedDeadline == 1217,
             "explicit ignore-read still writes the single shared clock", ref failures);
