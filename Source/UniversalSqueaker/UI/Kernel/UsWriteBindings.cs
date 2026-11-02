@@ -120,10 +120,7 @@ public sealed class UsWriteBindings
     /// existence AND executability in one answer - so a return layer that currently has nothing to undo
     /// is climbed PAST rather than swallowing the key with an empty action.</summary>
     public void Command(string key, Action action, Func<bool> canExecute)
-    {
-        bindings.BindCommand(key, action, canExecute);
-        Record(key, UsWriteBindingKind.Command, false);
-    }
+        => RegisterConditionalCommand(key, key, false, action, canExecute);
 
     /// <summary>Registers one item-scoped writable value binding and records its family template once.</summary>
     public void ItemValue<T>(string itemsKey, string itemKey, string leaf, Func<T> get, Action<T> set)
@@ -137,6 +134,16 @@ public sealed class UsWriteBindings
     {
         bindings.BindAction(ItemKey(itemsKey, itemKey, leaf), action);
         Record(ItemTemplate(itemsKey, leaf), UsWriteBindingKind.Action, true);
+    }
+
+    /// <summary>Registers an item command with the same execution veto as a page command.</summary>
+    public void ItemCommand(string itemsKey, string itemKey, string leaf, Action action, Func<bool> canExecute)
+        => RegisterConditionalCommand(ItemKey(itemsKey, itemKey, leaf), ItemTemplate(itemsKey, leaf), true, action, canExecute);
+
+    private void RegisterConditionalCommand(string bindingKey, string registryKey, bool itemScoped, Action action, Func<bool> canExecute)
+    {
+        bindings.BindCommand(bindingKey, action, canExecute);
+        Record(registryKey, UsWriteBindingKind.Command, itemScoped);
     }
 
     /// <summary>The encoded concrete key of one item-scoped write, produced by <see cref="UiBindingAddress"/>.</summary>

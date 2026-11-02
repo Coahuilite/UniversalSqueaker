@@ -478,8 +478,8 @@ internal static class UiSourceInvariantTests
         // tuning composite (us/fallback-editor); each is used by exactly one manifest element, so the
         // parity assertion above keeps the new number honest in both directions.
         // FILTER-COMPACT adds the shared bounded directory/source-list presentation.
-        Assert(registeredKinds.Count == 16,
-            "the registered us/* kind set must have 16 members (15 settings + 1 overlay), got "
+        Assert(registeredKinds.Count == manifestKinds.Count + 2,
+            "the registered us/* kind count must equal the manifest kind count plus two retained kinds, got "
             + registeredKinds.Count);
     }
 

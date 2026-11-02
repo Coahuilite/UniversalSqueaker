@@ -298,14 +298,23 @@ public static partial class VoicePacksPageModel
         state.ActiveTab = SectionGroup(sectionKey);
     }
 
-    /// <summary>Typed scope write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。
-    /// 非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。</summary>
+    /// <summary>Project the active write domain without changing remembered navigation identities.
+    /// Callers retain their own eligibility checks; this projection adds no new prerequisite.</summary>
+    internal static void GetTuningWriteDomain(VoicePacksPageState state, out string race, out string child)
+    {
+        race = state.TuningLayer == 0 ? "" : state.TuningRaceDefName ?? "";
+        child = state.TuningLayer is 0 or 1 ? "" : state.TuningXenotypeDefName ?? "";
+    }
+
+    /// <summary>Typed scope write to the active layer's exact domain. Incomplete Race/Xeno targets
+    /// remain refused rather than falling back to the Pawn profile.</summary>
     private static void ApplyActionTuningScope(GameSettings settings, VoicePacksPageState state, string actionKey, BehaviorScope? scope)
     {
         if (string.IsNullOrEmpty(actionKey)) return;
         if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
         if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
-        settings.SetActionTuningScope(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, scope);
+        GetTuningWriteDomain(state, out string race, out string child);
+        settings.SetActionTuningScope(actionKey, race, child, scope);
     }
 
 
@@ -1343,21 +1352,32 @@ public static partial class VoicePacksPageModel
     /// <summary>VF1定稿 A4: action reset-to-preset facade, the mood side's shape: the current-layer
     /// identity's last-wins anchor names the preset; no anchor or no resolvable entry = no-op.</summary>
     public static void ResetActionTuningToPreset(GameSettings settings, VoicePacksPageState state, string actionKey)
+        => TryResetActionTuningToPreset(settings, state, actionKey, out _);
+
+    /// <summary>Result-bearing UI path for scoped draft cleanup. The existing settings owner still
+    /// decides whether the reset executes; present template fields identify only its affected editors.</summary>
+    internal static bool TryResetActionTuningToPreset(GameSettings settings, VoicePacksPageState state, string actionKey,
+        out IReadOnlyCollection<string> affectedFields)
     {
-        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        affectedFields = Array.Empty<string>();
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return false;
         state.TuningContextActive = true;
+        GetTuningWriteDomain(state, out string race, out string child);
         string anchor = "";
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || !string.Equals(record.actionKey, actionKey, StringComparison.Ordinal)) continue;
             if (record.serviceFamily != "Pawn" || record.IsValidLayer(out int recordLayer) == false || recordLayer != state.TuningLayer) continue;
-            if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", state.TuningRaceDefName ?? "", StringComparison.Ordinal)) continue;
-            if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", state.TuningXenotypeDefName ?? "", StringComparison.Ordinal)) continue;
+            if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", race, StringComparison.Ordinal)) continue;
+            if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", child, StringComparison.Ordinal)) continue;
             if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;
         }
-        if (anchor.Length == 0) return;
+        if (anchor.Length == 0) return false;
         UsBehaviorPresetDef? preset = SqueakGameDefs.BaselineByName(anchor);
-        settings.ResetActionTuningToPreset(actionKey, state.TuningRaceDefName ?? "", state.TuningXenotypeDefName ?? "", preset);
+        GameSettings.TryFindActionBaseline(preset, actionKey, race, child, out var template);
+        bool applied = settings.ResetActionTuningToPreset(actionKey, race, child, preset);
+        if (applied && template != null) affectedFields = template.PresentKeys().ToArray();
+        return applied;
     }
 
 

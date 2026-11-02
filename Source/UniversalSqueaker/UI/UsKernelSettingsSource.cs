@@ -613,15 +613,17 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     public SqueakResetOutcome ResetActionTuningRow(string actionKey)
     {
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
-        var result = settings.ResetActionTuningRow(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName);
-        rowResults[RowIdentity(actionKey, state.TuningLayer == 0 ? "" : state.TuningRaceDefName, state.TuningLayer == 2 ? state.TuningXenotypeDefName : "")] = "US.B.Restore." + result;
+        VoicePacksPageModel.GetTuningWriteDomain(state, out string race, out string child);
+        var result = settings.ResetActionTuningRow(actionKey, race, child);
+        rowResults[RowIdentity(actionKey, race, child)] = "US.B.Restore." + result;
         return result;
     }
 
     public SqueakResetOutcome ResetActionTuningArea()
     {
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
-        return settings.ResetActionTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
+        VoicePacksPageModel.GetTuningWriteDomain(state, out string race, out string child);
+        return settings.ResetActionTuningArea(race, child);
     }
 
 
@@ -639,6 +641,9 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     {
         VoicePacksPageModel.ResetActionTuningToPreset(settings, state, actionKey);
     }
+
+    internal bool TryResetActionToPreset(string actionKey, out IReadOnlyCollection<string> affectedFields)
+        => VoicePacksPageModel.TryResetActionTuningToPreset(settings, state, actionKey, out affectedFields);
 
     // VF1定稿: the area/selection commands are page-state writes; the table commands go through the
     // model facade onto the store (the single authority for per-race final tables).

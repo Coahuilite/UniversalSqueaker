@@ -956,15 +956,8 @@ public static partial class UsKernelSettingsHost
         writes.Command(
             "reset-normal-diagnostics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Diagnostics) == SqueakResetOutcome.Applied) bump(); });
-        writes.Command(
-            "reset-action-row",
-            () => { if (source.ResetActionTuningRow(state.TuningSelectedAction) == SqueakResetOutcome.Applied) bump(); },
-            () => state.TuningSelectedAction.Length > 0 && source.CanResetTuningArea());
-        writes.Command(
-            "reset-action-area",
-            () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) {
-                source.EndAffectedEdit(id => id.StartsWith("sparse-", StringComparison.Ordinal) || id.StartsWith("contribution-", StringComparison.Ordinal)); bump(); } },
-            () => source.CanResetTuningArea());
+        // Action row/area commands are registered by BindBehaviorSheet, alongside the exact
+        // retained field identities needed to end only the drafts their Applied result affects.
         // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board and the teaching toggle.
         // The intro is a page-state bool like help-open, with the two complementary VisibleBinds the
         // manifest's collapse/reopen buttons read. The board is READ-ONLY projection; its two exits

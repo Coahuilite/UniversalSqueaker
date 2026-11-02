@@ -16,8 +16,8 @@ public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
     public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope,
         KindName, () => new UsSparseFieldWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"),
             new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Bind", binding: UiBindingRole.Value), new UiAttributeDefinition("Field"),
-            new UiAttributeDefinition("LabelKey"), new UiAttributeDefinition("EffectiveBind"), new UiAttributeDefinition("OptionsBind"),
-            new UiAttributeDefinition("HelpAction"), new UiAttributeDefinition("HelpPayload"))));
+            new UiAttributeDefinition("LabelKey"), new UiAttributeDefinition("EffectiveBind", binding: UiBindingRole.Value), new UiAttributeDefinition("OptionsBind", binding: UiBindingRole.Choices),
+            new UiAttributeDefinition("HelpAction", binding: UiBindingRole.Command), new UiAttributeDefinition("HelpPayload", binding: UiBindingRole.Value))));
     public void Configure(UiElementSpec value) => spec = value;
     private string Binding => spec.TryGetAttribute("Bind", out string key) ? key : spec.Id;
     private string Field => spec.TryGetAttribute("Field", out string name) ? name : "parameter";

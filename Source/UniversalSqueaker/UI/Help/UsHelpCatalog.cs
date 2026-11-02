@@ -84,6 +84,7 @@ internal static class UsHelpCatalog
             new HelpItem("us/action-fields/talking", "US.UI.Field.talking", "US.UI.Help.Field.talking"),
             new HelpItem("us/action-fields/age", "US.UI.Field.age", "US.UI.Help.Field.age"),
             new HelpItem("us/action-fields/mood", "US.UI.Field.mood", "US.UI.Help.Field.mood"),
+            new HelpItem("us/action-fields/contributions", "US.B.Contributions", "US.B.ContributionsHelp"),
         }),
         // Window-level fallback section: the section-map guard keeps it reachable via
         // SectionHelpRefOf's default branch; its three items are claimed live by the navigation

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <UiPage Schema="2" Source="coahuilite.universalsqueaker">
   <Styles Schema="1" Density="regular">
     <Density Name="regular">
@@ -7,6 +7,15 @@
     <Density Name="dense">
       <Metric Token="RowHeight" Value="20" />
     </Density>
+    <Scheme Name="us-tuning-title">
+      <Metric Token="Font" Value="Medium" />
+    </Scheme>
+    <Scheme Name="us-tuning-body">
+      <Metric Token="Font" Value="Small" />
+    </Scheme>
+    <Scheme Name="us-tuning-meta">
+      <Metric Token="Font" Value="Tiny" />
+    </Scheme>
     <Scheme Name="us-preset-rows">
       <Metric Token="Font" Value="Small" />
     </Scheme>
@@ -133,36 +142,9 @@
         <Widget Id="edit-domain-context" Kind="text/wrapped" Bind="edit-domain-context" />
         <Widget Id="b-area-reset" Kind="input/button" TextKey="US.Reset.Area" ActionBind="b-area-reset" Height="28" Width="180" />
         <Widget Id="b-action-invalid" Kind="text/wrapped" TextKey="US.B.InvalidTarget" VisibleBind="b-action-invalid" />
-        <Row Id="b-behavior-split" Breakpoint="1" Narrow="Column" Fill="true" Gap="12" Padding="0">
-          <Scroll Id="b-action-list" Width="220" Fill="true" Gap="4" Padding="0" VisibleBind="b-behavior-list">
-            <Repeat Id="b-actions" Items="b-action-keys" Template="b-action-row" Gap="2" Padding="0" />
-          </Scroll>
-          <Scroll Id="b-action-sheet" Fill="true" Gap="6" Padding="0" VisibleBind="b-behavior-sheet" CancelBind="cancel-tuning-target">
-            <Widget Id="b-action-back" Kind="input/button" TextKey="US.B.BackActions" ActionBind="b-action-back" VisibleBind="b-action-back" Height="28" />
-            <Widget Id="b-action-title" Kind="text/wrapped" Bind="b-action-title" />
-            <Column Id="source-selection" Gap="4" Padding="0">
-              <Widget Id="behavior-source" Kind="input/dropdown" Bind="behavior-source" OptionsBind="behavior-source-options" Height="30" />
-              <Widget Id="source-status" Kind="text/wrapped" Bind="behavior-source-status" />
-              <Widget Id="source-explain" Kind="input/button" TextKey="US.B.Info" ActionBind="explain-topic" PayloadBind="explain:us/behavior-source/selection" Width="28" Height="28" />
-            </Column>
-            <Column Id="sparse-action-fields" Gap="6" Padding="0" VisibleBind="b-action-selected">
-              <Widget Id="sparse-note" Kind="text/wrapped" TextKey="US.UI.SparseNote" />
-              <Widget Id="b-scope-label" Kind="text/wrapped" TextKey="US.Tuning.ActionScope" />
-              <Widget Id="b-scope" Kind="input/dropdown" Bind="b-scope" OptionsBind="b-scope-options" Height="28" />
-              <Widget Id="b-scope-effective" Kind="text/wrapped" Bind="b-scope-effective" Emphasis="Muted" />
-              <Repeat Id="sparse-action-rows" Items="action-edit-keys" Template="sparse-action-row" Gap="0" Padding="0" />
-              <Repeat Id="b-contributions" Items="b-contribution-keys" Template="b-contribution-row" Gap="6" Padding="0" />
-              <Widget Id="b-row-result" Kind="text/wrapped" Bind="b-row-result" />
-              <Widget Id="b-preset-anchor" Kind="text/wrapped" Bind="b-preset-anchor" />
-              <Row Id="b-row-restores" Gap="6" Padding="0">
-                <Widget Id="b-row-reset" Kind="input/button" TextKey="US.B.RestoreRow" ActionBind="b-row-reset" Height="28" />
-                <Widget Id="b-preset-reset" Kind="input/button" TextKey="US.Tuning.ResetToPreset" ActionBind="b-preset-reset" Height="28" />
-              </Row>
-              <Widget Id="b-rules-output" Kind="input/button" TextKey="US.B.RulesOutput" ActionBind="go-page" PayloadBind="go-Output-payload" Height="28" />
-              <Widget Id="b-action-explanation" Kind="text/wrapped" Bind="b-action-explanation" Emphasis="Muted" />
-            </Column>
-          </Scroll>
-        </Row>
+        <Scroll Id="b-actions-scroll" Fill="true" Gap="0" Padding="0" CancelBind="cancel-tuning-target" Scheme="us-tuning-body">
+          <Repeat Id="b-actions" Items="b-action-keys" Template="b-action-row" Gap="0" Padding="0" />
+        </Scroll>
       </Column>
       <Scroll Id="page-Presets-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Presets">
         <Widget Id="preset-boundary" Kind="text/wrapped" TextKey="US.UI.PresetNote" />
@@ -428,17 +410,6 @@
     </Row>
   </Column>
   <Templates>
-    <Column Id="sparse-action-row" VisibleBind="current-row" Gap="6" Padding="0">
-      <Widget Id="sparse-timing-kind" Kind="input/dropdown" VisibleBind="timing-kind-choice" Bind="timing-kind" OptionsBind="timing-kind-options" Width="300" Height="28" />
-      <Widget Id="sparse-enabled" Kind="us/sparse-field" Bind="action-field-enabled" Field="enabled" LabelKey="US.UI.Field.enabled" EffectiveBind="effective-enabled" HelpAction="explain-enabled" HelpPayload="explain-enabled-topic" OptionsBind="sparse-bool-options" />
-      <Widget Id="sparse-interaction-seconds" Kind="us/sparse-field" Bind="action-field-interaction-seconds" Field="interaction-seconds" LabelKey="US.UI.Field.interaction-seconds" EffectiveBind="effective-interaction-seconds" HelpAction="explain-interaction-seconds" HelpPayload="explain-interaction-seconds-topic" VisibleBind="interaction-row" />
-      <Widget Id="sparse-interval" Kind="us/sparse-field" Bind="action-field-interval" Field="interval" LabelKey="US.UI.Field.interval" EffectiveBind="effective-interval" HelpAction="explain-interval" HelpPayload="explain-interval-topic" VisibleBind="simulation-row" />
-      <Widget Id="sparse-volume" Kind="us/sparse-field" Bind="action-field-volume" Field="volume" LabelKey="US.UI.Field.volume" EffectiveBind="effective-volume" HelpAction="explain-volume" HelpPayload="explain-volume-topic" />
-      <Widget Id="sparse-pitch" Kind="us/sparse-field" Bind="action-field-pitch" Field="pitch" LabelKey="US.UI.Field.pitch" EffectiveBind="effective-pitch" HelpAction="explain-pitch" HelpPayload="explain-pitch-topic" />
-      <Widget Id="sparse-talking" Kind="us/sparse-field" Bind="action-field-talking" Field="talking" LabelKey="US.UI.Field.talking" EffectiveBind="effective-talking" HelpAction="explain-talking" HelpPayload="explain-talking-topic" OptionsBind="sparse-bool-options" />
-      <Widget Id="sparse-age" Kind="us/sparse-field" Bind="action-field-age" Field="age" LabelKey="US.UI.Field.age" EffectiveBind="effective-age" HelpAction="explain-age" HelpPayload="explain-age-topic" OptionsBind="sparse-bool-options" />
-      <Widget Id="sparse-mood" Kind="us/sparse-field" Bind="action-field-mood" Field="mood" LabelKey="US.UI.Field.mood" EffectiveBind="effective-mood" HelpAction="explain-mood" HelpPayload="explain-mood-topic" OptionsBind="sparse-bool-options" />
-    </Column>
     <Overlay Id="b-source-row" Padding="4">
       <Widget Id="b-source-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
       <Widget Id="b-source-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="choose" PayloadBind="payload" />
@@ -496,19 +467,61 @@
       <Widget Id="b-pack-target-status" Kind="text/wrapped" Bind="status" Emphasis="Muted" />
       <Widget Id="b-pack-target-edit" Kind="input/button" TextKey="US.B.EditTarget" ActionBind="choose" PayloadBind="payload" VisibleBind="editable" Height="28" />
     </Column>
-    <Overlay Id="b-action-row" Padding="4">
-      <Widget Id="b-action-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
-      <Widget Id="b-action-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="choose" PayloadBind="payload" />
-      <Column Id="b-action-words" Gap="1" Padding="0">
-        <Widget Id="b-action-name" Kind="text/wrapped" Bind="title" />
-        <Widget Id="b-action-group" Kind="text/wrapped" Bind="group" Emphasis="Muted" />
+    <!-- A single Repeat retains action headers, field rows and restores as compatible hidden nodes. -->
+    <Column Id="b-action-row" Gap="0" Padding="0" VisibleBind="visible" Scheme="us-tuning-body">
+      <Column Id="b-action-summary" Gap="6" Padding="0" VisibleBind="header">
+        <Widget Id="b-action-group" Kind="text/wrapped" Bind="group" VisibleBind="group-first" Scheme="us-tuning-title" />
+        <Row Id="b-action-line" Gap="8" Padding="0" Breakpoint="780" Narrow="Column">
+          <Widget Id="b-action-name" Kind="text/wrapped" Bind="title" />
+          <Row Id="b-action-controls" Width="540" Gap="8" Padding="0" Breakpoint="500" Narrow="Column">
+            <Widget Id="b-action-scope" Kind="input/dropdown" Bind="scope" OptionsBind="scope-options" Width="220" MaxWidth="260" Height="28" VisibleBind="editable" HelpRef="us/scope-tree/action-scope" />
+            <Widget Id="b-action-scope-unavailable" Kind="text/wrapped" Bind="scope-display" VisibleBind="not-editable" Emphasis="Muted" Width="220" />
+            <Widget Id="b-action-effective" Kind="text/wrapped" Bind="scope-effective" VisibleBind="has-scope-hint" Emphasis="Muted" />
+            <Widget Id="b-action-advanced" Kind="input/button" TextKey="US.B.Advanced" ActionBind="advanced" VisibleBind="collapsed" Width="100" Height="28" HelpRef="us/scope-tree/response-details" />
+            <Widget Id="b-action-collapse" Kind="input/button" TextKey="US.B.CollapseAdvanced" ActionBind="advanced" VisibleBind="expanded" Width="100" Height="28" HelpRef="us/scope-tree/response-details" />
+          </Row>
+        </Row>
+        <Widget Id="b-action-rule" Kind="chrome/rule" Height="8" />
       </Column>
-    </Overlay>
-    <Column Id="b-contribution-row" Gap="2" Padding="0" VisibleBind="current">
-      <Widget Id="contribution-title" Kind="text/wrapped" Bind="title" />
-      <Widget Id="contribution-number" Kind="us/sparse-field" Bind="value" Height="28" VisibleBind="number" Field="parameter" />
-      <Widget Id="contribution-bool" Kind="input/dropdown" Bind="value" OptionsBind="options" Height="28" VisibleBind="boolean" />
-      <Widget Id="contribution-effective" Kind="text/wrapped" Bind="effective" Emphasis="Muted" />
+      <Column Id="source-selection" Gap="6" Padding="8" VisibleBind="source-visible">
+        <Widget Id="b-action-context" Kind="text/wrapped" Bind="context" />
+        <Widget Id="sparse-note" Kind="text/wrapped" TextKey="US.UI.SparseNote" Emphasis="Muted" />
+        <Widget Id="b-source-title" Kind="text/wrapped" TextKey="US.UI.Help.Source.Title" />
+        <Row Id="b-source-controls" Gap="6" Padding="0">
+          <Widget Id="behavior-source" Kind="input/dropdown" Bind="source" OptionsBind="source-options" Width="300" MaxWidth="400" Height="28" HelpRef="us/behavior-source/selection" />
+          <Widget Id="source-explain" Kind="input/button" TextKey="US.B.Info" ActionBind="explain-source" PayloadBind="source-topic" Width="28" Height="28" />
+        </Row>
+        <Widget Id="source-status" Kind="text/wrapped" Bind="source-status" />
+        <Widget Id="sparse-timing-kind" Kind="input/dropdown" VisibleBind="timing-kind-choice" Bind="timing-kind" OptionsBind="timing-kind-options" Width="300" Height="28" />
+      </Column>
+      <Column Id="sparse-field-row" Gap="4" Padding="8" VisibleBind="field-visible">
+        <Widget Id="sparse-field-group" Kind="text/wrapped" Bind="field-group" VisibleBind="field-group-first" />
+        <Row Id="sparse-field-heading" Gap="6" Padding="0">
+          <Widget Id="sparse-field-title" Kind="text/wrapped" Bind="field-title" />
+          <Widget Id="sparse-field-explain" Kind="input/button" TextKey="US.B.Info" ActionBind="explain-field" PayloadBind="field-topic" Width="28" Height="28" />
+        </Row>
+        <Widget Id="sparse-field-note" Kind="text/wrapped" Bind="field-note" VisibleBind="has-field-note" Emphasis="Muted" />
+        <Widget Id="sparse-boolean" Kind="us/sparse-field" Bind="field-value" Field="enabled" EffectiveBind="field-effective" OptionsBind="field-options" VisibleBind="field-is-boolean" />
+        <Widget Id="sparse-interval" Kind="us/sparse-field" Bind="field-value" Field="interval" EffectiveBind="field-effective" VisibleBind="field-is-interval" />
+        <Widget Id="sparse-interaction-seconds" Kind="us/sparse-field" Bind="field-value" Field="interaction-seconds" EffectiveBind="field-effective" VisibleBind="field-is-interaction-seconds" />
+        <Widget Id="sparse-volume" Kind="us/sparse-field" Bind="field-value" Field="volume" EffectiveBind="field-effective" VisibleBind="field-is-volume" />
+        <Widget Id="sparse-pitch" Kind="us/sparse-field" Bind="field-value" Field="pitch" EffectiveBind="field-effective" VisibleBind="field-is-pitch" />
+        <Widget Id="contribution-number" Kind="us/sparse-field" Bind="field-value" Field="parameter" EffectiveBind="field-effective" VisibleBind="field-is-parameter" />
+        <Widget Id="contribution-key" Kind="text/wrapped" Bind="technical-key" VisibleBind="details" Scheme="us-tuning-meta" Emphasis="Muted" />
+      </Column>
+      <Column Id="b-action-restores" Gap="6" Padding="8" VisibleBind="footer">
+        <Widget Id="b-row-result" Kind="text/wrapped" Bind="row-result" VisibleBind="has-row-result" />
+        <Widget Id="b-preset-anchor" Kind="text/wrapped" Bind="preset-anchor" />
+        <Row Id="b-row-restores" Gap="6" Padding="0" Breakpoint="520" Narrow="Column">
+          <Widget Id="b-row-reset" Kind="input/button" TextKey="US.B.RestoreRow" ActionBind="row-reset" Width="180" Height="28" />
+          <Widget Id="b-preset-reset" Kind="input/button" TextKey="US.Tuning.ResetToPreset" ActionBind="preset-reset" Width="180" Height="28" />
+        </Row>
+        <Row Id="b-action-secondary" Gap="6" Padding="0" Breakpoint="520" Narrow="Column">
+          <Widget Id="b-rules-output" Kind="input/button" TextKey="US.B.RulesOutput" ActionBind="rules-output" Width="200" Height="28" />
+          <Widget Id="b-action-details" Kind="input/button" TextKey="US.B.TechnicalDetails" ActionBind="toggle-details" Width="160" Height="28" HelpRef="us/action-fields/contributions" />
+        </Row>
+        <Widget Id="b-action-explanation" Kind="text/wrapped" Bind="explanation" VisibleBind="details" Scheme="us-tuning-meta" Emphasis="Muted" />
+      </Column>
     </Column>
     <Row Id="b-missing-row" Gap="6" Padding="0">
       <Widget Id="b-missing-name" Kind="text/wrapped" Bind="title" />

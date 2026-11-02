@@ -677,7 +677,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Field.talking>Talking participation</US.UI.Field.talking>
   <US.UI.Field.age>Age response</US.UI.Field.age>
   <US.UI.Field.mood>Mood response</US.UI.Field.mood>
-  <US.UI.EditContext>Current Eat / Select edit domain</US.UI.EditContext>
+  <US.UI.EditContext>Current editing layer / target</US.UI.EditContext>
   <US.UI.OutputContext>Change scope / per-action volume and pitch…</US.UI.OutputContext>
   <US.UI.ExplainSelect>Select response</US.UI.ExplainSelect>
   <US.UI.PawnProfile>General Pawn profile</US.UI.PawnProfile>
@@ -851,7 +851,7 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.B.RestoreRow>Restore row</US.B.RestoreRow>
   <US.B.PresetAnchor>Preset reset target</US.B.PresetAnchor>
   <US.B.NoAnchor>No preset anchor for this action and layer</US.B.NoAnchor>
-  <US.B.RulesOutput>Select / Eat rules → Output</US.B.RulesOutput>
+  <US.B.RulesOutput>Select / Eat → Output</US.B.RulesOutput>
   <US.B.Custom>Registered custom action</US.B.Custom>
   <US.B.LastGood>Last-good snapshot</US.B.LastGood>
   <US.B.SourceCandidates>candidates; never adopted automatically</US.B.SourceCandidates>
@@ -881,4 +881,40 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.B.Restore.Rejected>Restore rejected; previous values kept.</US.B.Restore.Rejected>
   <US.B.Help>Targets lists every loaded identity, with HAR humanlike first. Expand a race for its actual xenotype domains. One-pack rows have an exact-target switch; multi-pack rows open independent choices. Packs is a separate browsing lens: Contents does not change the working target. Queries never select a result. Enabled rows remain until Refresh or a query change. Tuning edits the named layer; System contains appearance, diagnostics and restores. The configured path reads declarations, not playback.</US.B.Help>
   <US.B.ImportNoChange>No action row imported; no save queued.</US.B.ImportNoChange>
+  <US.B.Advanced>Advanced</US.B.Advanced>
+  <US.B.CollapseAdvanced>Collapse</US.B.CollapseAdvanced>
+  <US.B.CurrentAction>Current action</US.B.CurrentAction>
+  <US.B.ActionFields>Action settings</US.B.ActionFields>
+  <US.B.TechnicalDetails>Technical details</US.B.TechnicalDetails>
+  <US.B.Contributions>Response contributions</US.B.Contributions>
+  <US.B.ContributionsHelp>Edit the named action and target only. Blank inherits; No and 0 are explicit values. Response enablement and participation are separate. Parameters keep their original units. Technical details show exact IDs; author parameters use the author&apos;s units.</US.B.ContributionsHelp>
+  <US.B.FieldGroup.Age>Age modulation</US.B.FieldGroup.Age>
+  <US.B.FieldGroup.Mood>Mood modulation</US.B.FieldGroup.Mood>
+  <US.B.FieldGroup.Jitter>Pitch variation</US.B.FieldGroup.Jitter>
+  <US.B.FieldGroup.Author>Author response settings</US.B.FieldGroup.Author>
+  <US.B.Field.AgePitch>Age pitch multiplier</US.B.Field.AgePitch>
+  <US.B.Field.AgeVolume>Age volume multiplier</US.B.Field.AgeVolume>
+  <US.B.Field.AgeParticipation>Apply age modulation</US.B.Field.AgeParticipation>
+  <US.B.Field.MoodLow>Low-mood threshold</US.B.Field.MoodLow>
+  <US.B.Field.MoodHigh>High-mood threshold</US.B.Field.MoodHigh>
+  <US.B.Field.MoodLowPitch>Low-mood pitch multiplier</US.B.Field.MoodLowPitch>
+  <US.B.Field.MoodLowVolume>Low-mood volume multiplier</US.B.Field.MoodLowVolume>
+  <US.B.Field.MoodNeutralPitch>Neutral-mood pitch multiplier</US.B.Field.MoodNeutralPitch>
+  <US.B.Field.MoodNeutralVolume>Neutral-mood volume multiplier</US.B.Field.MoodNeutralVolume>
+  <US.B.Field.MoodHighPitch>High-mood pitch multiplier</US.B.Field.MoodHighPitch>
+  <US.B.Field.MoodHighVolume>High-mood volume multiplier</US.B.Field.MoodHighVolume>
+  <US.B.Field.MoodParticipation>Apply mood modulation</US.B.Field.MoodParticipation>
+  <US.B.Field.JitterMin>Minimum pitch variation</US.B.Field.JitterMin>
+  <US.B.Field.JitterMax>Maximum pitch variation</US.B.Field.JitterMax>
+  <US.B.Field.AuthorResponse>Enable author response: {0}</US.B.Field.AuthorResponse>
+  <US.B.Field.AuthorParticipation>Apply author response: {0}</US.B.Field.AuthorParticipation>
+  <US.B.Field.AuthorParameter>Author parameter: {0}</US.B.Field.AuthorParameter>
+  <US.B.FieldNote.Pitch>Multiplier: 1 is unchanged; must be positive. Blank inherits.</US.B.FieldNote.Pitch>
+  <US.B.FieldNote.Volume>Multiplier: 1 is unchanged; 0 is silent. Blank inherits.</US.B.FieldNote.Volume>
+  <US.B.FieldNote.MoodThreshold>A value from 0 to 1, not a percentage. Low must be below High. Blank inherits.</US.B.FieldNote.MoodThreshold>
+  <US.B.FieldNote.Jitter>Positive pitch multiplier; maximum must be at least minimum. Blank inherits.</US.B.FieldNote.Jitter>
+  <US.B.FieldNote.Participation>Yes applies this response; No skips it. Inherit keeps the upstream choice.</US.B.FieldNote.Participation>
+  <US.B.FieldNote.Response>Enables this declared response, separately from participation. Inherit keeps the upstream choice.</US.B.FieldNote.Response>
+  <US.B.FieldNote.AuthorParameter>Use the author&apos;s parameter units and range. Blank inherits; 0 is an explicit value.</US.B.FieldNote.AuthorParameter>
+  <US.B.FieldInherit>Inherit</US.B.FieldInherit>
 </LanguageData>

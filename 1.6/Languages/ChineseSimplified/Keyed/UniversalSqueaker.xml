@@ -669,7 +669,7 @@
   <US.UI.Field.talking>谈话调制参与</US.UI.Field.talking>
   <US.UI.Field.age>年龄响应</US.UI.Field.age>
   <US.UI.Field.mood>心情响应</US.UI.Field.mood>
-  <US.UI.EditContext>当前 Eat／Select 编辑域</US.UI.EditContext>
+  <US.UI.EditContext>当前编辑层／目标</US.UI.EditContext>
   <US.UI.OutputContext>更改作用域／逐动作音量与音调…</US.UI.OutputContext>
   <US.UI.ExplainSelect>选择回应说明</US.UI.ExplainSelect>
   <US.UI.PawnProfile>全部 Pawn 的通用配置</US.UI.PawnProfile>
@@ -843,7 +843,7 @@
   <US.B.RestoreRow>恢复此行</US.B.RestoreRow>
   <US.B.PresetAnchor>预设恢复锚点</US.B.PresetAnchor>
   <US.B.NoAnchor>此动作和层没有预设锚点</US.B.NoAnchor>
-  <US.B.RulesOutput>Select／Eat 规则 → 输出</US.B.RulesOutput>
+  <US.B.RulesOutput>选中／进食选项 → 输出</US.B.RulesOutput>
   <US.B.Custom>已注册自定义动作</US.B.Custom>
   <US.B.LastGood>最后有效快照</US.B.LastGood>
   <US.B.SourceCandidates>个候选；不会自动采用</US.B.SourceCandidates>
@@ -873,4 +873,40 @@
   <US.B.Restore.Rejected>恢复被拒绝；保留原值。</US.B.Restore.Rejected>
   <US.B.Help>目标名册列出全部已加载身份，默认优先显示 HAR 类人。展开种族可查看它的实际异种域。单包行有准确目标开关；多包行打开后独立选择。包镜头用于浏览，“内容”不会改变编辑目标。查询不会自动选择结果。已启用行保留至刷新或更改查询。调音编辑已点名的层；系统包含外观、诊断和恢复。已配置路径读取声明，不表示播放结果。</US.B.Help>
   <US.B.ImportNoChange>没有导入动作行；未排队保存。</US.B.ImportNoChange>
+  <US.B.Advanced>高级</US.B.Advanced>
+  <US.B.CollapseAdvanced>收起</US.B.CollapseAdvanced>
+  <US.B.CurrentAction>当前动作</US.B.CurrentAction>
+  <US.B.ActionFields>动作设置</US.B.ActionFields>
+  <US.B.TechnicalDetails>技术详情</US.B.TechnicalDetails>
+  <US.B.Contributions>响应贡献</US.B.Contributions>
+  <US.B.ContributionsHelp>仅修改已标明的动作与目标。留空继承，“否”和 0 是明确值。响应启用与参与分别保存。参数保持原单位；技术详情显示准确键，作者参数按作者约定填写。</US.B.ContributionsHelp>
+  <US.B.FieldGroup.Age>年龄调制</US.B.FieldGroup.Age>
+  <US.B.FieldGroup.Mood>心情调制</US.B.FieldGroup.Mood>
+  <US.B.FieldGroup.Jitter>音调随机变化</US.B.FieldGroup.Jitter>
+  <US.B.FieldGroup.Author>作者响应设置</US.B.FieldGroup.Author>
+  <US.B.Field.AgePitch>年龄音调倍数</US.B.Field.AgePitch>
+  <US.B.Field.AgeVolume>年龄音量倍数</US.B.Field.AgeVolume>
+  <US.B.Field.AgeParticipation>参与年龄调制</US.B.Field.AgeParticipation>
+  <US.B.Field.MoodLow>低心情分界</US.B.Field.MoodLow>
+  <US.B.Field.MoodHigh>高心情分界</US.B.Field.MoodHigh>
+  <US.B.Field.MoodLowPitch>低心情音调倍数</US.B.Field.MoodLowPitch>
+  <US.B.Field.MoodLowVolume>低心情音量倍数</US.B.Field.MoodLowVolume>
+  <US.B.Field.MoodNeutralPitch>平稳心情音调倍数</US.B.Field.MoodNeutralPitch>
+  <US.B.Field.MoodNeutralVolume>平稳心情音量倍数</US.B.Field.MoodNeutralVolume>
+  <US.B.Field.MoodHighPitch>高心情音调倍数</US.B.Field.MoodHighPitch>
+  <US.B.Field.MoodHighVolume>高心情音量倍数</US.B.Field.MoodHighVolume>
+  <US.B.Field.MoodParticipation>参与心情调制</US.B.Field.MoodParticipation>
+  <US.B.Field.JitterMin>音调随机倍数下限</US.B.Field.JitterMin>
+  <US.B.Field.JitterMax>音调随机倍数上限</US.B.Field.JitterMax>
+  <US.B.Field.AuthorResponse>启用作者响应：{0}</US.B.Field.AuthorResponse>
+  <US.B.Field.AuthorParticipation>参与作者响应：{0}</US.B.Field.AuthorParticipation>
+  <US.B.Field.AuthorParameter>作者参数：{0}</US.B.Field.AuthorParameter>
+  <US.B.FieldNote.Pitch>倍数：1 不变，须大于 0；留空继承。</US.B.FieldNote.Pitch>
+  <US.B.FieldNote.Volume>倍数：1 不变，0 为静音；留空继承。</US.B.FieldNote.Volume>
+  <US.B.FieldNote.MoodThreshold>填写 0 到 1 的数值，不换算为百分数；低分界须小于高分界。留空继承。</US.B.FieldNote.MoodThreshold>
+  <US.B.FieldNote.Jitter>正的音调倍数，上限不得低于下限；留空继承。</US.B.FieldNote.Jitter>
+  <US.B.FieldNote.Participation>“是”参与此响应，“否”跳过；继承沿用上层选择。</US.B.FieldNote.Participation>
+  <US.B.FieldNote.Response>启用此已声明响应，与是否参与分别设置；继承沿用上层选择。</US.B.FieldNote.Response>
+  <US.B.FieldNote.AuthorParameter>按作者约定的单位与范围填写；留空继承，0 是明确值。</US.B.FieldNote.AuthorParameter>
+  <US.B.FieldInherit>继承</US.B.FieldInherit>
 </LanguageData>

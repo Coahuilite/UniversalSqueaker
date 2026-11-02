@@ -67,8 +67,6 @@ public static partial class UsKernelSettingsHost
         .Replace("Id=\"voice-split\" Breakpoint=\"1\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
         .Replace("Id=\"b-roster-split\" Breakpoint=\"1\"", "Id=\"b-roster-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
         .Replace("Id=\"b-list-column\" Width=\"300\"", "Id=\"b-list-column\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
-        .Replace("Id=\"b-behavior-split\" Breakpoint=\"1\"", "Id=\"b-behavior-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
-        .Replace("Id=\"b-action-list\" Width=\"220\"", "Id=\"b-action-list\"" + (wide ? " Width=\"220\"" : ""))
         .Replace("Id=\"b-final-split\" Breakpoint=\"1\"", "Id=\"b-final-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
         .Replace("Id=\"b-final-list\" Width=\"300\"", "Id=\"b-final-list\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
         .Replace("Id=\"voice-detail-scroll\" Width=\"440\"", "Id=\"voice-detail-scroll\"" + (wide ? " Width=\"440\"" : ""))
@@ -132,8 +130,8 @@ public static partial class UsKernelSettingsHost
             NavigatePage(s, page);
             bumper.Bump();
         }
-        string EditContext() => s.TuningLayer == 0 ? T("PawnProfile") : s.TuningRaceDefName +
-            (s.TuningLayer == 2 ? "/" + s.TuningXenotypeDefName : "");
+        string EditContext() => TuningContextLabel(source, t, s.TuningLayer,
+            s.TuningLayer == 0 ? "" : s.TuningRaceDefName, s.TuningLayer == 2 ? s.TuningXenotypeDefName : "");
         void OpenHelp(string topic, string context)
         {
             bool changed = s.PinnedHelpRef != topic || s.PinnedHelpContext != context;
@@ -303,47 +301,6 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<bool>("action-fields-visible", () => production != null && s.TuningSelectedAction != "" && source.CanResetTuningArea());
         b.BindReadOnly<string>("action-fields-target", () => T("Editing") + ": " + s.TuningSelectedAction + " · " + EditContext());
         b.BindReadOnly<string>("edit-domain-context", () => { source.BuildView(); return T("EditContext") + ": " + EditContext(); });
-        // Retained editors belong to the exact action/domain, not mutable navigation state.
-        // Previously visited rows remain hidden compatible nodes, so switching context cannot
-        // publish an old draft into a different row or silently discard it.
-        var editKeys = new List<string>();
-        string CurrentEditKey() => RosterKey(s.TuningSelectedAction + "|" + (s.TuningLayer == 0 ? "" : s.TuningRaceDefName) + "|" + (s.TuningLayer == 2 ? s.TuningXenotypeDefName : ""));
-        b.BindReadOnly<IReadOnlyList<string>>("action-edit-keys", () => {
-            source.BuildView();
-            if (production == null || s.TuningSelectedAction == "" || !source.CanResetTuningArea()) return editKeys;
-            string key = CurrentEditKey();
-            if (editKeys.Contains(key)) return editKeys;
-            string action = s.TuningSelectedAction;
-            string race = s.TuningLayer == 0 ? "" : s.TuningRaceDefName;
-            string child = s.TuningLayer == 2 ? s.TuningXenotypeDefName : "";
-            editKeys.Add(key);
-            string Address(string leaf) => UsWriteBindings.ItemKey("action-edit-keys", key, leaf);
-            b.BindReadOnly<bool>(Address("current-row"), () => CurrentEditKey() == key);
-            string timingKind = UsResponsePolicy.IsOfficialInteraction(action) ? "Interaction" : "Simulation";
-            b.BindReadOnly<bool>(Address("timing-kind-choice"), () => !Kernel.BuiltInActionKeys.Contains(action));
-            b.BindChoices<string>(Address("timing-kind-options"), () => new[] {
-                new UiChoice<string>(T("IntervalInteraction"), "Interaction"), new UiChoice<string>(T("IntervalSimulation"), "Simulation") });
-            writes.ItemValue<string>("action-edit-keys", key, "timing-kind", () => timingKind, value => {
-                if (value == "Interaction" || value == "Simulation") { timingKind = value; bumper.Bump(); }
-            });
-            b.BindReadOnly<bool>(Address("interaction-row"), () => timingKind == "Interaction");
-            b.BindReadOnly<bool>(Address("simulation-row"), () => timingKind == "Simulation");
-            b.BindReadOnly<string>(Address("timing-effective"), () => production.EffectiveInterval(action, race, child, timingKind == "Interaction", t));
-            b.BindChoices<string>(Address("sparse-bool-options"), () => new[] { new UiChoice<string>(T("SourceInherit"), ""), new UiChoice<string>(T("Yes"), "True"), new UiChoice<string>(T("No"), "False") });
-            foreach (string field in new[] { "enabled", "interaction-seconds", "interval", "volume", "pitch", "talking", "age", "mood" })
-            {
-                string f = field;
-                writes.ItemValue<string>("action-edit-keys", key, "action-field-" + f,
-                    () => production.ReadActionField(f, action, race, child),
-                    v => { bool committed = production.TryCommitActionField(f, v, action, race, child); bumper.Bump();
-                        if (!committed) throw new InvalidOperationException(production.RowResult(action, race, child)); });
-                b.BindReadOnly<string>(Address("explain-" + f + "-topic"), () => "us/action-fields/" + f);
-                b.BindReadOnly<string>(Address("effective-" + f), () => production.EffectiveField(f, action, race, child, t));
-                writes.ItemAction<string>("action-edit-keys", key, "explain-" + f,
-                    topic => OpenHelp(topic, action + " · " + (race == "" ? T("PawnProfile") : race + (child == "" ? "" : "/" + child))));
-            }
-            return editKeys;
-        });
         b.BindReadOnly<string>("action-row-diagnostic", () => {
             string[] parts = (production?.RowDiagnostic ?? "").Split(new[] { '\n' }, 2);
             return parts[0] == "" ? "" : t.Translate(parts[0]);
