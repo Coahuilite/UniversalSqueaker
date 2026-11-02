@@ -32,6 +32,7 @@ public sealed class ResponseFrame
     public bool HasVocalOrgans = true;
     public double TalkingChance = 1;
     public double StateWaitFactor = 1;
+    public double TargetSpeedFactor = 1;
     public FactSnapshot Facts = new(Array.Empty<KeyValuePair<string, Truth>>());
     public IReadOnlyDictionary<string, double> NumericFacts = new Dictionary<string, double>();
     public ISet<string> AvailableFacts = new HashSet<string>(StringComparer.Ordinal);
@@ -53,22 +54,32 @@ public static class BehaviorContract
         return SelectConditions.UsesSelection(action.Condition) && SelectPolicy.HasParameters(behavior)
             ? new Condition("all", "", condition, SelectConditions.Restriction(behavior)) : condition;
     }
-    public static BehaviorValues DeclaredDefaults(ActionPlan action) => new()
+    public static BehaviorValues DeclaredDefaults(ActionPlan action) => DeclaredDefaults(action, "Pawn");
+    /// <summary>Only defaults applicable to this subject family enter the sparse configuration fold.</summary>
+    public static BehaviorValues DeclaredDefaults(ActionPlan action, string family)
     {
-        Scope = action.Scope, Enabled = true,
-        SimulationIntervalTicks = BuiltInActionKeys.Contains(action.Key) ? null : action.Interval,
-        InteractionIntervalSeconds = BuiltInActionKeys.Contains(action.Key) ? null : action.InteractionIntervalSeconds,
-        TalkingEnabled = !action.SkipTalking, Volume = 1, Pitch = 1,
-        Phase = UsesEat(action.Condition) ? EatPhase.WholeProcess : null,
-        NutritionScope = UsesEat(action.Condition) ? EatNutritionScope.Any : null,
-        DrugScope = UsesEat(action.Condition) ? EatDrugScope.Any : null,
-        SelectRequirePlayerControlled = action.Key == CoreActions.Select ? true : null,
-        SelectRequireAwake = action.Key == CoreActions.Select ? true : null,
-        SelectRequireNotDowned = action.Key == CoreActions.Select ? true : null
-    };
+        if (family != "Pawn" && family != "NonPawn") throw new ArgumentException("Invalid subject family", nameof(family));
+        bool pawn = family == "Pawn";
+        return new BehaviorValues
+        {
+            Scope = pawn ? action.Scope : null, Enabled = true,
+            SimulationIntervalTicks = BuiltInActionKeys.Contains(action.Key) ? null : action.Interval,
+            InteractionIntervalSeconds = BuiltInActionKeys.Contains(action.Key) ? null : action.InteractionIntervalSeconds,
+            TalkingEnabled = pawn ? !action.SkipTalking : null, Volume = 1, Pitch = 1,
+            Phase = pawn && UsesEat(action.Condition) ? EatPhase.WholeProcess : null,
+            NutritionScope = pawn && UsesEat(action.Condition) ? EatNutritionScope.Any : null,
+            DrugScope = pawn && UsesEat(action.Condition) ? EatDrugScope.Any : null,
+            SelectRequirePlayerControlled = pawn && action.Key == CoreActions.Select ? true : null,
+            SelectRequireAwake = pawn && action.Key == CoreActions.Select ? true : null,
+            SelectRequireNotDowned = pawn && action.Key == CoreActions.Select ? true : null
+        };
+    }
     public static BehaviorValues Defaults(ActionPlan action, UsDevelopmentPolicy policy)
         => policy.RuntimePolicy.Defaults(action);
     public static BehaviorValues Defaults(ActionPlan action, UsResponsePolicy policy) => policy.Defaults(action);
+    public static BehaviorValues Defaults(ActionPlan action, UsDevelopmentPolicy policy, string family)
+        => policy.RuntimePolicy.Defaults(action, family);
+    public static BehaviorValues Defaults(ActionPlan action, UsResponsePolicy policy, string family) => policy.Defaults(action, family);
     public static string InvalidTimingUnit(string action, BehaviorValues behavior)
         => UsResponsePolicy.IsOfficialInteraction(action) && behavior.SimulationIntervalTicks.HasValue
             ? "InteractionUsesRealSeconds:RemoveSimulationIntervalTicks:" + action

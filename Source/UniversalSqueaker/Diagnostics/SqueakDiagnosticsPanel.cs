@@ -30,6 +30,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     private bool lastCollapsed;
     private bool lastEmpty;
     private bool opened;
+    private int lastDataRevision = -1;
 
     public SqueakDiagnosticsPanel()
     {
@@ -53,7 +54,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         closeOnClickedOutside = false;
         onlyOneOfTypeAllowed = true;
         focusWhenOpened = false;
-        onlyDrawInDevMode = true;
+        onlyDrawInDevMode = false;
     }
 
     // 620 -> 680 (lead-authorised, dev-only): the detail column needs 320 for its 40/60 value split
@@ -145,6 +146,11 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     {
         // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
         audit?.Publish();
+        if (Host != null && lastDataRevision != SqueakDiagnosticsOverlay.Revision)
+        {
+            lastDataRevision = SqueakDiagnosticsOverlay.Revision;
+            Host.Invalidate();
+        }
 
         // The collapsed bar carries a visible close (09 §3.3 rule 3): about-to-draw is the same
         // mid-draw close point the detail window already uses for its IsValid self-check.
@@ -282,11 +288,10 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         UsKernelDraw.Label(Execution, VerseUiExecution.Rect(new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f))), Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"), WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
     }
 
-    /// <summary>Plain log line, deliberately NOT a usdiag protocol event: the frozen vocabulary
-    /// gates a registry, and a dev-panel failure has no business editing it.</summary>
+    /// <summary>Named daily failure through the protected production diagnostic boundary.</summary>
     protected override void OnDrawFailure(Exception error)
     {
-        Log.Warning("[UniversalSqueaker] Diagnostics panel draw failed: " + SqueakLogText.SanitizeExceptionMessage(error.Message));
+        SqueakLog.DiagnosticsUiFailed("PanelDraw", error);
     }
 
     public override void PreClose()

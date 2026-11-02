@@ -16,12 +16,14 @@ internal readonly struct SqueakLogData
     internal readonly string? Action, Target, Pack, Reason, Sound, Source, PawnName, PawnId, PawnFaction; internal readonly int? Count, Dispatched, SuppressedDetail; internal readonly bool? Enabled, Egg, PawnControlled; internal readonly Exception? Exception;
     // v2-only identity/route facts (0.3.1 wave 2c). Race/Xenotype carry exact DefNames; Tier carries the
     // protocol tier vocabulary; SettingsOrigin carries the session settings-source fact.
-    internal readonly string? Race, Xenotype, Tier; internal readonly SqueakSettingsOrigin? SettingsOrigin;
+    internal readonly string? Race, Xenotype, Tier, Stage; internal readonly SqueakSettingsOrigin? SettingsOrigin;
+    internal readonly string? Detail, AuthoringClaim;
+    internal readonly bool AuthoringFieldsKnown;
     // UI text-fit audit facts: measured need vs the rect actually offered. Pixels carry one decimal so a
     // reviewer can tell a 1px rounding disagreement from a string that is twice as wide as its box.
     internal readonly float? Needed, Available;
-    internal SqueakLogData(string? action = null, string? target = null, string? pack = null, string? reason = null, string? sound = null, string? source = null, int? count = null, int? dispatched = null, int? suppressedDetail = null, bool? enabled = null, Exception? exception = null, string? pawnName = null, string? pawnId = null, string? race = null, string? xenotype = null, string? tier = null, SqueakSettingsOrigin? settingsOrigin = null, bool? egg = null, bool? pawnControlled = null, string? pawnFaction = null, float? needed = null, float? available = null)
-    { Action = action; Target = target; Pack = pack; Reason = reason; Sound = sound; Source = source; Count = count; Dispatched = dispatched; SuppressedDetail = suppressedDetail; Enabled = enabled; Exception = exception; PawnName = pawnName; PawnId = pawnId; Race = race; Xenotype = xenotype; Tier = tier; SettingsOrigin = settingsOrigin; Egg = egg; PawnControlled = pawnControlled; PawnFaction = pawnFaction; Needed = needed; Available = available; }
+    internal SqueakLogData(string? action = null, string? target = null, string? pack = null, string? reason = null, string? sound = null, string? source = null, int? count = null, int? dispatched = null, int? suppressedDetail = null, bool? enabled = null, Exception? exception = null, string? pawnName = null, string? pawnId = null, string? race = null, string? xenotype = null, string? tier = null, SqueakSettingsOrigin? settingsOrigin = null, bool? egg = null, bool? pawnControlled = null, string? pawnFaction = null, float? needed = null, float? available = null, string? stage = null, string? detail = null, bool authoringFieldsKnown = false, string? authoringClaim = null)
+    { Action = action; Target = target; Pack = pack; Reason = reason; Sound = sound; Source = source; Count = count; Dispatched = dispatched; SuppressedDetail = suppressedDetail; Enabled = enabled; Exception = exception; PawnName = pawnName; PawnId = pawnId; Race = race; Xenotype = xenotype; Tier = tier; SettingsOrigin = settingsOrigin; Egg = egg; PawnControlled = pawnControlled; PawnFaction = pawnFaction; Needed = needed; Available = available; Stage = stage; Detail = detail; AuthoringFieldsKnown = authoringFieldsKnown; AuthoringClaim = authoringClaim; }
 }
 
 internal readonly struct SqueakLogDefinition
@@ -78,7 +80,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.SettingsOrigin => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Mod settings origin was recorded.", 2),
         SqueakLogEvent.AudioRouteSelected => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Info, "Audio route: <action> -> <sound> (<tier>[, egg]).", 2),
         SqueakLogEvent.AudioVanillaFallback => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Info, "Audio dispatch fell back to vanilla: <action> -> <sound> (<tier>[, egg]).", 2),
-        SqueakLogEvent.FallbackProfileStoreFailed => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Fallback profile store operation failed.", 2),
+        SqueakLogEvent.FallbackProfileStoreFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "Fallback profile store operation failed (target <race>, stage <stage>, <ex_type>): <ex_msg>.", 2),
         SqueakLogEvent.AudioDisabled => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Squeak audio is disabled (true bypass): <action> not intercepted.", 2),
         SqueakLogEvent.VoicePackCompAutoAttached => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "VoicePack comp auto-attached to race <race>.", 2),
         SqueakLogEvent.VoicePackCompAttachSkipped => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "VoicePack comp auto-attach skipped for race <race> (<reason>).", 2),
@@ -110,6 +112,18 @@ internal static class SqueakLogRegistry
             string marker = (data.Egg == true ? ", egg" : "") + (data.PawnControlled == false ? ", nonplayer" : "");
             return "Audio dispatch fell back to vanilla: " + actionText + " -> " + soundText + " (" + tierText + marker + ").";
         }
+        if (e == SqueakLogEvent.FallbackProfileStoreFailed)
+        {
+            // Daily human text is the complete necessary failure record when the detailed suffix
+            // is off. Prepare it inside Emit's protected boundary, using the same path/control
+            // cleaning as exception metadata rather than exposing a Config path to players.
+            string target = SqueakLogText.SanitizeExceptionMessage(data.Race);
+            string stage = SqueakLogText.SanitizeExceptionMessage(data.Stage);
+            string type = data.Exception?.GetType().FullName ?? "UnknownException";
+            string reason = SqueakLogText.SanitizeExceptionMessage(data.Exception?.Message);
+            return "Fallback profile store operation failed (target " + target + ", stage " + stage
+                + ", " + type + "): " + reason + ".";
+        }
         if (e == SqueakLogEvent.AudioDisabled)
         {
             string actionText = string.IsNullOrEmpty(data.Action) ? "-" : data.Action!;
@@ -128,7 +142,37 @@ internal static class SqueakLogRegistry
                 + (data.Needed == null ? "-" : data.Needed.Value.ToString("0.0", CultureInfo.InvariantCulture))
                 + "px, has " + (data.Available == null ? "-" : data.Available.Value.ToString("0.0", CultureInfo.InvariantCulture)) + "px).";
         }
+        if (definition.Visibility == SqueakLogVisibility.Daily && definition.Level != SqueakLogLevel.Info)
+            return NecessaryFailureSentence(definition.Human, data);
         return definition.Human;
+    }
+
+    // Only necessary daily failure facts are added here. Detailed traces and normal daily info
+    // retain their existing gates and fields; this does not query the game or call a callback.
+    private static string NecessaryFailureSentence(string sentence, SqueakLogData data)
+    {
+        var text = new StringBuilder(sentence);
+        void Context(string name, string? value)
+        {
+            if (string.IsNullOrEmpty(value) || value == "N/A") return;
+            // Stable author IDs may legitimately contain ':' and '/'; the exception-path regex
+            // would mistake packageId:DefName for a drive-relative path. IDs come from the existing
+            // captured identity fields, not Config paths. Free-form reasons still use path cleaning.
+            string clean = name == "reason" ? SqueakLogText.SanitizeExceptionMessage(value)
+                : new string(Array.FindAll(value!.Replace('\r', ' ').Replace('\n', ' ').ToCharArray(), c => !char.IsControl(c)));
+            text.Append(' ').Append(name).Append('=').Append(clean);
+        }
+        Context("action", data.Action);
+        Context("target", data.Target);
+        Context("pack", data.Pack);
+        Context("race", data.Race);
+        Context("sound", data.Sound);
+        Context("reason", data.Reason);
+        if (data.Count.HasValue) text.Append(" count=").Append(data.Count.Value.ToString(CultureInfo.InvariantCulture));
+        if (data.Exception != null)
+            text.Append(" error=").Append(data.Exception.GetType().FullName).Append(": ")
+                .Append(SqueakLogText.SanitizeExceptionMessage(data.Exception.Message));
+        return text.ToString();
     }
 
     internal static string EventId(SqueakLogEvent e) => e switch
@@ -184,6 +228,7 @@ internal static class SqueakLogOnce
     internal static void Reset()
     {
         lock (sync) keys.Clear();
+        SqueakProductionProtocol.Reset();
     }
 
     internal static bool Claim(SqueakLogEvent evt, SqueakLogData data, int version)
@@ -193,6 +238,7 @@ internal static class SqueakLogOnce
         // Per-domain/per-sound events include their domain/sound dimensions in the claim key so one race or
         // sound failure does not suppress the same failure for a different race/sound.
         string key = "coahuilite.universalsqueaker|log-v" + version + "|" + evt + "|" + SqueakLogFormatter.Value(data.Action) + "|" + SqueakLogFormatter.Value(data.Target) + "|" + SqueakLogFormatter.Value(data.Pack) + "|" + SqueakLogFormatter.Value(data.Reason) + "|" + SqueakLogFormatter.Value(data.Race) + "|" + SqueakLogFormatter.Value(data.Xenotype) + "|" + SqueakLogFormatter.Value(data.Sound) + "|" + (data.Exception?.GetType().FullName ?? "-");
+        if (evt == SqueakLogEvent.FallbackProfileStoreFailed) key += "|stage=" + SqueakLogFormatter.Value(data.Stage);
         lock (sync)
         {
             if (keys.Contains(key)) return false;
@@ -268,6 +314,7 @@ internal static class SqueakLogFormatter
                 Add(builder, "pawn_ctrl", data.PawnControlled == null ? null : (data.PawnControlled.Value ? "player" : "nonplayer"));
                 break;
             case SqueakLogEvent.FallbackProfileStoreFailed:
+                Add(builder, "stage", SqueakLogText.SanitizeExceptionMessage(data.Stage));
                 if (data.Exception != null)
                 {
                     var site = data.Exception.TargetSite;
@@ -328,5 +375,143 @@ internal static class SqueakLogSink
         if (level == SqueakLogLevel.Warning) Log.Warning(text);
         else if (level == SqueakLogLevel.Error) Log.Error(text);
         else Log.Message(text);
+    }
+}
+
+
+internal enum SqueakProductionEvent
+{
+    DiagnosticPublicationFailed, SustainedEndUncertain, AuthoringRejected, AudioObservationFailed,
+    AudioBindingRejected, OutputVolumeInvalid, CapabilityUnavailable, PrerequisiteUnverified,
+    BehaviorRefreshPaused, SettingsSaveFailed, PublicationRepairFailed, BehaviorCandidateFailed,
+    ConfigurationUnsupported, PresetImportRejected, DiagnosticsUiFailed, NativeEntryUnavailable,
+    OverlayFallback, SaveStatusUnknown, ThemeFallback, FallbackAudioPublishFailed, CanonicalIdentityFailed
+}
+
+/// <summary>Already captured response facts. No native object, fact query or random source enters logging.</summary>
+public sealed class SqueakResponseLogData
+{
+    public string Subject = "", RequestedAction = "", Action = "", Reason = "", Receipt = "", ReceiptReason = "";
+    public string Opportunity = "", EventFact = "", Role = "", Domain = "", ChildDomain = "", SourceDomain = "";
+    public string Tier = "", Pack = "", Entry = "", Audio = "", Active = "", EndReason = "", Details = "";
+    public long Tick, SharedUntil, ActionUntil, NextState, SimulationAttempt;
+    public long? Operation, Confirmed, Configuration;
+    public double? MonotonicSeconds, SecondsUntil;
+    public long RateSuppressed;
+    public double RateWindowUntil;
+}
+
+/// <summary>fmt=3: current response and production-failure records, distinct from legacy route events.
+/// Failures are daily in every logging mode; response is detailed and bounded by its Comp owner.</summary>
+internal static class SqueakProductionProtocol
+{
+    private static readonly HashSet<string> failures = new(StringComparer.Ordinal);
+    internal static void Reset() { lock (failures) failures.Clear(); }
+    internal static bool Claim(SqueakProductionEvent evt, SqueakLogData data)
+    {
+        // Author facts are lossless; free details distinguish claims before output-only redaction/truncation.
+        string key = evt == SqueakProductionEvent.AuthoringRejected
+            ? "AuthoringRejected|" + (data.AuthoringFieldsKnown ? "known|" : "free|") + ClaimPart(data.Target) + ClaimPart(data.Reason) + ClaimPart(data.Source)
+                + ClaimPart(data.Action) + ClaimPart(data.Detail) + ClaimPart(data.AuthoringClaim)
+            : evt + "|" + data.Target + "|" + data.Source + "|" + data.Race + "|" + data.Sound
+                + "|" + SqueakLogText.SanitizeExceptionMessage(data.Reason) + "|" + data.Exception?.GetType().FullName;
+        lock (failures)
+        {
+            if (failures.Contains(key) || failures.Count >= 1024) return false;
+            return failures.Add(key);
+        }
+    }
+    private static string ClaimPart(string? value) => value == null ? "-:" : value.Length.ToString(CultureInfo.InvariantCulture) + ":" + value;
+    internal static SqueakLogLevel Level(SqueakProductionEvent evt) => evt is SqueakProductionEvent.PrerequisiteUnverified
+        or SqueakProductionEvent.AudioObservationFailed or SqueakProductionEvent.ThemeFallback or SqueakProductionEvent.SaveStatusUnknown
+        ? SqueakLogLevel.Error : SqueakLogLevel.Warning;
+    private static string Id(SqueakProductionEvent evt) => evt switch
+    {
+        SqueakProductionEvent.DiagnosticPublicationFailed => "kernel.diagnostic.failed",
+        SqueakProductionEvent.SustainedEndUncertain => "audio.sustained.end_uncertain",
+        SqueakProductionEvent.AuthoringRejected => "authoring.rejected",
+        SqueakProductionEvent.AudioObservationFailed => "audio.observation.failed",
+        SqueakProductionEvent.AudioBindingRejected => "audio.binding.rejected",
+        SqueakProductionEvent.OutputVolumeInvalid => "audio.output.invalid_volume",
+        SqueakProductionEvent.CapabilityUnavailable => "game.capability.unavailable",
+        SqueakProductionEvent.PrerequisiteUnverified => "mod.prerequisite.unverified",
+        SqueakProductionEvent.BehaviorRefreshPaused => "settings.behavior.refresh_paused",
+        SqueakProductionEvent.SettingsSaveFailed => "settings.save.failed",
+        SqueakProductionEvent.PublicationRepairFailed => "settings.publication.repair_failed",
+        SqueakProductionEvent.BehaviorCandidateFailed => "settings.behavior.candidate_failed",
+        SqueakProductionEvent.ConfigurationUnsupported => "settings.configuration.unsupported",
+        SqueakProductionEvent.PresetImportRejected => "settings.preset.rejected",
+        SqueakProductionEvent.DiagnosticsUiFailed => "ui.diagnostics.failed",
+        SqueakProductionEvent.NativeEntryUnavailable => "ui.native_entry.unavailable",
+        SqueakProductionEvent.OverlayFallback => "ui.overlay.fallback",
+        SqueakProductionEvent.SaveStatusUnknown => "ui.save_status.unknown",
+        SqueakProductionEvent.ThemeFallback => "ui.theme.fallback",
+        SqueakProductionEvent.FallbackAudioPublishFailed => "fallback.audio.publish_failed",
+        SqueakProductionEvent.CanonicalIdentityFailed => "game.canonical_identity.failed",
+        _ => throw new ArgumentOutOfRangeException(nameof(evt))
+    };
+    internal static string Failure(SqueakProductionEvent evt, SqueakLogData data, string build, string buildId)
+    {
+        var text = Header(Id(evt), Level(evt), "daily", build, buildId);
+        bool freeAuthoring = evt == SqueakProductionEvent.AuthoringRejected && !data.AuthoringFieldsKnown;
+        bool hasFreeFields = freeAuthoring && (data.Target != null || data.Source != null || data.Action != null || data.Reason != "UnstructuredIssue");
+        Add(text, "target", freeAuthoring ? hasFreeFields ? "AuthoringInput" : null : data.Target);
+        Add(text, "source", freeAuthoring ? null : data.Source); Add(text, "race", data.Race);
+        Add(text, "sound", data.Sound); Add(text, "count", data.Count);
+        Add(text, "reason", evt == SqueakProductionEvent.AuthoringRejected ? freeAuthoring ? "UnstructuredIssue" : data.Reason
+            : data.Reason == null ? null : SqueakLogText.SanitizeExceptionMessage(data.Reason));
+        if (evt == SqueakProductionEvent.AuthoringRejected)
+        {
+            Add(text, "action", freeAuthoring ? null : data.Action);
+            string? detail = hasFreeFields ? "target=" + data.Target + "; source=" + data.Source + "; action=" + data.Action
+                + "; reason=" + data.Reason + "; detail=" + data.Detail : data.Detail;
+            Add(text, "detail", detail == null ? null : SqueakLogText.SanitizeExceptionMessage(detail));
+        }
+        if (data.Exception != null)
+        {
+            Add(text, "ex_type", data.Exception.GetType().FullName);
+            Add(text, "ex_inner", data.Exception.InnerException?.GetType().FullName);
+            var site = data.Exception.TargetSite;
+            Add(text, "ex_site", site == null ? null : site.DeclaringType?.FullName + "." + site.Name);
+            Add(text, "ex_msg", SqueakLogText.SanitizeExceptionMessage(data.Exception.Message));
+        }
+        lock (failures)
+            if (failures.Count == 1024) Add(text, "once_budget", "exhausted_until_reset");
+        return text.ToString();
+    }
+    internal static string Response(SqueakResponseLogData data, string build, string buildId, bool exhausted)
+    {
+        var text = Header("kernel.response", SqueakLogLevel.Info, "dev_only", build, buildId);
+        Add(text, "subject", data.Subject); Add(text, "requested_action", data.RequestedAction); Add(text, "action", data.Action);
+        Add(text, "opportunity", data.Opportunity); Add(text, "event_fact", data.EventFact); Add(text, "operation", data.Operation);
+        Add(text, "tick", data.Tick); Add(text, "monotonic_seconds", data.MonotonicSeconds);
+        Add(text, "reason", data.Reason); Add(text, "receipt", data.Receipt); Add(text, "receipt_reason", data.ReceiptReason);
+        Add(text, "confirmed_tick", data.Confirmed); Add(text, "shared_until_tick", data.SharedUntil);
+        Add(text, "action_until_tick", data.ActionUntil); Add(text, "interaction_until_seconds", data.SecondsUntil);
+        Add(text, "next_state_tick", data.NextState); Add(text, "simulation_attempt_tick", data.SimulationAttempt);
+        Add(text, "role", data.Role); Add(text, "domain", data.Domain); Add(text, "child", data.ChildDomain);
+        Add(text, "source_domain", data.SourceDomain); Add(text, "tier", data.Tier); Add(text, "pack", data.Pack);
+        Add(text, "entry", data.Entry); Add(text, "audio", data.Audio); Add(text, "configuration", data.Configuration);
+        Add(text, "active", data.Active); Add(text, "end_reason", data.EndReason); Add(text, "details", data.Details);
+        if (data.RateWindowUntil > 0)
+        {
+            Add(text, "rate_window_until_seconds", data.RateWindowUntil);
+            Add(text, "previous_window_suppressed", data.RateSuppressed);
+        }
+        // The retained public facade can also carry a caller's own prefix budget. Only the
+        // native Comp supplies evidence of the adopted renewable window; do not invent one.
+        if (exhausted) Add(text, "diagnostic_budget", data.RateWindowUntil > 0 ? "rate_limited_until_window_renewal" : "exhausted");
+        return text.ToString();
+    }
+    private static StringBuilder Header(string evt, SqueakLogLevel level, string visibility, string build, string buildId)
+    {
+        var text = new StringBuilder("usdiag fmt=3");
+        Add(text, "lvl", level.ToString().ToLowerInvariant()); Add(text, "vis", visibility); Add(text, "evt", evt);
+        Add(text, "build", build); Add(text, "build_id", buildId);
+        return text;
+    }
+    private static void Add(StringBuilder text, string key, object? value)
+    {
+        if (value != null) text.Append(' ').Append(key).Append('=').Append(SqueakLogFormatter.Value(value));
     }
 }

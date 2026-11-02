@@ -32,7 +32,7 @@ internal sealed class GameSettingsPersistence
         if (Owner.State == SettingsSaveState.Failed && notifiedFailure != Owner.Generation)
         {
             notifiedFailure = Owner.Generation;
-            Log.Warning("usdiag settings save failed: " + Owner.Failure);
+            SqueakLog.SettingsSaveFailed(Owner.Generation, Owner.Failure);
             Messages.Message("US.Settings.Save.Failed".Translate(), MessageTypeDefOf.RejectInput, false);
         }
     }
@@ -40,7 +40,7 @@ internal sealed class GameSettingsPersistence
     private void RepairPublication()
     {
         if (Owner.PublicationPending && !Owner.RepairPublication(settings.ApplyToRuntime, out string failure))
-            Log.Warning("usdiag settings publication repair " + failure);
+            SqueakLog.PublicationRepairFailed(failure);
     }
     internal bool PersistBehaviorCandidate(string candidate)
     {
@@ -59,10 +59,10 @@ internal sealed class GameSettingsPersistence
                 }
                 finally { Scribe.saver.FinalizeSaving(); }
             }, out string failure);
-            if (!written) Log.Warning("usdiag behavior candidate save failed: " + failure);
+            if (!written) SqueakLog.BehaviorCandidateFailed(failure);
             return written;
         }, out string commitFailure);
-        if (!committed) Log.Warning("usdiag behavior candidate " + commitFailure);
+        if (!committed) SqueakLog.BehaviorCandidateFailed(commitFailure);
         return committed;
     }
     internal bool TryCommitBehaviorSource(BehaviorDomain domain, string? source, out string diagnostic)

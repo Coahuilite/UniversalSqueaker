@@ -100,9 +100,9 @@ internal static class SqueakKernelAdapter
     }
 
     /// <summary>Returns the store-resolved table after startup initialization, or the data source as a safe fallback.</summary>
-    public static BuiltInFallbackTable BuildBuiltIn()
+    public static BuiltInFallbackTable BuildBuiltIn(BuiltInFallbackTable? committed = null)
     {
-        var source = SqueakFallbackProfileStore.Current ?? BuildBuiltInSource();
+        var source = committed ?? SqueakFallbackProfileStore.Current ?? BuildBuiltInSource();
         var profiles = new List<FallbackProfile>();
         foreach (var profile in source.Profiles)
         {

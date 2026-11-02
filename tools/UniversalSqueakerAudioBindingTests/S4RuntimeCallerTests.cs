@@ -198,10 +198,18 @@ internal static partial class Program
             CurJob = new Job { def = new JobDef { defName = "Wait" } }, jobs = new Pawn_JobTracker { curDriver = new JobDriver() },
             pather = new Pawn_PathFollower(), mindState = new Pawn_MindState { IsIdle = true } };
         var otherComp = new CompSqueaker { Pawn = other }; other.Comp = otherComp; MaintainSubject(other, true); otherComp.CompTick();
-        var healthy = SoundStarter.Spawned.Last(); SqueakerRuntime.ResetSession();
-        Check(!ReferenceEquals(failing, healthy) && failing.EndCalls == 1 && healthy.EndCalls == 1 && !SqueakerRuntime.IsControlled(pawn)
-            && !SqueakerRuntime.IsControlled(other) && Log.Lines.Exists(x => x.Contains("owned sustained end uncertain")),
-            "one lifecycle End fault is reported without preventing another subject's owned release");
+        var healthy = SoundStarter.Spawned.Last();
+        int reportsBefore = Log.Lines.Count;
+        SqueakerRuntime.ResetSession();
+        // Same lifecycle scenario and requirements; each condition now has an independent result.
+        Check(!ReferenceEquals(failing, healthy), "lifecycle cleanup owns distinct failing and healthy objects");
+        Check(failing.EndCalls == 1, "lifecycle cleanup attempts the uncertain object's End exactly once");
+        Check(healthy.EndCalls == 1, "one End failure does not prevent the healthy object's single release");
+        Check(!SqueakerRuntime.IsControlled(pawn), "lifecycle cleanup releases the failing subject's registry entry");
+        Check(!SqueakerRuntime.IsControlled(other), "lifecycle cleanup releases the healthy subject's registry entry");
+        Check(Log.Lines.Skip(reportsBefore).Count(x => x.Contains("evt=audio.sustained.end_uncertain")
+                && x.Contains(" target=" + SqueakerRuntime.SubjectKey(pawn) + " ")) == 1,
+            "lifecycle cleanup reports the current named uncertainty event once for the failing subject");
         MaintainSubject(other, false);
     }
 }

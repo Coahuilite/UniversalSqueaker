@@ -20,7 +20,7 @@ public sealed class FallbackDelta
         if (overrides == null) throw new ArgumentNullException(nameof(overrides));
         Dictionary<string, string> copy = new(StringComparer.Ordinal);
         foreach (KeyValuePair<string, string> entry in overrides) copy.Add(entry.Key, entry.Value);
-        Overrides = copy;
+        Overrides = new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(copy);
         foreach (KeyValuePair<string, string> entry in copy)
         {
             if (!BuiltInActionKeys.Contains(entry.Key))
@@ -101,7 +101,7 @@ public sealed class FallbackProfile
         if (soundKeys == null) throw new ArgumentNullException(nameof(soundKeys));
         Dictionary<string, string> copy = new(StringComparer.Ordinal);
         foreach (KeyValuePair<string, string> entry in soundKeys) copy.Add(entry.Key, entry.Value);
-        SoundKeys = copy;
+        SoundKeys = new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(copy);
         foreach (KeyValuePair<string, string> entry in copy)
         {
             if (!BuiltInActionKeys.Contains(entry.Key))

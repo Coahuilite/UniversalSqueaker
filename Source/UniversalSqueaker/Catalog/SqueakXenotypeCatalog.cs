@@ -8,8 +8,9 @@ using Verse;
 
 namespace UniversalSqueaker;
 
-/// <summary>Atomically published VoicePack catalog. Reflective HAR discovery is deferred; canonical
-/// xenotypes are resolved only from assembled pack targets against the loaded Biotech Def database.</summary>
+/// <summary>Atomically published audio directory and independent loaded canonical identities.
+/// Canonical facts never depend on pack targets; GameRuntime applies exact-Race authorization.
+/// Reflective HAR hints remain deferred and do not participate in identity or admission.</summary>
 public static class SqueakXenotypeCatalog
 {
     private static SqueakXenotypeCatalogSnapshot current = SqueakXenotypeCatalogSnapshot.Empty;
@@ -18,6 +19,9 @@ public static class SqueakXenotypeCatalog
     public static void Refresh(GameSettings? settings = null)
     {
         settings ??= SqueakerMod.Settings;
+        var canonical = new Dictionary<string, XenotypeDef>(StringComparer.Ordinal);
+        var ambiguousCanonicalNames = new HashSet<string>(StringComparer.Ordinal);
+        CollectCanonical(canonical, ambiguousCanonicalNames);
         try
         {
             Dictionary<string, List<VoicePackInfo>> groups = new(StringComparer.Ordinal);
@@ -59,44 +63,42 @@ public static class SqueakXenotypeCatalog
                 .OrderBy(race => race, StringComparer.Ordinal)
                 .ToList();
 
-            Dictionary<string, XenotypeDef> canonical = new(StringComparer.Ordinal);
-            HashSet<string> ambiguousCanonicalNames = new(StringComparer.Ordinal);
             HashSet<string> harHints = new(StringComparer.Ordinal);
             HashSet<string> officialHarHints = new(StringComparer.Ordinal);
-            if (ModsConfig.BiotechActive)
-            {
-                try
-                {
-                    // TODO(HAR): generic HAR reflection discovery is deferred to a later version.
-                    // US 0.1.x is assembled-only: canonical xenotypes are exactly the targets declared
-                    // by packs, with no HAR-specific projection or product-race special-casing.
-                    HashSet<string> assembledXenotypes = new(StringComparer.Ordinal);
-                    foreach (string name in xenotypePacks.Keys) assembledXenotypes.Add(name);
-                    foreach (XenotypeDef xenotype in DefDatabase<XenotypeDef>.AllDefs)
-                    {
-                        if (string.IsNullOrEmpty(xenotype.defName) || !assembledXenotypes.Contains(xenotype.defName)) continue;
-                        if (canonical.ContainsKey(xenotype.defName))
-                        {
-                            canonical.Remove(xenotype.defName);
-                            ambiguousCanonicalNames.Add(xenotype.defName);
-                        }
-                        else if (!ambiguousCanonicalNames.Contains(xenotype.defName)) canonical.Add(xenotype.defName, xenotype);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (SqueakLog.ShouldEmitDev) SqueakLog.XenotypeDiscoveryFailed(ex);
-                    // Fail-closed：装配异常时丢弃已填充的部分 canonical，避免发布半成品。
-                    canonical.Clear();
-                    ambiguousCanonicalNames.Clear();
-                }
-            }
             Volatile.Write(ref current, new SqueakXenotypeCatalogSnapshot(canonical, ambiguousCanonicalNames, harHints, officialHarHints, packsByKey, racePacks, xenotypePacks, raceDefNames));
         }
         catch (Exception ex)
         {
             SqueakLog.CatalogRefreshFailed(ex);
-            Volatile.Write(ref current, SqueakXenotypeCatalogSnapshot.Empty);
+            // An audio-directory failure cannot erase independently collected identity facts.
+            Volatile.Write(ref current, new SqueakXenotypeCatalogSnapshot(canonical, ambiguousCanonicalNames,
+                new(), new(), new(StringComparer.Ordinal), new(), new(StringComparer.Ordinal), Array.Empty<string>()));
+        }
+    }
+
+    private static void CollectCanonical(Dictionary<string, XenotypeDef> canonical, HashSet<string> ambiguous)
+    {
+        if (!ModsConfig.BiotechActive) return;
+        try
+        {
+            // TODO(HAR): reflection-based hints remain deferred. The identity authority here is
+            // every currently loaded native XenotypeDef, independent of audio supply or UI rows.
+            foreach (XenotypeDef xenotype in DefDatabase<XenotypeDef>.AllDefs)
+            {
+                if (string.IsNullOrEmpty(xenotype.defName)) continue;
+                if (canonical.ContainsKey(xenotype.defName))
+                {
+                    canonical.Remove(xenotype.defName);
+                    ambiguous.Add(xenotype.defName);
+                }
+                else if (!ambiguous.Contains(xenotype.defName)) canonical.Add(xenotype.defName, xenotype);
+            }
+        }
+        catch (Exception error)
+        {
+            canonical.Clear();
+            ambiguous.Clear();
+            SqueakLog.CanonicalIdentityFailed(error);
         }
     }
 
@@ -122,7 +124,7 @@ public sealed class SqueakXenotypeCatalogSnapshot
     /// <summary>Names with multiple loaded Def instances. Runtime must fail closed for these.</summary>
     public readonly IReadOnlyCollection<string> AmbiguousCanonicalDefNames;
     /// <summary>HAR discovery hints are reserved for a later generic HAR discovery pass.
-    /// In the assembled-only US 0.1.x projection they are always empty and never projected as rows.</summary>
+    /// They remain empty; loaded canonical identities are a separate complete native fact index.</summary>
     public readonly IReadOnlyCollection<string> HarHintDefNames;
     /// <summary>Official HAR-only hints; reserved for the same later generic pass, never projected as rows.</summary>
     public readonly IReadOnlyCollection<string> OfficialHarHintDefNames;

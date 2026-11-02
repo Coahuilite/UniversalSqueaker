@@ -234,14 +234,6 @@ namespace UniversalSqueaker
         public string actionKey = "";
         public string soundKey = "";
     }
-    public static class SqueakLog
-    {
-        public static void TargetRejected(string target, string reason) { }
-        public static void CompAttachSkipped(string target, string reason) { }
-        public static void CompAttachFailed(Exception error) { }
-        public static void CompAutoAttached(string target) { }
-        public static void ResolverRebuildFailed(Exception error) { }
-    }
     public static class SqueakFallbackProfileStore
     {
         public static UniversalSqueaker.Kernel.BuiltInFallbackTable? Current;

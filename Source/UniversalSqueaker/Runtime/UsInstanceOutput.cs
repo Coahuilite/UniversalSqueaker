@@ -196,7 +196,7 @@ internal static class UsInstanceOutput
             if (!owner.FaultReported)
             {
                 owner.FaultReported = true;
-                Log.Warning("usdiag output instance invalid current volume; silenced owned instance");
+                SqueakLog.OutputVolumeInvalid();
             }
             return;
         }

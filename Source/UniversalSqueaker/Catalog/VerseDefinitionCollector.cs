@@ -59,7 +59,7 @@ public static class VerseDefinitionCollector
                 packageId,
                 packageName,
                 IsHarType(def.GetType()),
-                LifeKindOf(def.race)));
+                LifeKindOf(def.race), ReferenceEquals(def, ThingDefOf.Human)));
         }
 
         // Directory order is the STABLE IDENTITY order (defName ordinal); the player-facing tier

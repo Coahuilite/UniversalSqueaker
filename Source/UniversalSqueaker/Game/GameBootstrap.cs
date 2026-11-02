@@ -20,7 +20,7 @@ internal static class GameBootstrap
         PrerequisiteVerified = FerriteLibVersion.Require(new Version(0, 8, 0), new Version(0, 9, 0), SqueakerMod.PackageId, out string prerequisiteReport);
         if (!PrerequisiteVerified)
         {
-            Log.Error("UniversalSqueaker cannot verify its FerriteLib prerequisite. " + prerequisiteReport);
+            SqueakLog.PrerequisiteUnverified(prerequisiteReport);
         }
 
         // Loading may run on LongEvent's worker thread. PostLoadInit validates/captures the new settings format;
@@ -47,7 +47,7 @@ internal static class GameBootstrap
             UsAudioBindings.Publish();
             SqueakerRuntime.Initialize();
             if (!Settings.TryRefreshBehaviorSources(SqueakerRuntime.BehaviorSources, persistence.PersistBehaviorCandidate, out string sourceFailure))
-                Log.Warning("usdiag behavior snapshot refresh paused: " + sourceFailure);
+                SqueakLog.BehaviorRefreshPaused(sourceFailure);
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
             // VF1 order: the final-table store loads BEFORE the mount decision, because the support
@@ -56,6 +56,7 @@ internal static class GameBootstrap
             // artifacts outside the ModSettings debounce/write path.
             SqueakFallbackProfileStore.LoadOrRebuild(SqueakKernelAdapter.BuildBuiltInSource());
             SqueakerRuntime.RefreshAudio();
+            SqueakFallbackProfileStore.RuntimePublisher = SqueakerRuntime.PublishFallbackAudio;
             // Route table: mount the default squeak comp on the support set, replacing the canonical
             // author patch. Reads the refreshed snapshot and the loaded tables; runs on the main
             // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.

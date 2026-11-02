@@ -86,9 +86,13 @@ public enum UsDiagDotTone { Ready, Blocked, Pending, Unknown }
 public sealed class UsDiagRow
 {
     public UsDiagRow(int pawnId, UsDiagDotTone tone, string pawnText, string actionText, string cooldownText, string audioText, bool ready, bool locked)
+        : this(pawnId, tone, pawnText, actionText, cooldownText, audioText, ready, locked, null) { }
+
+    public UsDiagRow(int pawnId, UsDiagDotTone tone, string pawnText, string actionText, string cooldownText, string audioText, bool ready, bool locked, string? observationStatus)
     {
         PawnId = pawnId; Tone = tone; PawnText = pawnText; ActionText = actionText;
         CooldownText = cooldownText; AudioText = audioText; Ready = ready; Locked = locked;
+        ObservationStatus = observationStatus;
     }
 
     public int PawnId { get; }
@@ -99,6 +103,7 @@ public sealed class UsDiagRow
     public string AudioText { get; }
     public bool Ready { get; }
     public bool Locked { get; }
+    public string? ObservationStatus { get; }
 }
 
 /// <summary>
@@ -181,6 +186,10 @@ public struct UsDiagPreviousFacts
 /// </summary>
 public sealed class UsDiagDetail
 {
+    public UsDiagDetail(string pawnText, bool ready, bool locked, string actionText, string audioText,
+        IReadOnlyList<UsDiagGateLine> gates, UsDiagCurrentSummary summary, UsDiagPreviousBand previous)
+        : this(pawnText, ready, locked, actionText, audioText, gates, summary, previous, null) { }
+
     public UsDiagDetail(
         string pawnText,
         bool ready,
@@ -189,10 +198,12 @@ public sealed class UsDiagDetail
         string audioText,
         IReadOnlyList<UsDiagGateLine> gates,
         UsDiagCurrentSummary summary,
-        UsDiagPreviousBand previous)
+        UsDiagPreviousBand previous,
+        string? observationStatus)
     {
         PawnText = pawnText; Ready = ready; Locked = locked;
         ActionText = actionText; AudioText = audioText; Gates = gates; Summary = summary; Previous = previous;
+        ObservationStatus = observationStatus;
     }
 
     public string PawnText { get; }
@@ -207,6 +218,7 @@ public sealed class UsDiagDetail
 
     /// <summary>The remembered evidence, in its own band with its own recency.</summary>
     public UsDiagPreviousBand Previous { get; }
+    public string? ObservationStatus { get; }
 }
 
 /// <summary>

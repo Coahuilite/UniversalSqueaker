@@ -60,16 +60,21 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private InteractionOpportunity? observedInteraction;
     private string observedEventFact = "";
     private string requestedAction = "";
-    internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
+    private string observedRole = "", observedRace = "", observedChild = "";
+    internal bool HasEvaluation { get; private set; }
+    internal long ObservationSequence { get; private set; }
+    private bool detailedEvidenceCaptured;
+    internal string DiagnosticText => !HasEvaluation ? "stage=NotEvaluated subject=" + owner.Subject
+        : "tick=" + lastObservation + " action=" + LastOutcome.Action
         + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
-        + " actionUntil=" + state.ActionDeadline(LastOutcome.Action) + " nextState=" + state.NextStateTick
+        + " actionUntil=" + state.ActionDeadline(LastOutcome.Action ?? "") + " nextState=" + state.NextStateTick
         + " gate=" + (state.LastGate == "" ? LastOutcome.Reason : state.LastGate)
         + " simulationAttemptTick=" + state.AttemptTick
         + " opportunity=" + (observedInteraction.HasValue ? "AcceptedInteraction" : requestedAction == "" ? "SimulationState" : "SimulationEvent")
         + " operation=" + observedInteraction?.OperationId + " eventFact=" + observedEventFact
         + " monotonicSeconds=" + (observedInteraction?.MonotonicSeconds.ToString("R", System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable")
-        + " secondsUntil=" + state.InteractionDeadline(LastOutcome.Action).ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+        + " secondsUntil=" + state.InteractionDeadline(LastOutcome.Action ?? "").ToString("R", System.Globalization.CultureInfo.InvariantCulture)
         + " active=" + owner.ActiveAction + " ended=" + owner.LastEndReason
         + " subject=" + owner.Subject + " nativeLabel=" + pawn.ThingID + " role=" + lastRequest?.SubjectRole
         + " family=" + lastRequest?.Family + " domain=" + lastRequest?.Domain + " child=" + lastRequest?.ChildDomain
@@ -85,11 +90,70 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         + " observation=" + observationEvidence
         + " rolls=" + string.Join(",", draws.Select(x => x.Key + ":" + x.Value))
         + " missing=" + string.Join(",", (LastOutcome.Diagnostics ?? Array.Empty<FactDiagnostic>()).Select(x => x.Key + ":" + x.Reason));
+    internal SqueakResponseLogData CaptureResponseLog() => new()
+    {
+        Subject = owner.Subject, RequestedAction = requestedAction, Action = LastOutcome.Action,
+        Reason = LastOutcome.Reason, Receipt = LastOutcome.Receipt?.Result.ToString() ?? "NotRequested",
+        ReceiptReason = LastOutcome.Receipt?.Reason ?? "", Tick = lastObservation,
+        Opportunity = observedInteraction.HasValue ? "AcceptedInteraction" : requestedAction == "" ? "SimulationState" : "SimulationEvent",
+        EventFact = observedEventFact, Operation = observedInteraction?.OperationId,
+        MonotonicSeconds = observedInteraction?.MonotonicSeconds,
+        SecondsUntil = observedInteraction.HasValue ? state.InteractionDeadline(LastOutcome.Action ?? "") : null,
+        Confirmed = state.ConfirmedTick, SharedUntil = state.SharedDeadline, ActionUntil = state.ActionDeadline(LastOutcome.Action ?? ""),
+        NextState = state.NextStateTick, SimulationAttempt = state.AttemptTick,
+        Role = observedRole, Domain = observedRace,
+        ChildDomain = observedChild, SourceDomain = lastRequest?.Audio.SourceDomain.ToString() ?? "",
+        Tier = lastRequest?.Audio.SourceTier?.ToString() ?? "", Pack = lastRequest?.Audio.PackKey ?? "",
+        Entry = lastRequest?.Audio.EntryKey ?? "", Audio = lastRequest?.Audio.AudioId ?? "",
+        Configuration = configuration?.Id, Active = owner.ActiveAction, EndReason = owner.LastEndReason,
+        Details = DiagnosticText
+    };
     public IReadOnlyList<KeyValuePair<RandomPurpose, double>> LastRandomDraws => draws.AsReadOnly();
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
     internal SessionObservation Observation => owner.Observe();
     internal bool OnMap(Map map) => pawn.MapHeld == map;
+
+    internal SqueakResponseEvidence CaptureDiagnosticEvidence()
+    {
+        string action = LastOutcome.Action ?? "";
+        var evidence = new SqueakResponseEvidence(HasEvaluation ? "Evaluated" : "NotEvaluated", ObservationSequence,
+            HasEvaluation ? Observation : (SessionObservation?)null, action,
+            HasEvaluation ? LastOutcome.Receipt?.Result.ToString() ?? "NotRequested" : null,
+            LastOutcome.Reason, observedInteraction.HasValue,
+            HasEvaluation && action != "" && observedInteraction.HasValue ? state.InteractionDeadline(action) : null);
+        evidence.Add("subject", owner.Subject); evidence.Add("next_state_tick", state.NextStateTick);
+        evidence.Add("phase_input", state.PhaseInput.HasValue ? "Ready" : "NotReady");
+        evidence.Add("phase_policy", candidate.State.Phase == null ? "NotAdopted" : StatePhasePolicy.AlgorithmVersion);
+        evidence.Add("phase_active", state.PhaseActive(candidate.State));
+        if (!HasEvaluation) return evidence;
+        evidence.Add("tick", lastObservation); evidence.Add("requested_action", requestedAction); evidence.Add("action", action);
+        evidence.Add("reason", LastOutcome.Reason); evidence.Add("receipt", LastOutcome.Receipt?.Result.ToString() ?? "NotRequested");
+        evidence.Add("receipt_reason", LastOutcome.Receipt?.Reason); evidence.Add("role", observedRole);
+        evidence.Add("domain", observedRace); evidence.Add("child", observedChild); evidence.Add("root", "NotCaptured");
+        evidence.Add("opportunity", observedInteraction.HasValue ? "AcceptedInteraction" : requestedAction == "" ? "SimulationState" : "SimulationEvent");
+        evidence.Add("event_fact", observedEventFact); evidence.Add("operation", observedInteraction?.OperationId);
+        evidence.Add("monotonic_seconds", observedInteraction?.MonotonicSeconds);
+        evidence.Add("interaction_until_seconds", action != "" && observedInteraction.HasValue ? state.InteractionDeadline(action) : (double?)null);
+        evidence.Add("action_until_tick", action != "" && !observedInteraction.HasValue ? state.ActionDeadline(action) : (long?)null);
+        evidence.Add("shared_until_tick", state.SharedDeadline); evidence.Add("confirmed_tick", state.ConfirmedTick);
+        evidence.Add("simulation_attempt_tick", state.AttemptTick); evidence.Add("configuration", configuration?.Id);
+        evidence.Add("active", owner.ActiveAction); evidence.Add("end_reason", owner.LastEndReason);
+        evidence.Add("source_domain", lastRequest?.Audio.SourceDomain); evidence.Add("tier", lastRequest?.Audio.SourceTier);
+        evidence.Add("pack", lastRequest?.Audio.PackKey); evidence.Add("entry", lastRequest?.Audio.EntryKey);
+        evidence.Add("audio", lastRequest?.Audio.AudioId); evidence.Add("local_pitch", lastRequest?.Pitch);
+        evidence.Add("local_volume", lastRequest?.Audio.Volume);
+        evidence.Add("details", detailedEvidenceCaptured ? "CapturedBounded" : "NotCaptured");
+        if (detailedEvidenceCaptured)
+        {
+            if (effectiveActions.TryGetValue(action, out var effective))
+                foreach (var origin in effective.Origins) evidence.Detail("origin." + SqueakResponseEvidence.Safe(origin.Key), origin.Value);
+            foreach (var draw in draws) evidence.Detail("roll." + draw.Key, draw.Value);
+            foreach (var missing in LastOutcome.Diagnostics ?? Array.Empty<FactDiagnostic>())
+                evidence.Detail("missing." + SqueakResponseEvidence.Safe(missing.Key), missing.Reason);
+        }
+        return evidence;
+    }
 
     private bool HasAvailableFact(string key) => SqueakerRuntime.ImplementationAvailable(key);
 
@@ -99,8 +163,8 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         this.catalog = catalog;
         this.candidate = candidate;
         long now = Find.TickManager.TicksGame;
-        long offset = candidate.InitialSpread == 0 ? 0 : (long)((uint)pawn.thingIDNumber % (ulong)candidate.InitialSpread);
-        owner = new ResponseSession(SqueakerRuntime.SubjectKey(pawn), now > long.MaxValue - offset ? long.MaxValue : now + offset, candidate.State);
+        owner = new ResponseSession(SqueakerRuntime.SubjectKey(pawn), now, candidate.State, candidate.InitialSpread,
+            pawn.thingIDNumber, SqueakerRuntime.PhaseInputFor(pawn), candidate.UsesNativeRhythm ? Find.TickManager.TickRateMultiplier : 1);
     }
 
     internal void UsePolicy(UsResponsePolicy policy)
@@ -122,9 +186,10 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         if (notificationFact != null) values[notificationFact] = Truth.True;
         var ingestion = result == null ? null : new IngestionResultFact(SqueakerRuntime.SubjectKey(result.Ingester), result.ItemId, result.ItemDef, result.Nutrition);
         values[EatPolicy.Result] = UsIngestionObservation.Ingested == null ? Truth.Unknown : ingestion == null ? Truth.False : Truth.True;
-        resultEvidence = result == null ? "" : "ingester=" + result.Ingester.ThingID + ",item=" + result.ItemId
+        bool detailed = pawn.GetComp<CompSqueaker>().WantsDetailedDiagnostics;
+        resultEvidence = !detailed || result == null ? "" : "ingester=" + result.Ingester.ThingID + ",item=" + result.ItemId
             + ",def=" + result.ItemDef + ",nutrition=" + result.Nutrition;
-        ingestionEvidence = UsIngestionObservation.Describe(pawn);
+        ingestionEvidence = detailed ? UsIngestionObservation.Describe(pawn) : "";
         var numbers = new Dictionary<string, double>(StringComparer.Ordinal);
         if (result != null) numbers["ingestion.nutrition"] = result.Nutrition;
         var stage = pawn.ageTracker?.CurLifeStage;
@@ -145,6 +210,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
             HasVocalOrgans = vocal.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
             TalkingChance = accepted.TalkingScaling && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
             StateWaitFactor = candidate.UsesNativeRhythm && eventKey == null ? CompSqueaker.StateRhythmFactor() : 1,
+            TargetSpeedFactor = candidate.UsesNativeRhythm && eventKey == null ? Find.TickManager.TickRateMultiplier : 1,
             Facts = catalog.Capture(owner.Subject, values, diagnostics, ingestion), NumericFacts = numbers,
             AvailableFacts = new HashSet<string>(catalog.FactKeys.Where(HasAvailableFact), StringComparer.Ordinal),
             Age = SqueakLifeStageResolver.Resolve(pawn),
@@ -158,23 +224,30 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         InteractionOpportunity? interaction = null)
     {
         long now = Find.TickManager.TicksGame;
+        if (!state.PhaseInput.HasValue && SqueakerRuntime.PhaseInputFor(pawn) is StatePhaseInput phase)
+            state.BindPhaseInput(phase);
         if (eventKey == null && now < owner.State.NextStateTick) return;
-        observationEvidence = evidence != "" ? evidence : eventKey == null
+        detailedEvidenceCaptured = pawn.GetComp<CompSqueaker>().WantsDetailedDiagnostics;
+        observationEvidence = !detailedEvidenceCaptured ? ""
+            : evidence != "" ? evidence : eventKey == null
             ? "StateOpportunity:job=" + pawn.CurJob?.def?.defName + ",driver=" + pawn.jobs?.curDriver?.GetType().FullName : "Event:" + eventKey;
         configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
         var view = new RuntimeView(catalog, configuration, SqueakerRuntime.Audio);
         var frame = Capture(configuration, eventKey, activeCommand, registeredAction, ingestionResult, notificationFact, interaction);
-        observedInteraction = interaction; observedEventFact = frame.EventFact; requestedAction = eventKey ?? "";
+        observedInteraction = interaction; observedEventFact = frame.EventFact; requestedAction = registeredAction ?? eventKey ?? "";
+        observedRole = frame.SubjectRole; observedRace = frame.Domain.Target; observedChild = frame.Domain.Child;
         draws.Clear(); preparedSound = null; lastRequest = null;
         LastOutcome = owner.Respond(view, frame, candidate, this, this);
         lastObservation = now;
+        HasEvaluation = true;
+        ObservationSequence++;
         try { pawn.GetComp<CompSqueaker>().RecordKernelOutcome(LastOutcome, preparedSound, lastRequest); }
         catch (Exception error)
         {
             if (!diagnosticFaultReported)
             {
                 diagnosticFaultReported = true;
-                Log.Warning("usdiag committed kernel result; diagnostic publication failed: " + error.GetType().Name);
+                SqueakLog.DiagnosticPublicationFailed(owner.Subject, error);
             }
         }
     }
@@ -202,7 +275,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         if (!endFaultReported && owner.LastEndReason.Contains(":EndFault:"))
         {
             endFaultReported = true;
-            Log.Warning("usdiag owned sustained end uncertain; slot detached, no repeated End: " + owner.LastEndReason);
+            SqueakLog.SustainedEndUncertain(owner.Subject, owner.LastEndReason);
         }
     }
     private sealed class NativeSustainedHandle : ISustainedHandle
@@ -356,7 +429,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         var receipt = OneShotDispatch.Execute(
             Preflight,
             Play,
-            () => Log.Message("usdiag OneShot " + request.Action + " " + request.Audio.AudioId + " NativeCallReturned"));
+            null);
         return receipt.Result == PlaybackResult.Rejected && receipt.Reason == "PreflightRejected"
             ? new PlaybackReceipt(PlaybackResult.Rejected, rejection)
             : receipt;
@@ -374,6 +447,18 @@ public static class SqueakerRuntime
     private static UsDevelopmentPolicy? selectedPolicy;
     private static UsResponsePolicy? ordinaryPolicy;
     internal static UsResponsePolicy? CurrentPolicy => selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
+    private static System.WeakReference<Game>? sessionGame;
+    private static Game? SessionGame => sessionGame != null && sessionGame.TryGetTarget(out var game) ? game : null;
+    private static bool worldReady;
+    internal static StatePhaseInput? PhaseInputFor(Pawn pawn)
+        => worldReady && ReferenceEquals(Current.Game, SessionGame) && pawn.thingIDNumber > 0 && Find.World?.info != null
+            ? new StatePhaseInput(Find.World.info.persistentRandomValue, pawn.thingIDNumber) : null;
+    internal static void WorldReady(Game game)
+    {
+        ResetSession();
+        sessionGame = new System.WeakReference<Game>(game);
+        worldReady = true;
+    }
     internal static bool DevelopmentActive => selectedPolicy != null;
     internal static bool AttackObservationActive => DevelopmentActive || ordinaryPolicy != null;
     public static string PolicyStatus => selectedPolicy != null ? "ExplicitDevelopmentCandidate"
@@ -389,12 +474,10 @@ public static class SqueakerRuntime
     }
     internal static bool TryProcessDeclaredNotification(Pawn pawn, string actionId)
     {
-        if (Kernel.BuiltInActionKeys.Contains(actionId) || !catalog.HasAction(actionId)) return false;
+        if (!catalog.TryGetNotificationFact(actionId, out string fact)) return false;
         var session = SessionFor(pawn);
         if (session == null) return false;
-        string fact = actionId + "/Notification";
-        session.Tick(actionId, registeredAction: actionId, notificationFact: catalog.HasFact(fact) ? fact : null,
-            evidence: "DeclaredNotification:" + actionId);
+        session.Tick(actionId, notificationFact: fact, evidence: "DeclaredNotification:" + actionId);
         return true;
     }
 
@@ -428,6 +511,12 @@ public static class SqueakerRuntime
     private static PawnResponseAdapter? SessionFor(Pawn pawn)
     {
         var runtimePolicy = CurrentPolicy;
+        if (!ReferenceEquals(Current.Game, SessionGame))
+        {
+            ResetSession();
+            var game = Current.Game;
+            sessionGame = game == null ? null : new System.WeakReference<Game>(game);
+        }
         if (runtimePolicy == null)
         {
             return null;
@@ -469,6 +558,13 @@ public static class SqueakerRuntime
     internal static string DiagnosticText(Pawn pawn) => sessions.TryGetValue(pawn.thingIDNumber, out var session)
         ? session.DiagnosticText : PolicyStatus;
     internal static SessionObservation? Observe(Pawn pawn) => sessions.TryGetValue(pawn.thingIDNumber, out var session) ? session.Observation : null;
+    internal static SqueakResponseEvidence DiagnosticEvidence(Pawn pawn)
+    {
+        if (sessions.TryGetValue(pawn.thingIDNumber, out var session)) return session.CaptureDiagnosticEvidence();
+        var evidence = new SqueakResponseEvidence("NoOwner");
+        evidence.Add("subject", SubjectKey(pawn)); evidence.Add("policy", PolicyStatus);
+        return evidence;
+    }
 
     public static void Initialize()
     {
@@ -480,7 +576,7 @@ public static class SqueakerRuntime
         foreach (var notification in DefDatabase<UsNotificationDef>.AllDefsListForReading)
         {
             try { catalog.DeclareNotification(new NotificationContract(notification.actionId, notification.intervalTicks, notification.priority)); }
-            catch (Exception error) { catalog.Issues.Add(notification.defName + ":" + error.Message); }
+            catch (Exception error) { catalog.AddIssue(notification.defName + ":" + error.Message, notification.defName, "InvalidNotification", detail: error.Message); }
         }
         foreach (var provider in DefDatabase<UsProviderDef>.AllDefsListForReading)
         {
@@ -490,7 +586,7 @@ public static class SqueakerRuntime
             }
             catch (Exception error)
             {
-                catalog.Issues.Add(provider.defName + ":" + error.Message);
+                catalog.AddIssue(provider.defName + ":" + error.Message, provider.defName, "InvalidProvider", detail: error.Message);
             }
         }
 
@@ -502,7 +598,7 @@ public static class SqueakerRuntime
             {
                 var declaration = target.Copy();
                 declaration.Id = (source.modContentPack?.PackageId ?? "") + "/" + source.defName;
-                catalog.AddBehaviorSource(declaration);
+                catalog.AddBehaviorSource(declaration, declaration.Id);
             }
         }
 
@@ -513,7 +609,7 @@ public static class SqueakerRuntime
                 var domain = pack.declaration.Domain;
                 if (domain.Family != "Pawn")
                 {
-                    catalog.Issues.Add(pack.defName + ":NonPawnHostUnavailable");
+                    catalog.AddIssue(pack.defName + ":NonPawnHostUnavailable", pack.defName, "NonPawnHostUnavailable");
                     continue;
                 }
                 var target = DefDatabase<ThingDef>.GetNamedSilentFail(domain.Target);
@@ -521,32 +617,39 @@ public static class SqueakerRuntime
                     || !typeof(Pawn).IsAssignableFrom(target.thingClass)
                     || domain.Child != "" && (!ModsConfig.BiotechActive || DefDatabase<XenotypeDef>.GetNamedSilentFail(domain.Child) == null))
                 {
-                    catalog.Issues.Add(pack.defName + ":TargetDomainUnavailable");
+                    catalog.AddIssue(pack.defName + ":TargetDomainUnavailable", pack.defName, "TargetDomainUnavailable");
                     continue;
                 }
                 var identity = new VoicePackInfo { defName = pack.defName, modContentPack = pack.modContentPack };
                 if (identity.TryGetPackKey(out string selectionKey))
                 {
-                    audioInputs.AddPack(pack.modContentPack?.PackageId ?? "", pack.defName, pack.declaration, Bind, selectionKey);
+                    audioInputs.AddPack(pack.modContentPack?.PackageId ?? "", pack.defName, pack.declaration, Bind, selectionKey, pack.defName);
                 }
                 else
                 {
-                    catalog.Issues.Add(pack.defName + ":SelectionIdentityUnavailable");
+                    catalog.AddIssue(pack.defName + ":SelectionIdentityUnavailable", pack.defName, "SelectionIdentityUnavailable");
                 }
             }
             catch (Exception error)
             {
-                catalog.Issues.Add(pack.defName + ":InvalidTarget:" + error.Message);
+                catalog.AddIssue(pack.defName + ":InvalidTarget:" + error.Message, pack.defName, "InvalidTarget", detail: error.Message);
             }
         }
 
         VoicePackDirectory.Refresh(audioInputs.Entries);
         RefreshAudio();
         catalog.Issues.AddRange(audioInputs.Issues);
+        catalog.IssueRecords.AddRange(audioInputs.IssueRecords);
         catalog.Publish();
-        foreach (string issue in catalog.Issues)
+        foreach (var issue in catalog.IssueRecords)
         {
-            Log.Warning("usdiag authoring " + issue);
+            SqueakLog.AuthoringRejectedKnown(issue.Detail, issue.Target, issue.Reason, issue.Source, issue.Action, issue.Claim);
+        }
+        // Public callers may still append unstructured issue text; never infer trusted fields from it.
+        var described = new HashSet<string>(catalog.IssueRecords.Select(x => x.Message), StringComparer.Ordinal);
+        foreach (string issue in catalog.Issues.Where(x => !described.Contains(x)))
+        {
+            SqueakLog.AuthoringRejected(issue);
         }
     }
 
@@ -563,6 +666,26 @@ public static class SqueakerRuntime
             return null;
         }
         return key;
+    }
+
+    internal static SqueakDiagnosticLogResult LogResponse(Pawn pawn, bool exhausted, long suppressed = 0, double until = 0)
+    {
+        if (sessions.TryGetValue(pawn.thingIDNumber, out var session))
+            return SqueakLog.TryKernelResponse(() => {
+                var data = session.CaptureResponseLog();
+                data.RateSuppressed = suppressed; data.RateWindowUntil = until;
+                return data;
+            }, exhausted);
+        return SqueakDiagnosticLogResult.NotCaptured;
+    }
+
+    internal static void PublishFallbackAudio(Kernel.BuiltInFallbackTable committed)
+    {
+        if (!UnityData.IsInMainThread) throw new InvalidOperationException("FallbackAudioOwnerThreadRequired");
+        // Construct fully before replacing Audio. Existing sessions capture the new reference at their
+        // next legal selection; no session, opportunity, deadline, W or native comp is touched.
+        var candidate = new Kernel.AudioCatalog(audioInputs.Entries, SqueakKernelAdapter.BuildBuiltIn(committed));
+        Audio = candidate;
     }
 
     internal static void RefreshAudio() => Audio = new Kernel.AudioCatalog(audioInputs.Entries, SqueakKernelAdapter.BuildBuiltIn());
@@ -646,17 +769,23 @@ public static class SqueakerRuntime
             session.Stop();
         }
         sessions.Clear();
+        sessionGame = null;
+        worldReady = false;
         UsIngestionObservation.Reset();
+        SqueakLog.ResetSession();
     }
 }
 
 public sealed class ResponseSessionLifecycle : GameComponent
 {
+    private readonly Game game;
     public ResponseSessionLifecycle(Game game)
     {
         SqueakerRuntime.ResetSession();
+        this.game = game;
+        SqueakDiagnosticsOverlay.NotifyGameChanged();
     }
 
-    public override void StartedNewGame() => SqueakerRuntime.ResetSession();
-    public override void LoadedGame() => SqueakerRuntime.ResetSession();
+    public override void StartedNewGame() { SqueakerRuntime.WorldReady(game); SqueakDiagnosticsOverlay.NotifyGameChanged(); }
+    public override void LoadedGame() { SqueakerRuntime.WorldReady(game); SqueakDiagnosticsOverlay.NotifyGameChanged(); }
 }

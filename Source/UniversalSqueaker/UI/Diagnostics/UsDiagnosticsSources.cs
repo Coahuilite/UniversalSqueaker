@@ -12,7 +12,7 @@ namespace UniversalSqueaker.UI;
 /// in-window narrow Back). The row cache expires on the overlay revision plus the view-state
 /// keys - never a wall clock (cache-clock rule; the 2026-09-04 filter misalignment is the proof case).
 /// </summary>
-public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
+public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource, IUsDiagnosticsCaptureSource
 {
     private readonly Dictionary<int, Pawn> pawnsById = new();
     private readonly List<UsDiagRow> rowsCache = new();
@@ -26,6 +26,17 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
     private float contentWidth;
     private UsDiagNavView navigationView = UsDiagNavView.List;
     private readonly bool[] groupOpen = { true, true, true };
+    private bool searchTruncated;
+    public string CaptureStatus => SqueakDiagnosticsOverlay.CaptureStatus
+        + (searchTruncated ? "\n" + "US.Diagnostics.Capture.SearchTruncated".Translate() : "");
+    public bool CanStartCapture => SqueakDiagnosticsOverlay.CanStartCapture(SqueakDiagnosticsOverlay.SelectedEntry?.Pawn);
+    public bool Recording => SqueakDiagnosticsOverlay.Recording;
+    public bool CanClearCapture => SqueakDiagnosticsOverlay.HasCapture && !Recording;
+    public bool CaptureControlsVisible => !Collapsed;
+    public void StartCapture() => SqueakDiagnosticsOverlay.StartCapture(SqueakDiagnosticsOverlay.SelectedEntry?.Pawn);
+    public void StopCapture() => SqueakDiagnosticsOverlay.StopCapture();
+    public void ClearCapture() => SqueakDiagnosticsOverlay.ClearCapture();
+    public void CopyFeedback() => SqueakDiagnosticsOverlay.CopyFeedback(SqueakDiagnosticsOverlay.SelectedEntry?.Pawn);
 
     public int Revision => SqueakDiagnosticsOverlay.Revision;
     public bool IsValid => SqueakDiagnosticsOverlay.IsSessionActive;
@@ -38,9 +49,9 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
         get => searchQuery;
         set
         {
-            string trimmed = (value ?? string.Empty).Trim();
-            if (string.Equals(trimmed, searchQuery, StringComparison.Ordinal)) return;
-            searchQuery = trimmed;
+            string query = value ?? string.Empty;
+            if (string.Equals(query, searchQuery, StringComparison.Ordinal)) return;
+            searchQuery = query;
             page = 0;
         }
     }
@@ -95,6 +106,16 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 
     public int TotalRowCount => AllRows.Count;
     public int PageCount => UsDiagnosticsProjection.PageCount(AllRows.Count);
+    public string QueryStatus
+    {
+        get
+        {
+            int returned = TotalRowCount;
+            string scope = (string.IsNullOrWhiteSpace(searchQuery) ? "US.Diagnostics.Search.Viewport" : "US.Diagnostics.Search.Map").Translate();
+            return scope + " · " + string.Format("US.Diagnostics.Search.Returned".Translate(), returned)
+                + (searchTruncated ? "\n" + "US.Diagnostics.Capture.SearchTruncated".Translate() : "");
+        }
+    }
 
     public UsDiagDetail? Detail
     {
@@ -115,7 +136,7 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
     }
 
     /// <summary>The bar's three answers, built from the same monitor row the bar used to paint raw.</summary>
-    public UsDiagBarModel? Bar => UsDiagnosticsRowFactory.BuildBar(
+    public UsDiagBarModel? Bar => SqueakDiagnosticsOverlay.CaptureBar ?? UsDiagnosticsRowFactory.BuildBar(
         MonitorRow,
         locked: false,
         lockedPawnText: string.Empty,
@@ -178,10 +199,12 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 
             rowsCache.Clear();
             pawnsById.Clear();
+            searchTruncated = false;
 
-            if (searchQuery.Length > 0)
+            string query = searchQuery.Trim();
+            if (query.Length > 0)
             {
-                List<Pawn> hits = SqueakDiagnosticsOverlay.SearchCurrentMap(searchQuery);
+                List<Pawn> hits = SqueakDiagnosticsOverlay.SearchCurrentMap(query, out searchTruncated);
                 for (int i = 0; i < hits.Count; i++)
                 {
                     rowsCache.Add(UsDiagnosticsRowFactory.BuildSearchRow(hits[i], ShowSeconds));
@@ -213,10 +236,19 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 /// session ends. It has no list navigation context, so it reports no narrow state and no Back
 /// control - the pinned window must not grow a fake one.
 /// </summary>
-public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
+public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource, IUsDiagnosticsCaptureSource
 {
     private readonly Pawn pinnedPawn;
     private readonly bool[] pinnedGroupOpen = { true, true, true };
+    public string CaptureStatus => SqueakDiagnosticsOverlay.CaptureStatus;
+    public bool CanStartCapture => SqueakDiagnosticsOverlay.CanStartCapture(pinnedPawn);
+    public bool Recording => SqueakDiagnosticsOverlay.Recording;
+    public bool CanClearCapture => SqueakDiagnosticsOverlay.HasCapture && !Recording;
+    public bool CaptureControlsVisible => !Collapsed;
+    public void StartCapture() => SqueakDiagnosticsOverlay.StartCapture(pinnedPawn);
+    public void StopCapture() => SqueakDiagnosticsOverlay.StopCapture();
+    public void ClearCapture() => SqueakDiagnosticsOverlay.ClearCapture();
+    public void CopyFeedback() => SqueakDiagnosticsOverlay.CopyFeedback(pinnedPawn);
 
     public UsDiagnosticsDetailSource(Pawn pinnedPawn)
     {
@@ -270,7 +302,7 @@ public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
             SqueakDiagnosticSnapshot? snapshot = SqueakDiagnosticsOverlay.TryGetEntry(pinnedPawn, out SqueakDiagnosticsOverlay.CachedPawn? entry)
                 ? entry.Snapshot
                 : null;
-            return UsDiagnosticsRowFactory.BuildBar(
+            return SqueakDiagnosticsOverlay.CaptureBar ?? UsDiagnosticsRowFactory.BuildBar(
                 MonitorRow,
                 locked: true,
                 lockedPawnText: pinnedPawn.LabelShort,
@@ -317,7 +349,7 @@ internal static class UsDiagnosticsRowFactory
             CooldownText(s, showSeconds),
             DispatchText(s.LastDispatched),
             SqueakDiagnosticsOverlay.ReadyFor(s),
-            SqueakDiagnosticsOverlay.IsLocked(pawn));
+            SqueakDiagnosticsOverlay.IsLocked(pawn), ReadStatus(entry));
     }
 
     internal static UsDiagRow BuildSearchRow(Pawn pawn, bool showSeconds)
@@ -382,10 +414,9 @@ internal static class UsDiagnosticsRowFactory
         if (s.Response.HasValue)
         {
             var observed = s.Response.Value;
-            bool blocked = observed.ProtectedAt(Find.TickManager.TicksGame);
             gates.Add(new UsDiagGateLine("US.Diagnostics.Gate.ActionCooldown".Translate(), CooldownText(s, showSeconds),
-                blocked ? UsDiagGateState.Block : UsDiagGateState.Pass, UsDiagGateGroup.Rules, UsDiagBasis.CurrentObservation,
-                UsDiagnosticsProjection.Status(blocked ? UsDiagGateState.Block : UsDiagGateState.Pass, "!", Tr)));
+                UsDiagGateState.NA, UsDiagGateGroup.Rules, UsDiagBasis.PreviousEvaluation,
+                UsDiagnosticsProjection.Status(UsDiagGateState.NA, "!", Tr)));
             gates.Add(new UsDiagGateLine("US.Kernel.LastObservedDecision".Translate(),
                 observed.Action + " @" + observed.ObservedTick + " " + observed.Reason + " " + observed.Receipt?.Result,
                 UsDiagGateState.NA, UsDiagGateGroup.Audio, UsDiagBasis.PreviousEvaluation, UsDiagnosticsProjection.Status(UsDiagGateState.NA, "!", Tr)));
@@ -393,23 +424,39 @@ internal static class UsDiagnosticsRowFactory
         gates.Add(new UsDiagGateLine("US.Diagnostics.Gate.Playability".Translate(), UsDiagnosticsProjection.Dash,
             UsDiagGateState.Pending, UsDiagGateGroup.Audio, UsDiagBasis.CurrentObservation,
             UsDiagnosticsProjection.Status(UsDiagGateState.Pending, "!", Tr), UsDiagPendingReason.SourceMissing));
+        string status = ReadStatus(entry);
+        string saved = s.Evidence == null ? "US.Diagnostics.Capture.NotCaptured".Translate() : s.Evidence.Text();
+        var summary = new UsDiagCurrentSummary(status,
+            "US.Diagnostics.Capture.ReadBasis".Translate(entry.HasSnapshot ? entry.LastSuccessRealtime.ToString("0.##") : "—", entry.ReadFailures, entry.ReadFailure),
+            false, true, Array.Empty<string>());
         return new UsDiagDetail(LabelOf(entry.Pawn), SqueakDiagnosticsOverlay.ReadyFor(s), SqueakDiagnosticsOverlay.IsLocked(entry.Pawn),
-            CurrentActionText(s), DispatchText(s.LastDispatched), gates, UsDiagnosticsProjection.BuildCurrentSummary(gates, Tr),
-            new UsDiagPreviousBand("US.Kernel.LastObservedDecision".Translate(), s.KernelText, DispatchText(s.LastDispatched)));
+            CurrentActionText(s), DispatchText(s.LastDispatched), gates, summary,
+            new UsDiagPreviousBand("US.Kernel.LastObservedDecision".Translate(), saved, DispatchText(s.LastDispatched)), status);
+    }
+
+    private static string ReadStatus(SqueakDiagnosticsOverlay.CachedPawn entry)
+    {
+        string state = entry.ReadFailure != "" ? entry.HasSnapshot ? "Stale" : "ReadFailed"
+            : entry.Snapshot.Evidence?.Stage != "Evaluated" ? entry.Snapshot.Evidence?.Stage ?? "NotCaptured"
+            : entry.Snapshot.Evidence.Result;
+        return ("US.Diagnostics.Capture.State." + state).Translate();
     }
 
     private static string LabelOf(Pawn pawn) => $"{pawn.LabelShort} ({pawn.def.defName})";
     private static string CurrentActionText(SqueakDiagnosticSnapshot s)
-        => s.Response?.Action ?? UsDiagnosticsProjection.Dash;
+        => string.IsNullOrEmpty(s.Response?.Action) ? UsDiagnosticsProjection.Dash : s.Response!.Value.Action;
     private static string CooldownText(SqueakDiagnosticSnapshot s, bool showSeconds)
     {
         if (!s.Response.HasValue) return UsDiagnosticsProjection.Dash;
         var observed = s.Response.Value;
+        if (observed.Action.Length == 0) return UsDiagnosticsProjection.Dash;
+        if (s.Evidence?.Interaction == true)
+            return "US.Diagnostics.Capture.SavedSecondsUntil".Translate(s.Evidence.InteractionUntil?.ToString("0.###") ?? "—");
         long now = Find.TickManager.TicksGame;
-        long action = Math.Max(0, observed.ActionDeadline - now);
+        long action = observed.ActionDeadline == long.MinValue ? 0 : Math.Max(0, observed.ActionDeadline - now);
         long shared = observed.ChecksShared ? Math.Max(0, observed.SharedDeadline - now) : 0;
         double divisor = showSeconds ? 60 : 1;
-        return (action / divisor).ToString("0.##") + " / " + (shared / divisor).ToString("0.##") + (showSeconds ? "s" : "t");
+        return (observed.ActionDeadline == long.MinValue ? "—" : (action / divisor).ToString("0.##")) + " / " + (shared / divisor).ToString("0.##") + (showSeconds ? "s" : "t");
     }
     private static string DispatchText(SqueakRecentOutcome? dispatched)
     {

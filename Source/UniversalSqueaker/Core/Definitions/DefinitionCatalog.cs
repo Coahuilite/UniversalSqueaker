@@ -302,6 +302,19 @@ public sealed class ProviderBatch
     }
 }
 
+/// <summary>Captured author facts beside the retained issue text; exception details are never reason codes.</summary>
+internal readonly struct AuthoringIssue
+{
+    internal readonly string Message, Target, Reason;
+    internal readonly string? Source, Detail, Action, Claim;
+    internal AuthoringIssue(string message, string target, string reason, string? source = null, string? detail = null, string? action = null, string? claim = null)
+    { Message = message; Target = target; Reason = reason; Source = source; Detail = detail; Action = action; Claim = claim; }
+    // Original input facts distinguish once claims; this value is never a display field.
+    internal static string Inputs(string? target, string? source = null, string? action = null)
+        => Part(target) + Part(source) + Part(action);
+    private static string Part(string? value) => value == null ? "-:" : value.Length.ToString(CultureInfo.InvariantCulture) + ":" + value;
+}
+
 public sealed class DefinitionCatalog
 {
     private bool published;
@@ -314,12 +327,15 @@ public sealed class DefinitionCatalog
         next.facts.Clear(); foreach (var pair in facts) next.facts.Add(pair.Key, pair.Value);
         next.actions.Clear(); foreach (var pair in actions) next.actions.Add(pair.Key, pair.Value);
         next.responses.Clear(); foreach (var pair in responses) next.responses.Add(pair.Key, pair.Value);
+        foreach (var pair in notifications) next.notifications.Add(pair.Key, pair.Value);
         foreach (var source in behaviorSources) next.behaviorSources.Add(source.Copy());
         next.Issues.AddRange(Issues);
+        next.IssueRecords.AddRange(IssueRecords);
         return next;
     }
     private readonly Dictionary<string, RegisteredFact> facts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ActionPlan> actions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> notifications = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IUsResponseRule> responses = new(StringComparer.Ordinal)
     {
         ["us.core/Age"] = new NativeAgeResponse(),
@@ -327,6 +343,12 @@ public sealed class DefinitionCatalog
     };
     public IUsResponseRule[] Responses => responses.Values.ToArray();
     public readonly List<string> Issues = new();
+    internal readonly List<AuthoringIssue> IssueRecords = new();
+    internal void AddIssue(string message, string target, string reason, string? source = null, string? detail = null, string? action = null, string? claim = null)
+    {
+        Issues.Add(message);
+        IssueRecords.Add(new AuthoringIssue(message, target, reason, source, detail ?? message, action, claim));
+    }
     public DefinitionCatalog(long workInterval, long woundedInterval, bool fullDevCandidate = false)
     {
         foreach (var builtIn in BuiltInPawnContracts.Create(workInterval, woundedInterval, fullDevCandidate))
@@ -352,6 +374,8 @@ public sealed class DefinitionCatalog
 
     public ActionPlan[] Actions => actions.Values.ToArray();
     public bool HasAction(string key) => actions.ContainsKey(key);
+    public bool TryGetNotificationFact(string actionId, out string factId) => notifications.TryGetValue(actionId, out factId!);
+    internal string? KnownAction(string? key) => key != null && actions.TryGetValue(key, out var action) ? action.Key : null;
     private readonly List<BehaviorSource> behaviorSources = new();
     public BehaviorSourceDirectory BehaviorSources => sourceDirectory ?? new(behaviorSources);
     public bool HasFact(string key) => facts.ContainsKey(key);
@@ -362,21 +386,29 @@ public sealed class DefinitionCatalog
         if (contract == null) throw new ArgumentNullException(nameof(contract));
         if (actions.ContainsKey(contract.ActionId) || facts.ContainsKey(contract.FactId))
         {
-            Issues.Add("Notification:" + contract.ActionId + ":DuplicateIdentity");
+            AddIssue("Notification:" + contract.ActionId + ":DuplicateIdentity", KnownAction(contract.ActionId) ?? "Notification", "DuplicateIdentity", source: "Notification", claim: AuthoringIssue.Inputs(contract.ActionId));
             return false;
         }
         facts.Add(contract.FactId, new RegisteredFact(new BuiltInFact(contract.FactId), "us.notification"));
-        if (AddAction(contract.Declaration())) return true;
+        if (AddAction(contract.Declaration()))
+        {
+            notifications.Add(contract.ActionId, contract.FactId);
+            return true;
+        }
         facts.Remove(contract.FactId);
         return false;
     }
-    public void AddBehaviorSource(BehaviorSource source)
+    public void AddBehaviorSource(BehaviorSource source) => AddBehaviorSource(source, null);
+    // Only the native adapter supplies a loaded Def identity; public source input remains unconfirmed.
+    internal void AddBehaviorSource(BehaviorSource source, string? diagnosticTarget)
     {
         RequireBuilding();
         behaviorSources.Add(source.Copy());
         foreach (var contribution in source.Contributions)
             foreach (string required in contribution.RequiredFacts.Where(x => !HasFact(x)))
-                Issues.Add(source.Id + ":" + contribution.Action + ":Missing required fact " + required);
+                AddIssue(source.Id + ":" + contribution.Action + ":Missing required fact " + required,
+                    diagnosticTarget ?? "BehaviorSource", "MissingRequiredFact", action: KnownAction(contribution.Action),
+                    claim: AuthoringIssue.Inputs(source.Id, required, contribution.Action));
     }
 
     public bool AddProvider(IUsDefinitionProvider provider)
@@ -425,7 +457,7 @@ public sealed class DefinitionCatalog
         }
         catch (Exception error)
         {
-            Issues.Add("Provider:" + error.Message);
+            AddIssue("Provider:" + error.Message, provider?.GetType().FullName ?? "Provider", "ProviderRejected", detail: error.Message);
             return false;
         }
     }
@@ -442,7 +474,7 @@ public sealed class DefinitionCatalog
         {
             if (!AuthorXml.ActionId(group.Key) || group.Count() != 1 || actions.ContainsKey(group.Key))
             {
-                Issues.Add("Action:" + group.Key + ":Duplicate/invalid identity");
+                AddIssue("Action:" + group.Key + ":Duplicate/invalid identity", KnownAction(group.Key) ?? "Action", "InvalidActionIdentity", claim: AuthoringIssue.Inputs(group.Key));
                 continue;
             }
             pending.Add(group.Key, group.Single());
@@ -455,7 +487,7 @@ public sealed class DefinitionCatalog
             if (failed.Contains(key) || !pending.TryGetValue(key, out var declaration)) return false;
             if (!visiting.Add(key))
             {
-                Issues.Add("Action:" + key + ":Inheritance cycle");
+                AddIssue("Action:" + key + ":Inheritance cycle", "Action", "InheritanceCycle", claim: AuthoringIssue.Inputs(key));
                 failed.Add(key);
                 return false;
             }
@@ -483,7 +515,7 @@ public sealed class DefinitionCatalog
             catch (Exception error)
             {
                 failed.Add(key);
-                Issues.Add("Action:" + key + ":" + error.Message);
+                AddIssue("Action:" + key + ":" + error.Message, "Action", "ActionRejected", claim: AuthoringIssue.Inputs(key));
                 return false;
             }
             finally { visiting.Remove(key); }

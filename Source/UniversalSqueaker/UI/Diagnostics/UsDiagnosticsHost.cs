@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FerriteLib.UiKit.Kernel;
+using Verse;
 
 namespace UniversalSqueaker.UI;
 
@@ -123,6 +124,7 @@ public static class UsDiagnosticsHost
         b.BindValue<bool>(KeySeconds, () => source.ShowSeconds, value => { source.ShowSeconds = value; bump(); });
         b.BindValue<bool>(KeyCollapsed, () => source.Collapsed, value => { source.Collapsed = value; bump(); });
         b.BindValue<string>(KeySearch, () => source.SearchQuery, value => { source.SearchQuery = value; bump(); });
+        b.BindReadOnly<string>("diag-query-status", () => source is UsDiagnosticsSessionSource native ? native.QueryStatus : "");
         b.BindValue<int>(KeyPage, () => source.Page, value => { source.Page = value; bump(); });
 
         // Narrow navigation. The write goes through the binding so the layout cache sees it (D1/D6):
@@ -161,6 +163,18 @@ public static class UsDiagnosticsHost
         // the source's own drill-in/lock decision is untouched.
         b.BindAction<int>(KeyRowClick, pawnId => { source.ClickRow(pawnId); bump(); });
         b.BindCommand(KeyClose, source.RequestClose);
+
+        var capture = source as IUsDiagnosticsCaptureSource;
+        b.BindReadOnly<bool>("diag-capture-visible", () => capture?.CaptureControlsVisible == true);
+        b.BindReadOnly<bool>("diag-capture-start-visible", () => capture?.CaptureControlsVisible == true && capture.CanStartCapture);
+        b.BindReadOnly<bool>("diag-capture-stop-visible", () => capture?.CaptureControlsVisible == true && capture.Recording);
+        b.BindReadOnly<bool>("diag-capture-clear-visible", () => capture?.CaptureControlsVisible == true && capture.CanClearCapture);
+        b.BindReadOnly<string>("diag-capture-status", () => capture?.CaptureStatus ?? "US.Diagnostics.Capture.Unavailable".Translate());
+        var writes = new UsWriteBindings(b);
+        writes.Command("diag-capture-start", () => { capture?.StartCapture(); bump(); }, () => capture?.CanStartCapture == true);
+        writes.Command("diag-capture-stop", () => { capture?.StopCapture(); bump(); }, () => capture?.Recording == true);
+        writes.Command("diag-capture-clear", () => { capture?.ClearCapture(); bump(); }, () => capture?.CanClearCapture == true);
+        writes.Command("diag-capture-copy", () => { capture?.CopyFeedback(); bump(); }, () => capture != null);
 
         return b;
     }

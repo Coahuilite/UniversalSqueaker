@@ -2,6 +2,20 @@ using System.Collections.Generic;
 
 namespace UniversalSqueaker.UI;
 
+/// <summary>Opt-in player capture controls. Existing read-only sources need not implement this.</summary>
+public interface IUsDiagnosticsCaptureSource
+{
+    string CaptureStatus { get; }
+    bool CanStartCapture { get; }
+    bool Recording { get; }
+    bool CanClearCapture { get; }
+    bool CaptureControlsVisible { get; }
+    void StartCapture();
+    void StopCapture();
+    void ClearCapture();
+    void CopyFeedback();
+}
+
 /// <summary>
 /// The data boundary of every diagnostics page (main master-detail window and detachable
 /// detail windows). The production implementations wrap the overlay session; the harness

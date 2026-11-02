@@ -10,6 +10,7 @@ namespace Verse
 {
     public class ThingComp { public virtual void CompTick() { } }
     public sealed class Game { }
+    public static class Current { public static Game? Game; }
     public class GameComponent
     {
         public virtual void StartedNewGame() { }
@@ -37,8 +38,9 @@ namespace Verse
         public static readonly FixtureTicks TickManager = new();
         public static Map CurrentMap = new();
         public static readonly FixtureCamera CameraDriver = new();
+        public static RimWorld.Planet.World? World;
     }
-    public sealed class FixtureTicks { public int TicksGame = 1000; }
+    public sealed class FixtureTicks { public int TicksGame = 1000; public float TickRateMultiplier = 1f; }
     public sealed class FixtureCamera { public FixtureRect CurrentViewRect = new(); }
     public sealed class FixtureRect
     {
@@ -47,6 +49,11 @@ namespace Verse
     }
     public static class Prefs { public static bool DevMode = true; }
     public static class UnityData { public static bool IsInMainThread = true; }
+}
+namespace RimWorld.Planet
+{
+    public sealed class World { public WorldInfo? info; }
+    public sealed class WorldInfo { public int persistentRandomValue; }
 }
 namespace UnityEngine
 {
@@ -57,6 +64,9 @@ namespace UniversalSqueaker
     public partial class CompSqueaker
     {
         public Pawn Pawn = null!;
+        // Existing diagnostic-text assertions observe an enabled in-memory diagnostics session.
+        public static bool DiagnosticsEnabled = true;
+        internal bool WantsDetailedDiagnostics => DiagnosticsEnabled || SqueakLog.ShouldEmitDev;
         public static bool ScaleFrequencyWithTalking;
         // Existing caller fixtures model one audible subject at 1x; native membership/speed
         // sampling belongs to the production CompSqueaker boundary, not this platform double.
@@ -81,6 +91,8 @@ namespace UniversalSqueaker
         public SqueakVocalCapability(float vocal, float talking) { VocalOrganEfficiency = vocal; TalkingChance = talking; }
     }
     public static class SqueakerMod { public static readonly GameSettings Settings = new(); }
+    // UI lifetime is outside this caller double; no recording behavior is simulated here.
+    internal static class SqueakDiagnosticsOverlay { internal static void NotifyGameChanged() { } }
     // Only native persistence scheduling is doubled; source transactions and effective settings resolution are production.
     public partial class GameSettings
     {

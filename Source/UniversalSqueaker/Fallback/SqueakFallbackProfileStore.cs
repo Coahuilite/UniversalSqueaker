@@ -54,9 +54,11 @@ internal static class SqueakFallbackProfileStore
     private const string DocumentElementName = "UniversalSqueakerFallbackProfile";
     private const string FilePrefix = "UniversalSqueaker_Profile_";
     private const string FileSuffix = ".xml";
-    private static readonly Dictionary<RaceKey, FallbackProfile> profiles = new();
     private static BuiltInFallbackTable? current;
     private static BuiltInFallbackTable? lastSource;
+    // Bound once by native startup after the initial catalog is ready. Detached store users retain
+    // the persistence-only contract; every production mutation after startup reaches this publisher.
+    internal static Action<BuiltInFallbackTable>? RuntimePublisher { private get; set; }
 
     /// <summary>VF1 test seam: lanes point the store at a temp folder and NEVER touch the player's
     /// real Config directory.</summary>
@@ -81,21 +83,19 @@ internal static class SqueakFallbackProfileStore
         // LoadOrRebuild could never have claimed otherwise.
         DiscoverPlayerTables(resolved);
 
-        profiles.Clear();
-        foreach (KeyValuePair<RaceKey, FallbackProfile> pair in resolved) profiles.Add(pair.Key, pair.Value);
         BuiltInFallbackTable result = new(new List<FallbackProfile>(resolved.Values));
         current = result;
         return result;
     }
 
-    /// <summary>Re-run the whole load against the last data source (after a save/restore/delete).</summary>
+    /// <summary>Re-run the load/recovery against the last data source; successful mutations do not reload or rewrite.</summary>
     public static BuiltInFallbackTable Rebuild()
         => LoadOrRebuild(lastSource ?? BuiltInFallbackTable.Empty);
 
     /// <summary>The races the final table supports right now (maintainer sources and player tables).</summary>
     public static IEnumerable<string> SupportedRaceDefNames()
     {
-        foreach (KeyValuePair<RaceKey, FallbackProfile> pair in profiles) yield return pair.Key.DefName;
+        foreach (FallbackProfile profile in Profiles(current ?? BuiltInFallbackTable.Empty)) yield return profile.Race.DefName;
     }
 
     /// <summary>True when a maintainer data source (a shipped profile Def) owns this race.</summary>
@@ -105,44 +105,47 @@ internal static class SqueakFallbackProfileStore
         return source != null && source.For(race) != null;
     }
 
-    /// <summary>VF1 (r5): every write answer is OBSERVABLE - a swallowed exception must never come
-    /// back as "Saved". Written = the single-writer save succeeded and the table was reloaded;
-    /// Failed = the write threw (the store logged it, the old file state stands); Refused* = the
-    /// call was legitimate to reject (no shipped data to restore to / a shipped table cannot be
-    /// deleted by the player path).</summary>
-    public enum StoreOutcome { Written, Failed, RefusedNoSource, RefusedMaintainer }
+    /// <summary>Written reports physical commitment (and adoption when a native publisher is bound).
+    /// WrittenRuntimeNotAdopted also reports commitment, but preserves the last-good runtime catalog.
+    /// Failed and Refused* occur before commitment. Detached store usage remains persistence-only.</summary>
+    public enum StoreOutcome { Written, Failed, RefusedNoSource, RefusedMaintainer, WrittenRuntimeNotAdopted }
 
-    /// <summary>VF1 (r5): the player's REAL field-presence delta for one race, read straight from
-    /// the copy - the starting point for a single-entry edit. It keeps delete markers and values
-    /// that merely equal an old default, which a diff against the resolved table would lose.</summary>
     public static FallbackDelta? LoadPlayerDelta(RaceKey race)
+        => TryLoadPlayerDelta(race, out var delta) ? delta : null;
+
+    /// <summary>An absent delta is valid inheritance; an unreadable delta must not become an edit
+    /// starting from an empty row, which would lose untouched overrides and explicit-empty markers.</summary>
+    public static bool TryLoadPlayerDelta(RaceKey race, out FallbackDelta? delta)
     {
+        delta = null;
         try
         {
             string path = PathFor(race);
-            if (!File.Exists(path)) return null;
+            if (!File.Exists(path)) return true;
             SqueakFallbackProfileCopy copy = Read(path);
-            if (!string.Equals(copy.packageId, SqueakerMod.PackageId, StringComparison.Ordinal)) return null;
-            bool invalid = false;
-            return ToDelta(copy, out invalid);
+            if (!string.Equals(copy.packageId, SqueakerMod.PackageId, StringComparison.Ordinal))
+                throw new InvalidDataException("Fallback profile package identity is invalid.");
+            delta = ToDelta(copy, out bool invalid);
+            if (invalid) throw new InvalidDataException("Fallback profile delta is invalid.");
+            return true;
         }
         catch (Exception ex)
         {
-            SqueakLog.FallbackProfileStoreFailed(race.DefName, ex);
-            return null;
+            SqueakLog.FallbackProfileStoreFailed(race.DefName, ex, "read_player_delta");
+            return false;
         }
     }
 
-    /// <summary>VF1 save: write the player's field-presence delta for one race and reload. A
+    /// <summary>VF1 save: write the player's field-presence delta for one race and publish the staged table. A
     /// maintainer race keeps its source version (the delta merges over the shipped data); a
     /// player-only race records version 0 and merges over the empty profile. The write goes
     /// through the same SafeSaver single writer as every other copy, and its result is returned.</summary>
     public static StoreOutcome SaveProfile(RaceKey race, FallbackDelta delta)
     {
         FallbackProfile source = SourceFor(race);
+        var candidate = ReplaceProfile(race, FallbackProfileOperations.Merge(source, delta));
         if (!TryWrite(PathFor(race), source, delta)) return StoreOutcome.Failed;
-        Rebuild();
-        return StoreOutcome.Written;
+        return PublishCommitted(race, candidate);
     }
 
     /// <summary>VF1 restore-default: clear the player overrides back to the maintainer data. A
@@ -152,9 +155,9 @@ internal static class SqueakFallbackProfileStore
     {
         FallbackProfile? source = lastSource?.For(race);
         if (source == null) return StoreOutcome.RefusedNoSource;
+        var candidate = ReplaceProfile(race, source);
         if (!TryWrite(PathFor(race), source, null)) return StoreOutcome.Failed;
-        Rebuild();
-        return StoreOutcome.Written;
+        return PublishCommitted(race, candidate);
     }
 
     /// <summary>VF1 delete: removes ONLY a player-created table (file + support). A race with a
@@ -163,6 +166,7 @@ internal static class SqueakFallbackProfileStore
     public static StoreOutcome DeletePlayerTable(RaceKey race)
     {
         if (HasMaintainerSource(race)) return StoreOutcome.RefusedMaintainer;
+        var candidate = ReplaceProfile(race, null);
         try
         {
             string path = PathFor(race);
@@ -170,18 +174,49 @@ internal static class SqueakFallbackProfileStore
         }
         catch (Exception ex)
         {
-            SqueakLog.FallbackProfileStoreFailed(race.DefName, ex);
+            SqueakLog.FallbackProfileStoreFailed(race.DefName, ex, "delete_player_table");
             return StoreOutcome.Failed;
         }
 
-        Rebuild();
+        return PublishCommitted(race, candidate);
+    }
+
+    private static BuiltInFallbackTable ReplaceProfile(RaceKey race, FallbackProfile? replacement)
+    {
+        var next = new List<FallbackProfile>();
+        bool replaced = false;
+        foreach (var profile in Profiles(current ?? BuiltInFallbackTable.Empty))
+        {
+            if (!profile.Race.Equals(race)) next.Add(profile);
+            else
+            {
+                replaced = true;
+                if (replacement != null) next.Add(replacement);
+            }
+        }
+        if (!replaced && replacement != null) next.Add(replacement);
+        return new BuiltInFallbackTable(next);
+    }
+
+    private static StoreOutcome PublishCommitted(RaceKey race, BuiltInFallbackTable candidate)
+    {
+        // No reload/restamp or second disk transaction after success. Publish the already staged
+        // complete table, then let the existing audio owner atomically replace its own reference.
+        current = candidate;
+        try { RuntimePublisher?.Invoke(candidate); }
+        catch (Exception error) when (error is not OutOfMemoryException && error is not StackOverflowException
+            && error is not AccessViolationException && error is not System.Threading.ThreadAbortException)
+        {
+            SqueakLog.FallbackAudioPublishFailed(race.DefName, error);
+            return StoreOutcome.WrittenRuntimeNotAdopted;
+        }
         return StoreOutcome.Written;
     }
 
     private static FallbackProfile SourceFor(RaceKey race)
         => lastSource?.For(race) ?? new FallbackProfile(race, 0, new Dictionary<string, string>());
 
-    public static FallbackProfile? For(RaceKey race) => profiles.TryGetValue(race, out FallbackProfile? profile) ? profile : null;
+    public static FallbackProfile? For(RaceKey race) => current?.For(race);
 
     /// <summary>VF1: the shipped data-source profile for a race (before player deltas), when one
     /// exists - the editor uses it to tell "maintainer data" from "player override".</summary>
@@ -201,7 +236,7 @@ internal static class SqueakFallbackProfileStore
         catch (Exception ex)
         {
             corrupt = true;
-            SqueakLog.FallbackProfileStoreFailed(source.Race.DefName, ex);
+            SqueakLog.FallbackProfileStoreFailed(source.Race.DefName, ex, "load_profile_copy");
         }
 
         bool invalid = false;
@@ -298,7 +333,7 @@ internal static class SqueakFallbackProfileStore
         }
         catch (Exception ex)
         {
-            SqueakLog.FallbackProfileStoreFailed(source.Race.DefName, ex);
+            SqueakLog.FallbackProfileStoreFailed(source.Race.DefName, ex, "write_profile_copy");
             return false;
         }
     }
@@ -317,7 +352,7 @@ internal static class SqueakFallbackProfileStore
         }
         catch (Exception ex)
         {
-            SqueakLog.FallbackProfileStoreFailed("*", ex);
+            SqueakLog.FallbackProfileStoreFailed("*", ex, "discover_player_tables");
             return;
         }
 
@@ -330,7 +365,7 @@ internal static class SqueakFallbackProfileStore
             }
             catch (Exception ex)
             {
-                SqueakLog.FallbackProfileStoreFailed(Path.GetFileName(path), ex);
+                SqueakLog.FallbackProfileStoreFailed(Path.GetFileName(path), ex, "read_player_table");
                 continue;
             }
 

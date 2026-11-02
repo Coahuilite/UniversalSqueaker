@@ -66,7 +66,11 @@ public readonly struct UsRaceIdentity
         SourcePackageName = sourcePackageName ?? "";
         IsHar = isHar;
         LifeKind = lifeKind;
+        IsHuman = false;
     }
+    public UsRaceIdentity(string defName, string label, UsRaceSourceKind source, string sourcePackageId,
+        string sourcePackageName, bool isHar, UsRaceLifeKind lifeKind, bool isHuman)
+        : this(defName, label, source, sourcePackageId, sourcePackageName, isHar, lifeKind) => IsHuman = isHuman;
 
     public readonly string DefName;
     public readonly string Label;
@@ -78,6 +82,7 @@ public readonly struct UsRaceIdentity
     /// AlienRace framework type (collector-verified; never a name whitelist, never a package-id
     /// proxy - source and framework are different facts). A cached Type answer, not per-GUI work.</summary>
     public readonly bool IsHar;
+    public readonly bool IsHuman;
 
     public readonly UsRaceLifeKind LifeKind;
 

@@ -33,6 +33,26 @@ public sealed class ResponseSession
         State = new DecisionState(firstOpportunity);
         this.policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
+    public ResponseSession(string subject, long firstOpportunity, StatePolicy policy, StatePhaseInput? phaseInput)
+        : this(subject, firstOpportunity, policy)
+    {
+        if (!phaseInput.HasValue) return;
+        State.BindPhaseInput(phaseInput.Value);
+        State.NextStateTick = State.Align(firstOpportunity, policy, StateScheduleKind.Initial);
+    }
+
+    internal ResponseSession(string subject, long now, StatePolicy policy, long initialSpread, int subjectId,
+        StatePhaseInput? phaseInput, double targetSpeedFactor) : this(subject, now, policy)
+    {
+        if (phaseInput.HasValue) State.BindPhaseInput(phaseInput.Value);
+        if (State.PhaseActive(policy))
+            State.NextStateTick = State.Align(now, policy, StateScheduleKind.Initial, targetSpeedFactor: targetSpeedFactor);
+        else
+        {
+            long offset = initialSpread == 0 ? 0 : (long)((uint)subjectId % (ulong)initialSpread);
+            State.NextStateTick = TickDeadline.Add(now, offset);
+        }
+    }
 
     // Future settlements use the new input; all already-reserved state and owned audio stay here.
     internal void UsePolicy(StatePolicy policy) => this.policy = policy ?? throw new ArgumentNullException(nameof(policy));
@@ -69,7 +89,7 @@ public sealed class ResponseSession
         {
             if (!frame.StateOpportunity && !action.Condition.RequiredFacts().Contains(frame.EventFact, StringComparer.Ordinal)
                 || frame.ActionFilter != null && action.Key != frame.ActionFilter) continue;
-            var effective = view.Configuration.Resolve(frame.Domain, action.Key, selectedPolicy.Defaults(action),
+            var effective = view.Configuration.Resolve(frame.Domain, action.Key, BehaviorContract.Defaults(action, selectedPolicy, frame.Domain.Family),
                 view.Definitions.BehaviorSources, frame.AvailableFacts.Contains, action.Condition.RequiredFacts());
             effectiveActions.Add(action.Key, effective);
             var behavior = effective.Read();
@@ -91,7 +111,7 @@ public sealed class ResponseSession
             plans.Add(new ActionPlan(action.Key, action.Priority, BehaviorContract.EffectiveCondition(action, behavior),
                 behavior.SimulationIntervalTicks ?? action.Interval, selectedPolicy.ChecksShared(action), action.WriteShared,
                 frame.StateOpportunity ? action.Chance : action.Chance * selectedPolicy.EventProbability, action.BaseAction,
-                behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking,
+                frame.Domain.Family != "Pawn" || (behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking),
                 behavior.Volume ?? 1, behavior.Pitch ?? 1, action.Sustained, action.RequiresVocal, action.SubjectRole, action.Scope));
             modulation.Add(action.Key, ResponseModulation.Resolve(frame.Subject, behavior, frame.NumericFacts, view.Definitions.Responses, frame.Facts.Ingestion));
         }
@@ -106,6 +126,7 @@ public sealed class ResponseSession
             InteractionIntervals = interactionIntervals,
             HasVocalOrgans = frame.HasVocalOrgans, TalkingChance = frame.TalkingChance,
             Activity = view.Configuration.Activity, StateWaitFactor = selectedPolicy.StateWaitFactor * frame.StateWaitFactor,
+            TargetSpeedFactor = frame.TargetSpeedFactor,
             Facts = frame.Facts, Actions = plans.ToArray(), ActionModulation = modulation,
             BlockedActions = blocked, BlockedActionReasons = reasons, AudioCatalog = view.Audio,
             AudioContext = new Kernel.SelectionContext(domain, "", frame.Age, true, view.Configuration.AllowEggs),
@@ -120,7 +141,7 @@ public sealed class ResponseSession
     {
         var action = view.Definitions.Actions.FirstOrDefault(x => x.Key == ActiveAction);
         if (action == null) { Stop("CurrentContractUnavailable"); return LastEndReason; }
-        var effective = view.Configuration.Resolve(frame.Domain, action.Key, BehaviorContract.Defaults(action, selectedPolicy),
+        var effective = view.Configuration.Resolve(frame.Domain, action.Key, BehaviorContract.Defaults(action, selectedPolicy, frame.Domain.Family),
             view.Definitions.BehaviorSources, frame.AvailableFacts.Contains, action.Condition.RequiredFacts());
         var behavior = effective.Read();
         return Review(frame.Tick, frame.Facts, BehaviorContract.EffectiveCondition(action, behavior),

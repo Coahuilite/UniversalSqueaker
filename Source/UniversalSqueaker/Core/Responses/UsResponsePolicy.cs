@@ -21,7 +21,7 @@ public sealed class UsResponsePolicy
     private readonly HashSet<string> sharedExemptions;
 
     /// <summary>Ordinary Release defaults, folded before explicit author and player values.</summary>
-    internal static UsResponsePolicy CreateOrdinary() => new(new StatePolicy(216, 600), 600,
+    internal static UsResponsePolicy CreateOrdinary() => new(new StatePolicy(216, 600, StatePhasePolicy.Ordinary), 600,
         UsEquipQualification.PlayerCoreEquip,
         new Dictionary<string, long>(StringComparer.Ordinal)
         {
@@ -71,9 +71,11 @@ public sealed class UsResponsePolicy
         UsesNativeRhythm = true;
     }
 
-    internal BehaviorValues Defaults(ActionPlan action)
+    internal BehaviorValues Defaults(ActionPlan action) => Defaults(action, "Pawn");
+
+    internal BehaviorValues Defaults(ActionPlan action, string family)
     {
-        var values = BehaviorContract.DeclaredDefaults(action);
+        var values = BehaviorContract.DeclaredDefaults(action, family);
         if (development != null && BuiltInActionKeys.Contains(action.Key))
             values.SimulationIntervalTicks = action.Key == CoreActions.Wounded ? development.WoundedInterval : development.Interval;
         else if (intervals.TryGetValue(action.Key, out long interval)) values.SimulationIntervalTicks = interval;
@@ -82,7 +84,7 @@ public sealed class UsResponsePolicy
             values.SimulationIntervalTicks = null;
             values.InteractionIntervalSeconds = development == null ? action.Key == CoreActions.Select ? 0.3 : 0.6 : development.InteractionIntervalSeconds;
         }
-        if (scopes.TryGetValue(action.Key, out var scope)) values.Scope = scope;
+        if (family == "Pawn" && scopes.TryGetValue(action.Key, out var scope)) values.Scope = scope;
         return values;
     }
 

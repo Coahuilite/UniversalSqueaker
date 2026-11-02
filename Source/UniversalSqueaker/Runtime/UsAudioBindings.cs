@@ -83,7 +83,7 @@ internal static class UsAudioBindings
         {
             declarationObservationComplete = false;
         }
-        Log.Error("usdiag " + stage + " observation incomplete: " + error.GetType().Name + ":" + error.Message);
+        SqueakLog.AudioObservationFailed(stage, error);
     }
 
     private static bool IsConcreteSound(XmlNode node)
@@ -183,7 +183,7 @@ internal static class UsAudioBindings
         if (reported.Add(sound))
         {
             string reason = rejected.TryGetValue(sound, out var failure) ? failure : "MissingFinalBinding";
-            Log.Warning("usdiag resource " + sound.defName + " " + reason);
+            SqueakLog.AudioBindingRejected(sound.defName, reason);
         }
         return null;
     }

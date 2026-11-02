@@ -54,9 +54,11 @@ internal readonly struct SqueakDiagnosticSnapshot
     public readonly SqueakVocalCapability VocalCapability;
     public readonly SqueakRecentOutcome? LastEvaluation, LastSignificantOutcome, LastDispatched;
     public readonly string KernelText;
+    public readonly SqueakResponseEvidence? Evidence;
     internal SqueakDiagnosticSnapshot(Responses.SessionObservation? response, SqueakVocalCapability vocal,
-        SqueakRecentOutcome? evaluation, SqueakRecentOutcome? significant, SqueakRecentOutcome? dispatched, string text)
-    { Response = response; VocalCapability = vocal; LastEvaluation = evaluation; LastSignificantOutcome = significant; LastDispatched = dispatched; KernelText = text; }
+        SqueakRecentOutcome? evaluation, SqueakRecentOutcome? significant, SqueakRecentOutcome? dispatched, string text,
+        SqueakResponseEvidence? evidence = null)
+    { Response = response; VocalCapability = vocal; LastEvaluation = evaluation; LastSignificantOutcome = significant; LastDispatched = dispatched; KernelText = text; Evidence = evidence; }
 }
 /// <summary>
 /// 挂在带 Squeaker 组件的 pawn 上的自驱动发声组件。
@@ -130,6 +132,7 @@ public partial class CompSqueaker : ThingComp
     {
 
         SqueakerRuntime.ReleasePawn(Pawn);
+        SqueakDiagnosticsOverlay.NotifyTargetUnavailable(Pawn);
         SqueakPeriodicPopulation.Unregister(this, previousMap);
         registeredMap = null;
         base.PostDestroy(mode, previousMap);
@@ -138,6 +141,7 @@ public partial class CompSqueaker : ThingComp
     internal void NotifyPeriodicDespawn(Map map)
     {
         SqueakerRuntime.ReleasePawn(Pawn);
+        SqueakDiagnosticsOverlay.NotifyTargetUnavailable(Pawn);
         SqueakPeriodicPopulation.Unregister(this, map);
         if (ReferenceEquals(registeredMap, map)) registeredMap = null;
     }
@@ -159,7 +163,7 @@ public partial class CompSqueaker : ThingComp
         SoundDef? sound, SqueakSoundSource source, float nowRealtime, string? poolStableKey = null,
         UniversalSqueaker.Kernel.ChainTier? tier = null)
     {
-        if (DiagnosticsEnabled)
+        if (DiagnosticsEnabled || SqueakDiagnosticsOverlay.IsTracked(Pawn))
         {
             SqueakRecentOutcome evaluation = new(outcome, actionKey, Find.TickManager.TicksGame,
                 nowRealtime, cooldownConsumed, sound, source, poolStableKey, tier);
@@ -192,19 +196,22 @@ public partial class CompSqueaker : ThingComp
     /// <summary>Samples diagnostic state without selecting audio, consuming Rand, changing timestamps, or touching the production context cache.</summary>
     internal SqueakDiagnosticSnapshot GetDiagnosticSnapshot()
     {
-        return new SqueakDiagnosticSnapshot(SqueakerRuntime.Observe(Pawn), SampleVocalCapability(), lastEvaluation, lastSignificantOutcome, lastDispatched, SqueakerRuntime.DiagnosticText(Pawn));
+        var evidence = SqueakerRuntime.DiagnosticEvidence(Pawn);
+        return new SqueakDiagnosticSnapshot(evidence.Observation, default, lastEvaluation, lastSignificantOutcome, lastDispatched, "", evidence);
     }
 
-    private int responseDiagnosticBudget = 64;
+    private int responseDiagnosticAttempts;
+    private double responseDiagnosticUntil;
+    private long responseDiagnosticSuppressed, responseDiagnosticSuppressedTotal, responseDiagnosticFailures;
+    private SqueakDiagnosticLogResult lastDiagnosticLogResult;
+    internal bool WantsDetailedDiagnostics => DiagnosticsEnabled || SqueakDiagnosticsOverlay.IsRecording(Pawn)
+        || SqueakLog.ShouldEmitDev && (Time.realtimeSinceStartup >= responseDiagnosticUntil || responseDiagnosticAttempts < 64);
+    internal string DiagnosticLogStatus => "mode=" + SqueakLog.Mode + " effective=" + SqueakLog.ShouldEmitDev
+        + " window_attempted=" + responseDiagnosticAttempts + " window_until_seconds=" + responseDiagnosticUntil.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+        + " rate_suppressed=" + responseDiagnosticSuppressed + " total_suppressed=" + responseDiagnosticSuppressedTotal
+        + " output_failures=" + responseDiagnosticFailures + " last_output=" + lastDiagnosticLogResult;
     internal void RecordKernelOutcome(Responses.DecisionOutcome outcome, SoundDef? sound, Responses.PlaybackRequest? request)
     {
-        if (SqueakLog.Mode != SqueakDevLoggingMode.Enabled) responseDiagnosticBudget = 64;
-        else if (responseDiagnosticBudget > 0)
-        {
-            responseDiagnosticBudget--;
-            Log.Message("usdiag response " + SqueakerRuntime.DiagnosticText(Pawn)
-                + (responseDiagnosticBudget == 0 ? " diagnosticBudget=exhausted" : ""));
-        }
         var mapped = outcome.Receipt?.Result == Responses.PlaybackResult.Dispatched
             ? SqueakTriggerOutcome.Dispatched : SqueakTriggerOutcome.EligibilityRejected;
         var source = request?.Audio.SourceTier switch
@@ -219,6 +226,25 @@ public partial class CompSqueaker : ThingComp
         RecordOutcome(mapped, outcome.Action, false,
             outcome.Receipt?.Result == Responses.PlaybackResult.Dispatched || outcome.Receipt?.Result == Responses.PlaybackResult.Indeterminate,
             sound, source, Time.realtimeSinceStartup, request?.Audio.PackKey, request?.Audio.SourceTier);
+        SqueakDiagnosticsOverlay.RecordSettled(Pawn);
+        if (!SqueakLog.ShouldEmitDev)
+        {
+            responseDiagnosticAttempts = 0; responseDiagnosticUntil = 0; responseDiagnosticSuppressed = 0;
+            lastDiagnosticLogResult = SqueakDiagnosticLogResult.ModeOff;
+            return;
+        }
+        double now = Time.realtimeSinceStartup;
+        long previousSuppressed = 0;
+        if (now >= responseDiagnosticUntil)
+        {
+            previousSuppressed = responseDiagnosticSuppressed;
+            responseDiagnosticAttempts = 0; responseDiagnosticSuppressed = 0; responseDiagnosticUntil = now + 60;
+        }
+        if (responseDiagnosticAttempts >= 64)
+        { responseDiagnosticSuppressed++; responseDiagnosticSuppressedTotal++; return; }
+        responseDiagnosticAttempts++;
+        lastDiagnosticLogResult = SqueakerRuntime.LogResponse(Pawn, responseDiagnosticAttempts == 64, previousSuppressed, responseDiagnosticUntil);
+        if (lastDiagnosticLogResult is SqueakDiagnosticLogResult.FormatFailed or SqueakDiagnosticLogResult.SinkFailed) responseDiagnosticFailures++;
     }
     internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();

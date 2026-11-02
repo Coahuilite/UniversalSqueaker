@@ -12,8 +12,9 @@ public sealed class DomainPool
     internal DomainPool(AudioDomain domain, List<VoicePackEntry> entries)
     {
         Domain = domain;
-        entries.Sort((a, b) => StringComparer.Ordinal.Compare(a.PackKey, b.PackKey));
-        Entries = entries;
+        var copy = new List<VoicePackEntry>(entries);
+        copy.Sort((a, b) => StringComparer.Ordinal.Compare(a.PackKey, b.PackKey));
+        Entries = copy.AsReadOnly();
     }
 }
 

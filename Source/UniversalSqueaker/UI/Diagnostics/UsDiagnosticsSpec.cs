@@ -33,6 +33,15 @@ public static class UsDiagnosticsSpec
 {
     private const string PageHead = "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">";
     private const string PageTail = "</UiPage>";
+    private const string CaptureXml =
+        "<Column Id=\"diag-capture\" Gap=\"4\" VisibleBind=\"diag-capture-visible\">"
+        + "<Widget Id=\"diag-capture-status\" Kind=\"text/wrapped\" Bind=\"diag-capture-status\" />"
+        + "<Row Id=\"diag-capture-actions\" Gap=\"4\" Breakpoint=\"400\" Narrow=\"Column\">"
+        + "<Column Id=\"diag-start-slot\" VisibleBind=\"diag-capture-start-visible\"><Widget Id=\"diag-start\" Kind=\"input/button\" TextKey=\"US.Diagnostics.Capture.Start\" ActionBind=\"diag-capture-start\" Height=\"30\" /></Column>"
+        + "<Column Id=\"diag-stop-slot\" VisibleBind=\"diag-capture-stop-visible\"><Widget Id=\"diag-stop\" Kind=\"input/button\" TextKey=\"US.Diagnostics.Capture.Stop\" ActionBind=\"diag-capture-stop\" Height=\"30\" /></Column>"
+        + "<Column Id=\"diag-clear-slot\" VisibleBind=\"diag-capture-clear-visible\"><Widget Id=\"diag-clear\" Kind=\"input/button\" TextKey=\"US.Diagnostics.Capture.Clear\" ActionBind=\"diag-capture-clear\" Height=\"30\" /></Column>"
+        + "<Widget Id=\"diag-copy\" Kind=\"input/button\" TextKey=\"US.Diagnostics.Capture.Copy\" ActionBind=\"diag-capture-copy\" Height=\"30\" />"
+        + "</Row></Column>";
 
     /// <summary>Invariant spelling of the breakpoint, so the spec is byte-stable across locales.</summary>
     internal static readonly string Breakpoint =
@@ -56,6 +65,7 @@ public static class UsDiagnosticsSpec
         // The collapsed bar is its own page-wide root (09 §3.3 rule 2): as the Row's third child it
         // inherited a 250px list row's width and painter, which is exactly the reported defect.
         "  <Widget Id=\"diag-bar\" Kind=\"us/diag/bar\" Scope=\"main\" />",
+        CaptureXml,
         "  <Row Id=\"diag-root\" Gap=\"" + Gap + "\" Padding=\"" + Padding + "\" Breakpoint=\"" + Breakpoint + "\" Narrow=\"Column\">",
         // Wide presentation: master list + independent detail column, BOTH behind one VisibleBind so the
         // pair is absent - not zero-sized - whenever the narrow presentation is the arranged one.
@@ -94,6 +104,7 @@ public static class UsDiagnosticsSpec
         "\n",
         PageHead,
         "  <Widget Id=\"lock-bar\" Kind=\"us/diag/bar\" Scope=\"lock\" />",
+        CaptureXml,
         "  <Column Id=\"lock-root\" Gap=\"4\" Padding=\"" + Padding + "\">",
         "    <Widget Id=\"lock-toolbar\" Kind=\"us/diag/toolbar\" Scope=\"lock\" />",
         "    <Scroll Id=\"lock-detail-scroll\" Fill=\"true\" Gap=\"4\">",

@@ -41,7 +41,7 @@ public partial class GameSettings
         Scribe_Values.Look(ref showOptionsEntry, "showOptionsEntry", true);
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
         configurationUnreadable = configurationFormat != 1;
-        if (configurationUnreadable) { Log.Warning("usdiag configuration=UnsupportedResponseConfigurationFormat:" + configurationFormat); return; }
+        if (configurationUnreadable) { SqueakLog.ConfigurationUnsupported(configurationFormat); return; }
         voicePackSelections ??= new List<VoicePackSelectionRecord>();
         actionTuning ??= new List<ActionTuningRecord>();
         if (!Enum.IsDefined(typeof(SqueakVoicePackMode), voicePackMode)) voicePackMode = SqueakVoicePackMode.Disabled;

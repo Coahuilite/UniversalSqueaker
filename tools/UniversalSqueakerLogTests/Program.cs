@@ -77,14 +77,14 @@ internal static class Program
             D("info", "daily", "logging.mode.auto_enabled", "Detailed diagnostic logging is enabled by Auto mode.", trailing: " enabled=true"),
             D("info", "daily", "logging.mode.auto_disabled", "Detailed diagnostic logging is disabled by Auto mode.", trailing: " enabled=false"),
             D("warning", "daily", "settings.open.api_unavailable", "Mod Settings API is unavailable."),
-            D("warning", "daily", "settings.open.failed", "Mod Settings could not be opened.", trailing: " ex_type=System.Exception ex_msg=settings%20failed"),
-            D("error", "daily", "voicepack.catalog.refresh_failed", "VoicePack catalog refresh failed.", trailing: " ex_type=System.Exception ex_msg=catalog%20failed"),
-            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "coahuilite.universalsqueaker:US_Example", trailing: " reason=duplicate_key count=2"),
-            D("error", "daily", "voicepack.resolver.rebuild_failed", "VoicePack resolver rebuild failed.", trailing: " ex_type=System.Exception ex_msg=resolver%20failed"),
-            D("warning", "daily", "voicepack.target.rejected", "A Xenotype VoicePack target was rejected.", target: "target-1", trailing: " reason=reason-1"),
-            D("error", "daily", "trigger.attempt.failed", "Squeak trigger attempt failed.", action: "Select", trailing: " ex_type=System.Exception ex_msg=trigger%20failed"),
+            D("warning", "daily", "settings.open.failed", "Mod Settings could not be opened. error=System.Exception: settings failed", trailing: " ex_type=System.Exception ex_msg=settings%20failed"),
+            D("error", "daily", "voicepack.catalog.refresh_failed", "VoicePack catalog refresh failed. error=System.Exception: catalog failed", trailing: " ex_type=System.Exception ex_msg=catalog%20failed"),
+            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=coahuilite.universalsqueaker:US_Example reason=duplicate_key count=2", pack: "coahuilite.universalsqueaker:US_Example", trailing: " reason=duplicate_key count=2"),
+            D("error", "daily", "voicepack.resolver.rebuild_failed", "VoicePack resolver rebuild failed. error=System.Exception: resolver failed", trailing: " ex_type=System.Exception ex_msg=resolver%20failed"),
+            D("warning", "daily", "voicepack.target.rejected", "A Xenotype VoicePack target was rejected. target=target-1 reason=reason-1", target: "target-1", trailing: " reason=reason-1"),
+            D("error", "daily", "trigger.attempt.failed", "Squeak trigger attempt failed. action=Select error=System.Exception: trigger failed", action: "Select", trailing: " ex_type=System.Exception ex_msg=trigger%20failed"),
             D("info", "daily", "audio.dispatch.no_sound", "No fallback SoundDef was found.", action: "Move"),
-            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed.", action: "Attack", trailing: " sound=US_Attack_1 ex_type=System.Exception ex_msg=dispatch%20failed"),
+            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed. action=Attack sound=US_Attack_1 error=System.Exception: dispatch failed", action: "Attack", trailing: " sound=US_Attack_1 ex_type=System.Exception ex_msg=dispatch%20failed"),
             D("info", "dev_only", "audio.dispatch.ok", "Squeak audio dispatched.", action: "Select", target: "12345", trailing: " sound=US_OfficialExample_Race_Select suppressed_detail=0 pawn=Mousy pawn_id=Thing_Race12345"),
             D("info", "dev_only", "trigger.outcome.summary", "Squeak trigger outcome summary was recorded.", trailing: " dispatched=7 suppressed_detail=2"),
             D("error", "daily", "hook.attack.unavailable", "Attack squeak hook is unavailable."),
@@ -99,13 +99,13 @@ internal static class Program
         SqueakLog.PackRejected("p1", 2);
         SqueakLog.PackRejected("p2", 1);
         AssertLines(nameof(VerifyOnceSemantics),
-            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p1", trailing: " reason=duplicate_key count=1"),
-            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p2", trailing: " reason=duplicate_key count=1"));
+            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=p1 reason=duplicate_key count=1", pack: "p1", trailing: " reason=duplicate_key count=1"),
+            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=p2 reason=duplicate_key count=1", pack: "p2", trailing: " reason=duplicate_key count=1"));
 
         SqueakLog.ResetSession();
         Verse.Log.Reset();
         SqueakLog.PackRejected("p1", 1);
-        AssertLines(nameof(VerifyOnceSemantics) + " reset", D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p1", trailing: " reason=duplicate_key count=1"));
+        AssertLines(nameof(VerifyOnceSemantics) + " reset", D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=p1 reason=duplicate_key count=1", pack: "p1", trailing: " reason=duplicate_key count=1"));
 
         // Once keys are per-domain/per-sound: the same exception type on a different race or sound is not suppressed.
         SqueakLog.ResetSession();
@@ -117,10 +117,10 @@ internal static class Program
         SqueakLog.AudioDispatchFailed("Attack", "US_Attack_A", new Exception("dispatch fail"));
         SqueakLog.AudioDispatchFailed("Attack", "US_Attack_B", new Exception("dispatch fail"));
         AssertLines(nameof(VerifyOnceSemantics) + " domain/sound",
-            V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceA", trailing: " ex_type=System.Exception ex_msg=profile%20fail"),
-            V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceB", trailing: " ex_type=System.Exception ex_msg=profile%20fail"),
-            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed.", action: "Attack", trailing: " sound=US_Attack_A ex_type=System.Exception ex_msg=dispatch%20fail"),
-            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed.", action: "Attack", trailing: " sound=US_Attack_B ex_type=System.Exception ex_msg=dispatch%20fail"));
+            V2("warning", "daily", "fallback.profile.store_failed", "Fallback profile store operation failed (target RaceA, stage store, System.Exception): profile fail.", race: "RaceA", trailing: " stage=store ex_type=System.Exception ex_msg=profile%20fail"),
+            V2("warning", "daily", "fallback.profile.store_failed", "Fallback profile store operation failed (target RaceB, stage store, System.Exception): profile fail.", race: "RaceB", trailing: " stage=store ex_type=System.Exception ex_msg=profile%20fail"),
+            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed. action=Attack sound=US_Attack_A error=System.Exception: dispatch fail", action: "Attack", trailing: " sound=US_Attack_A ex_type=System.Exception ex_msg=dispatch%20fail"),
+            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed. action=Attack sound=US_Attack_B error=System.Exception: dispatch fail", action: "Attack", trailing: " sound=US_Attack_B ex_type=System.Exception ex_msg=dispatch%20fail"));
     }
 
     private static void VerifyOnceLimit()
@@ -131,10 +131,10 @@ internal static class Program
         SqueakLog.PackRejected("cap0", 1);
 
         AssertEqual(1026, Verse.Log.Captured.Count, nameof(VerifyOnceLimit) + " count");
-        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "cap0", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[0]), nameof(VerifyOnceLimit) + " first");
-        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "cap1023", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1023]), nameof(VerifyOnceLimit) + " limit");
-        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p1", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1024]), nameof(VerifyOnceLimit) + " reclaimed");
-        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "cap0", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1025]), nameof(VerifyOnceLimit) + " cleared prior key");
+        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=cap0 reason=duplicate_key count=1", pack: "cap0", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[0]), nameof(VerifyOnceLimit) + " first");
+        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=cap1023 reason=duplicate_key count=1", pack: "cap1023", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1023]), nameof(VerifyOnceLimit) + " limit");
+        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=p1 reason=duplicate_key count=1", pack: "p1", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1024]), nameof(VerifyOnceLimit) + " reclaimed");
+        AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=cap0 reason=duplicate_key count=1", pack: "cap0", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1025]), nameof(VerifyOnceLimit) + " cleared prior key");
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ internal static class Program
         }
 
         AssertEqual(1, Verse.Log.Captured.Count, nameof(VerifyDrawFailureIsBounded) + ": 500 identical draw failures must produce one line");
-        AssertEqual(D("warning", "daily", "diagnostics.mark.draw_failed", "A diagnostics head mark could not be drawn.",
+        AssertEqual(D("warning", "daily", "diagnostics.mark.draw_failed", "A diagnostics head mark could not be drawn. error=System.InvalidOperationException: You can only call GUI functions from inside OnGUI.",
             trailing: " ex_type=System.InvalidOperationException ex_msg=You%20can%20only%20call%20GUI%20functions%20from%20inside%20OnGUI."),
             Format(Verse.Log.Captured[0]), nameof(VerifyDrawFailureIsBounded) + " line");
 
@@ -174,7 +174,7 @@ internal static class Program
         AssertLines(nameof(VerifyDisabledModeGate),
             Human("info", $"Universal Squeaker started with {Build} build {BuildId}."),
             Human("error", "Attack squeak hook is unavailable."),
-            Human("warning", "A VoicePack was rejected."));
+            Human("warning", "A VoicePack was rejected. pack=p1 reason=duplicate_key count=1"));
     }
 
     private static void VerifySilentFailureBoundary()
@@ -209,11 +209,11 @@ internal static class Program
         SqueakLog.PackRejected("p a+b?c", 1);
 
         AssertLines(nameof(VerifyEncodingAndExceptionMetadata),
-            D("warning", "daily", "settings.open.failed", "Mod Settings could not be opened.", trailing: " ex_type=System.ApplicationException ex_inner=System.InvalidOperationException ex_site=UniversalSqueaker.LogCharacterization.Program.CreateNestedException ex_msg=boom%20at%20%3Cpath%3E%20Mods%5Cfile.c%3Cpath%3E%20second%20line"),
-            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed.", action: "Attack", trailing: " sound=US_Attack_1 ex_type=System.Exception ex_msg=" + new string('a', 256)),
-            D("warning", "daily", "voicepack.target.rejected", "A Xenotype VoicePack target was rejected.", target: "t%201", trailing: " reason=-"),
+            D("warning", "daily", "settings.open.failed", "Mod Settings could not be opened. error=System.ApplicationException: boom at <path> Mods\\file.c<path> second line", trailing: " ex_type=System.ApplicationException ex_inner=System.InvalidOperationException ex_site=UniversalSqueaker.LogCharacterization.Program.CreateNestedException ex_msg=boom%20at%20%3Cpath%3E%20Mods%5Cfile.c%3Cpath%3E%20second%20line"),
+            D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed. action=Attack sound=US_Attack_1 error=System.Exception: " + new string('a', 256), action: "Attack", trailing: " sound=US_Attack_1 ex_type=System.Exception ex_msg=" + new string('a', 256)),
+            D("warning", "daily", "voicepack.target.rejected", "A Xenotype VoicePack target was rejected. target=t 1", target: "t%201", trailing: " reason=-"),
             D("info", "daily", "audio.dispatch.no_sound", "No fallback SoundDef was found.", action: "%E4%B8%AD%E6%96%87"),
-            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p%20a+b%3Fc", trailing: " reason=duplicate_key count=1"));
+            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=p a+b?c reason=duplicate_key count=1", pack: "p%20a+b%3Fc", trailing: " reason=duplicate_key count=1"));
 
         AssertEqual("-", SqueakLogText.PercentEncode(null), nameof(VerifyEncodingAndExceptionMetadata) + " null encoding");
         AssertEqual("-", SqueakLogText.PercentEncode("N/A"), nameof(VerifyEncodingAndExceptionMetadata) + " N/A encoding");
@@ -236,7 +236,7 @@ internal static class Program
 
     /// <summary>usdiag v2: fmt=2 header, fixed v2 core order with race/[xenotype],
     /// string action keys, tier, settings.origin, and the log-v2 once domain. All v1 asserts above
-    /// re-verify that the fmt=1 bytes are unchanged for the retained event surface.</summary>
+    /// re-verify unchanged fmt=1 fields; DIAG-02 corrections also pin contextual daily human text.</summary>
     private static void VerifyV2Protocol()
     {
         Reset(SqueakDevLoggingMode.Enabled);
@@ -257,7 +257,7 @@ internal static class Program
             V2("info", "dev_only", "audio.route.selected", "Audio route: Move -> US_Move_1 (vanilla).", action: "Move", target: "1", pack: "-", race: "RaceA", trailing: " sound=US_Move_1 tier=vanilla egg=false suppressed_detail=0 pawn_faction=PlayerColony pawn_ctrl=player"),
             V2("info", "dev_only", "audio.route.selected", "Audio route: Joy -> US_EggTest_Select_Joy (race_pack, egg, nonplayer).", action: "Joy", target: "888", pack: "coahuilite.universalsqueaker.eggtest:US_EggTest_Select", race: "RaceA", trailing: " sound=US_EggTest_Select_Joy tier=race_pack egg=true suppressed_detail=3 pawn=Mousy pawn_id=Thing_Race888 pawn_faction=Pirate pawn_ctrl=nonplayer"),
             V2("info", "dev_only", "audio.dispatch.vanilla_fallback", "Audio dispatch fell back to vanilla: Move -> US_Move_Vanilla (vanilla, nonplayer).", action: "Move", target: "99", race: "RaceA", trailing: " sound=US_Move_Vanilla tier=vanilla egg=false pawn=Mousy pawn_id=Thing_Race99 pawn_faction=Pirate pawn_ctrl=nonplayer"),
-            V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceA", trailing: " ex_type=System.Exception ex_msg=profile%20write%20failed"),
+            V2("warning", "daily", "fallback.profile.store_failed", "Fallback profile store operation failed (target RaceA, stage store, System.Exception): profile write failed.", race: "RaceA", trailing: " stage=store ex_type=System.Exception ex_msg=profile%20write%20failed"),
             V2("info", "daily", "audio.disabled", "Squeak audio is disabled (true bypass): Select not intercepted.", action: "Select"));
         CaptureV2Coverage();
         // log-v2 once: the first settings.origin claim wins per session; ResetSession reopens the domain.
@@ -282,7 +282,7 @@ internal static class Program
         SqueakLog.SettingsOrigin(SqueakSettingsOrigin.LoadedFromFile);
         AssertLines(nameof(VerifyV2Protocol) + " independent once",
             V2("info", "daily", "settings.origin", "Mod settings origin: FreshCreated.", trailing: " settings_origin=FreshCreated"),
-            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p1", trailing: " reason=duplicate_key count=1"));
+            D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected. pack=p1 reason=duplicate_key count=1", pack: "p1", trailing: " reason=duplicate_key count=1"));
         CaptureV2Coverage();
 
         // v2 values flow through the same percent-encoding/sanitization rules as v1; human text stays raw.
@@ -301,7 +301,7 @@ internal static class Program
         AssertLines(nameof(VerifyV2Protocol) + " comp attach",
             V2("info", "daily", "voicepack.comp.auto_attached", "VoicePack comp auto-attached to race RaceA.", race: "RaceA"),
             V2("warning", "daily", "voicepack.comp.attach_skipped", "VoicePack comp auto-attach skipped for race RaceMissing (race_not_found).", race: "RaceMissing", trailing: " reason=race_not_found"),
-            V2("warning", "daily", "voicepack.comp.attach_failed", "VoicePack comp auto-attach failed.", trailing: " ex_type=System.Exception ex_msg=attach%20failed"));
+            V2("warning", "daily", "voicepack.comp.attach_failed", "VoicePack comp auto-attach failed. error=System.Exception: attach failed", trailing: " ex_type=System.Exception ex_msg=attach%20failed"));
         CaptureV2Coverage();
 
         // UI text-fit audit: one warning per distinct clipped label, carrying the element path plus the

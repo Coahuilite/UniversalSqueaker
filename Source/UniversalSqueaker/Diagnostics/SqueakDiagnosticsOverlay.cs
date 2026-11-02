@@ -15,7 +15,7 @@ namespace UniversalSqueaker;
 /// clock the UiKit pages rebuild on. Closing the main window ends the session and cascades every
 /// detail window closed; a map change tears the session down through the existing lifecycle guard.
 /// </summary>
-public static class SqueakDiagnosticsOverlay
+public static partial class SqueakDiagnosticsOverlay
 {
     private const float DetailRefreshSeconds = 0.25f;
     private const float SweepRefreshSeconds = 0.5f;
@@ -45,6 +45,10 @@ public static class SqueakDiagnosticsOverlay
         public string MarkText = string.Empty;
         public Color MarkColor = Color.white;
         public int Fingerprint;
+        public bool HasSnapshot;
+        public float LastSuccessRealtime;
+        public string ReadFailure = "";
+        public long ReadFailures;
     }
 
     private static readonly SqueakDiagnosticsSessionModel<Pawn> model = new();
@@ -129,7 +133,6 @@ public static class SqueakDiagnosticsOverlay
         {
             sessionActive = true;
             cachedMap = Find.CurrentMap;
-            CompSqueaker.DiagnosticsEnabled = true;
             model.Reset();
         }
 
@@ -175,6 +178,9 @@ public static class SqueakDiagnosticsOverlay
     /// <summary>Per-frame teardown guard. It must remain free of snapshot, formatting, translation, and draw work.</summary>
     public static void MaintainLifecycle()
     {
+        ApplyGameChange();
+        if (HasCapture && Current.Game == null) { StopCapture("GameEnded"); ClearCapture(); }
+        if (recordingPawn != null && (!IsTrackableNow(recordingPawn))) StopCapture("TargetUnavailable");
         if (!sessionActive)
         {
             return;
@@ -183,6 +189,7 @@ public static class SqueakDiagnosticsOverlay
         Map? map = Find.CurrentMap;
         if (map == null || !ReferenceEquals(cachedMap, map))
         {
+            StopCapture("MapChanged");
             CloseSession();
         }
     }
@@ -203,10 +210,6 @@ public static class SqueakDiagnosticsOverlay
                 return;
             }
 
-            // Diagnostics stay fresh even when production population scaling is disabled; individual
-            // comp snapshots only read the resulting immutable shared state.
-            CompSqueaker.MaintainPeriodicPopulationDiagnostics();
-
             float now = Time.realtimeSinceStartup;
             if (now >= nextDetailRealtime)
             {
@@ -223,7 +226,7 @@ public static class SqueakDiagnosticsOverlay
         catch (Exception ex)
         {
             // Diagnostics must fail closed: a modded pawn/snapshot exception never breaks the game frame.
-            Log.Warning("[UniversalSqueaker] Diagnostics refresh failed: " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+            SqueakLog.DiagnosticsUiFailed("Refresh", ex);
         }
     }
 
@@ -232,8 +235,11 @@ public static class SqueakDiagnosticsOverlay
     /// the map boundary is native, not hand-rolled. Matches are substring/label or defName,
     /// case-insensitive; a result row click locks directly (selection cannot reach off-screen pawns).
     /// </summary>
-    public static List<Pawn> SearchCurrentMap(string? rawQuery)
+    public static List<Pawn> SearchCurrentMap(string? rawQuery) => SearchCurrentMap(rawQuery, out _);
+
+    internal static List<Pawn> SearchCurrentMap(string? rawQuery, out bool truncated)
     {
+        truncated = false;
         List<Pawn> results = new();
         if (!sessionActive || cachedMap == null)
         {
@@ -254,11 +260,12 @@ public static class SqueakDiagnosticsOverlay
 
             if (MatchesQuery(pawn.LabelShort, pawn.def.defName, query))
             {
-                results.Add(pawn);
                 if (results.Count >= SearchResultsCap)
                 {
+                    truncated = true;
                     break;
                 }
+                results.Add(pawn);
             }
         }
 
@@ -327,6 +334,7 @@ public static class SqueakDiagnosticsOverlay
             UpdateSnapshot(EnsureEntry(pawn));
         }
 
+        lockedScratch.Clear();
         PruneDroppedEntries();
     }
 
@@ -387,6 +395,10 @@ public static class SqueakDiagnosticsOverlay
         try
         {
             entry.Snapshot = entry.Comp.GetDiagnosticSnapshot();
+            entry.HasSnapshot = true;
+            entry.LastSuccessRealtime = Time.realtimeSinceStartup;
+            entry.ReadFailure = "";
+            RecordReadStatus(entry);
             entry.MarkText = Mark;
             UI.UsDiagDotTone tone = ToneFor(entry.Snapshot);
             entry.MarkColor = ColorForTone(tone);
@@ -401,10 +413,15 @@ public static class SqueakDiagnosticsOverlay
 
             model.BumpRevision();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (SqueakLog.IsOrdinary(ex))
         {
+            entry.ReadFailure = ex.GetType().Name;
+            entry.ReadFailures++;
+            RecordReadStatus(entry);
+            entry.MarkColor = PendingColor;
+            model.BumpRevision();
             // Fail closed: one pawn's snapshot exception never aborts the refresh loop.
-            Log.Warning("[UniversalSqueaker] Diagnostics snapshot failed for " + entry.Pawn.LabelShort + ": " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+            SqueakLog.DiagnosticsUiFailed("Snapshot", ex, "Pawn/" + entry.Pawn.thingIDNumber);
         }
     }
 
@@ -441,7 +458,7 @@ public static class SqueakDiagnosticsOverlay
             hash = hash * 31 + (s.Response?.ActionDeadline.GetHashCode() ?? -1);
             hash = hash * 31 + (s.Response?.SharedDeadline.GetHashCode() ?? -1);
             hash = hash * 31 + (s.Response?.ProtectedAt(Find.TickManager.TicksGame) == true ? 1 : 0);
-            hash = hash * 31 + (int)(s.VocalCapability.VocalOrganEfficiency * 64f);
+            hash = hash * 31 + (s.Evidence?.Sequence.GetHashCode() ?? -1);
             hash = hash * 31 + (s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1);
             hash = hash * 31 + (s.LastEvaluation.HasValue ? (int)s.LastEvaluation.Value.Outcome : -1);
             hash = hash * 31 + (s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Tick : -1);
@@ -466,9 +483,11 @@ public static class SqueakDiagnosticsOverlay
             {
                 entry.Comp.ResetDiagnosticState();
                 entriesByPawn.Remove(dropScratch[i]);
+                if (ReferenceEquals(lastChangedEntry, entry)) lastChangedEntry = null;
                 model.BumpRevision();
             }
         }
+        dropScratch.Clear();
 
         // The viewport mirror must not keep pointers to dropped entries within the same frame.
         for (int i = viewportEntries.Count - 1; i >= 0; i--)
@@ -482,6 +501,7 @@ public static class SqueakDiagnosticsOverlay
 
     private static void CloseSession()
     {
+        StopCapture("PanelClosed");
         // Null the registries BEFORE closing: window PreClose re-enters the notify hooks, and the
         // windows are still on the stack while their PreClose runs.
         List<SqueakDiagnosticsDetailWindow> windows = new(detailWindows.Values);
@@ -493,7 +513,6 @@ public static class SqueakDiagnosticsOverlay
         cachedMap = null;
         nextSweepRealtime = 0f;
         nextDetailRealtime = 0f;
-        CompSqueaker.DiagnosticsEnabled = false;
         model.Reset();
 
         foreach (KeyValuePair<Pawn, CachedPawn> pair in entriesByPawn)
@@ -503,17 +522,21 @@ public static class SqueakDiagnosticsOverlay
 
         entriesByPawn.Clear();
         viewportEntries.Clear();
+        sweepScratch.Clear(); lockedScratch.Clear(); dropScratch.Clear();
+        lastChangedEntry = null;
 
         if (panel != null && panel.IsOpen)
         {
-            panel.Close();
+            try { panel.Close(); }
+            catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("PanelClose", error); }
         }
 
         for (int i = 0; i < windows.Count; i++)
         {
             if (windows[i].IsOpen)
             {
-                windows[i].Close();
+                try { windows[i].Close(); }
+                catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("DetailClose", error); }
             }
         }
     }

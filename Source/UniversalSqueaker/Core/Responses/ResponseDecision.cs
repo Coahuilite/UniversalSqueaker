@@ -245,6 +245,7 @@ public sealed class StatePolicy
     public readonly long SharedInterval;
     public readonly long Wait;
     public const long Retry = 60;
+    public readonly StatePhasePolicy? Phase;
     public StatePolicy(long sharedInterval, long wait)
     {
         if (sharedInterval < 0)
@@ -260,6 +261,8 @@ public sealed class StatePolicy
         SharedInterval = sharedInterval;
         Wait = wait;
     }
+    public StatePolicy(long sharedInterval, long wait, StatePhasePolicy phase) : this(sharedInterval, wait)
+        => Phase = phase ?? throw new ArgumentNullException(nameof(phase));
 }
 
 public sealed class DecisionState
@@ -273,6 +276,26 @@ public sealed class DecisionState
     public long AttemptTick { get; internal set; } = long.MinValue;
     public long? ConfirmedTick { get; internal set; }
     public string ConfirmedAction { get; internal set; } = "";
+    public StatePhaseInput? PhaseInput { get; private set; }
+    private long raisedPhaseWindow = 1;
+    private uint scheduledPhasePattern;
+    public bool PhaseActive(StatePolicy policy) => PhaseInput.HasValue && policy.Phase != null;
+    // Binding affects future schedules only; it never rewrites a reserved wait or protection.
+    public void BindPhaseInput(StatePhaseInput input) => PhaseInput = input;
+    internal long Align(long lowerBound, StatePolicy policy, StateScheduleKind kind, long effectiveWait = 0, double targetSpeedFactor = 1)
+    {
+        if (kind == StateScheduleKind.SharedRaise)
+            return StatePhasePolicy.Align(lowerBound, scheduledPhasePattern, raisedPhaseWindow);
+        if (!PhaseInput.HasValue || policy.Phase == null)
+        {
+            raisedPhaseWindow = 1;
+            return lowerBound;
+        }
+        long window = policy.Phase.Window(kind, effectiveWait, targetSpeedFactor);
+        scheduledPhasePattern = PhaseInput.Value.Pattern;
+        raisedPhaseWindow = policy.Phase.RaisedWindow(kind, window, targetSpeedFactor);
+        return StatePhasePolicy.Align(lowerBound, scheduledPhasePattern, window);
+    }
 
     public long ActionDeadline(string key) => deadlines.TryGetValue(key, out var value) ? value : long.MinValue;
     public double InteractionDeadline(string key) => interactionDeadlines.TryGetValue(key, out var value) ? value : double.NegativeInfinity;
@@ -423,6 +446,7 @@ public sealed class DecisionInput
     public Kernel.ISoundGate? SoundGate;
     public double Activity = 1;
     public double StateWaitFactor = 1;
+    public double TargetSpeedFactor = 1;
     public ModulationPlan Modulation = new();
     public IReadOnlyDictionary<string, ModulationPlan> ActionModulation = new Dictionary<string, ModulationPlan>();
     public string ActiveSustainedKey = "";
@@ -488,7 +512,8 @@ public sealed class ResponseDecision
             return Stop(state, policy, input, "", "Ineligible");
         }
         if (double.IsNaN(input.Activity) || double.IsInfinity(input.Activity) || input.Activity <= 0
-            || double.IsNaN(input.StateWaitFactor) || double.IsInfinity(input.StateWaitFactor) || input.StateWaitFactor <= 0)
+            || double.IsNaN(input.StateWaitFactor) || double.IsInfinity(input.StateWaitFactor) || input.StateWaitFactor <= 0
+            || state.PhaseActive(policy) && (double.IsNaN(input.TargetSpeedFactor) || double.IsInfinity(input.TargetSpeedFactor)))
         {
             return Stop(state, policy, input, "", "InvalidSoftRhythm");
         }
@@ -679,7 +704,12 @@ public sealed class ResponseDecision
     {
         if (input.StateOpportunity)
         {
-            state.NextStateTick = Math.Max(TickDeadline.Add(input.Tick, StatePolicy.Retry), state.SharedDeadline);
+            // Before selection there is no shared exemption: retain the existing conservative floor.
+            // After selection the folded plan owns exactly the same applicable H as settlement.
+            var selected = action.Length == 0 ? null : input.Actions.FirstOrDefault(x => x.Key == action);
+            long applicableShared = selected == null || selected.CheckShared ? state.SharedDeadline : input.Tick;
+            long lowerBound = Math.Max(TickDeadline.Add(input.Tick, StatePolicy.Retry), applicableShared);
+            state.NextStateTick = state.Align(lowerBound, policy, StateScheduleKind.Retry, targetSpeedFactor: input.TargetSpeedFactor);
         }
 
         return new DecisionOutcome(action, reason, diagnostics: diagnostics);
@@ -687,6 +717,7 @@ public sealed class ResponseDecision
 
     private static void Settle(DecisionState state, StatePolicy policy, DecisionInput input, ActionPlan action, PlaybackReceipt receipt)
     {
+        long previousShared = state.SharedDeadline;
         if (receipt.Result == PlaybackResult.Dispatched || receipt.Result == PlaybackResult.Indeterminate)
         {
             state.Protect(action, input, policy);
@@ -705,16 +736,18 @@ public sealed class ResponseDecision
             {
                 double softWait = Math.Ceiling(policy.Wait * (input.StateWaitFactor / input.Activity));
                 long wait = softWait >= long.MaxValue ? long.MaxValue : Math.Max(1, (long)softWait);
-                state.NextStateTick = TickDeadline.Add(Math.Max(input.Tick, applicableShared), wait);
+                long lowerBound = TickDeadline.Add(Math.Max(input.Tick, applicableShared), wait);
+                state.NextStateTick = state.Align(lowerBound, policy, StateScheduleKind.Success, wait, input.TargetSpeedFactor);
             }
             else
             {
-                state.NextStateTick = Math.Max(TickDeadline.Add(input.Tick, StatePolicy.Retry), applicableShared);
+                long lowerBound = Math.Max(TickDeadline.Add(input.Tick, StatePolicy.Retry), applicableShared);
+                state.NextStateTick = state.Align(lowerBound, policy, StateScheduleKind.Retry, targetSpeedFactor: input.TargetSpeedFactor);
             }
         }
-        else
+        else if (state.SharedDeadline > previousShared && state.SharedDeadline > state.NextStateTick)
         {
-            state.NextStateTick = Math.Max(state.NextStateTick, state.SharedDeadline);
+            state.NextStateTick = state.Align(state.SharedDeadline, policy, StateScheduleKind.SharedRaise);
         }
     }
 }

@@ -30,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../../Source/UniversalSqueaker/Logging/*.cs" Link="Production/Logging/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Core/**/*.cs" Link="Production/Core/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Game/VoicePackDirectory.cs" Link="Production/VoicePackDirectory.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakerNotifications.cs" Link="Production/SqueakerNotifications.cs" />
@@ -40,6 +41,7 @@
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsNativeAudioPool.cs" Link="Production/UsNativeAudioPool.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs" Link="Production/UsInstanceOutput.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/SqueakerRuntime.cs" Link="Production/SqueakerRuntime.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Diagnostics/SqueakResponseEvidence.cs" Link="Production/SqueakResponseEvidence.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/ResponseDebugActions.cs" Link="Production/ResponseDebugActions.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/UsAttackObservation.cs" Link="Production/UsAttackObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Game/UsPawnEventObservation.cs" Link="Production/UsPawnEventObservation.cs" />

@@ -12,11 +12,22 @@ public sealed class AudioInputBuilder
     private readonly List<AudioCandidate> audio = new();
     private readonly HashSet<string> packKeys = new(StringComparer.Ordinal);
     public readonly List<string> Issues = new();
+    internal readonly List<AuthoringIssue> IssueRecords = new();
+    private void AddIssue(string message, string target, string reason, string inputTarget, string? inputSource = null, string? action = null)
+    {
+        Issues.Add(message);
+        IssueRecords.Add(new AuthoringIssue(message, target, reason, detail: message, action: action,
+            claim: AuthoringIssue.Inputs(inputTarget, inputSource, action)));
+    }
     public AudioCandidate[] Entries => audio.ToArray();
     public AudioInputBuilder(DefinitionCatalog definitions) { this.definitions = definitions; }
     public bool AddPack(string packageId, string defName, VoicePackDeclaration declaration, Func<string, string?> bindSound,
-        string? selectionKey = null)
+        string? selectionKey = null) => AddPack(packageId, defName, declaration, bindSound, selectionKey, null);
+    // The native adapter may name the loaded Def; public package/Def strings do not establish that fact.
+    internal bool AddPack(string packageId, string defName, VoicePackDeclaration declaration, Func<string, string?> bindSound,
+        string? selectionKey, string? diagnosticTarget)
     {
+        string diagnosticOwner = diagnosticTarget ?? "VoicePack";
         string key = packageId + "/" + defName;
         try
         {
@@ -53,7 +64,7 @@ public sealed class AudioInputBuilder
 
                 if (!definitions.HasAction(entry.Action))
                 {
-                    Issues.Add(key + ":Missing action " + entry.Action);
+                    AddIssue(key + ":Missing action " + entry.Action, diagnosticOwner, "MissingAction", key, entry.Action);
                     continue;
                 }
 
@@ -65,7 +76,7 @@ public sealed class AudioInputBuilder
                 {
                     if (!AuthorXml.ExactKey(name)) throw new ArgumentException("Exact sound reference required");
                     string? bound = bindSound(name);
-                    if (bound == null) Issues.Add(key + ":Unbound sound " + name);
+                    if (bound == null) AddIssue(key + ":Unbound sound " + name, diagnosticOwner, "UnboundSound", key, name, definitions.KnownAction(entry.Action));
                     else if (!sounds.Contains(bound)) sounds.Add(bound);
                 }
 
@@ -92,9 +103,9 @@ public sealed class AudioInputBuilder
             }
             foreach (var fallback in declaration.Fallbacks)
             {
-                if (!definitions.HasAction(fallback.Key)) { Issues.Add(key + ":Missing fallback action " + fallback.Key); continue; }
+                if (!definitions.HasAction(fallback.Key)) { AddIssue(key + ":Missing fallback action " + fallback.Key, diagnosticOwner, "MissingFallbackAction", key, fallback.Key); continue; }
                 string? bound = bindSound(fallback.Value);
-                if (bound == null) { Issues.Add(key + ":Unbound fallback " + fallback.Value); continue; }
+                if (bound == null) { AddIssue(key + ":Unbound fallback " + fallback.Value, diagnosticOwner, "UnboundFallback", key, fallback.Value, definitions.KnownAction(fallback.Key)); continue; }
                 batch.Add(new AudioCandidate(key + "/fallback/" + fallback.Key, bound, fallback.Key, target.Target, 1,
                     family: target.Family == "Pawn" ? SubjectFamily.PawnRace : SubjectFamily.NonPawn, targetNamespace: target.Namespace,
                     packKey: selectionKey ?? packageId + ":" + defName, packWeight: declaration.Weight, childDomain: target.Child, fallback: true));
@@ -106,7 +117,7 @@ public sealed class AudioInputBuilder
         }
         catch (Exception error)
         {
-            Issues.Add(key + ":" + error.Message);
+            AddIssue(key + ":" + error.Message, diagnosticOwner, "PackRejected", key);
             return false;
         }
     }

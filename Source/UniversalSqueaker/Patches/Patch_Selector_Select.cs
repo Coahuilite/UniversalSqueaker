@@ -28,7 +28,7 @@ internal static class UsSelectObservation
         if (!reported)
         {
             reported = true;
-            Log.Warning("usdiag capability=SelectObservation fact=" + FactKey + " reason=" + FailureReason);
+            SqueakLog.CapabilityUnavailable("SelectObservation", FactKey, FailureReason);
         }
         return false;
     }

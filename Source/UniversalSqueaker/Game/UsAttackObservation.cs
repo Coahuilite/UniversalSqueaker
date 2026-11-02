@@ -32,7 +32,7 @@ internal static class UsAttackObservation
         if (!reported)
         {
             reported = true;
-            foreach (var item in missing) Log.Warning("usdiag capability=AttackExecution reason=" + item.Reason);
+            foreach (var item in missing) SqueakLog.CapabilityUnavailable("AttackExecution", item.Key, item.Reason);
         }
         return ready;
     }

@@ -468,7 +468,10 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     internal static float RowHeightFor(UiWidgetContext ctx) => TwoLine(ctx) ? TwoLineRowHeight : RowHeight;
 
     internal static float BodyHeight(UiWidgetContext ctx)
-        => FieldHeightFor(ctx) + UsDiagnosticsProjection.RowsPerPage * RowHeightFor(ctx);
+        => FieldHeightFor(ctx) + QueryStatusHeight(ctx) + UsDiagnosticsProjection.RowsPerPage * RowHeightFor(ctx);
+    private static string QueryStatus(UiWidgetContext ctx) => GetString(ctx.Bindings, "diag-query-status");
+    private static float QueryStatusHeight(UiWidgetContext ctx)
+        => string.IsNullOrEmpty(QueryStatus(ctx)) ? 0 : UsKernelDraw.TextBandHeight(Math.Max(1, ctx.ViewWidth - 8), ctx, QueryStatus(ctx), UiFont.Small, 24);
 
     protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
@@ -483,8 +486,13 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     internal static void DrawBodyCore(UiLayoutRect rect, UiWidgetContext ctx)
     {
         var b = ctx.Bindings;
-        string query = DrawSearchField(new UiLayoutRect(rect.X, rect.Y, rect.Width, FieldHeightFor(ctx)), ctx);
+        string query = DrawSearchField(new UiLayoutRect(rect.X, rect.Y, Math.Max(1, rect.Width - 64), FieldHeightFor(ctx)), ctx);
+        if (UsKernelDraw.SelectionButton(new UiLayoutRect(rect.XMax - 60, rect.Y, 60, FieldHeightFor(ctx)), ctx,
+            UsKernelDraw.Keyed(ctx, "US.Browse.Clear"), ctx.Theme, false, controlId: "diag-search-clear")) b.Set(UsDiagnosticsHost.KeySearch, "");
         float y = rect.Y + FieldHeightFor(ctx);
+        float scopeHeight = QueryStatusHeight(ctx);
+        if (scopeHeight > 0) UsKernelDraw.Label(new UiLayoutRect(rect.X + 4, y, Math.Max(1, rect.Width - 8), scopeHeight), QueryStatus(ctx), ctx, UiFont.Small);
+        y += scopeHeight;
 
         if (!b.TryGet(UsDiagnosticsHost.KeyRows, out IReadOnlyList<UsDiagRow>? rows) || rows == null || rows.Count == 0)
         {
@@ -719,7 +727,12 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         // blocked one: a diagnostic block is not a destructive action and must not borrow the danger
         // family the carrier's Warning/Danger alias would give it.
         UiLayoutRect badgeRect = new(rect.XMax - BadgeWidth, y + 3f, BadgeWidth, HeaderHeight - 6f);
-        if (detail.Ready)
+        if (detail.ObservationStatus != null)
+        {
+            UiThemeDraw.Surface(ctx.Drawing, badgeRect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
+            UsKernelDraw.Label(badgeRect, detail.ObservationStatus, ctx, UiFont.Tiny, UiTextAnchor.MiddleCenter, singleLine: true);
+        }
+        else if (detail.Ready)
         {
             UiThemeDraw.Surface(ctx.Drawing, badgeRect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
             UsKernelDraw.Label(badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Ready"), ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleCenter, singleLine: true);
@@ -1069,7 +1082,7 @@ internal static class UsDiagRowPainter
             UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.AudioText, audioWidth, measure), ctx, UiFont.Tiny, AudioWidth),
             ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
         UsKernelDraw.Label(new UiLayoutRect(statusX, rect.Y, StatusWidth, rect.Height),
-            UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
+            row.ObservationStatus ?? UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
             ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
     }
 
@@ -1095,7 +1108,7 @@ internal static class UsDiagRowPainter
             UsKernelDraw.Ellipsized(row.PawnText, ctx, UiFont.Tiny, pawnWidth),
             ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
         UsKernelDraw.Label(new UiLayoutRect(first.XMax - StatusWidth, first.Y, StatusWidth, first.Height),
-            UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
+            row.ObservationStatus ?? UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
             ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
 
         float cw = Mathf.Clamp(cooldownWidth > 0f ? cooldownWidth : CooldownWidth, 24f, CooldownWidth);

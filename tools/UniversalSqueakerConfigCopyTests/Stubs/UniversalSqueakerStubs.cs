@@ -18,7 +18,9 @@ public static class SqueakLog
 {
     public static readonly List<string> StoreFailures = new();
 
-    public static void FallbackProfileStoreFailed(string race, Exception ex)
+    public static void FallbackAudioPublishFailed(string race, Exception error) { }
+
+    public static void FallbackProfileStoreFailed(string race, Exception ex, string stage = "store")
     {
         StoreFailures.Add(race);
     }

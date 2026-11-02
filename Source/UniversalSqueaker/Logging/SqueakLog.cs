@@ -4,6 +4,7 @@ using System.Reflection;
 namespace UniversalSqueaker;
 
 public enum SqueakDevLoggingMode { Auto = 0, Enabled = 1, Disabled = 2 }
+internal enum SqueakDiagnosticLogResult { NotCaptured, ModeOff, FormatFailed, SinkFailed, SinkReturned }
 
 /// <summary>Session settings-source fact (usdiag v2, 0.3.1): FreshCreated = no settings file was
 /// successfully deserialized (missing or unreadable file, framework returned field defaults);
@@ -17,6 +18,8 @@ public static class SqueakLog
     private static SqueakDevLoggingMode mode;
     private static string build = "dev", buildId = "unknown";
 
+    static SqueakLog() => Configure(SqueakDevLoggingMode.Auto);
+
     public static bool EffectiveDevLogging { get; private set; }
     public static bool ShouldEmitDev => EffectiveDevLogging;
     public static SqueakDevLoggingMode Mode => mode;
@@ -29,21 +32,30 @@ public static class SqueakLog
 #else
         EffectiveDevLogging = mode == SqueakDevLoggingMode.Enabled;
 #endif
-        Assembly assembly = typeof(SqueakLog).Assembly;
-        string informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "unknown";
+        try
+        {
+            Assembly assembly = typeof(SqueakLog).Assembly;
+            string informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "unknown";
 #if US_STEAM
-        build = "steam";
-        buildId = informational.Split('+')[0];
+            build = "steam";
+            buildId = informational.Split('+')[0];
 #elif US_GITHUB
-        build = "github";
-        buildId = informational;
+            build = "github";
+            buildId = informational;
 #else
-        build = "dev";
-        buildId = informational;
+            build = "dev";
+            buildId = informational;
 #endif
+        }
+        catch (Exception error) when (IsOrdinary(error)) { }
     }
 
-    public static void ResetSession() => SqueakLogOnce.Reset();
+    public static void ResetSession()
+    {
+        SqueakLogOnce.Reset();
+        ReportedPopupTraces.Clear();
+        layoutTraceBudget = 512;
+    }
     public static void StartupIdentity() => Emit(SqueakLogEvent.ModStartIdentity, default, false);
     public static void StartupReady(int patchedMethods) => Emit(SqueakLogEvent.ModStartReady, new SqueakLogData(count: patchedMethods), false);
     public static void LoggingModeChanged(SqueakDevLoggingMode requested, bool enabled) => Emit(requested == SqueakDevLoggingMode.Enabled ? SqueakLogEvent.LoggingModeEnabled : requested == SqueakDevLoggingMode.Disabled ? SqueakLogEvent.LoggingModeDisabled : enabled ? SqueakLogEvent.LoggingModeAutoEnabled : SqueakLogEvent.LoggingModeAutoDisabled, new SqueakLogData(enabled: enabled), false);
@@ -82,7 +94,9 @@ public static class SqueakLog
     /// <summary>MVP: a dispatch that fell back to vanilla audio is a warning-level route record, not a normal
     /// info route. Every detected vanilla fallback emits one line while detailed logging is effective.</summary>
     public static void AudioVanillaFallback(string actionKey, string race, string? xenotype, string target, string sound, string tier = "vanilla", string? pack = null, bool isEgg = false, string? pawnName = null, string? pawnId = null, bool? pawnControlled = null, string? pawnFaction = null) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.AudioVanillaFallback, new SqueakLogData(action: actionKey, race: race, xenotype: xenotype, target: target, sound: sound, tier: tier, pack: pack, egg: isEgg, pawnName: pawnName, pawnId: pawnId, pawnControlled: pawnControlled, pawnFaction: pawnFaction), false); }
-    public static void FallbackProfileStoreFailed(string race, Exception ex) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.FallbackProfileStoreFailed, new SqueakLogData(race: race, exception: ex), true); }
+    public static void FallbackProfileStoreFailed(string race, Exception ex) => FallbackProfileStoreFailed(race, ex, "store");
+    public static void FallbackProfileStoreFailed(string race, Exception ex, string stage)
+        => Emit(SqueakLogEvent.FallbackProfileStoreFailed, new SqueakLogData(race: race, exception: ex, stage: stage), true);
     public static void AudioDisabled(string action) => Emit(SqueakLogEvent.AudioDisabled, new SqueakLogData(action: action), true);
     public static void CompAutoAttached(string race) => Emit(SqueakLogEvent.VoicePackCompAutoAttached, new SqueakLogData(race: race), false);
     public static void CompAttachSkipped(string race, string reason) => Emit(SqueakLogEvent.VoicePackCompAttachSkipped, new SqueakLogData(race: race, reason: reason), false);
@@ -101,32 +115,103 @@ public static class SqueakLog
     /// <summary>The library's publisher fires ptrace once per FRAME while a popup is open, which made one
     /// popup session 1,6k log lines in the 2026-09-14 run - noise, not evidence. Identical messages are
     /// therefore printed once per session: the whole message is the key, so a moved rect or a changed owner
-    /// still prints. Bounded on purpose (a forensic window, not a leak); clearing may re-report an unchanged
-    /// line once per 512 distinct ones, which is the price of a bounded set.</summary>
+    /// still prints until the bounded session window fills; reset reopens that window.
+    /// The 512th distinct line marks exhaustion.</summary>
     private static readonly System.Collections.Generic.HashSet<string> ReportedPopupTraces
         = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
+    private static int layoutTraceBudget = 512;
 
     public static void PopupTrace(string message)
     {
         if (!ShouldEmitDev) return;
-        if (string.IsNullOrEmpty(message)) return;
-        // The trigger traces carry the live pointer position, so the raw message differs on every mouse
-        // move; the forensic value is the DECISION (who is eligible, who owns it, whether it yields), so the
-        // dedupe key drops the coordinates. 537 lines in the 2026-09-15 run shrank to one per decision.
-        int pointerAt = message.IndexOf(" pointerLocal=", StringComparison.Ordinal);
-        string key = pointerAt > 0 ? message.Substring(0, pointerAt) : message;
-        if (!ReportedPopupTraces.Add(key)) return;
-        if (ReportedPopupTraces.Count > 512) ReportedPopupTraces.Clear();
-        Verse.Log.Message("[UniversalSqueaker] ptrace: " + message);
+        try
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            int pointerAt = message.IndexOf(" pointerLocal=", StringComparison.Ordinal);
+            string key = pointerAt > 0 ? message.Substring(0, pointerAt) : message;
+            if (ReportedPopupTraces.Contains(key) || ReportedPopupTraces.Count >= 512) return;
+            ReportedPopupTraces.Add(key);
+            SqueakLogSink.Emit(SqueakLogLevel.Info, Prefix + "ptrace: " + message
+                + (ReportedPopupTraces.Count == 512 ? " traceBudget=exhausted" : ""));
+        }
+        catch (Exception error) when (IsOrdinary(error)) { }
     }
 
-    /// <summary>Forensic layout-parity trace: reports the width/stack/height decisions each side of a
-    /// Measure/Draw pair made, so a reserved-vs-drawn divergence is readable from the player log.</summary>
-    public static void LayoutTrace(string message)
+    /// <summary>Named forensic channel; formatting executes inside the protected mode gate.</summary>
+    public static void LayoutTrace(Func<string> message)
     {
-        if (!ShouldEmitDev) return;
-        Verse.Log.Message("[UniversalSqueaker] ltrace: " + message);
+        if (!ShouldEmitDev || layoutTraceBudget <= 0) return;
+        try
+        {
+            string text = message();
+            if (string.IsNullOrEmpty(text)) return;
+            layoutTraceBudget--;
+            SqueakLogSink.Emit(SqueakLogLevel.Info, Prefix + "ltrace: " + text
+                + (layoutTraceBudget == 0 ? " traceBudget=exhausted" : ""));
+        }
+        catch (Exception error) when (IsOrdinary(error)) { }
     }
+    public static void LayoutTrace(string message) => LayoutTrace(() => message);
+
+    // Production callers choose a named result, never raw text, level or an arbitrary event ID.
+    public static void DiagnosticPublicationFailed(string subject, Exception error) => Production(SqueakProductionEvent.DiagnosticPublicationFailed, new(target: subject, exception: error));
+    public static void SustainedEndUncertain(string subject, string reason) => Production(SqueakProductionEvent.SustainedEndUncertain, new(target: subject, reason: reason));
+    public static void AuthoringRejected(string issue)
+        => Production(SqueakProductionEvent.AuthoringRejected, new(reason: "UnstructuredIssue", detail: issue));
+    public static void AuthoringRejected(string? issue, string target, string reason, string? source = null, string? action = null)
+        => Production(SqueakProductionEvent.AuthoringRejected,
+            new(target: target, reason: reason, source: source, action: action, detail: issue));
+    // Only captured owner identities and fixed reason codes may bypass free-text cleaning.
+    internal static void AuthoringRejectedKnown(string? issue, string target, string reason, string? source = null, string? action = null, string? claim = null)
+        => Production(SqueakProductionEvent.AuthoringRejected,
+            new(target: target, reason: reason, source: source, action: action, detail: issue, authoringFieldsKnown: true, authoringClaim: claim));
+    public static void AudioObservationFailed(string stage, Exception error) => Production(SqueakProductionEvent.AudioObservationFailed, new(source: stage, exception: error));
+    public static void AudioBindingRejected(string sound, string reason) => Production(SqueakProductionEvent.AudioBindingRejected, new(sound: sound, reason: reason));
+    public static void OutputVolumeInvalid() => Production(SqueakProductionEvent.OutputVolumeInvalid, default);
+    public static void CapabilityUnavailable(string capability, string fact, string reason) => Production(SqueakProductionEvent.CapabilityUnavailable, new(source: capability, target: fact, reason: reason));
+    public static void PrerequisiteUnverified(string reason) => Production(SqueakProductionEvent.PrerequisiteUnverified, new(reason: reason));
+    public static void BehaviorRefreshPaused(string reason) => Production(SqueakProductionEvent.BehaviorRefreshPaused, new(reason: reason));
+    public static void SettingsSaveFailed(long generation, string reason) => Production(SqueakProductionEvent.SettingsSaveFailed, new(target: generation.ToString(System.Globalization.CultureInfo.InvariantCulture), reason: reason));
+    public static void PublicationRepairFailed(string reason) => Production(SqueakProductionEvent.PublicationRepairFailed, new(reason: reason));
+    public static void BehaviorCandidateFailed(string reason) => Production(SqueakProductionEvent.BehaviorCandidateFailed, new(reason: reason));
+    public static void ConfigurationUnsupported(int format) => Production(SqueakProductionEvent.ConfigurationUnsupported, new(count: format));
+    public static void PresetImportRejected(string preset, Exception error) => Production(SqueakProductionEvent.PresetImportRejected, new(target: preset, exception: error));
+    public static void DiagnosticsUiFailed(string stage, Exception error, string? subject = null) => Production(SqueakProductionEvent.DiagnosticsUiFailed, new(source: stage, target: subject, exception: error));
+    public static void NativeEntryUnavailable(string stage) => Production(SqueakProductionEvent.NativeEntryUnavailable, new(source: stage));
+    public static void OverlayFallback(string stage, Exception error) => Production(SqueakProductionEvent.OverlayFallback, new(source: stage, exception: error));
+    public static void SaveStatusUnknown(string token) => Production(SqueakProductionEvent.SaveStatusUnknown, new(target: token));
+    public static void ThemeFallback(string resource, Exception error) => Production(SqueakProductionEvent.ThemeFallback, new(target: resource, exception: error));
+    public static void CanonicalIdentityFailed(Exception error) => Production(SqueakProductionEvent.CanonicalIdentityFailed, new(exception: error));
+    public static void FallbackAudioPublishFailed(string race, Exception error) => Production(SqueakProductionEvent.FallbackAudioPublishFailed, new(race: race, exception: error));
+
+    public static void KernelResponse(Func<SqueakResponseLogData> capture, bool exhausted)
+        => TryKernelResponse(capture, exhausted);
+
+    internal static SqueakDiagnosticLogResult TryKernelResponse(Func<SqueakResponseLogData> capture, bool exhausted)
+    {
+        if (!ShouldEmitDev) return SqueakDiagnosticLogResult.ModeOff;
+        string text;
+        try { text = Prefix + SqueakProductionProtocol.Response(capture(), build, buildId, exhausted); }
+        catch (Exception error) when (IsOrdinary(error)) { return SqueakDiagnosticLogResult.FormatFailed; }
+        try { SqueakLogSink.Emit(SqueakLogLevel.Info, text); return SqueakDiagnosticLogResult.SinkReturned; }
+        catch (Exception error) when (IsOrdinary(error)) { return SqueakDiagnosticLogResult.SinkFailed; }
+    }
+
+    private static void Production(SqueakProductionEvent evt, SqueakLogData data)
+    {
+        try
+        {
+            // A bounded once domain suppresses repeated persistent failures, not their first report.
+            if (!SqueakProductionProtocol.Claim(evt, data)) return;
+            SqueakLogSink.Emit(SqueakProductionProtocol.Level(evt), Prefix + SqueakProductionProtocol.Failure(evt, data, build, buildId));
+        }
+        catch (Exception error) when (IsOrdinary(error)) { }
+    }
+
+    internal static bool IsOrdinary(Exception error) => error is not OutOfMemoryException
+        && error is not StackOverflowException && error is not AccessViolationException
+        && error is not System.Threading.ThreadAbortException;
 
     private static void Emit(SqueakLogEvent evt, SqueakLogData data, bool once)
     {
@@ -139,8 +224,6 @@ public static class SqueakLog
             string text = Prefix + SqueakLogRegistry.HumanSentence(evt, definition, data) + (EffectiveDevLogging ? " || " + SqueakLogFormatter.Suffix(evt, definition, data, build, buildId) : "");
             SqueakLogSink.Emit(definition.Level, text);
         }
-        catch
-        {
-        }
+        catch (Exception error) when (IsOrdinary(error)) { }
     }
 }

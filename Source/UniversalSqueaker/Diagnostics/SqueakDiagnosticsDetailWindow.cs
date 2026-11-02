@@ -27,6 +27,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
     private readonly UsDiagnosticsDetailSource source;
     private float escArmedUntil = -1f;
     private bool lastCollapsed;
+    private int lastDataRevision = -1;
     private Rect expandedRect = Rect.zero;
 
     public SqueakDiagnosticsDetailWindow(Pawn pawn)
@@ -49,7 +50,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         closeOnClickedOutside = false;
         onlyOneOfTypeAllowed = false; // multiple locks are allowed by ruling.
         focusWhenOpened = false;
-        onlyDrawInDevMode = true;
+        onlyDrawInDevMode = false;
     }
 
     // 320 -> 340: the same 40/60 value column the main panel now gives its detail (defect D4).
@@ -89,6 +90,11 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
     {
         // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
         audit?.Publish();
+        if (Host != null && lastDataRevision != SqueakDiagnosticsOverlay.Revision)
+        {
+            lastDataRevision = SqueakDiagnosticsOverlay.Revision;
+            Host.Invalidate();
+        }
 
         // Self-close the moment the pinned pawn stopped being tracked (dead/despawned/map change/
         // session end). BeforeDraw is inside THIS window's own pass, so Close here is the same
@@ -159,7 +165,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     protected override void OnDrawFailure(Exception error)
     {
-        Log.Warning("[UniversalSqueaker] Diagnostics detail window draw failed: " + SqueakLogText.SanitizeExceptionMessage(error.Message));
+        SqueakLog.DiagnosticsUiFailed("DetailDraw", error);
     }
 
     public override void PreClose()

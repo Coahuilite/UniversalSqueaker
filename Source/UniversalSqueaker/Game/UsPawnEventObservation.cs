@@ -50,7 +50,7 @@ internal static class UsPawnEventObservation
     internal static bool Prepare(string key)
     {
         foreach (var item in Diagnostics)
-            if (item.Key == key && reported.Add(key + item.Reason)) Log.Warning("usdiag capability=PawnEventObservation fact=" + key + " reason=" + item.Reason);
+            if (item.Key == key && reported.Add(key + item.Reason)) SqueakLog.CapabilityUnavailable("PawnEventObservation", key, item.Reason);
         return Available(key);
     }
 }

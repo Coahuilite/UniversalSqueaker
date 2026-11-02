@@ -68,7 +68,7 @@ internal static class UsIngestionObservation
     internal static bool Prepare(string capability, bool ready)
     {
         if (!ready && reported.Add(capability))
-            Log.Warning("usdiag capability=IngestionObservation group=" + capability + " reason=MissingTarget:" + MissingTargets);
+            SqueakLog.CapabilityUnavailable("IngestionObservation", capability, MissingTargets);
         return ready;
     }
     internal static void SetupProcess(JobDriver driver)

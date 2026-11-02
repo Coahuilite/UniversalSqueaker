@@ -12,7 +12,13 @@ namespace UniversalSqueaker
         public static void Configure(SqueakDevLoggingMode mode) => EffectiveDevLogging = mode != SqueakDevLoggingMode.Disabled;
         public static void ResetSession() { }
         public static void LoggingModeChanged(SqueakDevLoggingMode mode, bool enabled) { }
-        public static void FallbackProfileStoreFailed(string race, Exception ex) { }
+        public static void SettingsSaveFailed(long generation, string reason) { }
+        public static void PublicationRepairFailed(string reason) { }
+        public static void BehaviorCandidateFailed(string reason) { }
+        public static void ConfigurationUnsupported(int format) { }
+        public static void FallbackAudioPublishFailed(string race, Exception error) { }
+
+        public static void FallbackProfileStoreFailed(string race, Exception ex, string stage = "store") { }
     }
     // Only game lifecycle, native catalog/UI and diagnostic boundaries are doubled. The composition root,
     // settings, ExposeData, atomic file adapter and single save owner are linked production source.
