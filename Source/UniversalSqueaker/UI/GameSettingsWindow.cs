@@ -133,7 +133,7 @@ public sealed class GameSettingsWindow : UiWindowHost
         // the mode write registers against it, released in PostClose so no dialog or staged commit can
         // outlive the page that created it.
         remixFlow = new RemixConfirmationFlow(Find.WindowStack);
-        uiCostMetrics = sampleCosts ? new UsUiCostMetrics(VerseFerriteTextMetrics.Instance) : null;
+        uiCostMetrics = sampleCosts ? new UsUiCostMetrics(new VerseTextMetrics(VerseFerriteTextMetrics.Instance)) : null;
         UiHost host = uiCostMetrics == null ? UsKernelSettingsHost.Create(source, remixFlow)
             : UsKernelSettingsHost.Create(source, uiCostMetrics, out _, remixFlow);
         // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's

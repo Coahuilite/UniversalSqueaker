@@ -17,7 +17,7 @@ namespace UniversalSqueaker.UI;
 ///
 /// <para>
 /// The shell wiring follows the established dialog pattern (RemixConfirmationFlow, SA1.3): a real
-/// <see cref="UiPageWindow"/> opened through a <see cref="UiWindowCatalog"/> with
+/// <see cref="UiWindowHost"/> page opened through a <see cref="UiWindowCatalog"/> with
 /// AbsorbInputAroundWindow=true, so the background cannot change the selection while the question
 /// is on screen; HostAttached opens the dialog's OWN UsTextFitAudit scope and registers it with
 /// the developer panel (UsDevPanelTargets.DialogHost), and HostDetached disposes the audit,
@@ -41,7 +41,7 @@ public sealed class UsConfirmWindow
 
     private readonly UiWindowCatalog catalog;
     private readonly UiBindings bindings;
-    private readonly ITextMetrics? dialogMetrics;
+    private readonly ITextMetrics dialogMetrics;
 
     // The stack this slot's catalog opens on. Open re-creates the slot when a caller names a
     // DIFFERENT stack (the harness injects a fresh one per lane); the same stack reuses the slot,
@@ -59,7 +59,10 @@ public sealed class UsConfirmWindow
     private UsConfirmWindow(WindowStack stack, ITextMetrics? dialogMetrics)
     {
         this.stack = stack;
-        this.dialogMetrics = dialogMetrics;
+        // Match the standard shell's composition of its legacy native ruler. Other injected rulers
+        // remain the actual caller-supplied object, including rulers without numeric capability.
+        this.dialogMetrics = dialogMetrics is VerseFerriteTextMetrics native ? new VerseTextMetrics(native)
+            : dialogMetrics ?? new VerseTextMetrics(VerseFerriteTextMetrics.Instance);
         UsKernelWidgetRegistrar.EnsureRegistered();
         bindings = new UiBindings();
         bindings.BindCommand("confirm-yes", Confirm);
@@ -68,12 +71,11 @@ public sealed class UsConfirmWindow
         // The registration is re-issued per Open (Register overwrites the key's entry): the window
         // size is a property of the QUESTION, measured below, not a shipped constant. The PM
         // boundary probe measured the old fixed 420x180 with the long restore copy and the
-        // confirm-buttons row landing BELOW the content body - unreachable controls. UiPageWindow is
-        // sealed, so the sizing rides the options, and the message additionally lives in a Scroll
+        // confirm-buttons row landing BELOW the content body - unreachable controls. The page keeps its text pair before opening, so sizing rides the options, and the message additionally lives in a Scroll
         // container so anything the screen clamp cannot fit still scrolls without crowding buttons.
     }
 
-    private UiWindowOptions OptionsFor(string message)
+    private UiWindowOptions OptionsFor(string message, ConfirmPageWindow window)
     {
         var options = new UiWindowOptions
         {
@@ -83,9 +85,8 @@ public sealed class UsConfirmWindow
             AbsorbInputAroundWindow = true,
             InitialSize = new Vector2(BaseWidth, BaseHeight),
         };
-        ITextMetrics metrics = dialogMetrics ?? VerseFerriteTextMetrics.Instance;
         float innerWidth = Math.Max(80f, BaseWidth - 2f * ShellSidePadding - 2f * RootPadding);
-        float textHeight = metrics.MeasureText(message ?? "", WindowTheme.Styles.Font, innerWidth)
+        float textHeight = window.MessageText().MeasureText(message ?? "", innerWidth)
             + 2f * WindowTheme.Geometry.Padding;
         float desired = 2f * RootPadding + textHeight + RootGap + ButtonHeight
             + ShellTitleHeight + ShellSidePadding;
@@ -96,14 +97,14 @@ public sealed class UsConfirmWindow
     }
 
     // Shell geometry constants: the UiWindowHost chrome (TitleBarHeight 56 / SidePadding 20) and the
-    // page's own root (Padding 10, Gap 8, button band 26) - the same numbers PageXmlFor writes.
+    // page's own root (Padding 10, Gap 8, button band 30) - the same numbers PageXmlFor writes.
     private const float BaseWidth = 420f;
     private const float BaseHeight = 180f;
     private const float ShellTitleHeight = 56f;
     private const float ShellSidePadding = 20f;
     private const float RootPadding = 10f;
     private const float RootGap = 8f;
-    private const float ButtonHeight = 26f;
+    private const float ButtonHeight = 30f;
 
     /// <summary>Ask once. Opening a second question cancels (drops the staged action of) the first.
     /// Strings arrive RESOLVED; the action must carry its own captured identity. Production passes no
@@ -135,13 +136,22 @@ public sealed class UsConfirmWindow
         flow.message = message ?? "";
         flow.confirmLabel = confirmLabel ?? "";
         flow.onConfirm = onConfirm;
-        flow.catalog.Register(Consumer, WindowKind, flow.OptionsFor(flow.message), flow.CreateWindow);
+        var window = flow.CreateWindow();
+        UiWindowOptions options;
+        try { options = flow.OptionsFor(flow.message, window); }
+        catch
+        {
+            flow.onConfirm = null;
+            window.PreClose(); // The not-yet-open shell still owns its native execution.
+            throw;
+        }
+        flow.catalog.Register(Consumer, WindowKind, options, _ => window);
         flow.catalog.Open(WindowKey);
         return flow;
     }
 
     /// <summary>The dialog page's own command table (the Remix flow's seam): lanes drive the exact
-    /// commands the real buttons fire, on the SAME table the UiPageWindow draws against.</summary>
+    /// commands the real buttons fire, on the SAME table the window's Host draws against.</summary>
     public IUiBindingAccess DialogBindings => bindings;
     /// <summary>The live question slot while one is staged (set by Open, cleared when an answer or
     /// CloseCurrent retires it; an ESC teardown leaves the slot for the next Open to reuse). A lane
@@ -180,20 +190,9 @@ public sealed class UsConfirmWindow
         UniversalSqueaker.UI.Dev.UsDevPanelTargets.DialogHost = host;
     }
 
-    private UiPageWindow CreateWindow(UiWindowKey key)
+    private ConfirmPageWindow CreateWindow()
     {
-        UiPageWindow window = new(
-            key,
-            UiLayoutManifest.Parse(PageXmlFor(message, confirmLabel)),
-            bindings,
-            WindowTheme,
-            new UsKernelTranslation(),
-            title,
-            "US.Common.Cancel".Translate(),
-            notice => (notice == UiWindowNotice.Prerequisite
-                ? "US.Settings.Prerequisite.Title"
-                : "US.Diagnostics.PageUnavailable.Title").Translate(),
-            metrics: dialogMetrics);
+        ConfirmPageWindow window = new(this);
         // F01/US-UI1: confirmation priority over the Dialog main window and the SubSuper dev tools
         // (measured 1.6 reference layer order; UsDevPanelWindow's constructor cites it).
         window.layer = WindowLayer.Super;
@@ -214,6 +213,33 @@ public sealed class UsConfirmWindow
         };
         return window;
     }
+
+    // The inherited shell remains the single capture/focus/frame/disposal owner. The small page
+    // adapter exposes a borrowed text pair for pre-open sizing, using THAT window's native owner.
+    // UiPageWindow is sealed and does not expose its pair before its first draw; a second sizing
+    // owner would make capability/fallback differ from the window whose buttons must remain reachable.
+    private sealed class ConfirmPageWindow : UiWindowHost
+    {
+        private readonly UsConfirmWindow flow;
+        private readonly VerseTextExecution text;
+        internal ConfirmPageWindow(UsConfirmWindow flow)
+        { this.flow = flow; text = new VerseTextExecution(Execution); }
+        protected override UiTheme Theme => WindowTheme;
+        protected override ITextMetrics Metrics => flow.dialogMetrics;
+        protected override string Title => flow.title;
+        protected override string CloseText => "US.Common.Cancel".Translate();
+        protected override Func<Vector2>? InitialSizePolicy => AppliedOptions?.InitialSize is Vector2 size ? () => size : null;
+        protected override void DrawNotice(Rect rect, UiWindowNotice notice) => UiTextFonts.Resolve(flow.dialogMetrics,
+            text, UiTextFonts.Requested(WindowTheme), elementPath: "us/confirm/notice").Draw(VerseUiExecution.Rect(rect),
+                (notice == UiWindowNotice.Prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title").Translate(),
+                WindowTheme.Styles.Resolve(UiStatusTone.Neutral).Text);
+        protected override UiHost CreateHost() => new(Consumer + "/" + WindowKind, UiLayoutManifest.Parse(flow.PageXml), flow.bindings,
+            WindowTheme, flow.dialogMetrics, new UsKernelTranslation());
+        internal UiTextRun MessageText() => UiTextFonts.Resolve(flow.dialogMetrics, text,
+            new UiTextFont(WindowTheme.DefaultFont, MessageFontSize), elementPath: "us/confirm/message");
+    }
+
+    private const int MessageFontSize = 16;
 
     private void Confirm()
     {
@@ -253,15 +279,14 @@ public sealed class UsConfirmWindow
         => "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
         + "  <Column Id=\"confirm-root\" Gap=\"8\" Padding=\"10\">"
         + "    <Scroll Id=\"confirm-message-scroll\" Fill=\"true\" Gap=\"0\" Padding=\"0\">"
-        + "      <Widget Id=\"confirm-message\" Kind=\"text/wrapped\" Text=\"" + Escape(message) + "\" />"
+        + "      <Widget Id=\"confirm-message\" Kind=\"text/wrapped\" FontSize=\"" + MessageFontSize + "\" Text=\"" + Escape(message) + "\" />"
         + "    </Scroll>"
         + "    <Row Id=\"confirm-buttons\" Gap=\"8\" Padding=\"0\">"
-        + "      <Widget Id=\"confirm-yes\" Kind=\"input/button\" Text=\"" + Escape(confirmLabel) + "\" ActionBind=\"confirm-yes\" Height=\"26\" />"
-        + "      <Widget Id=\"confirm-no\" Kind=\"input/button\" TextKey=\"US.Common.Cancel\" ActionBind=\"confirm-no\" Height=\"26\" Emphasis=\"Muted\" />"
+        + "      <Widget Id=\"confirm-yes\" Kind=\"input/button\" FontSize=\"" + MessageFontSize + "\" Text=\"" + Escape(confirmLabel) + "\" ActionBind=\"confirm-yes\" Height=\"" + ButtonHeight + "\" />"
+        + "      <Widget Id=\"confirm-no\" Kind=\"input/button\" FontSize=\"" + MessageFontSize + "\" TextKey=\"US.Common.Cancel\" ActionBind=\"confirm-no\" Height=\"" + ButtonHeight + "\" Emphasis=\"Muted\" />"
         + "    </Row>"
         + "  </Column>"
         + "</UiPage>";
 
-    // (The sizing lives in OptionsFor above: UiPageWindow is sealed, so the measured height rides
-    // the per-Open registration options rather than a subclass policy.)
+    // The measured opening size belongs to this staged question and its actual window text pair.
 }

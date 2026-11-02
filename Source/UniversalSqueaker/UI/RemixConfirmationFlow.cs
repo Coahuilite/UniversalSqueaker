@@ -69,7 +69,7 @@ public sealed class RemixConfirmationFlow
     public RemixConfirmationFlow(WindowStack stack, ITextMetrics? dialogMetrics = null)
     {
         if (stack == null) throw new ArgumentNullException(nameof(stack));
-        this.dialogMetrics = dialogMetrics;
+        this.dialogMetrics = dialogMetrics ?? new VerseTextMetrics(VerseFerriteTextMetrics.Instance);
 
         UsKernelWidgetRegistrar.EnsureRegistered();
         manifest = UiLayoutManifest.Parse(ReadManifest());
@@ -93,7 +93,7 @@ public sealed class RemixConfirmationFlow
                 // (close), and a close IS the cancel - the flow never commits on a close.
                 CloseOnAccept = false,
                 AbsorbInputAroundWindow = true,
-                InitialSize = new Vector2(460f, 240f),
+                InitialSize = new Vector2(460f, 246f),
             },
             CreateWindow);
     }

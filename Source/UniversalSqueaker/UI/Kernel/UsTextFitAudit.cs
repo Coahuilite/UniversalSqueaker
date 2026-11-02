@@ -767,6 +767,12 @@ public sealed class UsTextFitAudit : IDisposable
             FontName(report.Font),
             report.Needed,
             report.Available);
+        UiColour? ink = UiTextFonts.ColourOf(report);
+        if (UiTextFonts.FontOf(report).Size.HasValue || ink.HasValue)
+            SqueakLog.LayoutTrace(() => "UI.text.actual element=" + report.ElementPath
+                + " font=" + UiTextFonts.FontOf(report) + " colour=" + (ink.HasValue
+                    ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},{1},{2},{3}",
+                        ink.Value.Red, ink.Value.Green, ink.Value.Blue, ink.Value.Alpha) : "unknown"));
     }
 
     private static string FontName(UiFont font)

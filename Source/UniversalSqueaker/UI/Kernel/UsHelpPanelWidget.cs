@@ -42,6 +42,9 @@ public sealed class UsHelpPanelWidget : IUiWidget
         internal float Width, HeaderHeight, LabelHeight, BodyHeight;
         internal bool HideTitle;
         internal UiMeasureInputs? SmallEnvironment, TinyEnvironment;
+        internal UiTextFont LabelFont, BodyFont;
+        internal UiTextFont LabelRequested, BodyRequested;
+        internal UiTextPurpose Purpose;
         internal float Height => Padding * 2f + (HideTitle ? 0 : HeaderHeight + TitleGap + ContentGap)
             + LabelHeight + 2f + BodyHeight + 4f;
         internal bool Matches(UsHelpPanelLogic.HelpPanelDisplay display, string header)
@@ -76,15 +79,17 @@ public sealed class UsHelpPanelWidget : IUiWidget
         // Explicit pins and a currently effective session ref always take precedence.
         var display = ResolveFrameDisplay(ctx, CurrentSection(ctx), state.HasObservedHover ? state.ObservedHoverRef : null);
         string header = TitleHidden ? "" : HeaderText(ctx, display);
-        var environment = ctx.Metrics as IUiTextMetricsEnvironment;
+        var label = UsKernelDraw.Text(ctx);
+        var body = UsKernelDraw.Text(ctx, UiFont.Tiny);
         var measured = new MeasuredDisplay {
             Width = textWidth, HideTitle = TitleHidden, Header = header,
             Label = display.LabelText, Body = display.BodyText,
-            HeaderHeight = TitleHidden ? 0 : Math.Max(TitleMinHeight, Band(ctx, header, textWidth, UiFont.Small)),
-            LabelHeight = Band(ctx, display.LabelText, textWidth, UiFont.Small),
-            BodyHeight = Band(ctx, display.BodyText, textWidth, UiFont.Tiny),
-            SmallEnvironment = environment?.CaptureEnvironment(UiFont.Small),
-            TinyEnvironment = environment?.CaptureEnvironment(UiFont.Tiny)
+            HeaderHeight = TitleHidden ? 0 : Math.Max(TitleMinHeight, Band(label, header, textWidth)),
+            LabelHeight = Band(label, display.LabelText, textWidth),
+            BodyHeight = Band(body, display.BodyText, textWidth),
+            SmallEnvironment = label.CaptureEnvironment(), TinyEnvironment = body.CaptureEnvironment(),
+            LabelFont = label.Font, BodyFont = body.Font, Purpose = label.Purpose,
+            LabelRequested = label.Requested, BodyRequested = body.Requested
         };
         state.Measured.RemoveAll(value => value.Width == textWidth && value.HideTitle == measured.HideTitle);
         state.Measured.Add(measured);
@@ -106,9 +111,9 @@ public sealed class UsHelpPanelWidget : IUiWidget
         return string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.TitleText);
     }
 
-    private static float Band(UiWidgetContext ctx, string text, float textWidth, UiFont font)
+    private static float Band(UiTextRun run, string text, float textWidth)
     {
-        return Math.Max(1f, ctx.Metrics.MeasureText(text, font, textWidth));
+        return Math.Max(1f, run.MeasureText(text, textWidth));
     }
 
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
@@ -126,9 +131,13 @@ public sealed class UsHelpPanelWidget : IUiWidget
         state.HasObservedHover = !pinned;
         state.ObservedHoverRef = pinned ? "" : ctx.Session.CurrentHelpRef ?? "";
         MeasuredDisplay? measured = state.Measured.FindLast(value => value.Width == textWidth && value.HideTitle == TitleHidden);
-        var environment = ctx.Metrics as IUiTextMetricsEnvironment;
-        if (measured == null || !Equals(measured.SmallEnvironment, environment?.CaptureEnvironment(UiFont.Small))
-            || !Equals(measured.TinyEnvironment, environment?.CaptureEnvironment(UiFont.Tiny)))
+        var label = UsKernelDraw.TextForDrawing(ctx);
+        var body = UsKernelDraw.TextForDrawing(ctx, UiFont.Tiny);
+        var labelEnvironment = label.CaptureEnvironment();
+        var bodyEnvironment = body.CaptureEnvironment();
+        if (measured == null || measured.LabelFont != label.Font || measured.BodyFont != body.Font || measured.Purpose != label.Purpose
+            || measured.LabelRequested != label.Requested || measured.BodyRequested != body.Requested
+            || !Equals(measured.SmallEnvironment, labelEnvironment) || !Equals(measured.TinyEnvironment, bodyEnvironment))
         {
             ctx.Invalidate();
             return; // Never paint text using an unmeasured width/font environment.
@@ -146,24 +155,14 @@ public sealed class UsHelpPanelWidget : IUiWidget
         if (!measured.HideTitle)
         {
             UiLayoutRect headerRect = new(x, y, textWidth, measured.HeaderHeight);
-            UiThemeDraw.SectionHeader(ctx.Drawing, headerRect, measured.Header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
+            label.Draw(headerRect, measured.Header, ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text);
             y += headerRect.Height + TitleGap + ContentGap;
         }
-        UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(x, y, textWidth, measured.LabelHeight),
-            measured.Label,
-            ctx.Theme,
-            ctx.Theme[UiPaletteRole.Foreground],
-            UiFont.Small,
-            UiTextAnchor.UpperLeft);
+        label.Draw(new UiLayoutRect(x, y, textWidth, measured.LabelHeight), measured.Label,
+            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text, UiTextAnchor.UpperLeft);
         y += measured.LabelHeight + 2f;
-        UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(x, y, textWidth, measured.BodyHeight),
-            measured.Body,
-            ctx.Theme,
-            ctx.Theme[UiPaletteRole.SecondaryForeground],
-            UiFont.Tiny,
-            UiTextAnchor.UpperLeft);
+        body.Draw(new UiLayoutRect(x, y, textWidth, measured.BodyHeight), measured.Body,
+            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, UiEmphasis.Muted, writable: !ctx.IsDisabled).Text, UiTextAnchor.UpperLeft);
     }
 
     /// <summary>The section this panel is currently falling back to (null when none is active).</summary>

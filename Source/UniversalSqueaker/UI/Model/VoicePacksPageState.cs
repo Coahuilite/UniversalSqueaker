@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
 
@@ -109,6 +110,9 @@ public sealed class VoicePacksPageState
     internal long HelpLayoutRevision = -1;
     internal string HelpLayoutText = "";
     internal object? HelpSmallEnvironment, HelpTinyEnvironment;
+    internal UiTextFont? HelpLabelFont, HelpBodyFont;
+    internal UiTextFont? HelpLabelRequested, HelpBodyRequested;
+    internal UiTextPurpose HelpTextPurpose;
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
@@ -138,6 +142,8 @@ public sealed class VoicePacksPageState
     {
         Page = "Voices"; LastToolPage = "Behavior"; PinnedHelpRef = ""; PinnedHelpContext = "";
         HelpHeight = 128f; HelpViewWidth = HelpViewHeight = 0; HelpLayoutRevision = -1; HelpLayoutText = "";
+        HelpLabelFont = HelpBodyFont = HelpLabelRequested = HelpBodyRequested = null;
+        HelpSmallEnvironment = HelpTinyEnvironment = null;
         PageHistory.Clear();
         BrowseDefinitions = true; FiltersOpen = false; RestoreAllOpen = false;
         LastTuningPage = "Behavior"; LastSystemPage = "Appearance"; HighlightedTarget = "";

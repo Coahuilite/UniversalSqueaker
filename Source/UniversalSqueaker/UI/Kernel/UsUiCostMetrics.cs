@@ -7,10 +7,11 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>Window-local counters for the existing explicit-Enabled, bounded cost sample.
 /// The original ruler and its environment identity pass through unchanged; this adds no reuse policy.</summary>
-internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment
+internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment, IUiTextFontMetrics
 {
     private readonly ITextMetrics source;
     private readonly IUiTextMetricsEnvironment? environment;
+    private readonly IUiTextFontMetrics? fonts;
     private bool active, fitEnabledAtStart;
     private Totals height, width, environmentCapture, modeDraw, selectionDraw;
 
@@ -18,6 +19,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment
     {
         this.source = source ?? throw new ArgumentNullException(nameof(source));
         environment = source as IUiTextMetricsEnvironment;
+        fonts = source as IUiTextFontMetrics;
     }
 
     internal void Begin(bool fitEnabled)
@@ -47,6 +49,34 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment
         if (!active) return environment?.CaptureEnvironment(font);
         long started = Stopwatch.GetTimestamp();
         try { return environment?.CaptureEnvironment(font); }
+        finally { environmentCapture.Add(Stopwatch.GetTimestamp() - started); }
+    }
+
+    public bool Supports(UiTextPurpose purpose) => fonts?.Supports(purpose) == true;
+    public float MeasureText(string text, UiTextFont font, float availableWidth, UiTextPurpose purpose)
+    {
+        if (fonts == null && !font.Size.HasValue) return MeasureText(text, font.Alias, availableWidth);
+        var capable = fonts ?? throw new NotSupportedException("Resolve the effective font before numeric measurement.");
+        if (!active) return capable.MeasureText(text, font, availableWidth, purpose);
+        long started = Stopwatch.GetTimestamp();
+        try { return capable.MeasureText(text, font, availableWidth, purpose); }
+        finally { height.Add(Stopwatch.GetTimestamp() - started); }
+    }
+    public float MeasureWidth(string text, UiTextFont font, UiTextPurpose purpose)
+    {
+        if (fonts == null && !font.Size.HasValue) return MeasureWidth(text, font.Alias);
+        var capable = fonts ?? throw new NotSupportedException("Resolve the effective font before numeric measurement.");
+        if (!active) return capable.MeasureWidth(text, font, purpose);
+        long started = Stopwatch.GetTimestamp();
+        try { return capable.MeasureWidth(text, font, purpose); }
+        finally { width.Add(Stopwatch.GetTimestamp() - started); }
+    }
+    public UiMeasureInputs? CaptureEnvironment(UiTextFont font, UiTextPurpose purpose)
+    {
+        if (fonts == null && !font.Size.HasValue) return CaptureEnvironment(font.Alias);
+        if (!active) return fonts?.CaptureEnvironment(font, purpose);
+        long started = Stopwatch.GetTimestamp();
+        try { return fonts?.CaptureEnvironment(font, purpose); }
         finally { environmentCapture.Add(Stopwatch.GetTimestamp() - started); }
     }
 

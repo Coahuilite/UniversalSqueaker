@@ -13,18 +13,23 @@
        Enter is refused by the window options, not by anything here. -->
   <Styles Schema="1" Density="regular">
     <Density Name="regular">
-      <Metric Token="RowHeight" Value="24" />
+      <Metric Token="RowHeight" Value="30" />
     </Density>
     <Density Name="dense">
       <Metric Token="RowHeight" Value="20" />
     </Density>
+    <Scheme Name="us-confirm-body">
+      <Metric Token="Font" Value="Small" />
+      <Metric Token="FontSize" Value="16" />
+      <Metric Token="RowHeight" Value="30" />
+    </Scheme>
   </Styles>
-  <Column Id="confirm-root" Gap="10" Padding="12">
+  <Column Id="confirm-root" Gap="10" Padding="12" Scheme="us-confirm-body">
     <!-- The r4 shell measurement found the defect this fixes: with the bodies flowing freely, a step-two
          body one line shorter than step one's moved the button row UP (measured 22px in the ZH table),
          and the same-coordinate click met blank instead of Cancel. The swap's safety promise is only
          mechanical while the row cannot move, so BOTH steps get the same fixed-height region. The
-         height is the page budget minus chrome: 164 - 12 padding - 10 gap - 24 row - 12 padding = 106,
+         height is the page budget minus chrome: 170 - 12 padding - 10 gap - 30 row - 12 padding = 106,
          and the SA1.3 shell lane fit-audits the resolved EN/ZH bodies inside it every run; the Scroll
          is the fail-soft if a future table ever outgrows the region. -->
     <Scroll Id="confirm-body-first-region" Height="106" Padding="0" VisibleBind="confirm-step1">

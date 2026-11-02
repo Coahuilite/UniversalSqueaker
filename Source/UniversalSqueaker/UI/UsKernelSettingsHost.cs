@@ -48,7 +48,7 @@ public static partial class UsKernelSettingsHost
     /// </summary>
     public static UiHost Create(IUsKernelSettingsSource source, RemixConfirmationFlow? remixFlow)
     {
-        return Create(source, VerseFerriteTextMetrics.Instance, out _, remixFlow);
+        return Create(source, new VerseTextMetrics(VerseFerriteTextMetrics.Instance), out _, remixFlow);
     }
 
     /// <summary>

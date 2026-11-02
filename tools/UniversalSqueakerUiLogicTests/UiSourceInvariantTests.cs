@@ -373,10 +373,12 @@ internal static class UiSourceInvariantTests
                 throw new InvalidOperationException("retired independent Palette implementation reappears: " + file);
             foreach (string forbidden in forbiddenTypes)
             {
-                // UiTextAnchor is the new neutral FL enum, not the retired UiText helper.
-                // The public metrics-environment capability is also not the deleted UiText helper.
-                // Other old UiText-prefixed helpers remain rejected.
-                string scanned = forbidden == "UiText" ? text.Replace("UiTextAnchor", "").Replace("IUiTextMetricsEnvironment", "") : text;
+                // Only these complete fixed-FL API identifiers are not the retired US helper.
+                // Other UiText-prefixed names, including containing/concatenated identifiers, remain rejected.
+                string scanned = forbidden == "UiText"
+                    ? System.Text.RegularExpressions.Regex.Replace(text,
+                        @"\b(?:UiTextAnchor|IUiTextMetricsEnvironment|UiTextFont|UiTextFonts|UiTextPurpose|UiTextRun|IUiTextFontMetrics)\b", "")
+                    : text;
                 // FL 0.8's capture-abort enum is not the deleted UiInteract event authority.
                 if (forbidden == "UiInteract") scanned = scanned.Replace("UiInteractionEnd", "");
                 if (scanned.IndexOf(forbidden, StringComparison.Ordinal) >= 0)

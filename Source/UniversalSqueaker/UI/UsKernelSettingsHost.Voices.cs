@@ -87,19 +87,34 @@ public static partial class UsKernelSettingsHost
         if (Math.Abs(state.RosterListWidth - listWidth) > .01f) { state.RosterListWidth = listWidth; host.Invalidate(); }
         if (!state.HelpPanelOpen) return;
         var ctx = host.CreateContext(available.X);
+        var helpNode = host.Session.GetNodeByElementId("help-panel");
+        if (helpNode == null)
+        {
+            host.MeasureAndArrange(available);
+            helpNode = host.Session.GetNodeByElementId("help-panel");
+        }
+        if (helpNode == null) return;
+        // CreateContext is intentionally unresolving. Apply against its authoritative Host theme,
+        // not a previously resolved element theme, before sharing the widget's actual font pair.
+        ctx = UiTextFonts.Apply(ctx.WithNode(helpNode), ctx.Theme);
         string topic = state.PinnedHelpRef.Length > 0 ? state.PinnedHelpRef : host.Session.CurrentHelpRef ?? "";
         UsHelpCatalog.TryGetSection(host.Bindings.TryGet("help-section-ref", out string section) ? section : "", out var fallback);
         var display = UsHelpPanelLogic.Resolve(fallback, topic, key => UsKernelDraw.Keyed(ctx, key));
         string text = display.TitleText + "\n" + display.LabelText + "\n" + display.BodyText + "\n" + state.PinnedHelpContext;
-        var environment = ctx.Metrics as IUiTextMetricsEnvironment;
-        var small = environment?.CaptureEnvironment(UiFont.Small);
-        var tiny = environment?.CaptureEnvironment(UiFont.Tiny);
+        var labelRun = UsKernelDraw.Text(ctx);
+        var bodyRun = UsKernelDraw.Text(ctx, UiFont.Tiny);
+        var small = labelRun.CaptureEnvironment();
+        var tiny = bodyRun.CaptureEnvironment();
         if (state.HelpLayoutRevision == host.Session.ContentRevision && state.HelpViewWidth == available.X
             && state.HelpViewHeight == available.Y && state.HelpLayoutText == text && small != null && tiny != null
+            && state.HelpLabelFont == labelRun.Font && state.HelpBodyFont == bodyRun.Font && state.HelpTextPurpose == labelRun.Purpose
+            && state.HelpLabelRequested == labelRun.Requested && state.HelpBodyRequested == bodyRun.Requested
             && small.Equals(state.HelpSmallEnvironment) && tiny.Equals(state.HelpTinyEnvironment)) return;
         // Current text/environment may change without a business write (language or hover grace).
         if (state.HelpLayoutText != text || !Equals(small, state.HelpSmallEnvironment)
-            || !Equals(tiny, state.HelpTinyEnvironment)) host.Invalidate();
+            || !Equals(tiny, state.HelpTinyEnvironment) || state.HelpLabelFont != labelRun.Font || state.HelpBodyFont != bodyRun.Font
+            || state.HelpLabelRequested != labelRun.Requested || state.HelpBodyRequested != bodyRun.Requested
+            || state.HelpTextPurpose != labelRun.Purpose) host.Invalidate();
         for (int pass = 0; pass < 2; pass++)
         {
             var layout = host.MeasureAndArrange(available);
@@ -119,6 +134,8 @@ public static partial class UsKernelSettingsHost
         state.HelpViewWidth = available.X; state.HelpViewHeight = available.Y;
         state.HelpLayoutText = text; state.HelpLayoutRevision = host.Session.ContentRevision;
         state.HelpSmallEnvironment = small; state.HelpTinyEnvironment = tiny;
+        state.HelpLabelFont = labelRun.Font; state.HelpBodyFont = bodyRun.Font; state.HelpTextPurpose = labelRun.Purpose;
+        state.HelpLabelRequested = labelRun.Requested; state.HelpBodyRequested = bodyRun.Requested;
     }
 
     private static void BindVoiceManagement(IUsKernelSettingsSource source, UsWriteBindings writes,

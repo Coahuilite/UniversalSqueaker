@@ -18,7 +18,7 @@ namespace UniversalSqueaker.UI;
 /// once at the site that owns it (see <see cref="Keyed"/>), never once for Measure and again for
 /// Draw.
 /// </summary>
-public static class UsKernelDraw
+public static partial class UsKernelDraw
 {
     public const float RowLeftPadding = 10f;
 

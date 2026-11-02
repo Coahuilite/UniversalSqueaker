@@ -6,8 +6,8 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker;
 
 /// <summary>US owns thirty semantic colour roles through FL 0.8's public Palette.
-/// Three embedded palettes provide explicit selected/success borders and independent warning
-/// roles. Font, density and widget state belong to their
+/// Three embedded palettes provide explicit selected/success borders, independent warning
+/// roles and the seven author text-colour slots. Font, density and widget state belong to their
 /// existing owners; changing a swatch writes colours only and keeps layout/scroll/focus/draft.</summary>
 public static class UsTheme
 {
@@ -92,7 +92,7 @@ public static class UsTheme
         return Configure(theme, ActiveSwatchId);
     }
 
-    /// <summary>Apply only the selected swatch's thirty public palette declarations; preserve metrics and font.</summary>
+    /// <summary>Apply the swatch's semantic palette and text slots; preserve metrics and font.</summary>
     public static UiTheme Configure(UiTheme theme, string swatchId)
     {
         if (theme == null) throw new ArgumentNullException(nameof(theme));
@@ -100,6 +100,15 @@ public static class UsTheme
         // the page's current font/density applications in 0.8; keep those declarations intact.
         UsSwatch swatch = UsSwatches.Resolve(swatchId);
         foreach (var pair in swatch.Colors) theme.Palette[pair.Key] = pair.Value;
+        // Independent author slots follow the same current swatch. These are paint declarations:
+        // removing one reveals FL's current inherited/semantic source; alpha zero remains a value.
+        UiTextColours.Theme(theme).Set(theme[UiPaletteRole.Foreground]);
+        UiTextColours.Theme(theme, "TextColor.Muted").Set(theme[UiPaletteRole.SecondaryForeground]);
+        UiTextColours.Theme(theme, "TextColor.Active").Set(theme[UiPaletteRole.SelectedForeground]);
+        UiTextColours.Theme(theme, "TextColor.Success").Set(theme[UiPaletteRole.SuccessForeground]);
+        UiTextColours.Theme(theme, "TextColor.Warning").Set(theme[UiPaletteRole.WarningForeground]);
+        UiTextColours.Theme(theme, "TextColor.Danger").Set(theme[UiPaletteRole.DangerForeground]);
+        UiTextColours.Theme(theme, "TextColor.Disabled").Set(theme[UiPaletteRole.DisabledForeground]);
         return theme;
     }
 
