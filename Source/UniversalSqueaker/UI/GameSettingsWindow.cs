@@ -127,6 +127,7 @@ public sealed class GameSettingsWindow : UiWindowHost
         long started = sampleCosts ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         source = new UsKernelSettingsSource(SqueakerMod.Settings, Execution.Images);
         source.SetContentLayout(WindowChromeLayout.UsesWideLayout(lastContentRect.width, lastContentRect.height));
+        source.ViewState.RosterWideLayout = WindowChromeLayout.UsesWideRoster(lastContentRect.width);
         // BeforeDraw precedes first CreateHost: the opening layout already uses the actual content box.
         // SA1.3: the Remix confirmation flow is THIS window's - one per parent, built before the host so
         // the mode write registers against it, released in PostClose so no dialog or staged commit can
@@ -190,7 +191,7 @@ public sealed class GameSettingsWindow : UiWindowHost
                 Host.Session.Interactions.End(UiInteractionEnd.Aborted);
                 if (Host.Session.OwnedHotControl is UiControlKey capture) Host.Session.ReleaseHotControl(capture);
                 source!.SetContentLayout(wide);
-                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide, source!.ViewState.HelpHeight));
+                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide, source!.ViewState.HelpHeight, source.ViewState.RosterIsWide));
                 else Host.Invalidate();
             }
         }

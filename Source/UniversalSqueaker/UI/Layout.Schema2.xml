@@ -19,6 +19,15 @@
     <Scheme Name="us-preset-rows">
       <Metric Token="Font" Value="Small" />
     </Scheme>
+    <Scheme Name="us-roster-title">
+      <Metric Token="Font" Value="Medium" />
+    </Scheme>
+    <Scheme Name="us-roster-body">
+      <Metric Token="Font" Value="Small" />
+    </Scheme>
+    <Scheme Name="us-roster-meta">
+      <Metric Token="Font" Value="Tiny" />
+    </Scheme>
   </Styles>
   <Column Id="page-root" Gap="6" Padding="12" CancelBind="page-cancel">
     <Row Id="header-band" Gap="6" Padding="0">
@@ -43,7 +52,7 @@
       <Widget Id="home-return" Kind="input/button" TextKey="US.UI.BackToVoices" ActionBind="go-home" Width="172" Height="28" />
     </Column>
     <Column Id="business-body" Fill="true" Padding="0" Gap="0">
-      <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices">
+      <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices" Scheme="us-roster-body">
         <Column Id="b-control-band" Gap="2" Padding="0" VisibleBind="b-control">
           <Row Id="home-output" Breakpoint="680" Narrow="Column" Gap="12" Padding="0">
             <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" />
@@ -65,14 +74,13 @@
               <Widget Id="voice-filter-toggle" Kind="input/button" TextKey="US.UI.Filters" ActionBind="voice-filters" SelectedBind="voice-filters-open" Width="70" Height="28" />
             </Row>
             <Widget Id="packs-keyword" Kind="input/text-field" Bind="b-query" PlaceholderKey="US.B.Search" Height="28" Live="true" />
-            <Widget Id="b-range" Kind="input/dropdown" Bind="b-range" OptionsBind="b-ranges" Height="28" />
-            <Scroll Id="b-filter-scroll" Height="200" Gap="4" Padding="0" VisibleBind="voice-filters-open">
-              <Widget Id="b-coverage-label" Kind="text/wrapped" TextKey="US.B.Coverage" />
+            <Scroll Id="b-filter-scroll" Height="164" Gap="4" Padding="0" VisibleBind="voice-filters-open">
+              <Widget Id="b-range" Kind="input/dropdown" Bind="b-range" OptionsBind="b-ranges" Height="28" />
               <Widget Id="b-coverage" Kind="input/dropdown" Bind="b-coverage" OptionsBind="b-coverages" Height="28" />
               <Widget Id="b-source-query" Kind="input/text-field" Bind="b-source-query" PlaceholderKey="US.B.SearchSources" Height="28" Live="true" />
               <Widget Id="b-source-clear" Kind="input/button" TextKey="US.B.AllSources" ActionBind="b-source-clear" Height="28" />
               <Repeat Id="b-source-rows" Items="b-source-keys" Template="b-source-row" Gap="2" Padding="0" />
-              <Row Id="b-source-pages" Gap="4" Padding="0">
+              <Row Id="b-source-pages" Gap="4" Padding="0" VisibleBind="b-source-has-pages">
                 <Widget Id="b-source-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="b-source-prev" Width="90" Height="28" />
                 <Widget Id="b-source-page" Kind="text/wrapped" Bind="b-source-count" />
                 <Widget Id="b-source-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="b-source-next" Width="90" Height="28" />
@@ -80,10 +88,10 @@
             </Scroll>
             <Row Id="b-result-summary" Gap="4" Padding="0">
               <Widget Id="b-count" Kind="text/wrapped" Bind="b-count" Emphasis="Muted" />
-              <Widget Id="b-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="b-clear" Width="64" Height="28" />
+              <Widget Id="b-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="b-clear" Width="64" Height="28" VisibleBind="b-filtered" />
             </Row>
             <Row Id="b-retained-row" Gap="4" Padding="0" VisibleBind="b-retained">
-              <Widget Id="b-kept-note" Kind="text/wrapped" TextKey="US.B.Kept" />
+              <Widget Id="b-kept-note" Kind="text/wrapped" TextKey="US.B.Kept" VisibleBind="b-has-kept" Scheme="us-roster-meta" />
               <Widget Id="b-refresh" Kind="input/button" TextKey="US.UI.Refresh" ActionBind="b-refresh" Width="80" Height="28" />
             </Row>
             <Scroll Id="voice-list-scroll" Fill="true" Gap="2" Padding="0">
@@ -92,44 +100,45 @@
               <Widget Id="b-empty" Kind="text/wrapped" TextKey="US.B.NoResults" VisibleBind="b-no-results" />
               <Widget Id="b-packs-empty" Kind="text/wrapped" TextKey="US.Packs.Results.None" VisibleBind="b-packs-empty" />
             </Scroll>
-            <Row Id="b-pages" Gap="4" Padding="0">
+            <Row Id="b-pages" Gap="4" Padding="0" VisibleBind="b-has-pages">
               <Widget Id="b-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="b-prev" Height="28" />
               <Widget Id="b-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="b-next" Height="28" />
             </Row>
           </Column>
           <Scroll Id="voice-detail-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="b-sheet" CancelBind="voice-detail-cancel">
-            <Widget Id="voice-detail-back" Kind="input/button" TextKey="US.UI.BackToList" ActionBind="voice-back" VisibleBind="voice-compact-back" Width="160" Height="28" />
+            <Widget Id="voice-detail-back" Kind="input/button" TextKey="US.UI.BackToList" ActionBind="voice-back" VisibleBind="voice-compact-back" Width="160" MaxWidth="160" AlignX="Left" Height="28" />
             <Widget Id="b-no-sheet" Kind="text/wrapped" TextKey="US.B.ChooseTarget" VisibleBind="b-no-sheet" />
-            <Column Id="b-target-sheet" Gap="6" Padding="0" VisibleBind="b-target-sheet">
-              <Widget Id="b-target-title" Kind="text/wrapped" Bind="b-target-title" />
-              <Widget Id="b-target-meta" Kind="text/wrapped" Bind="b-target-meta" Emphasis="Muted" />
-              <Widget Id="b-target-status" Kind="text/wrapped" Bind="b-target-status" />
-              <Widget Id="b-working-target" Kind="text/wrapped" Bind="b-working" Emphasis="Muted" />
-              <Widget Id="b-voices-title" Kind="text/wrapped" TextKey="US.B.VoicesForTarget" />
+            <Column Id="b-target-sheet" MaxWidth="660" Gap="6" Padding="0" VisibleBind="b-target-sheet">
+              <Widget Id="b-target-title" Kind="text/wrapped" Bind="b-target-title" Scheme="us-roster-title" />
+              <Widget Id="b-target-status" Kind="text/wrapped" Bind="b-target-status" VisibleBind="b-target-has-status" />
+              <Widget Id="b-target-layer" Kind="text/wrapped" Bind="b-target-layer" />
+              <Widget Id="b-behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="b-behavior" VisibleBind="b-can-behavior" Width="Auto" Height="28" />
+              <Widget Id="b-forget" Kind="input/button" TextKey="US.B.Forget" ActionBind="b-forget" Width="Auto" Height="28" VisibleBind="b-target-orphans" />
               <Repeat Id="b-target-packs" Items="b-target-pack-keys" Template="b-target-pack-row" Gap="6" Padding="0" />
               <Widget Id="b-no-pack" Kind="text/wrapped" TextKey="US.B.NoPackHelp" VisibleBind="b-target-no-packs" />
-              <Widget Id="b-forget" Kind="input/button" TextKey="US.B.Forget" ActionBind="b-forget" Height="28" VisibleBind="b-target-orphans" />
-              <Widget Id="b-path-title" Kind="text/wrapped" TextKey="US.B.PathTitle" />
-              <Widget Id="b-path" Kind="text/wrapped" Bind="b-path" />
-              <Widget Id="b-diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" Height="28" />
-              <Column Id="b-target-exits" Gap="6" Padding="0">
-                <Widget Id="b-behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="b-behavior" VisibleBind="b-can-behavior" Height="28" />
-                <Widget Id="b-table" Kind="input/button" TextKey="US.B.OpenCreateTable" ActionBind="b-table" VisibleBind="b-can-table" Height="28" />
-              </Column>
+              <Widget Id="b-supply-route" Kind="text/wrapped" Bind="b-supply-route" VisibleBind="b-has-supply" Scheme="us-roster-meta" Emphasis="Muted" />
+              <Widget Id="b-supply-exact-counts" Kind="text/wrapped" Bind="b-supply-exact-counts" VisibleBind="b-supply-exact" />
+              <Widget Id="b-supply-race-counts" Kind="text/wrapped" Bind="b-supply-race-counts" VisibleBind="b-has-supply" />
+              <Widget Id="b-supply-fallback-counts" Kind="text/wrapped" Bind="b-supply-fallback-counts" VisibleBind="b-has-supply" />
+              <Widget Id="b-supply-table-counts" Kind="text/wrapped" Bind="b-supply-table-counts" VisibleBind="b-has-supply" />
+              <Widget Id="b-table" Kind="input/button" TextKey="US.B.OpenCreateTable" ActionBind="b-table" VisibleBind="b-can-table" Width="Auto" Height="28" />
             </Column>
-            <Column Id="b-pack-sheet" Gap="6" Padding="0" VisibleBind="b-pack-sheet">
-              <Widget Id="b-pack-title" Kind="text/wrapped" Bind="b-pack-title" />
-              <Widget Id="b-pack-meta" Kind="text/wrapped" Bind="b-pack-meta" Emphasis="Muted" />
+            <Column Id="b-pack-sheet" MaxWidth="660" Gap="6" Padding="0" VisibleBind="b-pack-sheet">
+              <Widget Id="b-pack-title" Kind="text/wrapped" Bind="b-pack-title" Scheme="us-roster-title" />
+              <Widget Id="b-pack-meta" Kind="text/wrapped" Bind="b-pack-meta" Scheme="us-roster-meta" Emphasis="Muted" />
               <Widget Id="b-pack-sheet-query" Kind="input/text-field" Bind="b-pack-sheet-query" PlaceholderKey="US.B.SearchTargets" Height="28" Live="true" />
-              <Widget Id="b-pack-working" Kind="text/wrapped" Bind="b-working" />
               <Repeat Id="b-pack-targets" Items="b-pack-target-keys" Template="b-pack-target-row" Gap="6" Padding="0" />
-              <Row Id="b-sheet-pages" Gap="4" Padding="0">
+              <Row Id="b-sheet-pages" Gap="4" Padding="0" VisibleBind="b-sheet-has-pages">
                 <Widget Id="b-sheet-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="b-sheet-prev" Width="90" Height="28" />
                 <Widget Id="b-sheet-count" Kind="text/wrapped" Bind="b-sheet-count" />
                 <Widget Id="b-sheet-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="b-sheet-next" Width="90" Height="28" />
               </Row>
-              <Widget Id="b-pack-semantics" Kind="text/wrapped" TextKey="US.UI.SelectionNote" Emphasis="Muted" />
             </Column>
+            <Row Id="b-detail-actions" Gap="6" Padding="0" MaxWidth="660" VisibleBind="b-detail-actions">
+              <Widget Id="b-details-toggle" Kind="input/button" TextKey="US.B.TechnicalDetails" ActionBind="b-details-toggle" SelectedBind="b-details-open" Width="180" Height="28" />
+              <Widget Id="b-diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" VisibleBind="b-target-sheet" Width="120" Height="28" />
+            </Row>
+            <Widget Id="b-path" Kind="text/wrapped" Bind="b-path" MaxWidth="660" VisibleBind="b-target-details" Scheme="us-roster-meta" Emphasis="Muted" />
           </Scroll>
         </Row>
       </Column>
@@ -416,7 +425,7 @@
       <Widget Id="b-source-text" Kind="text/wrapped" Bind="title" />
     </Overlay>
     <Column Id="b-roster-row" Gap="2" Padding="0">
-      <Widget Id="b-roster-tier" Kind="text/wrapped" Bind="tier" VisibleBind="tier-first" Emphasis="Muted" />
+      <Widget Id="b-roster-tier" Kind="text/wrapped" Bind="tier" VisibleBind="tier-first" Scheme="us-roster-meta" Emphasis="Muted" />
       <Overlay Id="b-roster-plate" Padding="4">
         <Widget Id="b-roster-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
         <Row Id="b-roster-line" Gap="4" Padding="0">
@@ -429,7 +438,7 @@
               <Widget Id="b-roster-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="choose" PayloadBind="payload" />
               <Column Id="b-roster-words" Gap="1" Padding="0">
                 <Widget Id="b-roster-name" Kind="text/wrapped" Bind="title" />
-                <Widget Id="b-roster-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" />
+                <Widget Id="b-roster-meta" Kind="text/wrapped" Bind="meta" Scheme="us-roster-meta" Emphasis="Muted" />
               </Column>
             </Overlay>
             <Widget Id="b-roster-fold" Kind="input/button" TextKey="US.B.XenoFold" ActionBind="fold" PayloadBind="payload" VisibleBind="has-children" Height="28" />
@@ -443,7 +452,7 @@
         <Widget Id="b-pack-name" Kind="text/wrapped" Bind="title" />
         <Row Id="b-pack-content-line" Gap="6" Padding="0">
           <Widget Id="b-pack-contents" Kind="input/button" TextKey="US.Packs.Card.Contents" ActionBind="view" PayloadBind="payload" Width="100" Height="28" />
-          <Widget Id="b-pack-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" />
+          <Widget Id="b-pack-row-meta" Kind="text/wrapped" Bind="meta" Scheme="us-roster-meta" Emphasis="Muted" />
         </Row>
         <Row Id="b-pack-single" Gap="6" Padding="0" VisibleBind="has-single">
           <Widget Id="b-pack-single-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" />
@@ -455,17 +464,17 @@
       <Row Id="b-target-pack-top" Gap="6" Padding="0">
         <Widget Id="b-target-pack-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" VisibleBind="editable" />
         <Widget Id="b-target-pack-name" Kind="text/wrapped" Bind="title" />
+        <Widget Id="b-target-pack-view" Kind="input/button" TextKey="US.B.ViewPack" ActionBind="view" PayloadBind="payload" Width="124" Height="28" />
       </Row>
-      <Widget Id="b-target-pack-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" />
-      <Widget Id="b-target-pack-view" Kind="input/button" TextKey="US.B.ViewPack" ActionBind="view" PayloadBind="payload" Width="124" Height="28" />
+      <Widget Id="b-target-pack-meta" Kind="text/wrapped" Bind="meta" Scheme="us-roster-meta" Emphasis="Muted" />
     </Column>
     <Column Id="b-pack-target-row" Gap="2" Padding="0">
       <Row Id="b-pack-target-top" Gap="6" Padding="0">
         <Widget Id="b-pack-target-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" VisibleBind="editable" />
         <Widget Id="b-pack-target-name" Kind="text/wrapped" Bind="title" />
       </Row>
-      <Widget Id="b-pack-target-status" Kind="text/wrapped" Bind="status" Emphasis="Muted" />
-      <Widget Id="b-pack-target-edit" Kind="input/button" TextKey="US.B.EditTarget" ActionBind="choose" PayloadBind="payload" VisibleBind="editable" Height="28" />
+      <Widget Id="b-pack-target-status" Kind="text/wrapped" Bind="status" VisibleBind="has-status" Scheme="us-roster-meta" Emphasis="Muted" />
+      <Widget Id="b-pack-target-edit" Kind="input/button" TextKey="US.B.EditTarget" ActionBind="choose" PayloadBind="payload" VisibleBind="editable" Width="Auto" Height="28" />
     </Column>
     <!-- A single Repeat retains action headers, field rows and restores as compatible hidden nodes. -->
     <Column Id="b-action-row" Gap="0" Padding="0" VisibleBind="visible" Scheme="us-tuning-body">

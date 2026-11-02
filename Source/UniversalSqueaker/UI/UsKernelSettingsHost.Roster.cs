@@ -43,6 +43,30 @@ public static partial class UsKernelSettingsHost
             row.Domain.OrphanCount > 0 ? T("Orphan") + " " + row.Domain.OrphanCount : "" }.Where(x => x != ""));
         string Supply(UsRosterTarget row) => row.Domain.Packs.Count == 1 ? row.Domain.Packs[0].Label
             : row.Domain.Packs.Count == 0 ? T("NoPack") : row.SelectedCount + "/" + row.Domain.Packs.Count + " " + T("PacksOn");
+        bool Ambiguous(UsRosterTarget row) => row.Domain.HasCanonicalConflict
+            || source.BuildView().Roster.Any(other => other.Key != row.Key && other.Label == row.Label);
+        string Identity(UsRosterTarget row) => row.Race + (row.Xeno == "" ? "" : " / " + row.Xeno) + " · " + row.SourceName;
+        bool Outside(UsRosterTarget row) => !Targets(false).Any(x => x.Key == row.Key);
+        bool Kept(UsRosterTarget row) => s.RosterCoverage == "enabled" && row.SelectedCount == 0
+            && Targets(false).Any(x => x.Key == row.Key);
+        string TargetNotice() => Current() is UsRosterTarget row
+            ? string.Join(" · ", new[] { Outside(row) ? T("Outside") : "", Kept(row) ? T("Kept") : "" }.Where(x => x != "")) : "";
+        string TargetStatus() => Current() is UsRosterTarget row ? string.Join("\n", new[] {
+            TargetNotice(), State(row), Ambiguous(row) ? Identity(row) : "" }.Where(x => x != "")) : "";
+        bool technicalOpen = false;
+        VoicePacksViewState? supplyView = null; string supplyTarget = ""; UsConfiguredSupply? supply = null;
+        UsConfiguredSupply? ConfiguredSupply()
+        {
+            var view = source.BuildView(); var row = Current();
+            if (!ReferenceEquals(view, supplyView) || supplyTarget != (row?.Key ?? ""))
+            { supplyView = view; supplyTarget = row?.Key ?? ""; supply = native?.ConfiguredSupply(row); }
+            return supply;
+        }
+        string Band(IReadOnlyList<UsConfiguredSupplyPack>? packs) => packs == null ? T("Unknown")
+            : string.Format(T("SupplyCounts"), packs.Count, packs.Count(p => p.Selected), packs.Where(p => p.Selected).Sum(p => p.Mappings.Count));
+        string BandDetails(string title, IReadOnlyList<UsConfiguredSupplyPack> packs) => title + ":\n"
+            + (packs.Count == 0 ? T("NoDeclarations") : string.Join("\n", packs.Select(p => p.Key + " · "
+                + T(p.Selected ? "Selected" : "NotSelected") + " [" + string.Join(", ", p.Mappings) + "]")));
         UsBrowseListState Browse() => s.BrowseDefinitions ? s.RosterBrowse : s.RosterPackBrowse;
         string Coverage() => s.BrowseDefinitions ? s.RosterCoverage : s.RosterPackCoverage;
         int targetMatched = 0, targetEligible = 0, packEligible = 0;
@@ -125,9 +149,9 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<bool>("b-voices", () => s.Page == "Voices");
         writes.Command("b-tuning", () => Go(s.LastTuningPage));
         writes.Command("b-system", () => Go(s.LastSystemPage));
-        b.BindReadOnly<bool>("b-list", () => s.WideLayout || !s.DetailOpen);
-        b.BindReadOnly<bool>("b-sheet", () => s.WideLayout || s.DetailOpen);
-        b.BindReadOnly<bool>("b-control", () => s.WideLayout || !s.DetailOpen);
+        b.BindReadOnly<bool>("b-list", () => s.RosterIsWide || !s.DetailOpen);
+        b.BindReadOnly<bool>("b-sheet", () => s.RosterIsWide || s.DetailOpen);
+        b.BindReadOnly<bool>("b-control", () => s.RosterIsWide || !s.DetailOpen);
         b.BindReadOnly<float>("b-list-width", () => s.WideLayout ? s.RosterListWidth : 0);
         b.BindReadOnly<bool>("b-target-sheet", () => s.BrowseDefinitions && Current() != null);
         b.BindReadOnly<bool>("b-pack-sheet", () => !s.BrowseDefinitions && Pack(s.SelectedPackKey).HasValue);
@@ -152,12 +176,22 @@ public static partial class UsKernelSettingsHost
         writes.Command("b-refresh", () => { if (s.BrowseDefinitions) s.RosterRetentionIdentity = ""; else s.RosterPackRetentionIdentity = ""; Bump(); });
         writes.Command("b-prev", () => Page(-1)); writes.Command("b-next", () => Page(1));
         b.BindReadOnly<bool>("b-retained", () => Coverage() == "enabled");
+        b.BindReadOnly<bool>("b-has-kept", () => s.BrowseDefinitions ? Targets(false).Any(r => r.SelectedCount == 0)
+            && Coverage() == "enabled" : Coverage() == "enabled" && Packs(false).Any(p => !p.AnyDomainEnabled));
+        b.BindReadOnly<bool>("b-has-pages", () => (s.BrowseDefinitions ? Targets(false).Count : Packs(false).Count) > 12);
+        b.BindReadOnly<bool>("b-source-has-pages", () => Sources(false).Count > 5);
+        bool Filtered() => Browse().Query != "" || Browse().Group != UsBoardBrowsePolicy.BoardGroup.PlayerRaces
+            || Browse().SourcePackageId != "" || Browse().SourceQuery != "" || Coverage() != "any";
+        b.BindReadOnly<bool>("b-filtered", Filtered);
+        string FilterSummary() => string.Join(" · ", new[] {
+            t.Translate(UsBoardBrowsePolicy.GroupLabelKey(Browse().Group)), CoverageLabel(Coverage()),
+            Sources(false).FirstOrDefault(x => x.Value == Browse().SourcePackageId).Label ?? Browse().SourcePackageId }.Where(x => x != ""));
         b.BindReadOnly<string>("b-count", () => {
             int count = s.BrowseDefinitions ? Targets(false).Count : Packs(false).Count;
             int total = s.BrowseDefinitions ? targetEligible : packEligible;
-            return (s.BrowseDefinitions ? targetMatched : count) + "/" + total + " · " + T("Page") + " " + Math.Min(Browse().Page + 1, Math.Max(1, (count + 11) / 12)) + "/" + Math.Max(1, (count + 11) / 12)
-                + " · " + t.Translate(UsBoardBrowsePolicy.GroupLabelKey(Browse().Group)) + " · " + CoverageLabel(Coverage())
-                + (Browse().SourcePackageId == "" ? "" : " · " + Browse().SourcePackageId);
+            return (s.BrowseDefinitions ? targetMatched : count) + "/" + total
+                + (count > 12 ? " · " + T("Page") + " " + Math.Min(Browse().Page + 1, (count + 11) / 12) + "/" + (count + 11) / 12 : "")
+                + (Filtered() ? "\n" + FilterSummary() : "");
         });
         b.BindReadOnly<string>("b-source-count", () => Sources(false).Count + " · " + T("Page") + " " + (Browse().SourcePage + 1) + "/" + Math.Max(1, (Sources(false).Count + 4) / 5));
         var registered = new HashSet<string>(StringComparer.Ordinal);
@@ -179,9 +213,8 @@ public static partial class UsKernelSettingsHost
                 if (registered.Add("row:" + key))
                 {
                     Read("b-roster-keys", key, "title", () => Row()?.Label ?? id);
-                    Read("b-roster-keys", key, "meta", () => Row() is UsRosterTarget r ? Supply(r) + " · " + State(r)
-                        + (source.BuildView().Roster.Any(other => other.Key != r.Key && other.Label == r.Label) ? " · " + r.SourceName + " · " + (r.Xeno == "" ? r.Race : r.Xeno) : "")
-                        + (s.RosterCoverage == "enabled" && r.SelectedCount == 0 ? " · " + T("Kept") : "") : "");
+                    Read("b-roster-keys", key, "meta", () => Row() is UsRosterTarget r ? string.Join(" · ", new[] {
+                        Supply(r), State(r), Ambiguous(r) ? Identity(r) : "", Kept(r) ? T("Kept") : "" }.Where(x => x != "")) : "");
                     Read("b-roster-keys", key, "selected", () => s.HighlightedTarget == id);
                     Read("b-roster-keys", key, "payload", () => id);
                     Read("b-roster-keys", key, "has-switch", () => Row() is UsRosterTarget r && r.Editable && r.Domain.Packs.Count == 1);
@@ -218,9 +251,10 @@ public static partial class UsKernelSettingsHost
             return key;
         }).ToArray());
         b.BindReadOnly<string>("b-target-title", () => Current()?.Label ?? "");
-        b.BindReadOnly<string>("b-target-meta", () => Current() is UsRosterTarget r ? r.Race + (r.Xeno == "" ? "" : " | " + r.Xeno) + " · " + r.SourceName
-            + (r.RaceIdentity?.IsHar == true ? " · HAR" : "") + (r.RaceIdentity?.IsHuman == true && r.Xeno == "" ? " · " + T("NativeHuman") : "") : "");
-        b.BindReadOnly<string>("b-target-status", () => Current() is UsRosterTarget r ? State(r) + (!Targets(false).Any(x => x.Key == r.Key) ? "\n" + T("Outside") : "") : "");
+        b.BindReadOnly<string>("b-target-layer", () => Current() is UsRosterTarget r ? r.Loose ? T("ReadOnlyTarget")
+            : r.Xeno == "" ? T("RaceDomain") : T("XenoDomain") + " · " + (r.RaceIdentity?.Label ?? r.Race) + " / " + r.Label : "");
+        b.BindReadOnly<string>("b-target-status", TargetStatus);
+        b.BindReadOnly<bool>("b-target-has-status", () => TargetStatus() != "");
         b.BindReadOnly<bool>("b-target-no-packs", () => Current()?.Domain.Packs.Count == 0);
         b.BindReadOnly<bool>("b-target-orphans", () => Current()?.Domain.OrphanCount > 0);
         writes.Command("b-forget", () => { var r = Current(); if (r != null && !r.Loose) { source.ForgetUnavailable(r.Domain.Scope, r.Race, r.Xeno); Bump(); } });
@@ -232,9 +266,31 @@ public static partial class UsKernelSettingsHost
             source.SetFallbackSelection(exists ? r.Race : "", ""); s.PendingFallbackRace = exists ? "" : r.Race;
             s.FallbackCreating = !exists; s.FallbackDetailOpen = true; Go("Fallback"); });
         b.BindReadOnly<string>("b-pack-title", () => Pack(s.SelectedPackKey)?.Label ?? s.SelectedPackKey);
-        b.BindReadOnly<string>("b-pack-meta", () => Pack(s.SelectedPackKey) is PackCardView p ? p.ModName + " · " + p.Author + "\n" + p.Key + "\n" + p.Coverage
-            + (!Packs(false).Any(x => x.Key == p.Key) ? "\n" + T("Outside") : "") : T("Unavailable"));
-        b.BindReadOnly<string>("b-path", () => native?.ConfiguredPath(Current(), t) ?? T("Unknown"));
+        b.BindReadOnly<string>("b-pack-meta", () => Pack(s.SelectedPackKey) is PackCardView p ? p.ModName + " · " + p.Author
+            + (PackNotice() == "" ? "" : "\n" + PackNotice()) + (technicalOpen ? "\n" + p.Key + "\n" + p.Coverage : "") : T("Unavailable"));
+        string PackNotice() => Pack(s.SelectedPackKey) is PackCardView p ? string.Join(" · ", new[] {
+            !Packs(false).Any(x => x.Key == p.Key) ? T("Outside") : "",
+            s.RosterPackCoverage == "enabled" && !p.AnyDomainEnabled && Packs(false).Any(x => x.Key == p.Key) ? T("Kept") : "" }.Where(x => x != "")) : "";
+        b.BindReadOnly<bool>("b-details-open", () => technicalOpen);
+        b.BindReadOnly<bool>("b-detail-actions", () => s.BrowseDefinitions ? Current() != null : Pack(s.SelectedPackKey).HasValue);
+        b.BindReadOnly<bool>("b-target-details", () => technicalOpen && s.BrowseDefinitions && Current() != null);
+        writes.Command("b-details-toggle", () => { technicalOpen = !technicalOpen; Bump(); });
+        b.BindReadOnly<bool>("b-supply-exact", () => Current() is UsRosterTarget r && !r.Loose && r.Xeno != "");
+        b.BindReadOnly<bool>("b-has-supply", () => Current() is UsRosterTarget r && !r.Loose);
+        b.BindReadOnly<string>("b-supply-exact-counts", () => T("Exact") + "\n" + Band(ConfiguredSupply()?.ExactRegular));
+        b.BindReadOnly<string>("b-supply-race-counts", () => T("RaceRegular") + "\n" + Band(ConfiguredSupply()?.RaceRegular));
+        b.BindReadOnly<string>("b-supply-fallback-counts", () => T("PackFallback") + "\n" + Band(ConfiguredSupply()?.ExactFallback));
+        b.BindReadOnly<string>("b-supply-table-counts", () => T("FinalTable") + " · " + (ConfiguredSupply() is UsConfiguredSupply c
+            ? c.HasTable ? c.TableMappings + " " + T("Mapped") : T("NoTable") : T("Unknown")));
+        b.BindReadOnly<string>("b-supply-route", () => ConfiguredSupply() is UsConfiguredSupply c
+            ? T("ConfiguredSupply") + " · " + t.Translate("US.Tuning.Mode." + c.Mode) + "\n" + T("SupplyRoute." + c.Mode) : T("Unknown"));
+        b.BindReadOnly<string>("b-path", () => (Current() is UsRosterTarget r ? Identity(r) + " · " + r.SourceId
+            + (r.RaceIdentity?.IsHar == true ? " · HAR" : "")
+            + (r.RaceIdentity?.IsHuman == true && r.Xeno == "" ? " · " + T("NativeHuman") : "") + "\n" : "") + (ConfiguredSupply() is UsConfiguredSupply c
+            ? (Current()?.Xeno != "" ? BandDetails(T("Exact"), c.ExactRegular) + "\n" : "")
+                + BandDetails(T("RaceRegular"), c.RaceRegular) + "\n" + BandDetails(T("PackFallback"), c.ExactFallback)
+                + (Current()?.Xeno != "" ? "\n" + T("RaceRegularOnly") : "")
+            : native?.ConfiguredPath(Current(), t) ?? T("Unknown")) + "\n" + T("AdmissionNote"));
         b.BindReadOnly<IReadOnlyList<string>>("b-target-pack-keys", () => {
             var r = Current(); if (r == null) return Array.Empty<string>();
             return r.Domain.Packs.Select(pack => {
@@ -244,7 +300,8 @@ public static partial class UsKernelSettingsHost
                 if (registered.Add("tp:" + key))
                 {
                     Read("b-target-pack-keys", key, "title", () => Info().Label);
-                    Read("b-target-pack-keys", key, "meta", () => Info().ModName + " · " + Info().Author + "\n" + Info().Coverage);
+                    Read("b-target-pack-keys", key, "meta", () => Info().ModName + " · " + Info().Author + "\n" + Info().Coverage
+                        + (Row() is UsRosterTarget row && !row.Editable ? "\n" + State(row) : ""));
                     Read("b-target-pack-keys", key, "editable", () => Row()?.Editable == true);
                     Read("b-target-pack-keys", key, "readonly", () => Row()?.Editable != true);
                     Read("b-target-pack-keys", key, "payload", () => pk);
@@ -263,6 +320,7 @@ public static partial class UsKernelSettingsHost
         writes.Command("b-sheet-prev", () => { s.PackSheetPage = Math.Max(0, s.PackSheetPage - 1); Bump(); });
         writes.Command("b-sheet-next", () => { s.PackSheetPage = Math.Min(Math.Max(0, (PackTargets(false).Count - 1) / 10), s.PackSheetPage + 1); Bump(); });
         b.BindReadOnly<string>("b-sheet-count", () => PackTargets(false).Count + " · " + T("Page") + " " + (s.PackSheetPage + 1) + "/" + Math.Max(1, (PackTargets(false).Count + 9) / 10));
+        b.BindReadOnly<bool>("b-sheet-has-pages", () => PackTargets(false).Count > 10);
         b.BindReadOnly<IReadOnlyList<string>>("b-pack-target-keys", () => PackTargets(true).Select(d => {
             string pk = s.SelectedPackKey, target = d.RaceDefName + (d.TargetDefName == "" ? "" : "|" + d.TargetDefName), key = RosterKey(pk + "\n" + target);
             UsRosterTarget? Row() => Target(target);
@@ -270,6 +328,7 @@ public static partial class UsKernelSettingsHost
             {
                 Read("b-pack-target-keys", key, "title", () => Row()?.Label ?? target);
                 Read("b-pack-target-keys", key, "status", () => Row() is UsRosterTarget r ? State(r) : T("Unavailable"));
+                Read("b-pack-target-keys", key, "has-status", () => Row() is not UsRosterTarget r || State(r) != "");
                 Read("b-pack-target-keys", key, "editable", () => Row()?.Editable == true);
                 Read("b-pack-target-keys", key, "readonly", () => Row()?.Editable != true);
                 Read("b-pack-target-keys", key, "payload", () => target);
@@ -284,7 +343,6 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<bool>("b-dev-open", () => developerToolsOpen);
         writes.Command("b-dev-toggle", () => { developerToolsOpen = !developerToolsOpen; Bump(); });
         b.BindReadOnly<string>("b-preset-result", () => s.PresetResult);
-        b.BindReadOnly<string>("b-working", () => T("Working") + ": " + (s.SelectedRaceDefName == "" ? T("NoTarget") : s.SelectedRaceDefName + (s.SelectedTargetName == "" ? "" : " / " + s.SelectedTargetName)));
         // Missing selections stay addressable even when their domain isn't in the current result page.
         b.BindReadOnly<IReadOnlyList<string>>("b-missing-keys", () => source.BuildView().Roster.Where(r => r.Domain.OrphanCount > 0).Select(r => {
             string target = r.Key, key = RosterKey(target);

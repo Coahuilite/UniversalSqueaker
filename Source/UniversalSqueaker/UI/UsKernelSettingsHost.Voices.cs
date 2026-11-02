@@ -63,10 +63,10 @@ public static partial class UsKernelSettingsHost
         if (index >= 0) source.ViewState.PackPage = index / 20;
     }
     // Definition updates preserve the host and every compatible node identity, including scroll/drafts.
-    internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f) => UiLayoutManifest.Parse(ReadManifest()
+    internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f, bool? rosterWide = null) => UiLayoutManifest.Parse(ReadManifest()
         .Replace("Id=\"voice-split\" Breakpoint=\"1\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
-        .Replace("Id=\"b-roster-split\" Breakpoint=\"1\"", "Id=\"b-roster-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
-        .Replace("Id=\"b-list-column\" Width=\"300\"", "Id=\"b-list-column\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
+        .Replace("Id=\"b-roster-split\" Breakpoint=\"1\"", "Id=\"b-roster-split\" Breakpoint=\"" + ((rosterWide ?? wide) ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-list-column\" Width=\"300\"", "Id=\"b-list-column\"" + ((rosterWide ?? wide) ? " Width=\"300\"" : ""))
         .Replace("Id=\"b-final-split\" Breakpoint=\"1\"", "Id=\"b-final-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
         .Replace("Id=\"b-final-list\" Width=\"300\"", "Id=\"b-final-list\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
         .Replace("Id=\"voice-detail-scroll\" Width=\"440\"", "Id=\"voice-detail-scroll\"" + (wide ? " Width=\"440\"" : ""))
@@ -79,6 +79,10 @@ public static partial class UsKernelSettingsHost
     public static void PreparePage(UiHost host, UiLayoutPoint available)
     {
         if (!host.Bindings.TryGet("page-state", out VoicePacksPageState state)) return;
+        bool rosterWide = WindowChromeLayout.UsesWideRoster(available.X);
+        bool rosterChanged = state.RosterIsWide != rosterWide;
+        state.RosterWideLayout = rosterWide;
+        if (rosterChanged) host.UpdateDefinition(PageDefinition(state.WideLayout, state.HelpHeight, rosterWide));
         float listWidth = Math.Max(300, Math.Min(400, (available.X - 24) * .4f));
         if (Math.Abs(state.RosterListWidth - listWidth) > .01f) { state.RosterListWidth = listWidth; host.Invalidate(); }
         if (!state.HelpPanelOpen) return;
@@ -110,7 +114,7 @@ public static partial class UsKernelSettingsHost
             float height = Math.Min(budget, header.Height + 4f + content.Height);
             if (Math.Abs(state.HelpHeight - height) < .01f) break;
             state.HelpHeight = height;
-            host.UpdateDefinition(PageDefinition(state.WideLayout, height));
+            host.UpdateDefinition(PageDefinition(state.WideLayout, height, state.RosterIsWide));
         }
         state.HelpViewWidth = available.X; state.HelpViewHeight = available.Y;
         state.HelpLayoutText = text; state.HelpLayoutRevision = host.Session.ContentRevision;
@@ -174,22 +178,22 @@ public static partial class UsKernelSettingsHost
             () => !s.HelpPanelOpen && (s.DetailOpen || s.PackArrivalFromDirectory));
         writes.Command("page-cancel", () => {
             if (s.HelpPanelOpen) s.HelpPanelOpen = false;
-            else if (s.Page == "Voices" && !s.WideLayout && s.DetailOpen) ReturnVoiceList();
+            else if (s.Page == "Voices" && !s.RosterIsWide && s.DetailOpen) ReturnVoiceList();
             else if (s.Page == "Voices") {
                 if (s.BrowseDefinitions) { s.HighlightedTarget = ""; source.CancelDomainSelection(); }
                 else s.SelectedPackKey = "";
             }
             else ReturnToPreviousPage(s);
             bumper.Bump();
-        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.WideLayout && s.DetailOpen)
+        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.RosterIsWide && s.DetailOpen)
             || (s.BrowseDefinitions ? s.HighlightedTarget != "" : s.SelectedPackKey != "") || s.PackArrivalFromDirectory);
         b.BindReadOnly<bool>("voice-packs", () => !s.BrowseDefinitions);
         b.BindReadOnly<bool>("voice-definitions", () => s.BrowseDefinitions);
         writes.Command("browse-packs", () => { s.BrowseDefinitions = false; s.DetailOpen = false; bumper.Bump(); });
         writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; s.DetailOpen = false; bumper.Bump(); });
-        b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.WideLayout || !s.DetailOpen));
-        b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.WideLayout || s.DetailOpen));
-        b.BindReadOnly<bool>("voice-compact-back", () => (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
+        b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.RosterIsWide || !s.DetailOpen));
+        b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.RosterIsWide || s.DetailOpen));
+        b.BindReadOnly<bool>("voice-compact-back", () => (!s.RosterIsWide && s.DetailOpen) || s.PackArrivalFromDirectory);
         b.BindReadOnly<bool>("voice-directory-return", () => s.PackArrivalFromDirectory && !s.BrowseDefinitions && !s.DetailOpen);
         PackCardView? ViewedPack()
         {

@@ -5,6 +5,30 @@ using UniversalSqueaker.Kernel;
 
 namespace UniversalSqueaker.UI;
 
+/// <summary>Read-only configuration facts, not eligibility, resource readiness or playback results.</summary>
+public sealed class UsConfiguredSupplyPack
+{
+    public readonly string Key;
+    public readonly bool Selected;
+    public readonly IReadOnlyList<string> Mappings;
+    public UsConfiguredSupplyPack(string key, bool selected, IEnumerable<string> mappings)
+    { Key = key; Selected = selected; Mappings = Array.AsReadOnly(mappings.OrderBy(x => x, StringComparer.Ordinal).ToArray()); }
+}
+
+public sealed class UsConfiguredSupply
+{
+    public readonly IReadOnlyList<UsConfiguredSupplyPack> ExactRegular, RaceRegular, ExactFallback;
+    public readonly SqueakVoicePackMode Mode;
+    public readonly bool HasTable;
+    public readonly int TableMappings;
+    public UsConfiguredSupply(IEnumerable<UsConfiguredSupplyPack> exactRegular, IEnumerable<UsConfiguredSupplyPack> raceRegular,
+        IEnumerable<UsConfiguredSupplyPack> exactFallback, SqueakVoicePackMode mode, bool hasTable, int tableMappings)
+    {
+        ExactRegular = Array.AsReadOnly(exactRegular.ToArray()); RaceRegular = Array.AsReadOnly(raceRegular.ToArray());
+        ExactFallback = Array.AsReadOnly(exactFallback.ToArray()); Mode = mode; HasTable = hasTable; TableMappings = tableMappings;
+    }
+}
+
 /// <summary>Immutable directory/domain join. No admission, selection or audio reconstruction.</summary>
 public sealed class UsRosterTarget
 {

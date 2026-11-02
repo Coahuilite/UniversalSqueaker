@@ -823,19 +823,29 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.B.ChooseTarget>Select a target, or view a pack's contents.</US.B.ChooseTarget>
   <US.B.NoResults>No matching results. Clear these conditions or widen the range.</US.B.NoResults>
   <US.B.VoicesForTarget>VOICES FOR THIS TARGET</US.B.VoicesForTarget>
-  <US.B.NoPackHelp>No pack serves this exact target. Without a declaration or final table a race stays silent. Create a table explicitly below; table-only admission needs a full game restart.</US.B.NoPackHelp>
-  <US.B.PathTitle>CONFIGURED PATH · not a playback check</US.B.PathTitle>
+  <US.B.NoPackHelp>No pack declares this exact target.</US.B.NoPackHelp>
+  <US.B.RaceDomain>Race layer</US.B.RaceDomain>
+  <US.B.XenoDomain>Race + xenotype layer</US.B.XenoDomain>
+  <US.B.ReadOnlyTarget>Read-only target</US.B.ReadOnlyTarget>
+  <US.B.ConfiguredSupply>Configured supply</US.B.ConfiguredSupply>
+  <US.B.SupplyCounts>{0} declared packs · {1} selected · {2} selected action mappings</US.B.SupplyCounts>
+  <US.B.SupplyRoute.Fallback>Uses the first available layer: exact regular → same-race regular → exact pack fallback → final table.</US.B.SupplyRoute.Fallback>
+  <US.B.SupplyRoute.Remix>Mixes the nonempty supply layers below equally.</US.B.SupplyRoute.Remix>
+  <US.B.SupplyRoute.Vanilla>Routes only the final table; pack choices are retained.</US.B.SupplyRoute.Vanilla>
+  <US.B.SupplyRoute.Disabled>No dispatch; choices are retained.</US.B.SupplyRoute.Disabled>
+  <US.B.NoDeclarations>No declarations</US.B.NoDeclarations>
+  <US.B.Selected>Selected</US.B.Selected>
+  <US.B.NotSelected>Not selected</US.B.NotSelected>
   <US.B.OpenCreateTable>Open / create final table…</US.B.OpenCreateTable>
   <US.B.Forget>Forget dangling choices</US.B.Forget>
   <US.B.ViewPack>View pack</US.B.ViewPack>
   <US.B.EditTarget>Edit this target</US.B.EditTarget>
   <US.B.SearchTargets>Filter this pack's targets…</US.B.SearchTargets>
   <US.B.XenoFold>Show / hide xenotype domains</US.B.XenoFold>
-  <US.B.Working>Working target</US.B.Working>
   <US.B.NoTarget>No working target</US.B.NoTarget>
   <US.B.Exact>Exact xenotype regular</US.B.Exact>
   <US.B.RaceRegular>Same-race regular</US.B.RaceRegular>
-  <US.B.PackFallback>Exact-domain selected-pack fallback</US.B.PackFallback>
+  <US.B.PackFallback>Exact-domain pack fallback</US.B.PackFallback>
   <US.B.FinalTable>Final race table</US.B.FinalTable>
   <US.B.NoTable>No table</US.B.NoTable>
   <US.B.Mapped>mapped sounds</US.B.Mapped>

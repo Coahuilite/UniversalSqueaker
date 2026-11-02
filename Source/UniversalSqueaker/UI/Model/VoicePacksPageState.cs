@@ -31,6 +31,9 @@ public sealed class VoicePacksPageState
     public bool FiltersOpen;
     public bool RestoreAllOpen;
     public bool WideLayout;
+    // Null until a real content box is supplied; standalone hosts retain their original layout input.
+    internal bool? RosterWideLayout;
+    internal bool RosterIsWide => RosterWideLayout ?? WideLayout;
     public bool DetailOpen;
     public bool PackArrivalFromDirectory;
     public string SelectedPackKey = "";

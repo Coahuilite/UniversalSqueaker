@@ -815,19 +815,29 @@
   <US.B.ChooseTarget>选择目标，或查看语音包内容。</US.B.ChooseTarget>
   <US.B.NoResults>没有匹配结果。请清除条件或扩大范围。</US.B.NoResults>
   <US.B.VoicesForTarget>此目标的语音</US.B.VoicesForTarget>
-  <US.B.NoPackHelp>没有包服务于此准确目标。没有声明或最终表的种族保持无声。可在下方显式创建表；仅由表准入时需完整重启游戏。</US.B.NoPackHelp>
-  <US.B.PathTitle>已配置路径 · 不是播放检查</US.B.PathTitle>
+  <US.B.NoPackHelp>没有包声明此准确目标。</US.B.NoPackHelp>
+  <US.B.RaceDomain>种族层</US.B.RaceDomain>
+  <US.B.XenoDomain>种族＋异种层</US.B.XenoDomain>
+  <US.B.ReadOnlyTarget>只读目标</US.B.ReadOnlyTarget>
+  <US.B.ConfiguredSupply>已配置供给</US.B.ConfiguredSupply>
+  <US.B.SupplyCounts>{0} 个声明包 · {1} 个已选 · {2} 个已选动作映射</US.B.SupplyCounts>
+  <US.B.SupplyRoute.Fallback>使用首个可用层：准确常规 → 同种族常规 → 准确域包后备 → 最终表。</US.B.SupplyRoute.Fallback>
+  <US.B.SupplyRoute.Remix>在下列非空供给层间等权混合。</US.B.SupplyRoute.Remix>
+  <US.B.SupplyRoute.Vanilla>仅路由最终表；保留语音包选择。</US.B.SupplyRoute.Vanilla>
+  <US.B.SupplyRoute.Disabled>不派发；保留选择。</US.B.SupplyRoute.Disabled>
+  <US.B.NoDeclarations>未声明</US.B.NoDeclarations>
+  <US.B.Selected>已选用</US.B.Selected>
+  <US.B.NotSelected>未选用</US.B.NotSelected>
   <US.B.OpenCreateTable>打开／创建最终表…</US.B.OpenCreateTable>
   <US.B.Forget>清除失效选择</US.B.Forget>
   <US.B.ViewPack>查看语音包</US.B.ViewPack>
   <US.B.EditTarget>编辑此目标</US.B.EditTarget>
   <US.B.SearchTargets>筛选此包的目标…</US.B.SearchTargets>
   <US.B.XenoFold>展开／收起异种域</US.B.XenoFold>
-  <US.B.Working>编辑目标</US.B.Working>
   <US.B.NoTarget>尚无编辑目标</US.B.NoTarget>
   <US.B.Exact>准确异种常规供给</US.B.Exact>
   <US.B.RaceRegular>同种族常规供给</US.B.RaceRegular>
-  <US.B.PackFallback>准确域所选包后备</US.B.PackFallback>
+  <US.B.PackFallback>准确域包后备</US.B.PackFallback>
   <US.B.FinalTable>种族最终表</US.B.FinalTable>
   <US.B.NoTable>尚无表</US.B.NoTable>
   <US.B.Mapped>个已映射声音</US.B.Mapped>

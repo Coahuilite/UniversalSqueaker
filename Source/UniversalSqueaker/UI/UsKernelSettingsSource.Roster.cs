@@ -59,6 +59,22 @@ public sealed partial class UsKernelSettingsSource
             .Concat(new[] { "participation:us.core/Age", "participation:us.core/Mood" })
             .Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray());
     }
+    public UsConfiguredSupply? ConfiguredSupply(UsRosterTarget? target)
+    {
+        if (target == null || target.Loose) return null;
+        var configuration = settings.CaptureBehaviorConfiguration();
+        var packs = SqueakerRuntime.Audio.Packs.Where(p => !p.Domain.IsNonPawn && p.Domain.Race.DefName == target.Race).ToArray();
+        var exact = packs.Where(p => (p.Domain.Xenotype?.DefName ?? "") == target.Xeno).ToArray();
+        UsConfiguredSupplyPack Regular(VoicePackEntry p) => new(p.PackKey, configuration.IsPackSelected(p.Domain, p.PackKey), p.Actions.Keys);
+        var view = BuildView();
+        var table = view.FallbackRaces.Where(r => r.DefName == target.Race).ToArray();
+        return new UsConfiguredSupply(exact.Where(p => p.Actions.Count > 0).Select(Regular),
+            packs.Where(p => !p.Domain.Xenotype.HasValue && p.Actions.Count > 0).Select(Regular),
+            exact.Where(p => p.PackFallback?.Count > 0).Select(p => new UsConfiguredSupplyPack(p.PackKey,
+                configuration.IsPackSelected(p.Domain, p.PackKey), p.PackFallback!.Keys)),
+            view.Mode, table.Length > 0, table.Length > 0 ? table[0].SoundCount : 0);
+    }
+
     public string ConfiguredPath(UsRosterTarget? target, IUiTranslation t)
     {
         string T(string key) => t.Translate("US.B." + key);
