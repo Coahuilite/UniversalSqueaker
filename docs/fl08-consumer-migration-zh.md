@@ -2,6 +2,8 @@
 
 US0.6首次公开基线消费FL0.8 API、AssemblyVersion0.8.0.0及生产Require范围[0.8.0,0.9.0)，Private=false、单一显式carrier不变。实际编译依赖以候选嵌入收据和标准stage为准，不由邻库移动HEAD推断。3e42本地Release准备使用固定6ec0c31生产者；这不是已发布rc2／未来mainSHA。生产启动只检查API范围，Host runner／stage才核完整编译收据，不能混成一个启动门。
 
+本次发布门窄修明确使用`ferritelib/dist/release-gate-20261101/producer-release-r1/FerriteLib`，不回退旧生产者。US Release编译与现有Host运行实际消费同一固定FL，产品接口和收据见[release-gate固定交付](../dist/release-gate-20261101/INTERFACE-r1.md)。未变中性Core／Pawn through证据复用；NonPawn高层、上游精确故障组合及原生人验限制各保原边界。
+
 此前833c14f4／local.incremental4的真实消费与已接受性能、A009r2的US68b30e3／FL36fa7ad恢复对保各自原身份；704c4c1／local.incremental3未放行。已发布rc1资产与本地输入是不同坐标，后续云端更改由维护者处理，不退回旧0.7。1.6 adapter可用不表示已交付1.7 adapter；原生视觉／配置／声音及十五逐项人验保持真实缺口，不重新打开已接受性能。
 
 ## 安装运行前置

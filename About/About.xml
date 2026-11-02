@@ -1,15 +1,12 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- Structure: docs/mod-structure-reference-zh.md. Version is the numeric tag base; rc1 belongs
      to the release tag/asset name. RimWorld 1.6 and the 1.7 basic-compatibility candidate share the 1.6 payload. -->
 <ModMetaData>
   <packageId>coahuilite.universalsqueaker</packageId>
   <modVersion>0.6.0</modVersion>
-  <name>Universal Squeaker — B／种族名册版</name>
+  <name>Universal Squeaker</name>
   <author>Coahuilite</author>
-  <supportedVersions>
-    <li>1.6</li>
-    <li>1.7</li>
-  </supportedVersions>
+  <supportedVersions><li>1.6</li><li>1.7</li></supportedVersions>
   <!-- FerriteLib is a hard prerequisite: it carries FerriteLib.UiKit.dll, which US compiles against
        and binds to at runtime. RimWorld's modDependencies cannot express a version (ModRequirement
        only parses packageId / alternativePackageIds / displayName), so the API-range assert lives in
@@ -32,5 +29,7 @@
     <li>brrainz.harmony</li>
     <li>coahuilite.ferritelib</li>
   </loadAfter>
-  <description>本地原生 UI 比较 B／种族名册版。Voices 目标名册与 Packs 镜头；Tuning 含行为、输出、最终表和预设；System 含外观与入口、诊断及恢复。与 A 共用 packageId 和设置；不可同时安装 A 与 B。rnrnLocal native UI comparison B / Species roster. Voices target roster with a Packs lens; Tuning contains Behaviour, Output, Final table and Presets; System contains Appearance/entry, Diagnostics and Restore. A and B share the packageId and settings. Install only one US variant, alongside the shared FerriteLib and existing prerequisites.</description>
+  <description>为任何种族接入语音包的通用内核。Universal Squeaker 本身不含任何语音内容：它提供路由表（把第三方语音包按种族/异种域挂到 pawn 上）、分层调音（全局/种族/异种三级覆盖）、距离衰减曲线、心情调制、彩蛋门与相机指示器，并附带 usdiag 诊断协议。从启动主菜单或原版设置中的“US 语音”入口打开同一窗口：语音管理首页集中管理语音包，次级“设置与工具”提供编辑器，页头“本页帮助”和字段“说明”提供显式上下文帮助。原 Mod Settings 入口仍可用于恢复访问。需要前置模组 Harmony 和 FerriteLib。
+
+Universal Squeaker is a voice-pack routing kernel for any race. It ships no audio itself: it provides a routing table (attaching third-party voice packs to pawns by race/xenotype domain), layered tuning (global/race/xenotype overrides), distance attenuation curves, mood modulation, easter-egg gating, and a camera indicator — with a built-in usdiag diagnostics protocol. Open the same window through US Voices in the startup menu or vanilla Options: the voice-management home manages packs, secondary Settings &amp; tools pages hold the editors, and page-header help and field explanations provide explicit contextual help. The original Mod Settings route remains available to restore access. Requires the Harmony and FerriteLib prerequisite mods.</description>
 </ModMetaData>

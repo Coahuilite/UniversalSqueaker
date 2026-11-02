@@ -1,48 +1,133 @@
 # Universal Squeaker
 
-Accepted Select now uses 0.3 real seconds; Draft/Undraft use 0.6 each, while simulation keeps game ticks. This single explicit-opportunity contract rejects missing facts and obsolete timing fields rather than falling back. See [timing and upgrade guidance](docs/openspec/specs/response-opportunities/spec.md).
-
-Preparing **v0.6.0-rc1**, a prerelease/non-Latest for RimWorld1.6. The ea610fa/FL833c14f4 baseline received overall internal-trial acceptance; granular native results remain scoped known limits. See [release and upgrade notes](docs/releases/v0.6.0-rc1.md). The new local fixed input for CI preparation is not a publishedRC2 dependency.
-
-The local RimWorld 1.7 basic-compatibility candidate must be used with its paired FerriteLib package. Native sound and rendering still await human verification. The existing 1.6 entry and content remain available; see the [compatibility evidence and limits](docs/development/specification/open-issues.md#rw17-基础兼容候选).
-
-0.6: [current specification](docs/specification.md) — complete neutral Core, one synchronous response owner and explicit notification declarations. Ordinary responses now initialize automatically without developer mode; native/human acceptance remains pending.
-
 **English** | [中文](./README.zh-CN.md)
 
-A voice-pack routing kernel for RimWorld, derived from Squeaky Ratkin under MPL-2.0.
+Universal Squeaker (US) lets RimWorld pawns speak with voices from third-party voice packs, routed by **exact race and xenotype**.
+It is a voice-pack routing kernel: it ships no audio of its own and decides who speaks, when, which sound from which pack, and how.
+Derived from Squeaky Ratkin under MPL-2.0. The tree includes one Ratkin final-fallback mapping that references vanilla Core audio.
 
-US attaches third-party voices to accurate race/xenotype domains, with layered tuning, mood modulation, easter-egg eligibility, camera-height attenuation and diagnostics. It ships no audio files of its own; the current tree includes a Ratkin final-fallback mapping that references vanilla Core audio.
+## Status
 
-Open **US Voices** from the startup menu, the vanilla Options category column, or Mod Settings. The default voice-management page keeps mode, volume, search and exact pack targets together; **Settings & tools** opens your last editor in this window, with equal-width direct tabs. Context help expands below the business page only when requested. Appearance offers Original dark, Royalty and Black & gold from one embedded colour resource. The two native entries can be hidden independently. See the [current UI contract](docs/openspec/specs/ui-consumption/spec.md) for compact/wide layouts and native acceptance boundaries.
+| Item | Status |
+| --- | --- |
+| Version | 0.6.0 |
+| Release | v0.6.0-rc1 in preparation, not yet published |
+| RimWorld 1.6 | Primary target |
+| RimWorld 1.7 | Basic-compatibility candidate, to be used with the matching FerriteLib package; sound and UI not yet verified in game |
+| Prerequisites | Harmony, FerriteLib 0.8.x |
 
-The definition directory starts with humanoid races and legal xenotypes; animals are opt-in. Category, keyword and real Def-source filters combine, with bounded searchable source lists and reachable result pages. Existing fallback tables, new Race candidates and Core sounds keep separate browsing state; selecting a candidate does not create a table. At logical1024×768 the centred window is864×640, with no extra UI scaling. The native Options entry carries the US microphone icon.
+See the [release notes](docs/releases/v0.6.0-rc1.md) for scope and upgrade notes, and
+[open issues](docs/development/specification/open-issues.md) for known deviations and evidence limits.
 
-## Feedback
+## For players
 
-To report a voice problem in a map, open **Settings & tools → Diagnostics & dependencies → Open response diagnostics**, close settings normally, **Expand** the diagnostic bar, select or lock the pawn, then **Start new recording → reproduce normally → Stop → Copy feedback**. No developer mode or detailed logs are required. Opening only starts viewing; recording keeps the latest 64 results and marks overwritten or missing evidence. Closing stops recording and retains evidence for this game; leaving or reloading the game clears it. Paste the feedback with a description of the problem; no configuration or raw log collection is needed.
+### Install and update
 
-## Requirements and identity
+1. Install **[Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)** (`brrainz.harmony`) and
+   **FerriteLib** (`coahuilite.ferritelib`, 0.8.x) and load both before US. Neither is included in the US archive.
+2. Install at least one voice-pack mod. US makes no sound on its own.
+3. To update, quit the game completely, move the old US folder out of Mods, then put the new complete folder in its place.
+   Do not overwrite only the DLL. **Keep the same folder name** to keep your settings; there is no need to clear Config or saves.
 
-- RimWorld 1.6, or 1.7.4990 rev1069 with this basic-compatibility candidate.
-- **[Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)** (`brrainz.harmony`) is a required external mod; US does not bundle `0Harmony.dll`.
-- **FerriteLib** (`coahuilite.ferritelib`) is a required prerequisite. US references its DLL and never ships a second copy; the supported API range is checked in code.
-- packageId: `coahuilite.universalsqueaker`.
-- Namespace / Def prefix / diagnostic prefix: `UniversalSqueaker` / `US_` / `usdiag`.
-- License: [MPL-2.0](LICENSE).
+### Open the settings
 
-Install and enable Harmony and the paired FerriteLib package before Universal Squeaker in the mod list. Both prerequisites are installed separately from the US archive.
+Three entries open the same window: the startup menu, **US Voices** in the category column of the vanilla Options, and the vanilla
+Mod Settings. The two added entries can be hidden independently.
 
-Current builds explicitly consume a fixed FerriteLib **0.8** package (`[0.8.0,0.9.0)`). See the [consumer migration guide](docs/fl08-consumer-migration-zh.md) for build input, retained UI behavior and native acceptance boundaries.
+In the settings window you can:
 
-## Documentation
+- Choose which voice packs are active for each race or xenotype. Humanoid races and legal xenotypes are listed by default; animals
+  are opt-in. Filter by category, keyword and Def source.
+- Tune each action: fifteen official actions such as select, draft, attack and eat, each with its own scope and parameters.
+- Edit final-fallback tables: what a race uses when no suitable pack exists.
+- Switch appearance: Original dark, Royalty, or Black & gold.
+- Check prerequisites and record diagnostic feedback.
 
-The [current specification](docs/specification.md) is the single authority for capabilities, producer-consumer connections, native facts and ordinary defaults. [Implementation status and open defects](docs/development/specification/open-issues.md) remain separate; all fifteen itemized native/human gates retain their evidence limits.
+### Reporting a voice problem
 
-- [Author guide and examples](docs/us-kernel-0.6-authoring-zh.md)
-- [Upgrade and explicit source recovery](docs/upgrade-0.6-zh.md)
-- [Build and debug](docs/build-and-debug.md)
-- [Release flow](docs/release-runbook-zh.md) and [privacy gate](docs/push-privacy-gate.md)
-- [Documentation index](docs/README.md)
+In a map, open **Settings & tools → Diagnostics & dependencies → Open response diagnostics**, close settings normally, **Expand**
+the diagnostic bar, select or lock the pawn, then **Start new recording → reproduce normally → Stop → Copy feedback**. Paste the
+copied text with a description of the problem. No developer mode or detailed logs are needed. The latest 64 results are kept;
+leaving or reloading the game clears them.
 
-The current product declaration is 0.6.0. Documentation describes this source tree, which may include changes not present in an older download. Developer working instructions remain in `AGENTS.md`; durable state and open actions remain in `MEMORY.md` and `TODO.md`.
+## How it works
+
+In one sentence: **a game event → one response owner per pawn decides whether to speak → a sound is selected from the packs of
+that pawn's exact domain → modulated → played natively.** The decision core (`Core/`) has no game references: it takes facts and
+returns decisions. All code that touches the game lives in the adapter layer.
+
+```text
+Vanilla events (Harmony patches, observers)   Voice-pack and action Defs (XML)    Player settings
+          │                                          │                               │
+          ▼                                          ▼                               ▼
+ SqueakerRuntime (1.6 adapter)                 DefinitionCatalog         GameSettings → configuration snapshot
+          │ facts                                    │ declarations                  │
+          └──────────────► ResponseSession (one per pawn, serial) ◄──────────────────┘
+                                 │  ResponseDecision: opportunity, conditions, cooldown, settlement
+                                 ▼
+                           AudioCatalog: select by exact race + xenotype domain and selection mode
+                                 ▼
+                           local modulation: volume, pitch and related parameters
+                                 ▼
+                 UsNativeAudioPool / UsInstanceOutput → native game sound
+```
+
+| Concept | Meaning |
+| --- | --- |
+| Domain | an exact race + xenotype combination. A pack applies only to the domains it declares; nothing is guessed by name |
+| Action | the fifteen official actions plus author-defined ones, each with its own conditions and parameters |
+| Opportunity | one legal moment to speak. Player actions (select, draft) use real seconds; simulated events use game ticks |
+| Response owner | one `ResponseSession` per pawn that serially decides, cools down and settles, so one pawn never double-speaks |
+| Final fallback | the mapping used when a domain has no usable pack |
+
+**The settings UI** is built on FerriteLib.UiKit: `UI/Layout.Schema2.xml` defines page structure → `UsKernelSettingsHost`
+registers widgets and builds bindings → `IUsKernelSettingsSource` is the single boundary between UI and business logic.
+The UI only sends requests; the business side decides whether and when anything is saved or takes effect.
+
+### Source map (`Source/UniversalSqueaker/`)
+
+| Folder | Contents |
+| --- | --- |
+| `Core/` | engine-free decision core: `Definitions`, `Configuration` (behavior settings), `Responses` (opportunities and settlement), `Audio` (catalog, selection, modulation) |
+| `Game/` | 1.6 adapter: runtime, bootstrap, vanilla event observers, settings persistence |
+| `Runtime/` | the Comp, the kernel seam, native audio pool and output |
+| `Patches/` | Harmony patches for event and settings entries |
+| `Catalog/` | race, xenotype and Def identity collection |
+| `Settings/` | player settings read/write, migration, reset, preset import |
+| `Logging/`, `Diagnostics/` | log sink, diagnostic recording and feedback |
+| `UI/` | the settings window: page definition, Host, widgets and view models |
+| `tools/` (repository root) | tests and fixtures |
+
+## For voice-pack authors
+
+- [Author guide](docs/us-kernel-0.6-authoring-zh.md) and [loadable examples](docs/examples/0.6/)
+- Specification: [audio selection](docs/openspec/specs/audio-selection/spec.md) and
+  [the fifteen official actions](docs/openspec/specs/official-actions/spec.md)
+- Migrating from older versions: [0.6 upgrade notes](docs/upgrade-0.6-zh.md)
+
+## For contributors
+
+Building requires a fixed FerriteLib carrier DLL:
+
+```powershell
+pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '<FerriteLib package>/1.6/Assemblies/FerriteLib.UiKit.dll'
+pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath '<FerriteLib package>/1.6/Assemblies/FerriteLib.UiKit.dll'
+```
+
+| Document | Purpose |
+| --- | --- |
+| [docs/specification.md](docs/specification.md) | current specification entry, the single authority for behavior guarantees |
+| [docs/openspec/specs/](docs/openspec/specs/) | specification text, one folder per capability |
+| [docs/development/specification/open-issues.md](docs/development/specification/open-issues.md) | implementation deviations and evidence status |
+| [docs/build-and-debug.md](docs/build-and-debug.md) | building, gates and diagnostics |
+| [docs/fl08-consumer-migration-zh.md](docs/fl08-consumer-migration-zh.md) | consuming the fixed FerriteLib 0.8 package |
+| [docs/release-runbook-zh.md](docs/release-runbook-zh.md), [docs/push-privacy-gate.md](docs/push-privacy-gate.md) | release flow and privacy gate |
+| [docs/README.md](docs/README.md) | full documentation index and history |
+| `AGENTS.md`, `MEMORY.md`, `TODO.md` | working rules, durable facts and open actions for development agents, not user documentation |
+
+## Identity
+
+- packageId: `coahuilite.universalsqueaker`
+- Namespace / Def prefix / diagnostic prefix: `UniversalSqueaker` / `US_` / `usdiag`
+- The FerriteLib API range is checked at startup: `[0.8.0, 0.9.0)`. US ships neither FerriteLib nor `0Harmony.dll`.
+- License: [MPL-2.0](LICENSE)

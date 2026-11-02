@@ -97,5 +97,4 @@
   </ItemGroup>
 
   <ItemGroup><EmbeddedResource Include="Themes/Palettes.xml" LogicalName="UniversalSqueaker.Themes.Palettes.xml" /></ItemGroup>
-  <ItemGroup><AssemblyMetadata Include="UiComparisonVariant" Value="B / Species roster / 种族名册版" /></ItemGroup>
 </Project>
