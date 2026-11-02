@@ -9,12 +9,22 @@
 - Squeaky Ratkin (`coahuilite.squeakyratkin`) is a separate product. Never reuse its brand, packageId, namespace, or `SR_` prefix here. No `SqueakyRatkin.*` types or SR-owned assemblies, profiles, attachments or audio assets may ship with US. Neutral US fallback profile data may reference Core audio for any supported race.
 - Product version source: once the product csproj exists, its `<Version>` is primary and `About/About.xml <modVersion>` must follow it.
 
+Current product contracts start at `docs/specification.md`; source/status mappings are under `docs/development/specification/`. Replaced full texts are retained in `docs/archive/specs-before-20261029/`.
+
 ## Project philosophy
 
 - Neutral routing: a VoicePack declaration OR a per-race final fallback table admits a race. With neither, the race remains silent and receives no automatic comp; author-supplied comps are preserved. New table-only comp admission requires a full game restart; edits for already admitted races refresh the resolver. No built-in race special-casing: HAR races, vanilla Human and third-party races follow the same rule.
-- Optional dependencies degrade silently and never crash. HAR reflective discovery is **intent, not the shipped build**: `Catalog/SqueakXenotypeCatalog.cs` carries `TODO(HAR)` and discovers assembled defs only, so the reflective hint lists stay empty until that TODO lands.
+- Optional dependencies degrade without crashing unrelated capabilities. HAR reflective discovery remains deferred (`TODO(HAR)`); its hint lists stay empty. Canonical Xenotype identities come from all loaded native defs independently of audio-pack targets; `GameRuntime.ResolveContext` still requires Biotech, object identity/unambiguous names and an exact domain for the current Race.
 - Uninstall safety is a hard rule: removing the mod must never affect a saved game. No permanent data is written into saves; settings and profiles live in the Config folder.
 - Content and core are separate: the complete `Core/**/*.cs` production compile set must not reference Verse/Unity/RimWorld, platform doubles, native objects or mutable process-global state. Canonical contract IDs belong there; audio algorithms contain no product sound keys or race seeds. `SR_*`/Ratkin seed data belongs to SR content packs; US provides data-driven fallback profiles. Game observation, resources and lifecycle belong to the native adapters.
+
+## Keep authority and consumers connected
+
+- Production callers must use the existing owner for state, eligibility, commitment/publication and lifetime results. Legal backends/adapters, registry composition, independent author roots and complete synchronous fallback remain supported; they are not competing owners.
+- Storage or a view update is not runtime adoption. Close the actual publisher-to-consumer path; distinguish physical commitment from publication failure and identity facts from audio supply/browse projections. Ordinary pack selection remains configuration filtering, not audio reconstruction. See `docs/specification.md`.
+- Diagnostics never control business results. Isolate only the adopted observation/formatting/output boundary, not the surrounding business command. Do not convert valid callers to a new no-throw prerequisite or swallow real native/command failures.
+- Native `Verse.Log` calls belong only to the named `SqueakLogSink.Emit` member, reached through protected named event/forensic facade methods. No raw logger, debug exception or directory-wide exemption. Detail preparation stays behind the effective mode gate; memory records, receipts, feedback, publication repair and remaining cleanup do not depend on successful logging.
+- When the original entry is insufficient, extend it or propose an independent module/new cohesive core/responsibility migration using `docs/development/specification/changes.md`: state need, owner/lifetime, adjacent guarantees, the complete entry/consumer/failure/release slice, and adoption/exit. Original owners supply concrete constraints and alternatives; adopted capabilities follow normal maintenance. No new governance platform or CI gate is implied.
 
 ## Memory protocol
 

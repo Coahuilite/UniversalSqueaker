@@ -5,9 +5,9 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0-rc1 local CI/release preparation
+## NOW — US0.6 specification and open product work
 
-- Close WO-USFL-CI-RC-PREP-20261028: migrate the existing V4 scene to current Output/Presets/help, remove identical repeated tool builds while retaining processes/compile variants, unify restore/cache/log ownership, then run the full existing entry and actual pending-history privacy under the serial build lease. FL owns build/stub first; US edits independently and waits for the explicit fixed Release handoff before execution.
+- The full current specification is `docs/specification.md`; source coverage and preserved pre-cutover texts are linked there. The 2026-10-29 repair implements protected production logs, VF1 audio publication and canonical identity independence. Paired technical consumption is complete; remaining native checks and the separate clean-release identity are tracked in `docs/development/specification/open-issues.md`; the earlier documentation cutover alone did not implement them.
 - The ea610fa/FL833c14f4 pair received overall internal-trial acceptance. Preserve it and its detailed evidence gaps; do not repeat accepted performance or manufacture individual native passes. Prepare an independent clean localRC candidate. Future FL rc2 mainSHA/asset and US remote coordinate changes are PM-owned; no silent RC1 fallback or fabricated SHA. Release scope and upgrade guidance live in docs/releases/v0.6.0-rc1.md.
 
 - D-C covers all fifteen official contracts/facts/callers and SR guides through the single owner; the two dedicated baby-fit responses are retired. Current interfaces, evidence boundaries and explicit fixture migrations live in the public specification, fact ledger and acceptance/migration pages.
@@ -15,6 +15,7 @@
 - Core Work facts remain the approved twenty WorkTypes/105 givers and78 exact Job/driver pairs, with patient/DLC/world boundaries. Ordinary Work AnyOccurrence, exact Attack execution support, PlayerCoreEquip plus ActiveCommand, MentalBreak four successful sources, cadence/order/shared permissions are now adopted; do not reopen or expand them through name scans. Sources still require explicit selection, and every package retains its human contract/result gates.
 - Installed1.6.4871 method bodies are now available under the specific read-only task authorization. Preserve the named Social Goto Core-Def gap; no wider installation reads. Native loading, real Scribe/Config, screen and listening remain human gates, separately for all fifteen packages.
 - The FL0.8 public-API migration is the fixed dependency baseline for the authorized UIUX redesign; the consumer guide distinguishes current public-execution coverage from unported old fixture behavior. Use explicit fixed package input; do not restore the old0.7 fallback. The real RC asset and approved repository/tag/full-commit inputs are available; CI preserves main and runs the same gates on0.6.x push/PR-base. PM owns external integration; missing coordinates still fail before checkout. UI/UX design/implementation and native paired acceptance follow their own authorization.
+- RW17 remaining acceptance requires human observation of actual 1.6/1.7 sound, rendering, ordinary interaction and the adopted phase with the fixed pair. C2 preserves the original single-string CLR entry and author-log provenance boundary. Historical Core/audio/logging evidence remains in `docs/development/specification/open-issues.md` and the action/phase interface `dist/rw16-17-action-ux-20261031/INTERFACE-r4.md`. The pack-layout correction and its native-picture limitation are linked by `dist/rw16-17-pack-layout-20261101/INTERFACE-r1.md`; the rejected R5 pack geometry is not restored by old identity checks. Current mechanical delivery contains only FL and US and retains its separate owner; installed audio/races remain external. Earlier failure logs and packages remain unchanged.
 ## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
@@ -153,7 +154,7 @@ expands the product scope.
 - [ ] **0.5.x items A/B/C** (`MEMORY.md` "Release state and version scope"): (A) file-driven invocation + hot
   reload; (B) appearance file-driven + tier-2 granularity actually used; (C) structural migration.
 - [ ] **Route A re-price** and **optional tail**: the runtime harness does not cover the adapter
-  fold/converters/`BuildFallback` pass-through; HAR reflective discovery is `TODO(HAR)` and assembled-only -
+  fold/converters/`BuildFallback` pass-through; HAR reflective discovery remains `TODO(HAR)` with empty hint lists (independent loaded canonical identities are implemented) -
   never claim reflection; the two 2px band floors (`checklist`, `diag-list`: 20 vs the calibrated 21.33 Small
   line); a FL lane for the single-line RENDERING (the carrier stub records rect/text/colour but not wrap state);
   drop the nav subtitle line entirely to reclaim ~100px of stack height if the compact cards still read tall.
@@ -175,8 +176,8 @@ expands the product scope.
   constant-sum rule); the migration test has no assertion for the two new fields; the child help states the
   real fallback but the flag stays process-level and one-way; the eat child row's rule is mislabelled in
   non-shared-row failure messages.
-- [ ] **Diagnostics live-walkthrough** for the rebuilt panel: master-detail + locked detach windows, the
-  collapsed bars, the 16-line chain, four-tier dispatch labels, and the two-press Esc ON THE REAL STACK -
+- [ ] **Diagnostics live-walkthrough**: normal entry without Dev/logging, single-target start/normal
+  reproduction/stop/copy and close/reopen, explicit stale/missing data, compact navigation and two-press Esc ON THE REAL STACK -
   consumption is now the shell's (FL-IC2), so the open observation is which window the real WindowStack
   hands the key to with the panel, main settings window and a confirmation dialog open together.
   A leak there is FL event-seam material, never a whitelist entry.
