@@ -613,7 +613,9 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     public SqueakResetOutcome ResetActionTuningRow(string actionKey)
     {
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
-        return settings.ResetActionTuningRow(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName);
+        var result = settings.ResetActionTuningRow(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName);
+        rowResults[RowIdentity(actionKey, state.TuningLayer == 0 ? "" : state.TuningRaceDefName, state.TuningLayer == 2 ? state.TuningXenotypeDefName : "")] = "US.B.Restore." + result;
+        return result;
     }
 
     public SqueakResetOutcome ResetActionTuningArea()

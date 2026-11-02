@@ -59,8 +59,6 @@ C2闭合作者字段迁移的信任边界：公共AddPack的原始package／Def�
 公开五参AuthoringRejected保原CLR签名，但不接受调用方自称可信：其未确认字段移入清洗详情，采用固定AuthoringInput／UnstructuredIssue，且不输出source／action。原单参入口保持C1语义；内部AuthoringRejectedKnown只采用上述已核来源字段。Claim同时区分完整原输入、清洗前详情及known／free来源，保原预算／模式／sink和业务结果，不修改作者语法或增加准入条件。本轮现有Core932项、AudioBinding through67项、日志Release／Dev及实际Release构建通过；完整AudioBinding138项寿命证据沿未变路径复用。精确新隐私反例／字段组合仍为静态调用依据，没有新增case／probe／runner。当前交接为`dist/rw16-17-prepublication-20261030/INTERFACE-r3.md`；r1／r2文件保原件，不能据旧技术结果推荐其缺陷字节。
 
 ## 条件风险与证据盲区
-US-R1的纯模型高层默认阻断已作源码窄修：Respond与持续Review均用准确主体族构造默认，普通policy不向NonPawn补scope，NonPawn组合不运行Pawn Talking门。原DeclaredDefaults及两类policy的Defaults公开CLR重载保留Pawn语义；BehaviorValues.ApplicableTo、作者／玩家非法字段拒绝及ResponseDecision择一／冷却／结算未放松。现有OneShot入口编译整个生产Core（无平台引用或double），932项通过；AudioBinding原`--refactor-through`入口67项通过，实际生产调用覆盖Pawn普通Select／Eat／Attack、声明通知的原owner与硬冷却、无音／输出拒绝以及配置关闭后的持续授权复核与释放。后者为平台double层，前者的NonPawn走低层DecisionInput／音频域，均不到本次NonPawn RuntimeView／ResponseFrame故障组合，故没有该高层分支的动态前失败／后成功证据，也未新增case填空。A002显式消费新FL release-gate固定Release，产品Release及既有Host页面、编辑／绑定、确认、窗口／overlay失败恢复和Failed页脚检查通过；932／67项沿未变输入复用。固定交付与实际依赖收据见`dist/release-gate-20261101/INTERFACE-r1.md`；上游三个精确故障组合、NonPawn高层和原生验收不由这些Host绿项代签。
-
 FallbackDelta／FallbackProfile的公开字典及DomainPool条目已在构造边界只读包装／复制，保原内容与顺序；本轮未发现生产下转型写入，也未新增反例case。Social GotoAndBeSociallyActive当前Core Def未在4871指定内容中找到，仍为4850继承依据，必须点名保留，不猜名称／读取未授权DLC补齐。
 
 真实Scribe／Config、字体／IME／窗口盖层、原生挂接／Sample／听感及逐包记录未细化的范围保留原证据粒度；未逐项记录不是PASS或FAIL。2026-10-28的RC级总体接受及已接受性能不被这些缺口撤销，也不外推为每条原生结果；不因缺该粒度记录新增本次文档／RC准备前置门或要求重跑十五矩阵。未来真实变更／回归仍保具体影响验证。

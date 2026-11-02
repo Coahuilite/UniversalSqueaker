@@ -17,7 +17,7 @@ namespace UniversalSqueaker.UI;
 /// <see cref="GameSettings.CommitVoicePackMode"/>), so resolver rebuild and
 /// QueuePersistence semantics stay where they were.
 /// </summary>
-public static class VoicePacksPageModel
+public static partial class VoicePacksPageModel
 {
     /// <summary>
     /// UIR-007 / CORRECTIONS-R1 topic 1: the board-facts seam. The thin Verse adapter collects the
@@ -152,7 +152,7 @@ public static class VoicePacksPageModel
             tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
             state.FallbackStatusKey,
             raceBoard, select.SelectRequirePlayerControlled, select.SelectRequireAwake, select.SelectRequireNotDowned)
-        { AllPackCards = state.AllPackCards };
+        { AllPackCards = state.AllPackCards, Roster = BuildRoster(settings, catalog, state, xenotypes) };
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -381,10 +381,7 @@ public static class VoicePacksPageModel
                 if (string.IsNullOrEmpty(raceDefName)) continue;
                 options.Add(new TuningDomainOptionView(raceDefName, ResolveRaceLabel(raceDefName)));
             }
-            if (string.IsNullOrEmpty(currentRace) || !options.Any(o => string.Equals(o.RaceDefName, currentRace, StringComparison.Ordinal)))
-            {
-                currentRace = options.Count > 0 ? options[0].RaceDefName : "";
-            }
+            // Browsing is not choosing an editing domain. Directory-only races remain valid targets.
             currentXeno = "";
         }
         else if (layer == 2)
@@ -396,12 +393,7 @@ public static class VoicePacksPageModel
                     ResolveXenotypeLabel(catalog, key.TargetDefName) + " (" + key.TargetDefName + ")",
                     key.TargetDefName));
             }
-            if (string.IsNullOrEmpty(currentRace) || string.IsNullOrEmpty(currentXeno)
-                || !options.Any(o => string.Equals(o.RaceDefName, currentRace, StringComparison.Ordinal) && string.Equals(o.TargetDefName, currentXeno, StringComparison.Ordinal)))
-            {
-                currentRace = options.Count > 0 ? options[0].RaceDefName : "";
-                currentXeno = options.Count > 0 ? options[0].TargetDefName : "";
-            }
+            // Retain the exact requested pair; the native editor gates unavailable identities.
         }
         else
         {
@@ -598,14 +590,16 @@ public static class VoicePacksPageModel
     {
         if (string.IsNullOrEmpty(presetDefName)) return;
         UsBehaviorPresetDef? preset = SqueakGameDefs.BaselineByName(presetDefName);
-        if (preset == null) return;
+        if (preset == null) { state.PresetResult = "US.Preset.Invalid".Translate(); return; }
         BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
         BehaviorPresetImporter.Selection importSelection = new();
         foreach (string race in selection.SelectedRaceDefNames) importSelection.RaceDefNames.Add(race);
         foreach (string key in selection.SelectedXenotypeDomainKeys) importSelection.XenotypeDomainKeys.Add(key);
-        try { settings.ImportBaselinePreset(preset, importSelection); }
+        try { var result = settings.ImportBaselinePreset(preset, importSelection);
+            state.PresetResult = result.ActionsImported > 0 ? string.Format("US.B.Imported".Translate(), result.ActionsImported, result.FieldsImported) : "US.B.ImportNoChange".Translate(); }
         catch (ArgumentException error)
         {
+            state.PresetResult = "US.Preset.Invalid".Translate();
             SqueakLog.PresetImportRejected(preset.defName, error);
             Messages.Message("US.Preset.Invalid".Translate(), MessageTypeDefOf.RejectInput, false);
         }

@@ -116,3 +116,4 @@ public sealed class UsDirectoryFiltersWidget : UsSectionWidgetBase
     protected override float FallbackHeight(UiWidgetContext ctx) => 30;
     protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx) => UsBrowseControls.Draw(rect.X, rect.Y, rect.Width, ctx, "directory", true, ctx.Bindings.Get<bool>("voice-filters-open"));
 }
+

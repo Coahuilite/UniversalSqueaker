@@ -23,18 +23,17 @@ public sealed partial class UsKernelSettingsSource
     public string ReadActionField(string field, string action, string race, string child)
     {
         var value = settings.ReadPlayerActionOverride(action, race, child);
-        object? result = field switch { "enabled" => value.Enabled, "interval" => value.SimulationIntervalTicks,
-            "interaction-seconds" => value.InteractionIntervalSeconds,
-            "volume" => value.Volume, "pitch" => value.Pitch, "talking" => value.TalkingEnabled,
-            "age" => value.AgeEnabled, "mood" => value.MoodEnabled, _ => null };
+        object? result = FieldValue(value, field);
         return result is IFormattable number ? number.ToString(null, CultureInfo.InvariantCulture) : result?.ToString() ?? "";
     }
 
     // A field commits one complete sparse row through the existing persist-first transaction.
     // It does not rebuild effective values or erase other fields/response contributions.
     public void CommitActionField(string field, string text, string action, string race, string child)
+        => TryCommitActionField(field, text, action, race, child);
+    public bool TryCommitActionField(string field, string text, string action, string race, string child)
     {
-        if (action == "" || SqueakerMod.Instance == null) return;
+        if (action == "" || SqueakerMod.Instance == null) return false;
         var value = settings.ReadPlayerActionOverride(action, race, child);
         text = text.Trim();
         bool? boolean = null;
@@ -44,10 +43,10 @@ public sealed partial class UsKernelSettingsSource
         if (text != "")
         {
             if (field == "interval") { valid = long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed); ticks = parsed; }
-            else if (field == "volume" || field == "pitch" || field == "interaction-seconds") { valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed); scalar = parsed; }
+            else if (field == "volume" || field == "pitch" || field == "interaction-seconds" || field.StartsWith("parameter:", StringComparison.Ordinal)) { valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed); scalar = parsed; }
             else { valid = bool.TryParse(text, out bool parsed); boolean = parsed; }
         }
-        if (!valid) { RowDiagnostic = "US.UI.RowInvalid"; return; }
+        if (!valid) { RowDiagnostic = "US.UI.RowInvalid"; rowResults[RowIdentity(action, race, child)] = RowDiagnostic; return false; }
         switch (field)
         {
             case "enabled": value.Enabled = boolean; break;
@@ -58,16 +57,23 @@ public sealed partial class UsKernelSettingsSource
             case "talking": value.TalkingEnabled = boolean; break;
             case "age": value.AgeEnabled = boolean; break;
             case "mood": value.MoodEnabled = boolean; break;
-            default: return;
+            default:
+                if (field.StartsWith("parameter:", StringComparison.Ordinal)) { string key = field.Substring(10); if (scalar.HasValue) value.ResponseParameters[key] = scalar.Value; else value.ResponseParameters.Remove(key); }
+                else if (field.StartsWith("response:", StringComparison.Ordinal)) { string key = field.Substring(9); if (boolean.HasValue) value.ResponseEnabled[key] = boolean.Value; else value.ResponseEnabled.Remove(key); }
+                else if (field.StartsWith("participation:", StringComparison.Ordinal)) { string key = field.Substring(14); if (boolean.HasValue) value.Participation[key] = boolean.Value; else value.Participation.Remove(key); }
+                else return false;
+                break;
         }
-        if (!value.Valid) { RowDiagnostic = "US.UI.RowInvalid"; return; }
+        if (!value.Valid) { RowDiagnostic = "US.UI.RowInvalid"; rowResults[RowIdentity(action, race, child)] = RowDiagnostic; return false; }
         bool committed = SqueakerMod.Instance.TryCommitBehaviorOverride("Pawn", "", race, child,
             action, value, out string diagnostic);
         RowDiagnostic = committed ? diagnostic.StartsWith("Committed:", StringComparison.Ordinal)
             ? "US.UI.SourcePublishFailed" : "US.UI.SourceCommitted" : "US.UI.SourceRejected";
         RowDiagnostic += "\n" + action + " · " + (race == "" ? "Pawn profile" : race + (child == "" ? "" : "/" + child));
         if (diagnostic != "") RowDiagnostic += "; " + diagnostic;
+        rowResults[RowIdentity(action, race, child)] = RowDiagnostic;
         cachedView = null;
+        return committed;
     }
     private BehaviorDomain? SourceDomain => state.TuningLayer == 0 || state.TuningRaceDefName == "" ||
         (state.TuningLayer == 2 && state.TuningXenotypeDefName == "") ? null :
@@ -125,7 +131,9 @@ public sealed partial class UsKernelSettingsSource
             note = !readable || binding.RejectedTimingXml != "" ? t.Translate("US.UI.SourceTimingRejected") + "\n"
                 + (failure != "" ? failure : binding.RejectedTimingReason)
                 : t.Translate("US.UI.SourceStatus") + ": " + t.Translate(intent)
-                    + (binding.SourceId == "" ? "" : " · " + binding.SourceId);
+                    + (binding.SourceId == "" ? "" : " · " + binding.SourceId)
+                    + "\n" + t.Translate("US.B.LastGood") + ": " + (binding.Snapshot == null ? t.Translate("US.B.NotSupplied") : binding.Snapshot.Id)
+                    + " · " + SqueakerRuntime.BehaviorSources.Candidates(domain).Length + " " + t.Translate("US.B.SourceCandidates");
         }
         else note = t.Translate("US.UI.SourceChooseDomain");
         if (state.SourceChangeDiagnostic != "")

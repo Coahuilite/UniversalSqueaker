@@ -468,7 +468,7 @@ public static partial class UsKernelSettingsHost
             bump();
         });
         bindings.BindReadOnly<string>("banner-text", () => source.BuildView().BannerText);
-        bindings.BindReadOnly<string>("build-identity", () => source.BuildIdentity);
+        bindings.BindReadOnly<string>("build-identity", () => source.BuildIdentity + " · " + translation.Translate("US.B.Variant"));
         bindings.BindReadOnly<string>("save-status", () => source.SaveStatus);
         bindings.BindReadOnly<bool>("save-status-visible", () => source.SaveStatusVisible);
         bindings.BindReadOnly<bool>("is-dirty", () => source.IsDirty);
@@ -586,9 +586,11 @@ public static partial class UsKernelSettingsHost
         writes.Value<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetTalkingScaling(value); bump(); });
         writes.Value<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
 
-        writes.Value<string>("eat-phase", () => source.BuildView().EatPhase.ToString(), value => { source.SetEatParameter("phase", value); bump(); });
-        writes.Value<string>("eat-nutrition", () => source.BuildView().EatNutritionScope.ToString(), value => { source.SetEatParameter("nutritionScope", value); bump(); });
-        writes.Value<string>("eat-drug", () => source.BuildView().EatDrugScope.ToString(), value => { source.SetEatParameter("drugScope", value); bump(); });
+        string OwnEat(string field, string fallback) => source is UsKernelSettingsSource native ? native.ReadActionField(field, CoreActions.Eat,
+            state.TuningLayer == 0 ? "" : state.TuningRaceDefName, state.TuningLayer == 2 ? state.TuningXenotypeDefName : "") : fallback;
+        writes.Value<string>("eat-phase", () => OwnEat("phase", source.BuildView().EatPhase.ToString()), value => { source.SetEatParameter("phase", value); bump(); });
+        writes.Value<string>("eat-nutrition", () => OwnEat("nutritionScope", source.BuildView().EatNutritionScope.ToString()), value => { source.SetEatParameter("nutritionScope", value); bump(); });
+        writes.Value<string>("eat-drug", () => OwnEat("drugScope", source.BuildView().EatDrugScope.ToString()), value => { source.SetEatParameter("drugScope", value); bump(); });
         bindings.BindChoices<string>("eat-phase-options", () => EatOptions(typeof(EatPhase)));
         bindings.BindChoices<string>("eat-nutrition-options", () => EatOptions(typeof(EatNutritionScope)));
         bindings.BindChoices<string>("eat-drug-options", () => EatOptions(typeof(EatDrugScope)));
@@ -960,7 +962,8 @@ public static partial class UsKernelSettingsHost
             () => state.TuningSelectedAction.Length > 0 && source.CanResetTuningArea());
         writes.Command(
             "reset-action-area",
-            () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) bump(); },
+            () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) {
+                source.EndAffectedEdit(id => id.StartsWith("sparse-", StringComparison.Ordinal) || id.StartsWith("contribution-", StringComparison.Ordinal)); bump(); } },
             () => source.CanResetTuningArea());
         // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board and the teaching toggle.
         // The intro is a page-state bool like help-open, with the two complementary VisibleBinds the

@@ -2,7 +2,6 @@
 <LanguageData>
   <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
   <US.Settings.Save.Failed>Squeak settings could not be saved.</US.Settings.Save.Failed>
-
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
   <DebugAction_DiagnosticsOpen>Diagnostics: open panel</DebugAction_DiagnosticsOpen>
   <US.Debug.CameraIndicator>Camera: height {0}, view size {1}</US.Debug.CameraIndicator>
@@ -76,7 +75,6 @@
   <US.Diagnostics.Geometry.Report.Waiting>Report requested: it is written on the next drawn pass.</US.Diagnostics.Geometry.Report.Waiting>
   <US.Diagnostics.Geometry.Report.Written>Report written to the layout log: pass {0}.</US.Diagnostics.Geometry.Report.Written>
   <US.Diagnostics.Geometry.Report.NotProduced>No report produced: the capture was empty. Try again after the next drawn pass.</US.Diagnostics.Geometry.Report.NotProduced>
-
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>
   <US.Action.Sleep>Sleep</US.Action.Sleep>
@@ -92,16 +90,13 @@
   <US.Action.Work>Work</US.Action.Work>
   <US.Action.Equip>Equip</US.Action.Equip>
   <US.Action.MentalBreak>Mental break</US.Action.MentalBreak>
-
   <US.Mood.Good>Good</US.Mood.Good>
   <US.Mood.Neutral>Neutral</US.Mood.Neutral>
   <US.Mood.Bad>Bad</US.Mood.Bad>
   <US.Mood.Break>Break</US.Mood.Break>
-
   <US.Notice.RaceDomain>Race domain</US.Notice.RaceDomain>
   <US.Notice.TargetUnavailable>target not loaded</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>Some VoicePack domains have no enabled pack:</US.Notice.AudioPool.Body>
-
   <US.Settings.Shell.Title>Universal Squeaker uses its own settings window.</US.Settings.Shell.Title>
   <US.Settings.Shell.Body>The in-game Mod Settings shell is not used by {0}. Open the dedicated window to change routing, tuning and VoicePacks.</US.Settings.Shell.Body>
   <US.Settings.Shell.Open>Open Universal Squeaker settings</US.Settings.Shell.Open>
@@ -111,7 +106,6 @@
   <US.Settings.Window.Close>Close</US.Settings.Window.Close>
   <US.Settings.Prerequisite.Title>FerriteLib prerequisite mismatch</US.Settings.Prerequisite.Title>
   <US.Settings.Prerequisite.Body>The installed FerriteLib mod is older than the API this Universal Squeaker build was compiled against. Update FerriteLib to the matching version and restart the game; the player log carries the full contract diagnostic.</US.Settings.Prerequisite.Body>
-
   <!-- Schema=2 settings page headings (UsPageTitleWidget / UsNavWidget) and card titles
        (manifest TitleKey values). English text here is authoritative: it must match the
        literals these widgets displayed before they became translatable. -->
@@ -125,7 +119,6 @@
   <US.Page.Tuning.Caption>Select the layer and domain first; then set action scope and mood values.</US.Page.Tuning.Caption>
   <US.Page.Presets.Title>Baseline presets</US.Page.Presets.Title>
   <US.Page.Presets.Caption>These importable baselines are supplied by installed Defs.</US.Page.Presets.Caption>
-
   <US.Nav.Overview.Label>Overview</US.Nav.Overview.Label>
   <US.Nav.Overview.Description>Routing and playback</US.Nav.Overview.Description>
   <US.Nav.Distance.Label>Distance</US.Nav.Distance.Label>
@@ -192,8 +185,6 @@
   <US.VF1.Status.SavedNotAdopted>File saved, but the running audio catalog could not adopt it. Current responses keep the last usable catalog. See the log; a full game restart reloads the saved file.</US.VF1.Status.SavedNotAdopted>
   <US.VF1.Status.DeletedNotAdopted>File deleted, but the running audio catalog could not adopt the change. Current responses keep the last usable catalog. See the log; a full game restart reloads the files.</US.VF1.Status.DeletedNotAdopted>
   <US.VF1.Status.SaveFailed>The save failed - the table on disk is unchanged. See the log for the reason.</US.VF1.Status.SaveFailed>
-
-
   <US.Section.OutputLevel>Output level</US.Section.OutputLevel>
   <US.Section.PlaybackBehaviour>Voice rules</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>In-world indicator</US.Section.InWorldIndicator>
@@ -389,13 +380,13 @@
   <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
   <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field. Each row ends with two controls: "Reset to default" clears this layer's three factors (the preset source is kept) and "Reset to preset" re-applies that preset's baseline for this row. An unavailable control is still drawn, only disabled - hover it for the reason.</US.Help.ScopeTree.MoodTuning.Text>
   <US.Help.ScopeTree.ResetDefault.Text>Removes the exact selected player row, including its template reset target. Author contributions and parent layers remain intact. This differs from clearing only the scope field.</US.Help.ScopeTree.ResetDefault.Text>
-  <US.Help.ScopeTree.ResetPreset.Text>Re-applies the current template&apos;s present fields to this exact player row; unrelated player fields remain. The stored template identity is a reset target, not author-source provenance.</US.Help.ScopeTree.ResetPreset.Text>
+  <US.Help.ScopeTree.ResetPreset.Text>Re-applies the current template's present fields to this exact player row; unrelated player fields remain. The stored template identity is a reset target, not author-source provenance.</US.Help.ScopeTree.ResetPreset.Text>
   <US.Help.ScopeTree.Auto.Label>Auto / Use inherited value</US.Help.ScopeTree.Auto.Label>
-  <US.Help.ScopeTree.Auto.Text>Inherit clears only this layer&apos;s scope field. Other player fields and the template reset target remain; the effective scope then comes from the remaining layers and canonical contract.</US.Help.ScopeTree.Auto.Text>
+  <US.Help.ScopeTree.Auto.Text>Inherit clears only this layer's scope field. Other player fields and the template reset target remain; the effective scope then comes from the remaining layers and canonical contract.</US.Help.ScopeTree.Auto.Text>
   <US.Help.PresetList.Overview>Templates import sparse values into explicitly selected player layers. They do not bind or replace an author behavior source. A stored template identity provides a separate reset target.</US.Help.PresetList.Overview>
   <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
-  <US.Help.PresetList.Import.Text>Applies only template-present fields to the selected exact player domains. Repeating the import does not duplicate rows; values omitted by the template preserve the player&apos;s existing fields.</US.Help.PresetList.Import.Text>
+  <US.Help.PresetList.Import.Text>Applies only template-present fields to the selected exact player domains. Repeating the import does not duplicate rows; values omitted by the template preserve the player's existing fields.</US.Help.PresetList.Import.Text>
   <US.Help.FilterBar.Overview>The default range is humanlike, with HAR first; animals, other races and all targets remain reachable. Search, author, Race, Xenotype and state compose over exact pack/domain rows. Collapsing keeps the range, active conditions, matching-pack count and local Clear visible. Queries do not change editing or selections.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>Keyword</US.Help.FilterBar.Keyword.Label>
   <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching covers pack label, DefName, mod, author, key and provided domains. Open a matching pack to inspect its individual targets; search never changes selections.</US.Help.FilterBar.Keyword.Text>
@@ -409,7 +400,7 @@
   <US.Help.PackCards.Overview>Browse independent packs and inspect exact Race or legal Race/Xenotype targets. A single target has a direct switch; multi-target packs expose separate switches in detail. Selecting one target never enables every target.</US.Help.PackCards.Overview>
   <US.Help.PackCards.Card.Label>Pack Card</US.Help.PackCards.Card.Label>
   <US.Help.PackCards.Card.Text>The pack name sits beside Contents and each exact target sits beside its switch. Only namesakes, exceptional states or multiple targets need extra list identity. Full source, author, DefName and mapped-action count belong in detail. A mapping is not native sound or listening evidence.</US.Help.PackCards.Card.Text>
-  <US.Help.PackCards.Expand.Text>View only the named pack, without selecting its first domain. Wide layout retains list and detail; compact Back and that layer&apos;s Escape retain the viewed identity, query and position. Filtering out a pack preserves its real details. Only explicit domain selection changes the editing target.</US.Help.PackCards.Expand.Text>
+  <US.Help.PackCards.Expand.Text>View only the named pack, without selecting its first domain. Wide layout retains list and detail; compact Back and that layer's Escape retain the viewed identity, query and position. Filtering out a pack preserves its real details. Only explicit domain selection changes the editing target.</US.Help.PackCards.Expand.Text>
   <US.Help.PackCards.Row.Label>Domain Row</US.Help.PackCards.Row.Label>
   <US.Help.PackCards.Row.Text>Choose an exact domain as the context for behaviour or fallback tools. The row switch independently selects only this pack in this domain. Labels are presentation; identity remains pack key plus exact domain.</US.Help.PackCards.Row.Text>
   <US.Help.PackCards.Enable.Label>Enable Switch</US.Help.PackCards.Enable.Label>
@@ -475,29 +466,28 @@
   <US.Diagnostics.Recency.Ago>at {0}, {1} min ago</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>Back to list</US.Diagnostics.Nav.Back>
   <US.Tuning.Source.Default>Default</US.Tuning.Source.Default>
-
   <US.Distance.AxisCaption>Camera height {0}–{1} (game values) · Volume 100%→0%</US.Distance.AxisCaption>
   <US.Preset.List.BaselineNote>Read-only baselines. Apply writes to the checked domains; view and adjust current values on Tuning.</US.Preset.List.BaselineNote>
   <!-- US-RESET1: restore-defaults entries. The confirm texts list the fields each restore writes
        (display copy; the field SET is owned by the backend and pinned by the reset harness). -->
   <US.Section.RestoreDefaults>Restore defaults</US.Section.RestoreDefaults>
   <US.Reset.RestoreAll>Restore all US settings</US.Reset.RestoreAll>
-  <US.Reset.RestoreAll.Caption>Restores every Universal Squeaker setting to its default. Your final-fallback player tables and their sound mappings are never touched.</US.Reset.RestoreAll.Caption>
-  <US.Reset.RestoreAll.Confirm>This restores ALL Universal Squeaker settings to defaults: plain settings (output level, playback behaviour, trigger timing, diagnostics), every action and mood tuning override (global and per layer/domain), pack selections, and applied preset records with their source anchors. KEPT: every final-fallback player table and its sound mappings, all author/Def content, and the settings schema/migration diagnostics. This cannot be undone from this window.</US.Reset.RestoreAll.Confirm>
+  <US.Reset.RestoreAll.Caption>Restores player settings, pack selections and all action overrides. Explicit author-source choices, their last-good snapshots and final-fallback tables are kept.</US.Reset.RestoreAll.Caption>
+  <US.Reset.RestoreAll.Confirm>Restore player settings to defaults: output volume and distance, activity, talking scaling, eggs, camera indicator, appearance and entry preferences, diagnostics, pack selections, and every action override with its preset anchor. KEPT: explicit author-source choices and last-good snapshots, final-fallback player tables and sound mappings, author/Def content, and schema/migration diagnostics. This cannot be undone from this window.</US.Reset.RestoreAll.Confirm>
   <US.Reset.Area>Restore this area</US.Reset.Area>
   <US.Reset.Row>Restore row</US.Reset.Row>
   <US.Reset.DistanceDefaults>Restore distance defaults</US.Reset.DistanceDefaults>
   <US.Reset.Confirm>Restore</US.Reset.Confirm>
   <US.Reset.Area.Distance.Confirm>This restores the distance area to defaults: output volume, distance preset and the distance range. Action/mood tuning, pack selection and fallback tables are kept.</US.Reset.Area.Distance.Confirm>
-  <US.Reset.Area.Basics.Confirm>Restore playback-behaviour controls and the Pawn service-profile Eat parameters. Race/Xenotype overrides, author sources and other areas are kept; use the exact action/layer restore for domain overrides.</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Basics.Confirm>Restore activity, talking scaling, eggs, camera indicator, and Pawn service-profile Select eligibility and Eat parameters. Race/Xenotype overrides, author-source choices and other settings are kept.</US.Reset.Area.Basics.Confirm>
   <US.Reset.Area.Timing.Confirm>This restores the trigger-timing area to defaults: the minimum interval and the global cooldown multiplier. Other areas and fallback tables are kept.</US.Reset.Area.Timing.Confirm>
   <US.Reset.Area.Diagnostics.Confirm>This restores the diagnostics area to defaults: the developer log mode and the localized debug-action menu. The per-window layout-diagnosis switches are not settings and are untouched.</US.Reset.Area.Diagnostics.Confirm>
-  <US.Reset.Area.Action.Confirm>This restores EVERY action row of the current layer/domain shown below to defaults (scope, interval and probability overrides plus the row's preset anchor). Other layers, domains and areas are kept.</US.Reset.Area.Action.Confirm>
+  <US.Reset.Area.Action.Confirm>Remove EVERY player action override in the layer/domain shown below, including response parameters, participation and row preset anchors. Values inherit again from the adopted author source and service defaults. Other layers, domains, author-source choices and final-fallback tables are kept.</US.Reset.Area.Action.Confirm>
   <US.Reset.Area.Mood.Confirm>This restores EVERY mood row of the current layer/domain shown below to defaults (pitch, volume and jitter plus their preset anchors). Other layers, domains and areas are kept.</US.Reset.Area.Mood.Confirm>
-  <US.Help.ResetCenter.Overview>Restore defaults holds the global entry: one question, one answer, every Universal Squeaker setting back to its default in a single pass. The card states what is kept - above all your final-fallback player tables and their sound mappings, which no restore here ever touches.</US.Help.ResetCenter.Overview>
-  <US.Help.ResetCenter.RestoreAll.Text>The global restore covers the plain settings, every action/mood tuning override (global and per layer/domain), the pack selections and the applied preset records with their source anchors. It runs through the same publish and save path as any ordinary change, once. Cancel writes nothing; the fallback tables, author/Def content and the schema/migration diagnostics are kept.</US.Help.ResetCenter.RestoreAll.Text>
+  <US.Help.ResetCenter.Overview>Use the global restore to clear player settings, pack selections and action overrides together. Explicit author-source choices, their last-good snapshots and final-fallback player tables remain in place.</US.Help.ResetCenter.Overview>
+  <US.Help.ResetCenter.RestoreAll.Text>The global restore resets ordinary player settings and removes every action override and its preset anchor. It keeps explicit author-source choices and last-good snapshots, final-fallback tables, author/Def content and schema/migration diagnostics. The existing owner publishes and queues persistence; cancel writes nothing.</US.Help.ResetCenter.RestoreAll.Text>
   <US.Help.ResetArea.Overview>Each area carries its own restore: the question lists exactly the fields the area writes and names what stays untouched. Simple restores (the distance preset and range, a single action row) execute directly without a question.</US.Help.ResetArea.Overview>
-  <US.Help.ResetArea.Button.Text>The area restore writes defaults for the fields of the visible area only - never other areas, never the tuning values of other layers or domains, and never the fallback tables. The action/mood area buttons name the current layer and domain in the question; an empty or invalid target offers no restore at all. "Restore this area" (with the output level) and "Restore distance defaults" (preset and range only) are different entries with different scopes.</US.Help.ResetArea.Button.Text>
+  <US.Help.ResetArea.Button.Text>Each confirmation names the fields its existing owner resets. Playback behaviour also includes the camera indicator and Pawn service-profile Select/Eat fields. Action-area restore removes every player action override in the named layer/domain, not its explicit author-source choice. Distance defaults resets only the preset and range; distance-area restore also resets output volume. Final-fallback tables are kept.</US.Help.ResetArea.Button.Text>
   <!-- UIR-001/002/003/006 (WO-US-UI-REFACTOR-20261014): the five-page navigation, the Overview
        teaching and all-loaded-race board, the theme picker and the fallback editor's own section.
        The board words are composed in UsRaceBoardWidget from these entries; {0}/{1}/{2} are machine
@@ -620,7 +610,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.Response.Profile>Effective system configuration: volume {0}; activity {1}; audio mode {2}; policy {3}. Select a contract in Actions to inspect the same parameters, dependencies and origins used by the response core.</US.Response.Profile>
   <US.Response.PolicyPending>Policy unselected</US.Response.PolicyPending>
   <US.Preset.Invalid>This template is invalid. No settings were changed. See the named preset diagnostic.</US.Preset.Invalid>
-  <US.Help.ScopeTree.ResponseDetails.Text>Read the selected action&apos;s current folded values, response participation, parameters, sources and dependencies. These are configuration facts, not a prediction that audio will dispatch.</US.Help.ScopeTree.ResponseDetails.Text>
+  <US.Help.ScopeTree.ResponseDetails.Text>Read the selected action's current folded values, response participation, parameters, sources and dependencies. These are configuration facts, not a prediction that audio will dispatch.</US.Help.ScopeTree.ResponseDetails.Text>
   <US.UI.Entry>US Voices</US.UI.Entry>
   <US.UI.Voices>Voices</US.UI.Voices>
   <US.UI.Tools>Settings &amp; tools</US.UI.Tools>
@@ -800,4 +790,95 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.Diagnostics.Search.Map>Current-map search (up to 64 matches returned)</US.Diagnostics.Search.Map>
   <US.Diagnostics.Search.Returned>{0} targets returned</US.Diagnostics.Search.Returned>
   <US.Packs.Checklist.RaceUnavailableBanner>This race definition is not loaded. Saved selections are retained for recovery.</US.Packs.Checklist.RaceUnavailableBanner>
+  <US.B.Variant>B / Species roster</US.B.Variant>
+  <US.B.Voices>Voices</US.B.Voices>
+  <US.B.Tuning>Tuning</US.B.Tuning>
+  <US.B.System>System</US.B.System>
+  <US.B.Targets>Targets</US.B.Targets>
+  <US.B.Search>Search names, IDs, packs or sources…</US.B.Search>
+  <US.B.SearchSources>Search sources (does not select)…</US.B.SearchSources>
+  <US.B.AllSources>All sources</US.B.AllSources>
+  <US.B.Source>Source</US.B.Source>
+  <US.B.Coverage>Coverage</US.B.Coverage>
+  <US.B.Coverage.any>Any coverage</US.B.Coverage.any>
+  <US.B.Coverage.has>Has a pack</US.B.Coverage.has>
+  <US.B.Coverage.enabled>Enabled (retained)</US.B.Coverage.enabled>
+  <US.B.Coverage.none>No voice pack</US.B.Coverage.none>
+  <US.B.Coverage.issues>Needs attention</US.B.Coverage.issues>
+  <US.B.Page>Page</US.B.Page>
+  <US.B.PacksOn>packs selected</US.B.PacksOn>
+  <US.B.Missing>missing choices</US.B.Missing>
+  <US.B.NoPack>No voice pack</US.B.NoPack>
+  <US.B.Kept>Kept until Refresh or a query change</US.B.Kept>
+  <US.B.Loose>Loaded xenotype, no legal race pairing. Browse only; no parent race is assumed.</US.B.Loose>
+  <US.B.UnloadedRace>Race not loaded; saved choices retained</US.B.UnloadedRace>
+  <US.B.Dormant>Biotech inactive; domain dormant</US.B.Dormant>
+  <US.B.Unavailable>Target unavailable</US.B.Unavailable>
+  <US.B.Conflict>Conflicting canonical identities; routing closed</US.B.Conflict>
+  <US.B.Orphan>Saved choices missing</US.B.Orphan>
+  <US.B.Unknown>Unknown (not observed)</US.B.Unknown>
+  <US.B.NotSupplied>Not supplied</US.B.NotSupplied>
+  <US.B.Outside>Outside current results; target retained</US.B.Outside>
+  <US.B.NativeHuman>Native Human identity</US.B.NativeHuman>
+  <US.B.ChooseTarget>Select a target, or view a pack's contents.</US.B.ChooseTarget>
+  <US.B.NoResults>No matching results. Clear these conditions or widen the range.</US.B.NoResults>
+  <US.B.VoicesForTarget>VOICES FOR THIS TARGET</US.B.VoicesForTarget>
+  <US.B.NoPackHelp>No pack serves this exact target. Without a declaration or final table a race stays silent. Create a table explicitly below; table-only admission needs a full game restart.</US.B.NoPackHelp>
+  <US.B.PathTitle>CONFIGURED PATH · not a playback check</US.B.PathTitle>
+  <US.B.OpenCreateTable>Open / create final table…</US.B.OpenCreateTable>
+  <US.B.Forget>Forget dangling choices</US.B.Forget>
+  <US.B.ViewPack>View pack</US.B.ViewPack>
+  <US.B.EditTarget>Edit this target</US.B.EditTarget>
+  <US.B.SearchTargets>Filter this pack's targets…</US.B.SearchTargets>
+  <US.B.XenoFold>Show / hide xenotype domains</US.B.XenoFold>
+  <US.B.Working>Working target</US.B.Working>
+  <US.B.NoTarget>No working target</US.B.NoTarget>
+  <US.B.Exact>Exact xenotype regular</US.B.Exact>
+  <US.B.RaceRegular>Same-race regular</US.B.RaceRegular>
+  <US.B.PackFallback>Exact-domain selected-pack fallback</US.B.PackFallback>
+  <US.B.FinalTable>Final race table</US.B.FinalTable>
+  <US.B.NoTable>No table</US.B.NoTable>
+  <US.B.Mapped>mapped sounds</US.B.Mapped>
+  <US.B.NoneDeclared>None selected / declared</US.B.NoneDeclared>
+  <US.B.ConfiguredOnly>Configuration and mappings only; response eligibility and native sound readiness are evaluated at use.</US.B.ConfiguredOnly>
+  <US.B.DisabledPath>No dispatch; choices retained.</US.B.DisabledPath>
+  <US.B.VanillaPath>Only the final table is routed; packs are kept.</US.B.VanillaPath>
+  <US.B.RaceRegularOnly>A legal xenotype can borrow only same-race regular supply, never the race pack's PackFallback.</US.B.RaceRegularOnly>
+  <US.B.Info>i</US.B.Info>
+  <US.B.BackActions>Back to actions</US.B.BackActions>
+  <US.B.ChooseAction>Choose an action</US.B.ChooseAction>
+  <US.B.InvalidTarget>Choose a loaded race or a legal, unambiguous race + xenotype on Voices. No edit is redirected to another target.</US.B.InvalidTarget>
+  <US.B.RestoreRow>Restore row</US.B.RestoreRow>
+  <US.B.PresetAnchor>Preset reset target</US.B.PresetAnchor>
+  <US.B.NoAnchor>No preset anchor for this action and layer</US.B.NoAnchor>
+  <US.B.RulesOutput>Select / Eat rules → Output</US.B.RulesOutput>
+  <US.B.Custom>Registered custom action</US.B.Custom>
+  <US.B.LastGood>Last-good snapshot</US.B.LastGood>
+  <US.B.SourceCandidates>candidates; never adopted automatically</US.B.SourceCandidates>
+  <US.B.PublicationPending>Saved, runtime publication pending. The existing owner retries automatically; do not save the same change again.</US.B.PublicationPending>
+  <US.B.PublicationPendingShort>Saved · applying…</US.B.PublicationPendingShort>
+  <US.B.ExistingTables>Existing tables</US.B.ExistingTables>
+  <US.B.NewTable>New table</US.B.NewTable>
+  <US.B.CreateExplicit>Choose a candidate, then Create. Searching and selection write no table.</US.B.CreateExplicit>
+  <US.B.AdmissionNote>New table-only admission requires a full game restart. Already-admitted races use committed mappings at their next legal selection.</US.B.AdmissionNote>
+  <US.B.ClosePicker>Close sound picker</US.B.ClosePicker>
+  <US.B.DeveloperTools>Developer tools · show / hide</US.B.DeveloperTools>
+  <US.B.Imported>Imported {0} action rows / {1} fields. Applied now; physical save is queued. Sources and pack choices are unchanged.</US.B.Imported>
+  <US.B.Tier.0>HAR RACES</US.B.Tier.0>
+  <US.B.Tier.1>VANILLA HUMANLIKE</US.B.Tier.1>
+  <US.B.Tier.2>OTHER HUMANLIKE</US.B.Tier.2>
+  <US.B.Tier.3>ANIMALS</US.B.Tier.3>
+  <US.B.Tier.4>MECHANOIDS</US.B.Tier.4>
+  <US.B.Tier.5>ENTITIES</US.B.Tier.5>
+  <US.B.Tier.6>OTHER RACES</US.B.Tier.6>
+  <US.B.Tier.7>EXACT XENOTYPE DOMAINS</US.B.Tier.7>
+  <US.B.Tier.8>UNPAIRED XENOTYPES</US.B.Tier.8>
+  <US.B.Tier.9>DECLARED / SAVED, NOT LOADED</US.B.Tier.9>
+  <US.B.NoLegalDomain>No exact domain is authorized; browse only</US.B.NoLegalDomain>
+  <US.B.Coverage.idle>Not enabled</US.B.Coverage.idle>
+  <US.B.Restore.Applied>Row restored; the ordinary save is queued.</US.B.Restore.Applied>
+  <US.B.Restore.NoChange>No setting on this layer.</US.B.Restore.NoChange>
+  <US.B.Restore.Rejected>Restore rejected; previous values kept.</US.B.Restore.Rejected>
+  <US.B.Help>Targets lists every loaded identity, with HAR humanlike first. Expand a race for its actual xenotype domains. One-pack rows have an exact-target switch; multi-pack rows open independent choices. Packs is a separate browsing lens: Contents does not change the working target. Queries never select a result. Enabled rows remain until Refresh or a query change. Tuning edits the named layer; System contains appearance, diagnostics and restores. The configured path reads declarations, not playback.</US.B.Help>
+  <US.B.ImportNoChange>No action row imported; no save queued.</US.B.ImportNoChange>
 </LanguageData>

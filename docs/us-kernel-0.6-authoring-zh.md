@@ -43,8 +43,6 @@
 
 Pawn 包声明准确 Race；可选 `child` 是该 Race 下真实 canonical Xenotype。也可写显式 `family/namespace/target/child`；`race`不能与另一套 target 声明混用。NonPawn 的 namespace＋target 身份已能表达，原生完整宿主仍未交付，不能拿 Pawn 字段冒充。
 
-纯模型可直接将 NonPawn 的 `BehaviorDomain` 放入 `ResponseFrame`，经 `ResponseSession.Respond(RuntimeView, ResponseFrame, policy, ...)` 使用同一配置折叠、择一与结算；持续授权 `Review` 采用相同主体族默认。NonPawn 不注入 Pawn 的 scope、Talking、Eat 或 Select 资格默认，也不运行 Pawn Talking 门；显式填写这些非法配置仍拒绝。手动解释配置时，`BehaviorContract.DeclaredDefaults(action, family)`／`Defaults(action, policy, family)` 接受准确的 `"Pawn"` 或 `"NonPawn"`；原无 family 重载保留原 Pawn 语义，高层调用无需改走 `DecisionInput`。
-
 声音包只控制自己的音频和 participation。行为来源控制允许的作者默认，玩家 profile／Race／准确子域在其后逐字段覆盖；玩家 participation 可以覆盖 entry 的 Skip，作者来源不具有这项权限。缺事实为 Unknown；不删条件、不换主体、不退Call。
 
 包根 `weight` 决定包份额，entry `weight`决定已选包内变体份额；多写entry不增加机会或包份额。`pitch`是条目校准；音量可为0、音高须有限正数。`age`／egg筛选见[音频选择](openspec/specs/audio-selection/spec.md)，校准／参与见[调制与输出](openspec/specs/audio-output/spec.md)，保存／删除映射及能力组合见[现行规格](specification.md)。

@@ -12,7 +12,7 @@ public static partial class UsKernelSettingsHost
     private static bool IsToolPage(string page) => Array.IndexOf(ToolPages, page) >= 0;
     private static string PageHelpRef(VoicePacksPageState state) => state.Page switch
     {
-        "Voices" => state.BrowseDefinitions ? "us/race-board" : "us/pack-cards",
+        "Voices" => "us/roster",
         "Behavior" => "us/scope-tree", "Presets" => "us/preset-list", "Output" => "us/basic-tuning",
         "Fallback" => "us/fallback-editor", "Appearance" => "us/theme-picker",
         "Diagnostics" => "us/diagnostics", "Restore" => "us/reset-center", _ => "us/page-title"
@@ -27,6 +27,8 @@ public static partial class UsKernelSettingsHost
         }
         state.Page = page;
         if (IsToolPage(page)) state.LastToolPage = page;
+        if (TuningPage(page)) state.LastTuningPage = page;
+        else if (IsToolPage(page)) state.LastSystemPage = page;
         state.ActiveTab = page == "Behavior" ? "Tuning" : page == "Presets" ? "Presets" :
             page == "Appearance" || page == "Diagnostics" || page == "Restore" ? "Advanced" : "Packs";
         state.ActiveSectionKey = page switch { "Behavior" => "scope-tree", "Output" => "basic-tuning",
@@ -63,6 +65,12 @@ public static partial class UsKernelSettingsHost
     // Definition updates preserve the host and every compatible node identity, including scroll/drafts.
     internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f) => UiLayoutManifest.Parse(ReadManifest()
         .Replace("Id=\"voice-split\" Breakpoint=\"1\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-roster-split\" Breakpoint=\"1\"", "Id=\"b-roster-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-list-column\" Width=\"300\"", "Id=\"b-list-column\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
+        .Replace("Id=\"b-behavior-split\" Breakpoint=\"1\"", "Id=\"b-behavior-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-action-list\" Width=\"220\"", "Id=\"b-action-list\"" + (wide ? " Width=\"220\"" : ""))
+        .Replace("Id=\"b-final-split\" Breakpoint=\"1\"", "Id=\"b-final-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-final-list\" Width=\"300\"", "Id=\"b-final-list\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
         .Replace("Id=\"voice-detail-scroll\" Width=\"440\"", "Id=\"voice-detail-scroll\"" + (wide ? " Width=\"440\"" : ""))
         .Replace("Id=\"tool-nav\" Cols=\"7\"", "Id=\"tool-nav\" Cols=\"" + (wide ? "7" : "3") + "\"")
         .Replace("Id=\"help-drawer\" Height=\"128\"", "Id=\"help-drawer\" Height=\"" + helpHeight.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "\""));
@@ -72,7 +80,10 @@ public static partial class UsKernelSettingsHost
     /// retain node/editor/scroll identity. The second bounded arrange accounts for scrollbar width.</summary>
     public static void PreparePage(UiHost host, UiLayoutPoint available)
     {
-        if (!host.Bindings.TryGet("page-state", out VoicePacksPageState state) || !state.HelpPanelOpen) return;
+        if (!host.Bindings.TryGet("page-state", out VoicePacksPageState state)) return;
+        float listWidth = Math.Max(300, Math.Min(400, (available.X - 24) * .4f));
+        if (Math.Abs(state.RosterListWidth - listWidth) > .01f) { state.RosterListWidth = listWidth; host.Invalidate(); }
+        if (!state.HelpPanelOpen) return;
         var ctx = host.CreateContext(available.X);
         string topic = state.PinnedHelpRef.Length > 0 ? state.PinnedHelpRef : host.Session.CurrentHelpRef ?? "";
         UsHelpCatalog.TryGetSection(host.Bindings.TryGet("help-section-ref", out string section) ? section : "", out var fallback);
@@ -118,11 +129,6 @@ public static partial class UsKernelSettingsHost
         string T(string key) => t.Translate("US.UI." + key);
         void Go(string page)
         {
-            if (page == "Fallback" && s.FallbackSelectedRace == "" && !s.FallbackTableCanceled)
-            {
-                var tables = source.BuildView().FallbackRaces;
-                if (tables.Count > 0) VoicePacksPageModel.SetFallbackSelection(s, tables[0].DefName, "");
-            }
             NavigatePage(s, page);
             bumper.Bump();
         }
@@ -170,14 +176,19 @@ public static partial class UsKernelSettingsHost
             () => !s.HelpPanelOpen && (s.DetailOpen || s.PackArrivalFromDirectory));
         writes.Command("page-cancel", () => {
             if (s.HelpPanelOpen) s.HelpPanelOpen = false;
-            else if (s.Page == "Voices") ReturnVoiceList();
+            else if (s.Page == "Voices" && !s.WideLayout && s.DetailOpen) ReturnVoiceList();
+            else if (s.Page == "Voices") {
+                if (s.BrowseDefinitions) { s.HighlightedTarget = ""; source.CancelDomainSelection(); }
+                else s.SelectedPackKey = "";
+            }
             else ReturnToPreviousPage(s);
             bumper.Bump();
-        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
+        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.WideLayout && s.DetailOpen)
+            || (s.BrowseDefinitions ? s.HighlightedTarget != "" : s.SelectedPackKey != "") || s.PackArrivalFromDirectory);
         b.BindReadOnly<bool>("voice-packs", () => !s.BrowseDefinitions);
         b.BindReadOnly<bool>("voice-definitions", () => s.BrowseDefinitions);
-        writes.Command("browse-packs", () => { s.BrowseDefinitions = false; bumper.Bump(); });
-        writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; bumper.Bump(); });
+        writes.Command("browse-packs", () => { s.BrowseDefinitions = false; s.DetailOpen = false; bumper.Bump(); });
+        writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; s.DetailOpen = false; bumper.Bump(); });
         b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.WideLayout || !s.DetailOpen));
         b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.WideLayout || s.DetailOpen));
         b.BindReadOnly<bool>("voice-compact-back", () => (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
@@ -296,7 +307,7 @@ public static partial class UsKernelSettingsHost
         // Previously visited rows remain hidden compatible nodes, so switching context cannot
         // publish an old draft into a different row or silently discard it.
         var editKeys = new List<string>();
-        string CurrentEditKey() => s.TuningSelectedAction + "|" + (s.TuningLayer == 0 ? "" : s.TuningRaceDefName) + "|" + (s.TuningLayer == 2 ? s.TuningXenotypeDefName : "");
+        string CurrentEditKey() => RosterKey(s.TuningSelectedAction + "|" + (s.TuningLayer == 0 ? "" : s.TuningRaceDefName) + "|" + (s.TuningLayer == 2 ? s.TuningXenotypeDefName : ""));
         b.BindReadOnly<IReadOnlyList<string>>("action-edit-keys", () => {
             source.BuildView();
             if (production == null || s.TuningSelectedAction == "" || !source.CanResetTuningArea()) return editKeys;
@@ -324,8 +335,10 @@ public static partial class UsKernelSettingsHost
                 string f = field;
                 writes.ItemValue<string>("action-edit-keys", key, "action-field-" + f,
                     () => production.ReadActionField(f, action, race, child),
-                    v => { production.CommitActionField(f, v, action, race, child); bumper.Bump(); });
+                    v => { bool committed = production.TryCommitActionField(f, v, action, race, child); bumper.Bump();
+                        if (!committed) throw new InvalidOperationException(production.RowResult(action, race, child)); });
                 b.BindReadOnly<string>(Address("explain-" + f + "-topic"), () => "us/action-fields/" + f);
+                b.BindReadOnly<string>(Address("effective-" + f), () => production.EffectiveField(f, action, race, child, t));
                 writes.ItemAction<string>("action-edit-keys", key, "explain-" + f,
                     topic => OpenHelp(topic, action + " · " + (race == "" ? T("PawnProfile") : race + (child == "" ? "" : "/" + child))));
             }
@@ -339,5 +352,8 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<string>("kernel-status-raw", () => SqueakerRuntime.PolicyStatus);
         string carrier = typeof(UiHost).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
         b.BindReadOnly<string>("dependency-status", () => source.BuildIdentity + "\nFerriteLib " + carrier + "\n" + T("ObservationBoundary"));
+        BindRoster(source, writes, bumper, t);
+        BindBehaviorSheet(source, writes, bumper, t);
+        BindFinalSheet(source, writes, bumper, t);
     }
 }

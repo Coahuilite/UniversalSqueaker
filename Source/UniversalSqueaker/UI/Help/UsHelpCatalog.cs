@@ -69,6 +69,7 @@ internal static class UsHelpCatalog
 {
     private static readonly Dictionary<string, HelpSection> Sections = new(StringComparer.Ordinal)
     {
+        ["us/roster"] = new HelpSection("us/roster", "US.B.Voices", "US.B.Help", Array.Empty<HelpItem>()),
         ["us/behavior-source"] = new HelpSection("us/behavior-source", "US.UI.Help.Source.Title", "US.UI.Help.Source.Text", new[]
         {
             new HelpItem("us/behavior-source/selection", "US.UI.Help.Source.Title", "US.UI.Help.Source.Text"),

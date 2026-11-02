@@ -18,7 +18,16 @@ public sealed class VoicePacksPageState
     public readonly List<string> PageHistory = new();
     public string PinnedHelpRef = "";
     public string PinnedHelpContext = "";
-    public bool BrowseDefinitions;
+    public bool BrowseDefinitions = true;
+    public string LastTuningPage = "Behavior", LastSystemPage = "Appearance";
+    public readonly UsBrowseListState RosterBrowse = new(), RosterPackBrowse = new();
+    public string RosterCoverage = "any", RosterPackCoverage = "any", HighlightedTarget = "";
+    public readonly HashSet<string> RosterExpanded = new(StringComparer.Ordinal);
+    public readonly HashSet<string> RosterRetained = new(StringComparer.Ordinal), RosterPackRetained = new(StringComparer.Ordinal);
+    public string RosterRetentionIdentity = "", RosterPackRetentionIdentity = "";
+    public string PackSheetQuery = "";
+    public int PackSheetPage;
+    internal float RosterListWidth = 300;
     public bool FiltersOpen;
     public bool RestoreAllOpen;
     public bool WideLayout;
@@ -31,6 +40,7 @@ public sealed class VoicePacksPageState
     public int OrphanSelectionCount;
     public string MissingSelections = "";
     public string SourceChangeDiagnostic = "";
+    public string PresetResult = "";
     public string EnabledFilterIdentity = "";
     public readonly HashSet<string> EnabledFilterRows = new(StringComparer.Ordinal);
     internal IReadOnlyList<PackCardView> AllPackCards = Array.Empty<PackCardView>();
@@ -65,6 +75,7 @@ public sealed class VoicePacksPageState
     public UsBrowseListView DirectoryList = UsBrowseListView.Empty, TableList = UsBrowseListView.Empty,
         CandidateList = UsBrowseListView.Empty, SoundList = UsBrowseListView.Empty;
     public string PendingFallbackRace = "";
+    public bool FallbackCreating, FallbackDetailOpen;
     internal object? SoundDefinitions;
     internal IReadOnlyList<UsBrowseItem> CoreSounds = Array.Empty<UsBrowseItem>();
     public UsBoardBrowsePolicy.BoardGroup BoardGroup { get => DirectoryBrowse.Group; set => DirectoryBrowse.Group = value; }
@@ -125,12 +136,16 @@ public sealed class VoicePacksPageState
         Page = "Voices"; LastToolPage = "Behavior"; PinnedHelpRef = ""; PinnedHelpContext = "";
         HelpHeight = 128f; HelpViewWidth = HelpViewHeight = 0; HelpLayoutRevision = -1; HelpLayoutText = "";
         PageHistory.Clear();
-        BrowseDefinitions = false; FiltersOpen = false; RestoreAllOpen = false;
+        BrowseDefinitions = true; FiltersOpen = false; RestoreAllOpen = false;
+        LastTuningPage = "Behavior"; LastSystemPage = "Appearance"; HighlightedTarget = "";
+        RosterBrowse.Clear(); RosterPackBrowse.Clear(); RosterCoverage = RosterPackCoverage = "any";
+        RosterExpanded.Clear(); RosterRetained.Clear(); RosterPackRetained.Clear();
+        RosterRetentionIdentity = RosterPackRetentionIdentity = ""; PackSheetQuery = ""; PackSheetPage = 0;
         DetailOpen = false; PackArrivalFromDirectory = false; SelectedPackKey = ""; PackPage = 0;
         PackTotal = 0; PackSelected = 0; OrphanSelectionCount = 0; MissingSelections = "";
         AllPackCards = Array.Empty<PackCardView>(); PackGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
         PackRaceBrowse.Clear(); PackXenoBrowse.Clear(); PackAuthorBrowse.Clear();
-        SourceChangeDiagnostic = ""; EnabledFilterIdentity = ""; EnabledFilterRows.Clear();
+        SourceChangeDiagnostic = ""; PresetResult = ""; EnabledFilterIdentity = ""; EnabledFilterRows.Clear();
         SelectedScope = SqueakVoicePackScope.Race;
         SelectedRaceDefName = "";
         SelectedTargetName = "";
@@ -162,7 +177,7 @@ public sealed class VoicePacksPageState
         DirectoryBrowse.Clear(); TableBrowse.Clear(); CandidateBrowse.Clear(); SoundBrowse.Clear();
         TableBrowse.Group = UsBoardBrowsePolicy.BoardGroup.All;
         DirectoryList = TableList = CandidateList = SoundList = UsBrowseListView.Empty;
-        PendingFallbackRace = ""; SoundDefinitions = null; CoreSounds = Array.Empty<UsBrowseItem>();
+        PendingFallbackRace = ""; FallbackCreating = FallbackDetailOpen = false; SoundDefinitions = null; CoreSounds = Array.Empty<UsBrowseItem>();
         FallbackStatusArg = "";
         DomainSelectionCanceled = false;
         FallbackTableCanceled = false;

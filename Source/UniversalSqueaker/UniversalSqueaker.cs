@@ -38,6 +38,7 @@ public sealed class SqueakerMod : Mod
     internal SettingsSaveState SaveState => persistence.Owner.State;
     internal bool SaveStatusVisible => persistence.Owner.StatusVisible(Time.realtimeSinceStartup);
     internal bool IsSettingsDirty => persistence.Owner.Dirty;
+    internal bool SettingsPublicationPending => persistence.Owner.PublicationPending;
     public long SaveQueueRequestCount => persistence.Owner.RequestCount;
     public long PhysicalSaveCount => persistence.Owner.PhysicalSaveCount;
     /// <summary>Persist source intent before adopting and publishing it.</summary>

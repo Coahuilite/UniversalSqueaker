@@ -9,7 +9,6 @@
 | 普通政策 POL | GameBootstrap定义／音源／comp／配置就绪 → InstallOrdinaryPolicy／UsResponsePolicy.CreateOrdinary → 新及已有owner输入 | 普通Release自动，不要求Dev或UI；Dev仍显式单次 |
 | 公共通知 CORE-05 | Authoring/SqueakerNotifications.Declare → TryProcess → 注册事实／同owner | 返回处理，不等派发；XML与外部C#例在examples/0.6 |
 | 行为配置 CFG | GameSettings.BehaviorSources／ActionTuningRecord → BehaviorConfiguration.Read → 同次有效值／字段归因 | 作者层先玩家；视图和Read防外部写入 |
-| 主体族默认 CORE-05／CFG-02 | ResponseSession的Respond／Review → BehaviorContract.Defaults(action, policy, frame.Domain.Family) → 原BehaviorConfiguration.Resolve／授权／决策 | Pawn保原默认；NonPawn不注入Pawn专属默认且不运行Pawn Talking门，显式非法字段仍由原校验拒绝；旧无family公开重载保Pawn语义 |
 | 原子来源／行 PUB | SqueakerMod.TryCommit… → GameSettingsPersistence → UsAtomicConfigFile／同保存owner → ApplyToRuntime | persist-first；Committed后发布失败只修发布 |
 | 普通保存 PUB | setter → QueuePersistence → SettingsSaveOwner的Tick／Flush → base.WriteSettings | 实时0.35秒、代次、关闭一次重试；Scribe临时值finally恢复 |
 | 旧绑定恢复 CFG-06 | UsKernelSettingsSource.Voices安全读 → 选定域继承／同ID重绑 → 原子owner | 159f651修复已技术关闭P1；精确旧快照／同ID重绑／另拒绝域／原生点击仍有原证据缺口 |
@@ -35,8 +34,6 @@ ActionPlan是不可变动作输入，不是会话／请求／成立证明。Beha
 A002按CO明确许可仅补既有AudioBinding RuntimeDoubles的Current.Game／Find.World／World.info／WorldInfo.persistentRandomValue与TickRateMultiplier形状，默认null／1f，不造世界、seed场景或新case，原through场景和断言保持。最终Release、既有Core和同一through已重新运行；证据与新的固定工程接口在`dist/rw16-17-action-ux-20261031/INTERFACE-r4.md`。through默认null只证明legacy无ready路径，真实seed输入、归一化窗口分支和原生听感不由这些旧绿项代签；A001固定r3及原失败保留原依据。
 
 ## 固定依赖与公开边界
-2026-11-01发布门窄修显式消费FL的`dist/release-gate-20261101/producer-release-r1/FerriteLib`（MVID `f9235665-740f-4946-a45a-fa1c52512c12`）。US保持Private=false，实际Release与Host运行核同一编译引用收据；新固定产品、源码形式及相关检查边界统一见`dist/release-gate-20261101/INTERFACE-r1.md`。这是HEAD+dirty本地工程交付，不是正式rc资产；下列历史配对不被改签。
-
 US引用FL API范围[0.8.0,0.9.0)、Private=false，产品不夹FL或Harmony DLL，实际编译输入以该候选嵌入收据为准。3e42原本地Release准备使用固定6ec0c31生产者；它不是未来已发布rc2/mainSHA。2026-10-29合同修复技术配对为US3e42+dirty／FLcf1cf64+dirty：US显式消费FL固定producer-release-r1，实际Dev／Release编译、完整当前Host1747项及DLL-only作者编译通过，staging带同一FL目录；这不是clean release或已发布资产。此前ea610fa／FL833c14f4总体内部试玩与增量性能接受保持原身份；A009r2 US68b30e3／FL36fa恢复包亦不改签。此处不由移动FL HEAD推断载荷。
 
 

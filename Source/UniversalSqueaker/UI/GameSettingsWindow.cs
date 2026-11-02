@@ -74,7 +74,7 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     protected override UiTheme Theme => WindowTheme;
 
-    protected override string Title => mod.SettingsCategory();
+    protected override string Title => mod.SettingsCategory() + " — " + "US.B.Variant".Translate();
 
     protected override string Subtitle => "";
     protected override float TitleBarHeight => WindowChromeLayout.TitleBarHeight;
@@ -214,6 +214,7 @@ public sealed class GameSettingsWindow : UiWindowHost
         // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
         if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Invalidate();
         mod.TickSettingsSaveForWindow();
+        source?.SynchronizeSaveState();
         if (Host != null) UsKernelSettingsHost.PreparePage(Host, new UiLayoutPoint(contentRect.width, contentRect.height));
     }
 

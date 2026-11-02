@@ -28,5 +28,5 @@ public static class WindowChromeLayout
 
     /// <summary>Call with the actual FL content rectangle BEFORE the common page header is allocated.</summary>
     public static bool UsesWideLayout(float contentWidth, float contentHeight)
-        => contentWidth - 24 >= 1100 && contentHeight - 24 >= 640;
+        => contentWidth - 24 >= 780 && contentHeight - 24 >= 440;
 }

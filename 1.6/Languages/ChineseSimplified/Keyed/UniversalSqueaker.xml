@@ -2,7 +2,6 @@
 <LanguageData>
   <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
   <US.Settings.Save.Failed>语音设置保存失败。</US.Settings.Save.Failed>
-
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
   <DebugAction_DiagnosticsOpen>诊断：打开面板</DebugAction_DiagnosticsOpen>
   <US.Debug.CameraIndicator>相机：高度 {0}，视距 {1}</US.Debug.CameraIndicator>
@@ -76,7 +75,6 @@
   <US.Diagnostics.Geometry.Report.Waiting>已请求报告：将在下一次绘制后写入。</US.Diagnostics.Geometry.Report.Waiting>
   <US.Diagnostics.Geometry.Report.Written>报告已写入布局日志：pass {0}。</US.Diagnostics.Geometry.Report.Written>
   <US.Diagnostics.Geometry.Report.NotProduced>未生成报告：采集内容为空。请在再次绘制后重试。</US.Diagnostics.Geometry.Report.NotProduced>
-
   <US.Action.Call>普通叫声</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
   <US.Action.Sleep>睡眠</US.Action.Sleep>
@@ -92,16 +90,13 @@
   <US.Action.Work>工作</US.Action.Work>
   <US.Action.Equip>装备</US.Action.Equip>
   <US.Action.MentalBreak>精神崩溃</US.Action.MentalBreak>
-
   <US.Mood.Good>良好</US.Mood.Good>
   <US.Mood.Neutral>中性</US.Mood.Neutral>
   <US.Mood.Bad>低落</US.Mood.Bad>
   <US.Mood.Break>崩溃</US.Mood.Break>
-
   <US.Notice.RaceDomain>种族域</US.Notice.RaceDomain>
   <US.Notice.TargetUnavailable>目标未加载</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>以下语音包域尚未启用任何语音包：</US.Notice.AudioPool.Body>
-
   <US.Settings.Shell.Title>Universal Squeaker 使用独立设置窗口。</US.Settings.Shell.Title>
   <US.Settings.Shell.Body>游戏内的 Mod Settings 面板不再承载 {0} 的设置。请打开专用窗口调整路由、调音与语音包。</US.Settings.Shell.Body>
   <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
@@ -111,7 +106,6 @@
   <US.Settings.Window.Close>关闭</US.Settings.Window.Close>
   <US.Settings.Prerequisite.Title>FerriteLib 前置版本不匹配</US.Settings.Prerequisite.Title>
   <US.Settings.Prerequisite.Body>已安装的 FerriteLib 模组旧于本 Universal Squeaker 构建编译时所针对的 API。请将 FerriteLib 更新到配套版本后重启游戏；完整契约诊断见 Player.log。</US.Settings.Prerequisite.Body>
-
   <!-- Schema=2 设置页标题（UsPageTitleWidget / UsNavWidget）与卡片标题（清单 TitleKey）。
        中文串按净宽预算收紧：nav 描述 ≤25 半角单位，中间列 Tiny 文案 ≤47 半角单位。 -->
   <US.Page.Overview.Title>语音包路由</US.Page.Overview.Title>
@@ -124,7 +118,6 @@
   <US.Page.Tuning.Caption>先选层与域，再设动作范围与心情值</US.Page.Tuning.Caption>
   <US.Page.Presets.Title>基线预设</US.Page.Presets.Title>
   <US.Page.Presets.Caption>可导入基线由已安装的 Def 提供</US.Page.Presets.Caption>
-
   <US.Nav.Overview.Label>总览</US.Nav.Overview.Label>
   <US.Nav.Overview.Description>路由与播放</US.Nav.Overview.Description>
   <US.Nav.Distance.Label>距离</US.Nav.Distance.Label>
@@ -135,7 +128,6 @@
   <US.Nav.Tuning.Description>分层动作与心情规则</US.Nav.Tuning.Description>
   <US.Nav.Presets.Label>预设</US.Nav.Presets.Label>
   <US.Nav.Presets.Description>Def 提供的基线</US.Nav.Presets.Description>
-
   <US.DevPanel.Title>US 开发面板</US.DevPanel.Title>
   <US.DevPanel.Target>目标</US.DevPanel.Target>
   <US.DevPanel.Target.Settings>设置页</US.DevPanel.Target.Settings>
@@ -192,8 +184,6 @@
   <US.VF1.Status.SavedNotAdopted>文件已保存，但运行音频目录未能采用；当前回应保留最近可用目录。原因见日志，完整重启游戏会重新加载已保存文件。</US.VF1.Status.SavedNotAdopted>
   <US.VF1.Status.DeletedNotAdopted>文件已删除，但运行音频目录未能采用；当前回应保留最近可用目录。原因见日志，完整重启游戏会重新加载文件。</US.VF1.Status.DeletedNotAdopted>
   <US.VF1.Status.SaveFailed>保存失败——磁盘上的表未改动，原因见日志。</US.VF1.Status.SaveFailed>
-
-
   <US.Section.OutputLevel>输出音量</US.Section.OutputLevel>
   <US.Section.PlaybackBehaviour>发声规则</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
@@ -470,30 +460,28 @@
   <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
   <US.Tuning.Source.Default>默认</US.Tuning.Source.Default>
-
-
   <US.Distance.AxisCaption>相机高度 {0}–{1}（游戏数值） · 音量 100%→0%</US.Distance.AxisCaption>
   <US.Preset.List.BaselineNote>此处是只读基线。应用会写入勾选的域；当前值可在调音页查看和修改。</US.Preset.List.BaselineNote>
   <!-- US-RESET1: 恢复默认条目。确认文案列出各恢复写入的字段(展示文案;字段集合由后端拥有,
        并由恢复 harness 钉住)。 -->
   <US.Section.RestoreDefaults>恢复默认</US.Section.RestoreDefaults>
   <US.Reset.RestoreAll>恢复所有 US 设置</US.Reset.RestoreAll>
-  <US.Reset.RestoreAll.Caption>把所有 Universal Squeaker 设置恢复为默认值。绝不触碰你的最终 fallback 玩家表及其声音映射。</US.Reset.RestoreAll.Caption>
-  <US.Reset.RestoreAll.Confirm>这将把所有 Universal Squeaker 设置恢复为默认值:普通设置(输出音量、播放行为、触发时机、诊断)、全部动作与心情调音覆盖(全局及各层域)、包选择、已应用预设记录及其来源锚点。保留:全部最终 fallback 玩家表及其声音映射、全部作者/Def 内容、设置 schema 与迁移诊断。此操作无法在本窗口内撤销。</US.Reset.RestoreAll.Confirm>
+  <US.Reset.RestoreAll.Caption>恢复玩家设置、声音包选择和全部动作覆盖。保留显式作者来源选择、其 last-good 快照及最终回退表。</US.Reset.RestoreAll.Caption>
+  <US.Reset.RestoreAll.Confirm>恢复玩家设置默认值：输出音量与距离、活跃度、说话缩放、彩蛋、相机指示器、外观与入口偏好、诊断、声音包选择，以及含预设锚点的全部动作覆盖。保留：显式作者来源选择及 last-good 快照、最终回退玩家表及声音映射、作者/Def 内容、schema/迁移诊断。此窗口无法撤销这次恢复。</US.Reset.RestoreAll.Confirm>
   <US.Reset.Area>恢复此区域默认</US.Reset.Area>
   <US.Reset.Row>恢复此行默认</US.Reset.Row>
   <US.Reset.DistanceDefaults>恢复听取距离默认</US.Reset.DistanceDefaults>
   <US.Reset.Confirm>确认恢复</US.Reset.Confirm>
   <US.Reset.Area.Distance.Confirm>这将把听取距离区域恢复为默认值:输出音量、距离预设与距离范围。动作/心情调音、包选择与 fallback 表保持不变。</US.Reset.Area.Distance.Confirm>
-  <US.Reset.Area.Basics.Confirm>恢复播放行为控制与 Pawn 服务对象级 Eat 参数。保留 Race/Xenotype 覆盖、作者来源及其他区域；域覆盖请用准确动作行或层恢复。</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Basics.Confirm>恢复活跃度、说话缩放、彩蛋、相机指示器，以及 Pawn 服务对象级 Select 资格与 Eat 参数。保留 Race/Xenotype 覆盖、作者来源选择和其他设置。</US.Reset.Area.Basics.Confirm>
   <US.Reset.Area.Timing.Confirm>这将把触发时机区域恢复为默认值:最小间隔与全局冷却乘数。其它区域与 fallback 表保持不变。</US.Reset.Area.Timing.Confirm>
   <US.Reset.Area.Diagnostics.Confirm>这将把诊断区域恢复为默认值:开发者日志模式与本地化调试动作菜单。每窗口的布局诊断开关不是设置,不受影响。</US.Reset.Area.Diagnostics.Confirm>
-  <US.Reset.Area.Action.Confirm>这将把下方所示当前层域的每一条动作行恢复为默认值(范围、间隔与概率覆盖,以及该行的预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Action.Confirm>
+  <US.Reset.Area.Action.Confirm>移除下方所示层域的每一条玩家动作覆盖，包括 response 参数、参与开关和行预设锚点。数值重新继承已采用作者来源与服务默认值。保留其他层域、作者来源选择和最终回退表。</US.Reset.Area.Action.Confirm>
   <US.Reset.Area.Mood.Confirm>这将把下方所示当前层域的每条心情行恢复为默认值(音高、音量与抖动及其预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Mood.Confirm>
-  <US.Help.ResetCenter.Overview>恢复默认集中了全局入口:一问一答,一次操作把所有 Universal Squeaker 设置回到默认。卡片同时写明保留项——首先是你的最终 fallback 玩家表及其声音映射,这里的任何恢复都不会触碰。</US.Help.ResetCenter.Overview>
-  <US.Help.ResetCenter.RestoreAll.Text>全局恢复覆盖普通设置、全部动作/心情调音覆盖(全局及各层域)、包选择,以及已应用预设记录与其来源锚点。它和任何普通改动走同一条发布与保存通道,且只走一次。取消不写入任何数据;fallback 表、作者/Def 内容与 schema/迁移诊断均保留。</US.Help.ResetCenter.RestoreAll.Text>
+  <US.Help.ResetCenter.Overview>全局恢复可一起重置玩家设置、声音包选择与动作覆盖。显式作者来源选择、其 last-good 快照及最终回退玩家表保持不变。</US.Help.ResetCenter.Overview>
+  <US.Help.ResetCenter.RestoreAll.Text>全局恢复重置普通玩家设置，移除每条动作覆盖及其预设锚点。保留显式作者来源选择与 last-good 快照、最终回退表、作者/Def 内容及 schema/迁移诊断。沿用现有 owner 发布并排队持久化；取消不写入。</US.Help.ResetCenter.RestoreAll.Text>
   <US.Help.ResetArea.Overview>每个区域自带恢复入口:确认窗口逐条列出该区域将写入的字段,并说明哪些保持不变。简单恢复(距离预设与范围、单条动作行)直接执行,不再提问。</US.Help.ResetArea.Overview>
-  <US.Help.ResetArea.Button.Text>区域恢复只写当前可见区域的字段——不碰其它区域、其它层域的调音值,也不碰 fallback 表。动作/心情区域按钮在提问中写明当前层与域;目标为空或失效时不提供任何恢复。"恢复此区域默认"(含输出音量)与"恢复听取距离默认"(仅预设与范围)是两个入口,范围不同。</US.Help.ResetArea.Button.Text>
+  <US.Help.ResetArea.Button.Text>每个确认窗口说明现有 owner 实际恢复的字段。播放行为还包含相机指示器和 Pawn 服务对象级 Select/Eat 字段。动作区域恢复移除指定层域的全部玩家动作覆盖，不移除显式作者来源选择。距离默认仅恢复预设与范围；距离区域恢复还包含输出音量。最终回退表保留。</US.Help.ResetArea.Button.Text>
   <!-- UIR-001/002/003/006(WO-US-UI-REFACTOR-20261014):五页导航、总览教学与全部已加载种族看板、
        主题选择器与 fallback 编辑器独立分区。看板词组由 UsRaceBoardWidget 用这些条目拼装;
        {0}/{1}/{2} 只是机器槽位。调色板名称是 US 消费者内容,不是库默认值。 -->
@@ -794,4 +782,95 @@
   <US.Diagnostics.Search.Map>当前地图搜索（最多返回 64 个匹配）</US.Diagnostics.Search.Map>
   <US.Diagnostics.Search.Returned>返回 {0} 个对象</US.Diagnostics.Search.Returned>
   <US.Packs.Checklist.RaceUnavailableBanner>该种族定义未加载。已保存选择保留，待目标恢复。</US.Packs.Checklist.RaceUnavailableBanner>
+  <US.B.Variant>B／种族名册版</US.B.Variant>
+  <US.B.Voices>语音</US.B.Voices>
+  <US.B.Tuning>调音</US.B.Tuning>
+  <US.B.System>系统</US.B.System>
+  <US.B.Targets>目标</US.B.Targets>
+  <US.B.Search>搜索名称、标识、语音包或来源…</US.B.Search>
+  <US.B.SearchSources>搜索来源（不会自动选择）…</US.B.SearchSources>
+  <US.B.AllSources>全部来源</US.B.AllSources>
+  <US.B.Source>来源</US.B.Source>
+  <US.B.Coverage>覆盖条件</US.B.Coverage>
+  <US.B.Coverage.any>不限覆盖</US.B.Coverage.any>
+  <US.B.Coverage.has>有语音包</US.B.Coverage.has>
+  <US.B.Coverage.enabled>已启用（保留行）</US.B.Coverage.enabled>
+  <US.B.Coverage.none>无语音包</US.B.Coverage.none>
+  <US.B.Coverage.issues>需要关注</US.B.Coverage.issues>
+  <US.B.Page>页</US.B.Page>
+  <US.B.PacksOn>个包已选</US.B.PacksOn>
+  <US.B.Missing>项选择缺失</US.B.Missing>
+  <US.B.NoPack>暂无语音包</US.B.NoPack>
+  <US.B.Kept>保留至刷新或更改筛选</US.B.Kept>
+  <US.B.Loose>异种已加载，尚无合法种族配对。仅供浏览，不假定父种族。</US.B.Loose>
+  <US.B.UnloadedRace>种族未加载；保留已存选择</US.B.UnloadedRace>
+  <US.B.Dormant>Biotech 未启用；域休眠</US.B.Dormant>
+  <US.B.Unavailable>目标不可用</US.B.Unavailable>
+  <US.B.Conflict>规范身份冲突；路由关闭</US.B.Conflict>
+  <US.B.Orphan>已存选择缺失</US.B.Orphan>
+  <US.B.Unknown>未知（尚未观察）</US.B.Unknown>
+  <US.B.NotSupplied>未提供</US.B.NotSupplied>
+  <US.B.Outside>不在当前结果中；保留目标</US.B.Outside>
+  <US.B.NativeHuman>原生 Human 身份</US.B.NativeHuman>
+  <US.B.ChooseTarget>选择目标，或查看语音包内容。</US.B.ChooseTarget>
+  <US.B.NoResults>没有匹配结果。请清除条件或扩大范围。</US.B.NoResults>
+  <US.B.VoicesForTarget>此目标的语音</US.B.VoicesForTarget>
+  <US.B.NoPackHelp>没有包服务于此准确目标。没有声明或最终表的种族保持无声。可在下方显式创建表；仅由表准入时需完整重启游戏。</US.B.NoPackHelp>
+  <US.B.PathTitle>已配置路径 · 不是播放检查</US.B.PathTitle>
+  <US.B.OpenCreateTable>打开／创建最终表…</US.B.OpenCreateTable>
+  <US.B.Forget>清除失效选择</US.B.Forget>
+  <US.B.ViewPack>查看语音包</US.B.ViewPack>
+  <US.B.EditTarget>编辑此目标</US.B.EditTarget>
+  <US.B.SearchTargets>筛选此包的目标…</US.B.SearchTargets>
+  <US.B.XenoFold>展开／收起异种域</US.B.XenoFold>
+  <US.B.Working>编辑目标</US.B.Working>
+  <US.B.NoTarget>尚无编辑目标</US.B.NoTarget>
+  <US.B.Exact>准确异种常规供给</US.B.Exact>
+  <US.B.RaceRegular>同种族常规供给</US.B.RaceRegular>
+  <US.B.PackFallback>准确域所选包后备</US.B.PackFallback>
+  <US.B.FinalTable>种族最终表</US.B.FinalTable>
+  <US.B.NoTable>尚无表</US.B.NoTable>
+  <US.B.Mapped>个已映射声音</US.B.Mapped>
+  <US.B.NoneDeclared>未选用／未声明</US.B.NoneDeclared>
+  <US.B.ConfiguredOnly>仅显示配置与映射；回应资格及原生声音就绪状态在使用时判定。</US.B.ConfiguredOnly>
+  <US.B.DisabledPath>不派发；保留选择。</US.B.DisabledPath>
+  <US.B.VanillaPath>只路由最终表；保留语音包选择。</US.B.VanillaPath>
+  <US.B.RaceRegularOnly>合法异种只能借用同种族常规供给，不能借用种族包的 PackFallback。</US.B.RaceRegularOnly>
+  <US.B.Info>i</US.B.Info>
+  <US.B.BackActions>返回动作列表</US.B.BackActions>
+  <US.B.ChooseAction>选择动作</US.B.ChooseAction>
+  <US.B.InvalidTarget>请在语音页选择已加载种族，或合法且无歧义的种族＋异种。编辑不会被重定向至其他目标。</US.B.InvalidTarget>
+  <US.B.RestoreRow>恢复此行</US.B.RestoreRow>
+  <US.B.PresetAnchor>预设恢复锚点</US.B.PresetAnchor>
+  <US.B.NoAnchor>此动作和层没有预设锚点</US.B.NoAnchor>
+  <US.B.RulesOutput>Select／Eat 规则 → 输出</US.B.RulesOutput>
+  <US.B.Custom>已注册自定义动作</US.B.Custom>
+  <US.B.LastGood>最后有效快照</US.B.LastGood>
+  <US.B.SourceCandidates>个候选；不会自动采用</US.B.SourceCandidates>
+  <US.B.PublicationPending>已保存，等待运行时发布。现有所有者会自动重试；请勿重复保存同一更改。</US.B.PublicationPending>
+  <US.B.PublicationPendingShort>已保存 · 应用中…</US.B.PublicationPendingShort>
+  <US.B.ExistingTables>已有表</US.B.ExistingTables>
+  <US.B.NewTable>新建表</US.B.NewTable>
+  <US.B.CreateExplicit>先选择候选，再点击创建。搜索与选择不会写入表。</US.B.CreateExplicit>
+  <US.B.AdmissionNote>仅由新表准入的种族需完整重启游戏。已准入种族在下一次合法选择时使用已提交映射。</US.B.AdmissionNote>
+  <US.B.ClosePicker>关闭声音选择</US.B.ClosePicker>
+  <US.B.DeveloperTools>开发者工具 · 展开／收起</US.B.DeveloperTools>
+  <US.B.Imported>已导入 {0} 个动作行／{1} 个字段。现已应用，磁盘保存已排队。来源与语音包选择未变。</US.B.Imported>
+  <US.B.Tier.0>HAR 种族</US.B.Tier.0>
+  <US.B.Tier.1>原生类人</US.B.Tier.1>
+  <US.B.Tier.2>其他类人</US.B.Tier.2>
+  <US.B.Tier.3>动物</US.B.Tier.3>
+  <US.B.Tier.4>机械体</US.B.Tier.4>
+  <US.B.Tier.5>实体</US.B.Tier.5>
+  <US.B.Tier.6>其他种族</US.B.Tier.6>
+  <US.B.Tier.7>准确异种域</US.B.Tier.7>
+  <US.B.Tier.8>未配对异种</US.B.Tier.8>
+  <US.B.Tier.9>已声明／已存，但未加载</US.B.Tier.9>
+  <US.B.NoLegalDomain>未授权此准确域；仅供浏览</US.B.NoLegalDomain>
+  <US.B.Coverage.idle>未启用</US.B.Coverage.idle>
+  <US.B.Restore.Applied>此行已恢复，常规保存已排队。</US.B.Restore.Applied>
+  <US.B.Restore.NoChange>此层没有设置。</US.B.Restore.NoChange>
+  <US.B.Restore.Rejected>恢复被拒绝；保留原值。</US.B.Restore.Rejected>
+  <US.B.Help>目标名册列出全部已加载身份，默认优先显示 HAR 类人。展开种族可查看它的实际异种域。单包行有准确目标开关；多包行打开后独立选择。包镜头用于浏览，“内容”不会改变编辑目标。查询不会自动选择结果。已启用行保留至刷新或更改查询。调音编辑已点名的层；系统包含外观、诊断和恢复。已配置路径读取声明，不表示播放结果。</US.B.Help>
+  <US.B.ImportNoChange>没有导入动作行；未排队保存。</US.B.ImportNoChange>
 </LanguageData>

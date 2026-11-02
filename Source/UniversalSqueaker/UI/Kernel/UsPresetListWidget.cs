@@ -36,7 +36,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private const float XenotypeIndentNarrow = 12f;
     private const float LeftPadding = 10f;
     private const float ImportButtonWidth = 76f;
-    private const float ImportButtonHeight = 20f;
+    private const float ImportButtonHeight = 28f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
 
@@ -369,7 +369,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     private static float MeasuredRowHeight(string text, float width, UiWidgetContext ctx, float fallback)
     {
-        float measured = ctx.Metrics.MeasureText(text, UiFont.Tiny, width);
+        float measured = ctx.Metrics.MeasureText(text, UiFont.Small, width);
         return Math.Max(fallback, measured + 8f);
     }
 
