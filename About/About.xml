@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Structure: docs/mod-structure-reference-zh.md. Version is the numeric tag base; rc1 belongs
-     to the release tag/asset name. This metadata supports RimWorld1.6 only, not1.7. -->
+     to the release tag/asset name. RimWorld 1.6 and the 1.7 basic-compatibility candidate share the 1.6 payload. -->
 <ModMetaData>
   <packageId>coahuilite.universalsqueaker</packageId>
   <modVersion>0.6.0</modVersion>
   <name>Universal Squeaker</name>
   <author>Coahuilite</author>
-  <supportedVersions><li>1.6</li></supportedVersions>
+  <supportedVersions><li>1.6</li><li>1.7</li></supportedVersions>
   <!-- FerriteLib is a hard prerequisite: it carries FerriteLib.UiKit.dll, which US compiles against
        and binds to at runtime. RimWorld's modDependencies cannot express a version (ModRequirement
        only parses packageId / alternativePackageIds / displayName), so the API-range assert lives in

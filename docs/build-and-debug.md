@@ -2,6 +2,8 @@
 
 Select the fixed FerriteLib 0.8 package you intend to test with, then build US against that exact DLL. US does not build or ship FerriteLib. Game use also requires the external [Harmony mod](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077) (`brrainz.harmony`); the Lib.Harmony compilation reference does not supply the game runtime. Neither `0Harmony.dll` nor `FerriteLib.UiKit.dll` is bundled with US. The current identity and migration conditions are in the [0.8 consumer guide](fl08-consumer-migration-zh.md).
 
+The RW17 basic-compatibility candidate explicitly maps both game versions to the shared `1.6` payload. It still targets net472 and compiles against Krafs.Rimworld.Ref 1.6.4871; the 1.7 API/IL review is a separate evidence layer. The release-gate repair uses the fixed `ferritelib/dist/release-gate-20261101/producer-release-r1/FerriteLib` input with `Private=false`; its actual US compiler/runtime pairing is recorded in [the fixed interface](../dist/release-gate-20261101/INTERFACE-r1.md). The earlier `rw17-basic-compat-20261030` input remains a preserved historical candidate. Native 1.7 sound and rendering remain awaiting human verification.
+
 ## Local Dev workflow
 
 From the US repository root:
@@ -44,7 +46,7 @@ pwsh -NoProfile -File scripts/stage-package.ps1 `
 
 `-RequireReleaseIdentity` additionally requires a Release carrier and publishable version identity. Compiling a Release US DLL against a fixed Dev carrier is a technical build, not a publishable paired release. No install or publication follows from staging.
 
-The [r2 contract](us-kernel-0.6-refactor-zh.md) and [author guide](us-kernel-0.6-authoring-zh.md) describe the breaking declaration/configuration boundary. `UniversalSqueakerRefactorCoreTests` compiles the **whole production Core** without a platform reference or game double. `UniversalSqueakerDomainAdapterTests` checks the production configuration/domain adapter separately. AudioBinding tests exercise production callers/output with explicit platform doubles; SettingsMigration and Reset exercise production settings/ExposeData/atomic files with **Scribe doubles**. None proves native Scribe or real game Config.
+The [r2 contract](specification.md) and [author guide](us-kernel-0.6-authoring-zh.md) describe the breaking declaration/configuration boundary. `UniversalSqueakerRefactorCoreTests` compiles the **whole production Core** without a platform reference or game double. `UniversalSqueakerDomainAdapterTests` checks the production configuration/domain adapter separately. AudioBinding tests exercise production callers/output with explicit platform doubles; SettingsMigration and Reset exercise production settings/ExposeData/atomic files with **Scribe doubles**. None proves native Scribe or real game Config.
 
 ## What verification covers
 
@@ -72,4 +74,4 @@ Choose scenarios for the changed behavior: accurate Race/Xenotype selection and 
 
 For UI, inspect the real page and native input. For audio, test production dispatch and hearing separately from preview. For a new domain, check admission after restart. Do not rerun accepted historical matrices without a changed premise.
 
-Current UI limits are in [the UI contract](ui-contract-0.6-zh.md); dated evidence is scoped in [history](history/README.md).
+Current UI limits are in [the UI contract](openspec/specs/ui-consumption/spec.md); dated evidence is scoped in [history](history/README.md).

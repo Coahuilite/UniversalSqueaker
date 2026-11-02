@@ -5,7 +5,7 @@
 ## 1. 准备版本与候选
 
 1. 同步 csproj 的 `Version` / `VersionPrefix` 与 About 的 `modVersion`。身份轴使用纯数字版本；rc 后缀属于标签和工件名。
-2. 更新中英文变更说明、README 与受影响文档。保持 [当前行为](current-behavior-0.5-zh.md) 和 [0.6.x 目标规格](us-kernel-0.6-spec-zh.md) 的状态区别，不因规划完成就宣称实现。
+2. 更新中英文变更说明、README 与受影响文档。以[现行规格](specification.md)与[实现偏差](development/specification/open-issues.md)区分要求和已兑现状态；旧0.5指南只服务旧下载。
 3. 按 [构建指南](build-and-debug.md) 选择准确 FerriteLib 载体并执行相关验证。纯逻辑、Host stub 和实机结果分别记录。
 4. 检查候选安装包而不只检查源码：产品/载体配对、版本、内容、资源、许可和排除项。About 与发布安装步骤须列独立前置 [Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)（`brrainz.harmony`）和 FerriteLib，均排在 US 之前；US 包不内嵌这两个前置的 DLL。包结构以 [结构参考](mod-structure-reference-zh.md) 与 `stage-package.ps1` 为准。
 
