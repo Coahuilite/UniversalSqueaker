@@ -50,6 +50,7 @@ public sealed class VoicePacksViewState
     /// query's xenotype-hit auto-expansion. Read-only projection; enable writes still ride the per-domain
     /// identity through ToggleVoicePack unchanged.</summary>
     public IReadOnlyList<PackCardView> PackCards { get; }
+    public IReadOnlyList<PackCardView> AllPackCards { get; internal set; } = Array.Empty<PackCardView>();
 
     /// <summary>The filter narrowed the result to zero cards while packs exist (empty-result note).</summary>
     public bool PackResultsEmpty { get; }

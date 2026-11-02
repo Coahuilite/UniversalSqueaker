@@ -29,7 +29,16 @@ public static class UsBoardBrowsePolicy
         Races = 3,
         Xenotypes = 4,
         Other = 5,
+        HarHumanlike = 6,
+        Human = 7,
     }
+    public static string GroupLabelKey(BoardGroup group) => group switch
+    {
+        BoardGroup.PlayerRaces => "US.Browse.Group.PlayerRaces", BoardGroup.Races => "US.Browse.Group.Races",
+        BoardGroup.Xenotypes => "US.Browse.Group.Xenotypes", BoardGroup.Creatures => "US.Browse.Group.Creatures",
+        BoardGroup.Other => "US.Browse.Group.Other", BoardGroup.HarHumanlike => "US.Browse.Group.HarHumanlike",
+        BoardGroup.Human => "US.Browse.Group.Human", _ => "US.Browse.Group.All"
+    };
 
     /// <summary>The compact chips inside a group (OVT-002: HAR / vanilla races / vanilla creatures
     /// reachable separately; DLC vs third-party stays a visible per-row source fact + search).</summary>
@@ -83,6 +92,10 @@ public static class UsBoardBrowsePolicy
                 return race.IsAnimal;
             case BoardGroup.Other:
                 return !race.IsHumanlike && !race.IsAnimal;
+            case BoardGroup.HarHumanlike:
+                return race.IsHumanlike && race.IsHar && !race.IsHuman;
+            case BoardGroup.Human:
+                return race.IsHuman;
             default:
                 return true;
         }

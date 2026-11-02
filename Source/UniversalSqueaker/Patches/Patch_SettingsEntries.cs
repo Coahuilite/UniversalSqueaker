@@ -26,7 +26,7 @@ internal static class Patch_USMainMenuEntry
         // Target 1.6: the play list then the separate web-links list. Preserve all original IL on drift.
         if (sites.Length != 2)
         {
-            Log.Warning("usdiag UI=MainMenuEntrySeamUnavailable; original menu retained; use Mod Settings");
+            SqueakLog.NativeEntryUnavailable("MainMenuEntrySeamUnavailable:OriginalMenuRetained");
             return code;
         }
         sites[0].opcode = OpCodes.Call;

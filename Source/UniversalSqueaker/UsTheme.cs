@@ -145,8 +145,7 @@ public static class UsTheme
         }
         catch (Exception error)
         {
-            Verse.Log.Error("[US] the generated us-root style document did not parse; surfaces fall back to the"
-                + " carrier's Vanilla template: " + error.Message);
+            SqueakLog.ThemeFallback("us-root:CarrierVanilla", error);
             schemeIssues.Add("parse failure: " + error.Message);
             return UiStyleDocument.Empty;
         }

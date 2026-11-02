@@ -28,7 +28,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     // untranslated; only what the player reads goes through the translation seam. The dropdowns
     // display the translated (display, value) pairs carried by the options bindings, so a Chinese
     // client never shows a raw defName in the trigger or the list.
-    private const string KeyChipAll = "US.Packs.Filter.All";
+    private const string KeyChipAll = "US.Packs.Filter.Default";
     private const string KeyChipEnabledOnly = "US.Packs.Filter.EnabledOnly";
     private const string KeyChipConflicts = "US.Packs.Filter.Conflicts";
     private const string KeyChipOrphanOnly = "US.Packs.Filter.OrphanOnly";
@@ -61,6 +61,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         bindings.ValidateValue<UiDomainFilter>("domain-filter", elementPath);
         bindings.ValidateAction<UsDomainFilterWrite>("set-domain-filter", elementPath);
         bindings.ValidateAction<string>("clear-pack-filters", elementPath);
+        UsPackQueryControls.Validate(bindings, elementPath);
     }
 
     protected override float FallbackHeight(UiWidgetContext ctx)
@@ -72,7 +73,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     {
         float bodyWidth = BodyWidth(ctx);
         float domain = DomainRowHeight(ctx, bodyWidth);
-        float body = UsFilterBarLayout.BodyHeight(bodyWidth, domain);
+        float body = domain + UsPackQueryControls.Height(ctx, bodyWidth);
         TraceLayout("measure", bodyWidth, body, domain);
         return body;
     }
@@ -96,8 +97,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         TraceLayout("draw", rect.Width, rect.Height, domainHeight);
         DrawDomainRow(new UiLayoutRect(rect.X, rect.Y, rect.Width, domainHeight), ctx);
 
-        // D4: one dropdown (Author) left in this bar - a single full-width row, no stack rule needed.
-        DrawFilterDropdownRow(new UiLayoutRect(rect.X, rect.Y + domainHeight, rect.Width, RowHeight), ctx);
+        UsPackQueryControls.Draw(rect.X, rect.Y + domainHeight, rect.Width, ctx);
     }
 
     /// <summary>
@@ -137,7 +137,8 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         float x = rect.X;
 
         bool allActive = !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly
-            && race.Length == 0 && xenotype.Length == 0 && packAuthor.Length == 0 && searchText.Length == 0;
+            && race.Length == 0 && xenotype.Length == 0 && packAuthor.Length == 0 && searchText.Length == 0
+            && (!ctx.Bindings.TryGet("pack-range", out string range) || range == UsBoardBrowsePolicy.BoardGroup.PlayerRaces.ToString());
         if (UsKernelDraw.SelectionButton(new UiLayoutRect(x, rect.Y, buttonWidth, rect.Height), ctx, ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive, controlId: "clear-pack-filters"))
         {
             ctx.Bindings.Invoke("clear-pack-filters", "");
@@ -229,14 +230,17 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     private void TraceLayout(string pass, float width, float body, float domain)
     {
         if (!SqueakLog.ShouldEmitDev) return;
-        string line = pass
-            + " width=" + width.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
-            + " body=" + body.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
-            + " domain=" + domain.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
-            + " stack=" + (UsFilterBarLayout.DropdownsStack(width) ? "true" : "false");
-        if (string.Equals(line, lastLayoutTrace, System.StringComparison.Ordinal)) return;
-        lastLayoutTrace = line;
-        SqueakLog.LayoutTrace(line);
+        SqueakLog.LayoutTrace(() =>
+        {
+            string line = pass
+                + " width=" + width.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                + " body=" + body.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                + " domain=" + domain.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                + " stack=" + (UsFilterBarLayout.DropdownsStack(width) ? "true" : "false");
+            if (string.Equals(line, lastLayoutTrace, System.StringComparison.Ordinal)) return "";
+            lastLayoutTrace = line;
+            return line;
+        });
     }
 
     private string? lastLayoutTrace;

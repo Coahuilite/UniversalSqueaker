@@ -17,7 +17,7 @@ namespace UniversalSqueaker.UI;
 /// unprobed sound says "unknown", never "missing"), create-from-loaded-pawn-races, restore-default and
 /// deletion through ONE ordinary UiKit confirmation window. Every binding key it touches is the page
 /// table's pre-existing one; nothing here is a second authority, and the writes keep their original
-/// persistence chain (business setter → runtime notification → QueuePersistence → debounced save).
+/// persistence chain (independent SafeSaver commit → existing audio publisher → next legal selection).
 /// </para>
 ///
 /// <para>
@@ -98,14 +98,14 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
         // DrawEditor uses, never a fixed band, because the card page fit audit runs this editor at the
         // game's minimum box in both shipped languages.
         float height = 2 * (RowHeight + RowGap) + StatusBandHeight(ctx, width) + RowGap;
-        height += UsBrowseControls.Height(ctx, "table", true) + UsBrowseControls.Height(ctx, "candidate", true);
+        height += UsBrowseControls.Height(ctx, "table", true, width) + UsBrowseControls.Height(ctx, "candidate", true, width);
         string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
         if (selectedRace.Length > 0)
         {
             height += UniversalSqueaker.Kernel.BuiltInActionKeys.All.Count * RowHeight + RowGap;
             height += RowHeight + RowGap; // restore/delete
             string selectedEntry = ctx.Bindings.Get<string>("fallback-selected-entry") ?? "";
-            if (selectedEntry.Length > 0) height += UsBrowseControls.Height(ctx, "sound", true) + RowHeight + RowGap;
+            if (selectedEntry.Length > 0) height += UsBrowseControls.Height(ctx, "sound", true, width) + RowHeight + RowGap;
         }
 
         return height;
@@ -122,6 +122,8 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
         var tableView = ctx.Bindings.Get<UsBrowseListView>("table-browse-view");
         bool hidden = selected.Length > 0;
         foreach (var row in tableView.Rows) if (row.Value == selected) hidden = false;
+        if (selected.Length == 0 && ctx.Bindings.TryGet("fallback-arrival-race", out string arrival) && arrival.Length > 0)
+            return arrival + " · " + UsKernelDraw.Keyed(ctx, "US.VF1.TargetNeedsTable");
         string selection = selected.Length == 0 ? "" : UsKernelDraw.Keyed(ctx, "US.Browse.Editing") + ": " + selected
             + (hidden ? " · " + UsKernelDraw.Keyed(ctx, "US.Browse.HiddenSelection") : "");
         string notice = status.Length > 0 ? UsKernelDraw.Keyed(ctx, status)
@@ -148,11 +150,14 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
             racePairs.Add(new KeyValuePair<string, string>(
                 race.Label + "  " + race.Value, race.Value));
         }
+        if (selectedRace.Length > 0 && !racePairs.Exists(pair => pair.Value == selectedRace))
+            racePairs.Add(new KeyValuePair<string, string>(selectedRace + " · " + UsKernelDraw.Keyed(ctx, "US.Browse.OffPage"), DisplayOnlyCurrentValue));
+        string displayedRace = racePairs.Exists(pair => pair.Value == selectedRace) ? selectedRace : DisplayOnlyCurrentValue;
 
         UsKernelDraw.Label(ctx.Drawing, new UiLayoutRect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Race"),
             ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
-        UsKernelDraw.Dropdown(new UiLayoutRect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), "vf1-race", ctx, selectedRace, racePairs,
-            selected => ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(selected, null)));
+        UsKernelDraw.Dropdown(new UiLayoutRect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), "vf1-race", ctx, displayedRace, racePairs,
+            selected => { if (selected != DisplayOnlyCurrentValue) ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(selected, "")); });
         y += RowHeight + RowGap;
 
         // UIR-004: the status sentence keeps the wrap-aware band the measure reserved - the same

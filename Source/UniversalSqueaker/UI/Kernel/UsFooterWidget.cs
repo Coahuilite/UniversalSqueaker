@@ -130,8 +130,7 @@ public sealed class UsKernelFooterWidget : IUiWidget
         {
             if (ReportedStatusTokens.Add(token ?? ""))
             {
-                Log.Error("[US] footer save-status token '" + token + "' has no Keyed entry; "
-                    + "extend UsFooterWidget.SaveStatusText and both language tables.");
+                SqueakLog.SaveStatusUnknown(token ?? "");
             }
             return token ?? "";
         }

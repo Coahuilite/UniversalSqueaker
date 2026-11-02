@@ -89,9 +89,7 @@ public sealed class UsKernelOverlayController : IDisposable
         {
             creationFailed = true;
             Teardown();
-            Log.Warning(
-                "[UniversalSqueaker] Camera indicator kernel overlay draw failed; legacy camera indicator will be used: "
-                + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+            SqueakLog.OverlayFallback("Draw:LegacyIndicatorRetained", ex);
             return false;
         }
     }
@@ -107,9 +105,7 @@ public sealed class UsKernelOverlayController : IDisposable
         {
             creationFailed = true;
             Teardown();
-            Log.Warning(
-                "[UniversalSqueaker] Camera indicator kernel overlay creation failed; legacy camera indicator will be used: "
-                + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+            SqueakLog.OverlayFallback("Create:LegacyIndicatorRetained", ex);
         }
     }
 

@@ -42,7 +42,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         if (!uiCostActive) return;
         uiCostActive = false;
         double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-        SqueakLog.LayoutTrace(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+        SqueakLog.LayoutTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
             "UI.cost passes={0} partial={1} create_ms={2:F3} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
             passes, partial, Milliseconds(uiCreateTicks), uiViewReads, uiViewBuilds,
             Milliseconds(uiViewTicks), Milliseconds(uiViewMaxTicks)));
@@ -416,6 +416,9 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     }
 
     public void OpenDeveloperPanel() => UniversalSqueaker.UI.Dev.UsDevPanelWindow.OpenOrFocus();
+    internal void OpenResponseDiagnostics() => SqueakDebug.OpenDiagnostics();
+    internal bool CanOpenResponseDiagnostics => Find.CurrentMap != null;
+    internal string ResponseDiagnosticsEntryStatus => (CanOpenResponseDiagnostics ? "US.Diagnostics.Capture.EntryHint" : "US.Diagnostics.Capture.NoMap").Translate();
 
     public void RequestLayoutReport()
     {

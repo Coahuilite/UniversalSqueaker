@@ -118,6 +118,11 @@ public static partial class UsKernelSettingsHost
         string T(string key) => t.Translate("US.UI." + key);
         void Go(string page)
         {
+            if (page == "Fallback" && s.FallbackSelectedRace == "" && !s.FallbackTableCanceled)
+            {
+                var tables = source.BuildView().FallbackRaces;
+                if (tables.Count > 0) VoicePacksPageModel.SetFallbackSelection(s, tables[0].DefName, "");
+            }
             NavigatePage(s, page);
             bumper.Bump();
         }
@@ -149,38 +154,85 @@ public static partial class UsKernelSettingsHost
         writes.Value<string>("tool-page", () => s.Page, page => { if (IsToolPage(page)) Go(page); });
         b.BindReadOnly<string>("voice-page-title", () => T(s.Page));
         b.BindReadOnly<bool>("page-not-home", () => s.Page != "Voices");
+        void ReturnVoiceList()
+        {
+            s.DetailOpen = false;
+            if (s.PackArrivalFromDirectory) { s.BrowseDefinitions = true; s.PackArrivalFromDirectory = false; }
+            bumper.Bump();
+        }
         writes.Command("page-back", () => {
-            if (s.Page == "Voices" && s.DetailOpen) s.DetailOpen = false;
+            if (s.Page == "Voices" && (s.DetailOpen || s.PackArrivalFromDirectory)) ReturnVoiceList();
             else ReturnToPreviousPage(s);
             bumper.Bump();
         });
-        writes.Command("voice-back", () => { s.DetailOpen = false; bumper.Bump(); });
-        writes.Command("voice-detail-cancel", () => { s.DetailOpen = false; s.SelectedPackKey = ""; bumper.Bump(); },
-            () => !s.HelpPanelOpen && s.DetailOpen && s.SelectedPackKey != "");
+        writes.Command("voice-back", ReturnVoiceList);
+        writes.Command("voice-detail-cancel", ReturnVoiceList,
+            () => !s.HelpPanelOpen && (s.DetailOpen || s.PackArrivalFromDirectory));
         writes.Command("page-cancel", () => {
             if (s.HelpPanelOpen) s.HelpPanelOpen = false;
-            else if (s.Page == "Voices") s.DetailOpen = false;
+            else if (s.Page == "Voices") ReturnVoiceList();
             else ReturnToPreviousPage(s);
             bumper.Bump();
-        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.WideLayout && s.DetailOpen));
+        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
         b.BindReadOnly<bool>("voice-packs", () => !s.BrowseDefinitions);
         b.BindReadOnly<bool>("voice-definitions", () => s.BrowseDefinitions);
         writes.Command("browse-packs", () => { s.BrowseDefinitions = false; bumper.Bump(); });
         writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; bumper.Bump(); });
         b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.WideLayout || !s.DetailOpen));
         b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.WideLayout || s.DetailOpen));
-        b.BindReadOnly<bool>("voice-compact-back", () => !s.WideLayout && s.DetailOpen);
+        b.BindReadOnly<bool>("voice-compact-back", () => (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
+        b.BindReadOnly<bool>("voice-directory-return", () => s.PackArrivalFromDirectory && !s.BrowseDefinitions && !s.DetailOpen);
+        PackCardView? ViewedPack()
+        {
+            var view = source.BuildView();
+            var cards = view.AllPackCards.Count > 0 ? view.AllPackCards : view.PackCards;
+            for (int i = 0; i < cards.Count; i++) if (cards[i].Key == s.SelectedPackKey) return cards[i];
+            return null;
+        }
+        VoicePackDomainView? EditingDomain()
+        {
+            var domain = source.BuildView().SelectedDomain;
+            return !s.DomainSelectionCanceled && domain.HasValue && domain.Value.RaceDefName != ""
+                && !domain.Value.IsDormant && !domain.Value.IsTargetUnavailable && !domain.Value.HasCanonicalConflict
+                && (domain.Value.Scope == SqueakVoicePackScope.Race || domain.Value.TargetDefName != "") ? domain : null;
+        }
+        VoicePackDomainView? FallbackDomain()
+        {
+            var domain = source.BuildView().SelectedDomain;
+            if (s.DomainSelectionCanceled || !domain.HasValue || domain.Value.RaceDefName == "") return null;
+            // A Xenotype's availability does not decide whether its loaded parent has a race table.
+            if (domain.Value.Scope == SqueakVoicePackScope.Race) return domain.Value.IsTargetUnavailable ? null : domain;
+            var races = RaceDefinitionCatalog.Current.Races;
+            for (int i = 0; i < races.Count; i++) if (races[i].DefName == domain.Value.RaceDefName) return domain;
+            return null;
+        }
+        b.BindReadOnly<bool>("voice-has-viewed-pack", () => ViewedPack().HasValue);
+        b.BindReadOnly<bool>("voice-has-edit-domain", () => EditingDomain().HasValue);
+        b.BindReadOnly<bool>("voice-can-fallback", () => FallbackDomain().HasValue);
         b.BindReadOnly<string>("voice-detail-title", () => {
-            var card = source.BuildView().PackCards.FirstOrDefault(x => x.Key == s.SelectedPackKey);
-            return card.Key == null ? T("ChoosePack") : T("ViewingPack") + ": " + card.Label;
+            var card = ViewedPack();
+            return !card.HasValue ? s.SelectedPackKey == "" ? T("ChoosePackNote") : T("PackUnavailable") + ": " + s.SelectedPackKey
+                : T("ViewingPack") + ": " + card.Value.Label + (source.BuildView().PackCards.Any(x => x.Key == card.Value.Key) ? "" : " · " + T("HiddenPack"));
         });
         b.BindReadOnly<string>("voice-editing-target", () => {
-            var domain = source.BuildView().SelectedDomain;
-            return T("Editing") + ": " + (domain.HasValue ? domain.Value.DisplayName : T("ChooseDomain"));
+            var domain = EditingDomain();
+            return domain.HasValue ? T("Editing") + ": " + domain.Value.DisplayName : "";
         });
         b.BindReadOnly<string>("voice-detail-meta", () => {
-            var card = source.BuildView().PackCards.FirstOrDefault(x => x.Key == s.SelectedPackKey);
-            return card.Key == null ? T("ChoosePackNote") : card.ModName + " · " + card.Author + "\n" + card.DefName + "\n" + card.Coverage;
+            var card = ViewedPack();
+            return card.HasValue ? card.Value.ModName + " · " + card.Value.Author + "\n" + card.Value.DefName + "\n" + card.Value.Coverage : "";
+        });
+        b.BindReadOnly<string>("fallback-arrival-race", () => s.FallbackSelectedRace);
+        b.BindReadOnly<string>("voice-query-status", () =>
+        {
+            var view = source.BuildView();
+            if (view.PackCards.Count > 0) return "";
+            if (s.XenotypeFilter != "" && !view.BiotechActive) return T("BiotechOff");
+            if (s.RaceFilter == "" && s.XenotypeFilter == "") return "";
+            bool supply = view.AllPackCards.Any(card => card.Rows.Any(row =>
+                (s.RaceFilter == "" || row.RaceDefName == s.RaceFilter) && (s.XenotypeFilter == "" || row.TargetDefName == s.XenotypeFilter)));
+            string target = s.XenotypeFilter != "" ? s.XenotypeFilter : s.RaceFilter;
+            return target + " · " + T(supply ? "TargetFiltered" : "TargetNoPacks");
         });
         b.BindReadOnly<bool>("voice-filters-open", () => s.FiltersOpen);
         writes.Command("voice-filters", () => { s.FiltersOpen = !s.FiltersOpen; bumper.Bump(); });
@@ -193,13 +245,22 @@ public static partial class UsKernelSettingsHost
         writes.Command("voice-prev", () => { s.PackPage = Math.Max(0, s.PackPage - 1); s.DetailOpen = false; bumper.Bump(); });
         writes.Command("voice-next", () => { s.PackPage = Math.Min(Math.Max(0, (source.BuildView().PackCards.Count - 1) / 20), s.PackPage + 1); s.DetailOpen = false; bumper.Bump(); });
         writes.Command("voice-fallback", () => {
-            s.FallbackSelectedRace = s.SelectedRaceDefName;
+            var domain = FallbackDomain();
+            if (!domain.HasValue) return;
+            string race = domain.Value.RaceDefName;
+            VoicePacksPageModel.SetFallbackSelection(s, race, "");
+            if (!source.BuildView().FallbackRaces.Any(x => x.DefName == race))
+                s.PendingFallbackRace = race;
             Go("Fallback");
-        });
+        }, () => FallbackDomain().HasValue);
         writes.Command("voice-behavior", () => {
-            if (s.SelectedRaceDefName != "") { s.TuningLayer = s.SelectedTargetName == "" ? 1 : 2; s.TuningRaceDefName = s.SelectedRaceDefName; s.TuningXenotypeDefName = s.SelectedTargetName; }
+            var domain = EditingDomain();
+            if (!domain.HasValue) return;
+            s.TuningLayer = domain.Value.Scope == SqueakVoicePackScope.Race ? 1 : 2;
+            s.TuningRaceDefName = domain.Value.RaceDefName;
+            s.TuningXenotypeDefName = domain.Value.Scope == SqueakVoicePackScope.Xenotype ? domain.Value.TargetDefName : "";
             Go("Behavior");
-        });
+        }, () => EditingDomain().HasValue);
         writes.Command("open-topic", () => {
             OpenHelp(PageHelpRef(s), T(s.Page));
         });

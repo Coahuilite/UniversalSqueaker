@@ -23,6 +23,7 @@ public sealed class VoicePacksPageState
     public bool RestoreAllOpen;
     public bool WideLayout;
     public bool DetailOpen;
+    public bool PackArrivalFromDirectory;
     public string SelectedPackKey = "";
     public int PackPage;
     public int PackTotal;
@@ -32,6 +33,9 @@ public sealed class VoicePacksPageState
     public string SourceChangeDiagnostic = "";
     public string EnabledFilterIdentity = "";
     public readonly HashSet<string> EnabledFilterRows = new(StringComparer.Ordinal);
+    internal IReadOnlyList<PackCardView> AllPackCards = Array.Empty<PackCardView>();
+    public UsBoardBrowsePolicy.BoardGroup PackGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
+    public readonly UsBrowseListState PackRaceBrowse = new(), PackXenoBrowse = new(), PackAuthorBrowse = new();
     public SqueakVoicePackScope SelectedScope = SqueakVoicePackScope.Race;
     public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
@@ -122,8 +126,10 @@ public sealed class VoicePacksPageState
         HelpHeight = 128f; HelpViewWidth = HelpViewHeight = 0; HelpLayoutRevision = -1; HelpLayoutText = "";
         PageHistory.Clear();
         BrowseDefinitions = false; FiltersOpen = false; RestoreAllOpen = false;
-        DetailOpen = false; SelectedPackKey = ""; PackPage = 0;
+        DetailOpen = false; PackArrivalFromDirectory = false; SelectedPackKey = ""; PackPage = 0;
         PackTotal = 0; PackSelected = 0; OrphanSelectionCount = 0; MissingSelections = "";
+        AllPackCards = Array.Empty<PackCardView>(); PackGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
+        PackRaceBrowse.Clear(); PackXenoBrowse.Clear(); PackAuthorBrowse.Clear();
         SourceChangeDiagnostic = ""; EnabledFilterIdentity = ""; EnabledFilterRows.Clear();
         SelectedScope = SqueakVoicePackScope.Race;
         SelectedRaceDefName = "";

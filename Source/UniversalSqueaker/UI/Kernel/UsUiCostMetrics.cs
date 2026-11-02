@@ -54,7 +54,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment
     {
         if (!active) return;
         active = false;
-        SqueakLog.LayoutTrace(string.Format(CultureInfo.InvariantCulture,
+        SqueakLog.LayoutTrace(() => string.Format(CultureInfo.InvariantCulture,
             "UI.cost metrics passes={0} partial={1} fit_enabled_at_start={2} "
             + "height_calls={3} height_total_ms={4:F3} height_max_ms={5:F3} "
             + "width_calls={6} width_total_ms={7:F3} width_max_ms={8:F3} "
@@ -68,7 +68,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment
     }
 
     private static double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-    private static void WriteDraw(string kind, Totals totals) => SqueakLog.LayoutTrace(string.Format(
+    private static void WriteDraw(string kind, Totals totals) => SqueakLog.LayoutTrace(() => string.Format(
         CultureInfo.InvariantCulture, "UI.cost us_draw kind={0} calls={1} total_ms={2:F3} max_ms={3:F3}",
         kind, totals.Calls, Milliseconds(totals.Ticks), Milliseconds(totals.Max)));
 

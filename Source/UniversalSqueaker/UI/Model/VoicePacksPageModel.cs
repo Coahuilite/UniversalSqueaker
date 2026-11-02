@@ -52,8 +52,8 @@ public static class VoicePacksPageModel
         }
 
         List<VoicePackDomainView> xenotypes = BuildXenotypeDomains(settings, catalog);
-        List<FilterOptionView> raceFilterOptions = BuildRaceFilterOptions(races);
-        List<FilterOptionView> xenotypeFilterOptions = BuildXenotypeFilterOptions(xenotypes, state.RaceFilter);
+        List<FilterOptionView> raceFilterOptions = BuildRaceFilterOptions(races, state.PackGroup, xenotypes);
+        List<FilterOptionView> xenotypeFilterOptions = BuildXenotypeFilterOptions(xenotypes, state.RaceFilter, state.PackGroup);
 
         // US-PACK1: the two domain lists are no longer drawn as browse cards, so their OWN search boxes
         // retired with them - the unified keyword narrows the CARD result instead. The lists stay as the
@@ -101,11 +101,7 @@ public static class VoicePacksPageModel
 
         IReadOnlyList<string> authors = CollectAuthors(settings, catalog);
 
-        VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, filteredRaces, filteredXenotypes);
-        if (selected != null)
-        {
-            selected = FilterDomainPacks(selected.Value, in state.PackFilter);
-        }
+        VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
 
         string banner = BuildBannerText(filteredRaces, filteredXenotypes, mode, biotech);
         // S5 调音编辑器：当前层 + 层域归一（未选中时取首个选项），再投影分层 scope 与心情行。
@@ -155,7 +151,8 @@ public static class VoicePacksPageModel
             packCards, packResultsEmpty, packNoPacks,
             tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
             state.FallbackStatusKey,
-            raceBoard, select.SelectRequirePlayerControlled, select.SelectRequireAwake, select.SelectRequireNotDowned);
+            raceBoard, select.SelectRequirePlayerControlled, select.SelectRequireAwake, select.SelectRequireNotDowned)
+        { AllPackCards = state.AllPackCards };
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -609,7 +606,7 @@ public static class VoicePacksPageModel
         try { settings.ImportBaselinePreset(preset, importSelection); }
         catch (ArgumentException error)
         {
-            Log.Warning("usdiag preset=" + preset.defName + " rejected=" + error.Message);
+            SqueakLog.PresetImportRejected(preset.defName, error);
             Messages.Message("US.Preset.Invalid".Translate(), MessageTypeDefOf.RejectInput, false);
         }
     }
@@ -654,7 +651,7 @@ public static class VoicePacksPageModel
         return domains;
     }
 
-    private static List<FilterOptionView> BuildRaceFilterOptions(IReadOnlyList<RaceLayerRowView> races)
+    private static List<FilterOptionView> BuildRaceFilterOptions(IReadOnlyList<RaceLayerRowView> races, UsBoardBrowsePolicy.BoardGroup group, IReadOnlyList<VoicePackDomainView> xenotypes)
     {
         races ??= Array.Empty<RaceLayerRowView>();
         // OVT-003: the race filter answers the FULL directory, not just pack-owning races - a
@@ -665,23 +662,34 @@ public static class VoicePacksPageModel
         foreach (UsRaceIdentity id in directory)
         {
             if (string.IsNullOrEmpty(id.DefName)) continue;
+            if (!UsBoardBrowsePolicy.InGroup(id, group)) continue;
             byDef[id.DefName] = string.IsNullOrEmpty(id.Label) ? id.DefName : id.Label;
         }
 
         foreach (RaceLayerRowView race in races)
         {
             if (string.IsNullOrEmpty(race.RaceDefName)) continue;
-            byDef[race.RaceDefName] = race.DisplayName;
+            if (group != UsBoardBrowsePolicy.BoardGroup.All && !directory.Any(x => x.DefName == race.RaceDefName && UsBoardBrowsePolicy.InGroup(x, group))) continue;
+            if (!byDef.ContainsKey(race.RaceDefName)) byDef[race.RaceDefName] = race.DisplayName;
         }
 
         var result = new List<FilterOptionView>(byDef.Count);
         foreach (KeyValuePair<string, string> pair in byDef)
         {
-            result.Add(new FilterOptionView(pair.Value, pair.Key));
+            var identity = directory.FirstOrDefault(x => x.DefName == pair.Key);
+            bool collision = byDef.Any(x => x.Key != pair.Key && string.Equals(x.Value, pair.Value, StringComparison.OrdinalIgnoreCase));
+            string label = pair.Value + (collision ? " · " + identity.SourcePackageName + " · " + pair.Key : "");
+            if (!races.Any(x => x.RaceDefName == pair.Key && x.CandidateCount > 0)
+                && !xenotypes.Any(x => x.RaceDefName == pair.Key && x.CandidateCount > 0)) label += " · " + "US.Packs.Target.NoPacks".Translate();
+            result.Add(new FilterOptionView(label, pair.Key));
         }
 
         result.Sort((left, right) =>
         {
+            var a = directory.FirstOrDefault(x => x.DefName == left.Value);
+            var b = directory.FirstOrDefault(x => x.DefName == right.Value);
+            int byTier = UsBoardBrowsePolicy.Tier(a).CompareTo(UsBoardBrowsePolicy.Tier(b));
+            if (byTier != 0) return byTier;
             int byLabel = StringComparer.Ordinal.Compare(left.DisplayName, right.DisplayName);
             return byLabel != 0 ? byLabel : StringComparer.Ordinal.Compare(left.Value, right.Value);
         });
@@ -689,44 +697,27 @@ public static class VoicePacksPageModel
     }
 
     private static List<FilterOptionView> BuildXenotypeFilterOptions(
-        IReadOnlyList<VoicePackDomainView> xenotypes,
-        string raceFilter)
+        IReadOnlyList<VoicePackDomainView> xenotypes, string raceFilter, UsBoardBrowsePolicy.BoardGroup group)
     {
-        xenotypes ??= Array.Empty<VoicePackDomainView>();
+        var directory = RaceDefinitionCatalog.Current;
+        var labels = directory.Xenotypes.ToDictionary(x => x.DefName, x => x.Label, StringComparer.Ordinal);
+        foreach (var domain in xenotypes) if (!labels.ContainsKey(domain.TargetDefName)) labels[domain.TargetDefName] = domain.DisplayName;
         var result = new List<FilterOptionView>();
-        HashSet<string> seen = new(StringComparer.Ordinal);
-        foreach (VoicePackDomainView domain in xenotypes)
+        foreach (var pair in labels)
         {
-            if (string.IsNullOrEmpty(domain.TargetDefName)) continue;
-            if (!VoicePacksFilters.RaceFilterMatches(raceFilter, domain.RaceDefName)) continue;
-            string identity = domain.TargetDefName + "\n" + domain.RaceDefName;
-            if (!seen.Add(identity)) continue;
-            string display = string.IsNullOrEmpty(raceFilter)
-                ? domain.DisplayName + " (" + domain.RaceDisplay + ")"
-                : domain.DisplayName;
-            result.Add(new FilterOptionView(display, domain.TargetDefName));
+            var parents = xenotypes.Where(x => x.TargetDefName == pair.Key && (raceFilter == "" || x.RaceDefName == raceFilter)).ToArray();
+            bool humanScope = group == UsBoardBrowsePolicy.BoardGroup.PlayerRaces || group == UsBoardBrowsePolicy.BoardGroup.Xenotypes;
+            bool fits = group == UsBoardBrowsePolicy.BoardGroup.All || humanScope
+                || parents.Any(p => directory.Races.Any(r => r.DefName == p.RaceDefName && UsBoardBrowsePolicy.InGroup(r, group)));
+            if (!fits) continue;
+            var identity = directory.Xenotypes.FirstOrDefault(x => x.DefName == pair.Key);
+            bool collision = labels.Any(x => x.Key != pair.Key && string.Equals(x.Value, pair.Value, StringComparison.OrdinalIgnoreCase));
+            string label = pair.Value + (collision ? " · " + identity.SourcePackageName + " · " + pair.Key : "");
+            if (parents.Length == 0) label += " · " + "US.Packs.Target.NoPacks".Translate();
+            else if (raceFilter == "") label += " (" + string.Join(", ", parents.Select(x => x.RaceDisplay).Distinct(StringComparer.Ordinal)) + ")";
+            result.Add(new FilterOptionView(label, pair.Key));
         }
-
-        // OVT-003: directory xenotypes with NO pack domain are filter options too (a no-pack xeno
-        // must read back in the filter after arrival). They carry no race context, so a race filter
-        // narrows them out - the same honest rule as the pack domains above.
-        if (string.IsNullOrEmpty(raceFilter))
-        {
-            HashSet<string> seenTargets = new(StringComparer.Ordinal);
-            foreach (VoicePackDomainView domain in xenotypes)
-            {
-                if (!string.IsNullOrEmpty(domain.TargetDefName)) seenTargets.Add(domain.TargetDefName);
-            }
-
-            foreach (UsXenotypeIdentity xeno in RaceDefinitionCatalog.Current.Xenotypes)
-            {
-                if (string.IsNullOrEmpty(xeno.DefName) || !seenTargets.Add(xeno.DefName)) continue;
-                result.Add(new FilterOptionView(
-                    string.IsNullOrEmpty(xeno.Label) ? xeno.DefName : xeno.Label, xeno.DefName));
-            }
-        }
-
-        result.Sort((left, right) => StringComparer.Ordinal.Compare(left.DisplayName, right.DisplayName));
+        result.Sort((a, b) => StringComparer.Ordinal.Compare(a.DisplayName, b.DisplayName));
         return result;
     }
 
@@ -770,8 +761,7 @@ public static class VoicePacksPageModel
     {
         races ??= Array.Empty<RaceLayerRowView>();
         xenotypes ??= Array.Empty<VoicePackDomainView>();
-        // US-ESC1: the user CANCELLED the operation domain this session - do not re-pick the first row.
-        // First entry (never cancelled, or re-selected, or a workspace switch) keeps the auto default.
+        // Explicit cancellation survives every query; projection never chooses an operation target.
         if (state.DomainSelectionCanceled) return null;
 
         // OVT-003 (PM navigation supplement): an EXPLICIT identity - one the overview board or a
@@ -815,31 +805,7 @@ public static class VoicePacksPageModel
             return BuildRaceDomain(settings, catalog, state.SelectedRaceDefName);
         }
 
-        if (state.SelectedScope == SqueakVoicePackScope.Xenotype && xenotypes.Count > 0)
-        {
-            state.SelectedScope = SqueakVoicePackScope.Xenotype;
-            state.SelectedRaceDefName = xenotypes[0].RaceDefName;
-            state.SelectedTargetName = xenotypes[0].TargetDefName;
-            return xenotypes[0];
-        }
-
-        // Nothing explicit yet (first entry / re-selection): the legacy auto default chain.
-        if (races.Count > 0)
-        {
-            state.SelectedScope = SqueakVoicePackScope.Race;
-            state.SelectedRaceDefName = races[0].RaceDefName;
-            state.SelectedTargetName = "";
-            return BuildRaceDomain(settings, catalog, races[0].RaceDefName);
-        }
-
-        if (xenotypes.Count > 0)
-        {
-            state.SelectedScope = SqueakVoicePackScope.Xenotype;
-            state.SelectedRaceDefName = xenotypes[0].RaceDefName;
-            state.SelectedTargetName = xenotypes[0].TargetDefName;
-            return xenotypes[0];
-        }
-
+        // Browsing and query projection cannot choose an operation domain for the player.
         return null;
     }
 
@@ -915,15 +881,16 @@ public static class VoicePacksPageModel
         List<VoicePackRowView> rows = packs
             .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys))
             .ToList();
+        bool unavailable = !RaceDefinitionCatalog.Current.Races.Any(x => x.DefName == raceDefName);
         return new VoicePackDomainView(
             SqueakVoicePackScope.Race,
             raceDefName,
             "",
             ResolveRaceLabel(raceDefName),
             "Race",
-            status.State,
+            unavailable ? SqueakVoicePackDomainState.TargetUnavailable : status.State,
             false,
-            false,
+            unavailable,
             false,
             status.EnabledKeys?.Count ?? 0,
             packs.Count,
@@ -1091,6 +1058,20 @@ public static class VoicePacksPageModel
             }
         }
 
+        UiPackFilter noAuthor = default;
+        UiDomainFilter noStatus = default;
+        state.AllPackCards = PackCardProjection.Build(source, "", in noAuthor, "", "", in noStatus, state.PackCardsExpanded);
+        var definitions = RaceDefinitionCatalog.Current;
+        var raceIdentities = definitions.Races.ToDictionary(x => x.DefName, StringComparer.Ordinal);
+        var scoped = source.Where(x => raceIdentities.TryGetValue(x.RaceDefName, out var identity)
+            ? UsBoardBrowsePolicy.InGroup(identity, state.PackGroup) : state.PackGroup == UsBoardBrowsePolicy.BoardGroup.All).ToArray();
+        Array.Sort(scoped, (a, b) =>
+        {
+            raceIdentities.TryGetValue(a.RaceDefName, out var left);
+            raceIdentities.TryGetValue(b.RaceDefName, out var right);
+            int order = UsBoardBrowsePolicy.Compare(left, right);
+            return order != 0 ? order : StringComparer.Ordinal.Compare(a.PackKey, b.PackKey);
+        });
         state.PackTotal = CountCataloguedPacks(catalog);
         state.PackSelected = source.Where(x => x.PackEnabledInDomain).Select(x => x.PackKey).Distinct(StringComparer.Ordinal).Count();
         // Missing saved identities are separate from P/Q, including domains no longer in the catalog.
@@ -1105,7 +1086,7 @@ public static class VoicePacksPageModel
         state.OrphanSelectionCount = missing.Length;
         state.MissingSelections = string.Join("\n", missing);
         string filterIdentity = string.Join("\u001f", state.SearchText, state.PackFilter.Author, state.RaceFilter,
-            state.XenotypeFilter, state.DomainFilter.EnabledOnly, state.DomainFilter.ConflictOnly, state.DomainFilter.OrphanOnly);
+            state.XenotypeFilter, state.DomainFilter.EnabledOnly, state.DomainFilter.ConflictOnly, state.DomainFilter.OrphanOnly, state.PackGroup);
         if (state.EnabledFilterIdentity != filterIdentity)
         {
             state.EnabledFilterIdentity = filterIdentity;
@@ -1117,7 +1098,7 @@ public static class VoicePacksPageModel
                         (pair.Scope == SqueakVoicePackScope.Xenotype ? "|" + pair.TargetDefName : ""));
         }
         return PackCardProjection.Build(
-            source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
+            scoped, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
             in state.DomainFilter, state.PackCardsExpanded, state.EnabledFilterRows);
     }
 
@@ -1485,22 +1466,10 @@ public static class VoicePacksPageModel
 
         races.Sort((a, b) => string.CompareOrdinal(a.Label, b.Label));
 
+        // A projection never adopts another table. A deep link without a table retains its target
+        // in page state and offers explicit creation; only confirmed tables expose entry writers.
         string wanted = state.FallbackSelectedRace ?? "";
-        selectedRace = "";
-        // US-ESC1: a cancelled table stays cancelled - the projection must not answer the Esc a second
-        // time by re-picking the first race. The list itself (races) is untouched: cancellation is a
-        // selection state, never a data change.
-        if (races.Count > 0 && !state.FallbackTableCanceled)
-        {
-            selectedRace = wanted;
-            bool holds = false;
-            for (int i = 0; i < races.Count; i++)
-            {
-                if (string.Equals(races[i].DefName, selectedRace, StringComparison.Ordinal)) { holds = true; break; }
-            }
-
-            if (!holds) selectedRace = races[0].DefName;
-        }
+        selectedRace = !state.FallbackTableCanceled && races.Any(x => x.DefName == wanted) ? wanted : "";
 
         if (selectedRace.Length > 0)
         {
@@ -1657,9 +1626,14 @@ public static class VoicePacksPageModel
             && DefDatabase<SoundDef>.GetNamedSilentFail(soundDefName) == null) return;
 
         RaceKey raceKey = new(race);
+        if (state.FallbackTableCanceled || SqueakFallbackProfileStore.Current?.For(raceKey) == null) return;
         SqueakFallbackProfileStore.StoreOutcome outcome;
         {
-            FallbackDelta? current = SqueakFallbackProfileStore.LoadPlayerDelta(raceKey);
+            if (!SqueakFallbackProfileStore.TryLoadPlayerDelta(raceKey, out FallbackDelta? current))
+            {
+                state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
+                return;
+            }
             Dictionary<string, string> overrides = current == null
                 ? new Dictionary<string, string>(StringComparer.Ordinal)
                 : new Dictionary<string, string>(current.Overrides, StringComparer.Ordinal);
@@ -1670,11 +1644,11 @@ public static class VoicePacksPageModel
 
         if (outcome != SqueakFallbackProfileStore.StoreOutcome.Written)
         {
-            state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
+            state.FallbackStatusKey = outcome == SqueakFallbackProfileStore.StoreOutcome.WrittenRuntimeNotAdopted
+                ? "US.VF1.Status.SavedNotAdopted" : "US.VF1.Status.SaveFailed";
             return;
         }
 
-        settings.NotifyDiscreteResolverRuntimeChanged();
         ThingDef? raceDef = DefDatabase<ThingDef>.GetNamedSilentFail(race);
         bool admitted = raceDef != null && raceDef.race != null
             && raceDef.comps != null && raceDef.comps.Any(comp => comp is CompProperties_Squeaker);
@@ -1684,8 +1658,8 @@ public static class VoicePacksPageModel
     }
 
     /// <summary>VF1 create-table: an empty player table for a loaded pawn race. Support (and the
-    /// comp mount) begins at the NEXT full launch; the status line says exactly that - and a failed
-    /// write says failed.</summary>
+    /// comp mount) needs a full launch only if the race was not already admitted by a pack/author comp.
+    /// Committed-but-not-adopted is separate from a failed write.</summary>
     public static void CreateFallbackTable(GameSettings settings, VoicePacksPageState state, string raceDefName)
     {
         if (settings == null || state == null) return;
@@ -1693,8 +1667,9 @@ public static class VoicePacksPageModel
         if (def == null || def.race == null) return;
         RaceKey raceKey = new(raceDefName!);
         if (SqueakFallbackProfileStore.Current?.For(raceKey) != null) return;
-        if (SqueakFallbackProfileStore.SaveProfile(raceKey, new FallbackDelta(new Dictionary<string, string>()))
-            != SqueakFallbackProfileStore.StoreOutcome.Written)
+        var outcome = SqueakFallbackProfileStore.SaveProfile(raceKey, new FallbackDelta(new Dictionary<string, string>()));
+        if (outcome != SqueakFallbackProfileStore.StoreOutcome.Written
+            && outcome != SqueakFallbackProfileStore.StoreOutcome.WrittenRuntimeNotAdopted)
         {
             state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
             return;
@@ -1704,7 +1679,10 @@ public static class VoicePacksPageModel
         state.PendingFallbackRace = "";
         state.FallbackTableCanceled = false; // US-ESC1: the created table is a fresh selection, not a cancelled one.
         state.TuningContextActive = true;
-        state.FallbackStatusKey = "US.VF1.Status.CreatedRestart";
+        bool admitted = def.comps != null && def.comps.Any(comp => comp is CompProperties_Squeaker);
+        state.FallbackStatusKey = outcome == SqueakFallbackProfileStore.StoreOutcome.WrittenRuntimeNotAdopted
+            ? "US.VF1.Status.SavedNotAdopted"
+            : admitted ? "US.VF1.Status.Created" : "US.VF1.Status.CreatedRestart";
     }
 
     /// <summary>VF1 restore-default: clear the player overrides back to the maintainer data. A
@@ -1719,13 +1697,10 @@ public static class VoicePacksPageModel
         state.FallbackStatusKey = outcome switch
         {
             SqueakFallbackProfileStore.StoreOutcome.Written => "US.VF1.Status.Restored",
+            SqueakFallbackProfileStore.StoreOutcome.WrittenRuntimeNotAdopted => "US.VF1.Status.SavedNotAdopted",
             SqueakFallbackProfileStore.StoreOutcome.RefusedNoSource => "US.VF1.Status.NoMaintainerData",
             _ => "US.VF1.Status.SaveFailed",
         };
-        if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
-        {
-            settings.NotifyDiscreteResolverRuntimeChanged();
-        }
     }
 
     /// <summary>VF1 delete: removes ONLY the player table; if no pack or other table supports the
@@ -1743,13 +1718,10 @@ public static class VoicePacksPageModel
         state.FallbackStatusKey = outcome switch
         {
             SqueakFallbackProfileStore.StoreOutcome.Written => "US.VF1.Status.Deleted",
+            SqueakFallbackProfileStore.StoreOutcome.WrittenRuntimeNotAdopted => "US.VF1.Status.DeletedNotAdopted",
             SqueakFallbackProfileStore.StoreOutcome.RefusedMaintainer => "US.VF1.Status.DeleteRefusedMaintainer",
             _ => "US.VF1.Status.SaveFailed",
         };
-        if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
-        {
-            settings.NotifyDiscreteResolverRuntimeChanged();
-        }
     }
     // ---------------------------------------------------------------------------------------------
     // US-ESC1: the tree cancel layers (FL-IC2 CancelBind). One press answers ONE layer; executability is
@@ -1914,6 +1886,7 @@ public static class VoicePacksPageModel
         state.PackFilter = default;
         state.XenotypeFilter = "";
         state.DomainFilter = default;
+        state.PackGroup = UsBoardBrowsePolicy.BoardGroup.All;
         state.RaceFilter = row.RaceDefName;
         state.SelectedScope = string.Equals(intent.DomainScope, "Xenotype", StringComparison.Ordinal)
             ? SqueakVoicePackScope.Xenotype
@@ -1942,6 +1915,7 @@ public static class VoicePacksPageModel
         state.SearchText = "";
         state.PackFilter = default;
         state.DomainFilter = default;
+        state.PackGroup = UsBoardBrowsePolicy.BoardGroup.All;
         state.RaceFilter = row.RaceContextDefName;
         state.XenotypeFilter = row.DefName;
         state.SelectedScope = SqueakVoicePackScope.Xenotype;

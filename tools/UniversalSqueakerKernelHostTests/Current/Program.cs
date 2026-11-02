@@ -228,6 +228,23 @@ internal static partial class Program
                 }
                 page.Draw(view);
                 UiLayoutSnapshot layout = page.Host.MeasureAndArrange(view.Size);
+                if (Environment.GetEnvironmentVariable("US_TRACE_EXISTING_LAYOUT") == "1")
+                {
+                    string identity = "host=" + page.Host.Session.Identity + " frame=" + page.Host.Session.Frame
+                        + " language=" + language + " viewport=" + width + "x" + height
+                        + " destination=" + destination + " definitions=" + definitions + " help=" + help;
+                    foreach (var pair in layout.RectById)
+                        Console.WriteLine("EXISTING-GEOMETRY " + identity + " kind=rect id=" + pair.Key + " rect=" + pair.Value);
+                    foreach (var pair in layout.Viewports)
+                    {
+                        var node = page.Host.Session.GetNodeByElementId(pair.Key);
+                        UiLayoutPoint? position = node == null ? null : page.Host.Session.GetScrollPosition(node);
+                        Console.WriteLine("EXISTING-GEOMETRY " + identity + " kind=viewport id=" + pair.Key + " rect=" + pair.Value
+                            + " scroll=" + (position.HasValue ? "(" + position.Value.X + "," + position.Value.Y + ")" : "unavailable"));
+                    }
+                    foreach (var pair in layout.ScrollContents)
+                        Console.WriteLine("EXISTING-GEOMETRY " + identity + " kind=content id=" + pair.Key + " rect=" + pair.Value);
+                }
                 // WO16: optional bottom sibling, not a replacement page. Header/close remain fixed.
                 bool contentPresent = (help ? new[] { "page-root", "header-band", "page-title", "business-body", "help-drawer", "help-header", "help-close", "help-scroll", "help-panel", "footer-band", "footer" }
                     : new[] { "business-body", "footer-band" })

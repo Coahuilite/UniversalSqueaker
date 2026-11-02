@@ -99,7 +99,7 @@ public static partial class UsKernelSettingsHost
         // removed identity together with its scroll position (UiSession.PruneNodesExcept).
         var bumper = new SessionRevisionBumper();
         // (translation was created above the manifest parse - the D4 budget measures with it.)
-        writes = BuildBindings(source, bumper, translation, remixFlow);
+        writes = BuildBindings(source, bumper, translation, remixFlow, metrics);
         UiHost host = new(
             Source,
             manifest,
@@ -413,7 +413,7 @@ public static partial class UsKernelSettingsHost
 
     private static UsWriteBindings BuildBindings(
         IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation,
-        RemixConfirmationFlow? remixFlow)
+        RemixConfirmationFlow? remixFlow, ITextMetrics metrics)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -637,6 +637,10 @@ public static partial class UsKernelSettingsHost
         // opens the real panel, the harness records the call - Verse.Find is not stubbable here.
         bindings.BindReadOnly<bool>("dev-panel-open", () => UniversalSqueaker.UI.Dev.UsDevPanelWindow.Active != null);
         writes.Command("open-dev-panel", () => { source.OpenDeveloperPanel(); bump(); });
+        writes.Command("open-response-diagnostics", () => { if (source is UsKernelSettingsSource native) native.OpenResponseDiagnostics(); bump(); },
+            () => source is UsKernelSettingsSource native && native.CanOpenResponseDiagnostics);
+        bindings.BindReadOnly<string>("response-diagnostics-entry-status", () =>
+            source is UsKernelSettingsSource native ? native.ResponseDiagnosticsEntryStatus : "US.Diagnostics.Capture.Unavailable".Translate());
         bindings.BindReadOnly<string>("layout-diagnosis-status", () => source.LayoutDiagnosisStatus);
         // RPT1: the sentence that answers the Report click, printed immediately below the button by the
         // manifest. Read-only for the same reason the capture sentence is: the outcome is carrier state the
@@ -691,6 +695,7 @@ public static partial class UsKernelSettingsHost
             else if (op == "sources-prev") browse.SourcePage = Math.Max(0, Current().SourcePage - 1);
             else if (op == "sources-next") { source.BuildView(); var v = id == "directory" ? state.DirectoryList : id == "table" ? state.TableList : id == "candidate" ? state.CandidateList : state.SoundList; browse.SourcePage = Math.Min(v.SourcePages - 1, v.SourcePage + 1); }
             else if (op == "sources") browse.SourcesOpen = !browse.SourcesOpen;
+            else if (op == "sources-clear-search") { browse.SourceQuery = ""; browse.SourcePage = 0; }
             else if (op == "clear") { browse.Clear(); if (id == "table") browse.Group = UsBoardBrowsePolicy.BoardGroup.All; if (id == "directory") { state.BoardFilter = UsBoardBrowsePolicy.BoardFilter.None; state.BoardXenoExpanded = true; } }
             else if (op.StartsWith("source:", StringComparison.Ordinal)) { browse.SourcePackageId = op.Substring(7); browse.Page = 0; }
             else if (op.StartsWith("group:", StringComparison.Ordinal) && Enum.TryParse(op.Substring(6), out UsBoardBrowsePolicy.BoardGroup group)) { browse.Group = group; browse.Page = 0; }
@@ -742,7 +747,7 @@ public static partial class UsKernelSettingsHost
         // action left with the checklist list: the card row's switch is its item-local "enabled" VALUE,
         // which writes the SAME per-domain identity through ToggleVoicePack - one writer per identity.
         writes.Action<string>("select-domain", key => { SelectDomainByKey(source, key); bump(); });
-        var packCards = new PackCardItemBindings(source, writes, bindings, translation, bump);
+        var packCards = new PackCardItemBindings(source, writes, bindings, translation, bump, metrics);
         bindings.BindReadOnly<IReadOnlyList<string>>(PackCardKeysKey, () =>
         {
             IReadOnlyList<string> keys = PackCardKeys(source);
@@ -761,6 +766,43 @@ public static partial class UsKernelSettingsHost
         writes.Value<string>("xenotype-filter", () => state.XenotypeFilter, value => { source.SetXenotypeFilter(value); bump(); });
         writes.Value<string>("pack-filter", () => state.PackFilter.Author ?? "", value => { source.SetPackFilter(value); bump(); });
         writes.Action<string>("set-pack-filter", value => { source.SetPackFilter(value); bump(); });
+        bindings.BindChoices<string>("pack-range-options", () => new[] {
+            UsBoardBrowsePolicy.BoardGroup.PlayerRaces, UsBoardBrowsePolicy.BoardGroup.HarHumanlike,
+            UsBoardBrowsePolicy.BoardGroup.Human, UsBoardBrowsePolicy.BoardGroup.Creatures,
+            UsBoardBrowsePolicy.BoardGroup.Other, UsBoardBrowsePolicy.BoardGroup.All }
+            .Select(x => new UiChoice<string>(translation.Translate(UsBoardBrowsePolicy.GroupLabelKey(x)), x.ToString())).ToArray());
+        writes.Value<string>("pack-range", () => state.PackGroup.ToString(), value =>
+        {
+            if (!Enum.TryParse(value, out UsBoardBrowsePolicy.BoardGroup group)) return;
+            state.PackGroup = group;
+            // Only incompatible query criteria clear; operation identities and selections stay put.
+            if (state.RaceFilter != "" && !RaceDefinitionCatalog.Current.Races.Any(x => x.DefName == state.RaceFilter && UsBoardBrowsePolicy.InGroup(x, group))) source.SetRaceFilter("");
+            if (group == UsBoardBrowsePolicy.BoardGroup.Creatures || group == UsBoardBrowsePolicy.BoardGroup.Other) source.SetXenotypeFilter("");
+            state.PackPage = 0; bump();
+        });
+        foreach (string chooser in new[] { "race", "xeno", "author" })
+        {
+            string id = chooser;
+            var browse = id == "race" ? state.PackRaceBrowse : id == "xeno" ? state.PackXenoBrowse : state.PackAuthorBrowse;
+            bindings.BindReadOnly<UsBrowseListState>("pack-" + id + "-state", () => browse);
+            writes.Value<string>("pack-" + id + "-query", () => browse.Query, value => { browse.Query = value; browse.Page = 0; bump(); });
+            writes.Action<string>("pack-" + id + "-options", op =>
+            {
+                if (op == "toggle") browse.SourcesOpen = !browse.SourcesOpen;
+                else if (op == "close") browse.SourcesOpen = false;
+                else if (op == "clear") { browse.Query = ""; browse.Page = 0; }
+                else
+                {
+                    var view = source.BuildView();
+                    var options = id == "race" ? view.RaceFilterOptions : id == "xeno" ? view.XenotypeFilterOptions
+                        : view.Authors.Select(x => new FilterOptionView(x, x)).ToArray();
+                    int count = options.Count(x => UsBrowseListView.Contains(x.DisplayName, browse.Query) || UsBrowseListView.Contains(x.Value, browse.Query));
+                    int last = Math.Max(0, (count - 1) / 8);
+                    browse.Page = Math.Max(0, Math.Min(last, browse.Page + (op == "next" ? 1 : -1)));
+                }
+                bump();
+            });
+        }
         writes.Action<string>(
             "clear-pack-filters",
             _ =>
@@ -772,6 +814,8 @@ public static partial class UsKernelSettingsHost
                 source.SetXenotypeFilter("");
                 source.SetPackFilter("");
                 source.SetSearchText("");
+                state.PackGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
+                state.PackRaceBrowse.Clear(); state.PackXenoBrowse.Clear(); state.PackAuthorBrowse.Clear();
                 bump();
             });
         // The filter dropdowns display translated labels but write machine tokens: the options
@@ -1006,6 +1050,7 @@ public static partial class UsKernelSettingsHost
                 string destination = source.OpenRaceTarget(race);
                 NavigatePage(state, destination.StartsWith("pack", StringComparison.Ordinal) ? "Voices" : "Fallback");
                 state.BrowseDefinitions = false;
+                state.PackArrivalFromDirectory = true;
                 bumper.ArmScrollTarget(destination);
                 bump();
                 ApplyPackArrival(source, destination);
@@ -1020,6 +1065,7 @@ public static partial class UsKernelSettingsHost
                 string destination = source.OpenXenotypeTarget(target);
                 NavigatePage(state, "Voices");
                 state.BrowseDefinitions = false;
+                state.PackArrivalFromDirectory = true;
                 bumper.ArmScrollTarget(destination);
                 bump();
                 ApplyPackArrival(source, destination);
@@ -1113,6 +1159,16 @@ public static partial class UsKernelSettingsHost
                 if (!string.IsNullOrEmpty(rowKey) && !keys.Contains(rowKey)) keys.Add(rowKey);
             }
         }
+        var view = source.BuildView();
+        foreach (var card in view.AllPackCards.Count > 0 ? view.AllPackCards : view.PackCards)
+        {
+            if (card.Key != source.ViewState.SelectedPackKey) continue;
+            foreach (var row in card.Rows)
+            {
+                string rowKey = row.RowKey(card.Key);
+                if (!keys.Contains(rowKey)) keys.Add(rowKey);
+            }
+        }
 
         return keys;
     }
@@ -1143,18 +1199,20 @@ public static partial class UsKernelSettingsHost
         private readonly UsWriteBindings writes;
         private readonly UiBindings bindings;
         private readonly IUiTranslation translation;
+        private readonly ITextMetrics metrics;
         private readonly Action bump;
         private readonly HashSet<string> registered = new(StringComparer.Ordinal);
 
         internal PackCardItemBindings(
             IUsKernelSettingsSource source, UsWriteBindings writes, UiBindings bindings,
-            IUiTranslation translation, Action bump)
+            IUiTranslation translation, Action bump, ITextMetrics metrics)
         {
             this.source = source;
             this.writes = writes;
             this.bindings = bindings;
             this.translation = translation;
             this.bump = bump;
+            this.metrics = metrics;
         }
 
         internal void Ensure(IReadOnlyList<string> keys)
@@ -1168,12 +1226,20 @@ public static partial class UsKernelSettingsHost
 
             string Address(string field) => UsWriteBindings.ItemKey(PackCardKeysKey, key, field);
             bool isHeader = key.IndexOf(RowKeySeparator) < 0;
-            bindings.BindReadOnly<bool>(Address("is-header"), () => IsHeaderLive(key));
+            bindings.BindReadOnly<bool>(Address("is-header"), () => IsHeaderLive(key) && OnListPage(key));
             bindings.BindReadOnly<bool>(Address("is-domain"), () => !IsHeaderLive(key));
-            bindings.BindReadOnly<bool>(Address("in-list"), () => !IsHeaderLive(key) && FindOwningCard(key)?.Rows.Count == 1);
+            bindings.BindReadOnly<bool>(Address("list-item-visible"), () => OnListPage(key)
+                && (IsHeaderLive(key) || FindOwningCard(key)?.Rows.Count == 1));
+            bindings.BindReadOnly<bool>(Address("in-list"), () => !IsHeaderLive(key) && OnListPage(key) && FindOwningCard(key)?.Rows.Count == 1);
             bindings.BindReadOnly<bool>(Address("in-detail"), () => !IsHeaderLive(key) && FindOwningCard(key)?.Key == source.ViewState.SelectedPackKey);
             bindings.BindReadOnly<string>(Address("payload"), () => Payload(key));
             bindings.BindReadOnly<string>(Address("title"), () => Title(key));
+            bindings.BindReadOnly<float>(Address("content-width"), () =>
+            {
+                float title = metrics.MeasureWidth(Title(key), UiFont.Small);
+                float meta = isHeader ? metrics.MeasureWidth(Meta(key), UiFont.Small) : 0;
+                return Math.Max(1, Math.Min(360, Math.Max(title, meta) + 12));
+            });
             // The selection-surface is drawn for BOTH kinds (it is the template's hover/selected plate),
             // so "selected" must resolve on a header too. IsRowSelected parses the key as a domain and
             // returns false for a header (no owning card for a separator-less key), which is exactly the
@@ -1190,12 +1256,6 @@ public static partial class UsKernelSettingsHost
                     source.TogglePackCard(key);
                     source.ViewState.SelectedPackKey = key;
                     source.ViewState.DetailOpen = true;
-                    var card = FindCard(key);
-                    if (card.HasValue && card.Value.Rows.Count > 0)
-                    {
-                        var row = card.Value.Rows[0];
-                        source.SelectDomain(row.Scope, row.RaceDefName, row.TargetDefName);
-                    }
                     // A display write: the card's own body appears/disappears, so the clock must move.
                     bump();
                 });
@@ -1215,6 +1275,11 @@ public static partial class UsKernelSettingsHost
         /// <summary>Kind resolved LIVE, not from the registration-time parse: a key's shape is stable,
         /// but the answer must track the current projection frame like every other getter.</summary>
         private static bool IsHeaderLive(string key) => key.IndexOf(RowKeySeparator) < 0;
+        private bool OnListPage(string key)
+        {
+            string pack = IsHeaderLive(key) ? key : key.Substring(0, key.IndexOf(RowKeySeparator));
+            return source.BuildView().PackCards.Skip(source.ViewState.PackPage * 20).Take(20).Any(x => x.Key == pack);
+        }
 
         /// <summary>The select-domain payload of a domain row is its DOMAIN identity (the pack half is
         /// already carried by the item key); a header's payload is its own card key.</summary>
@@ -1248,20 +1313,20 @@ public static partial class UsKernelSettingsHost
             PackCardView? card = FindCard(key);
             if (!card.HasValue) return "";
             string origin = card.Value.ModName == "" ? card.Value.Key : card.Value.ModName;
-            var collisions = source.BuildView().PackCards.Where(other => other.Key != key
-                && string.Equals(other.Label, card.Value.Label, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(other.ModName, card.Value.ModName, StringComparison.OrdinalIgnoreCase)).ToArray();
+            var view = source.BuildView();
+            var collisions = (view.AllPackCards.Count > 0 ? view.AllPackCards : view.PackCards).Where(other => other.Key != key
+                && string.Equals(other.Label, card.Value.Label, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (collisions.Length > 0)
                 origin += " · " + (card.Value.DefName != "" && !collisions.Any(other => other.DefName == card.Value.DefName)
                     ? card.Value.DefName : card.Value.Key);
-            if (collisions.Length == 0 && card.Value.Rows.Count == 1
-                && string.Equals(origin, card.Value.Label, StringComparison.OrdinalIgnoreCase)) return "";
+            if (collisions.Length == 0 && card.Value.Rows.Count == 1) return "";
             return string.Format(translation.Translate("US.UI.PackListSummary"), origin, card.Value.Rows.Count);
         }
 
         private PackCardView? FindCard(string key)
         {
-            IReadOnlyList<PackCardView> cards = source.BuildView().PackCards;
+            var view = source.BuildView();
+            IReadOnlyList<PackCardView> cards = view.AllPackCards.Count > 0 ? view.AllPackCards : view.PackCards;
             for (int i = 0; i < cards.Count; i++)
                 if (string.Equals(cards[i].Key, key, StringComparison.Ordinal)) return cards[i];
             return null;
@@ -1343,10 +1408,7 @@ public static partial class UsKernelSettingsHost
         IUsKernelSettingsSource source, VoicePacksPageState state, IUiTranslation translation)
     {
         var parts = new List<string>();
-        string keyword = (state.SearchText ?? "").Trim();
-        if (keyword.Length > 0)
-            parts.Add(UsPacksText.Format(translation, KeySummaryCondition,
-                translation.Translate(KeyLabelKeyword), keyword));
+        parts.Add(translation.Translate(UsBoardBrowsePolicy.GroupLabelKey(state.PackGroup)));
         if (!string.IsNullOrEmpty(state.PackFilter.Author))
             parts.Add(UsPacksText.Format(translation, KeySummaryCondition,
                 translation.Translate("US.Packs.Filter.Author"), state.PackFilter.Author));

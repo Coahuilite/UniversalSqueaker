@@ -131,14 +131,15 @@ public sealed class UsTextFitAudit : IDisposable
     {
         if (!timingObservation) return;
         Publish();
-        subscription.TimingEnabled = false;
         timingObservation = false;
+        try { subscription.TimingEnabled = false; }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditTimingStop", error); }
         string Summary(string phase, int samples, double total, double max) => string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
             "UI.cost phase={0} passes={1} samples={2} total_ms={3:F3} max_ms={4:F3} partial={5}",
             phase, host.Session.Frame - timingFirstPass, samples, total, max, partial);
-        SqueakLog.LayoutTrace(Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
-        SqueakLog.LayoutTrace(Summary("draw", drawSamples, drawTotal, drawMax));
+        SqueakLog.LayoutTrace(() => Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
+        SqueakLog.LayoutTrace(() => Summary("draw", drawSamples, drawTotal, drawMax));
     }
 
     /// <summary>
@@ -285,32 +286,39 @@ public sealed class UsTextFitAudit : IDisposable
             return;
         }
 
-        IReadOnlyList<UiDiagnosticEvent> events = subscription.Snapshot();
-        for (int i = 0; i < events.Count; i++)
+        try
         {
-            UiDiagnosticEvent found = events[i];
-            if (found.Sequence <= loggedThrough) continue;
-            loggedThrough = found.Sequence;
-            if (found.Kind == UiDiagnosticKind.Fit && found.Overflow.HasValue)
+            IReadOnlyList<UiDiagnosticEvent> events = subscription.Snapshot();
+            for (int i = 0; i < events.Count; i++)
             {
-                Report(found.Overflow.Value);
-            }
-            else if (timingObservation && found.Kind == UiDiagnosticKind.Timing && found.Timing.HasValue)
-            {
-                UiDiagnosticTiming timing = found.Timing.Value;
-                if (timing.Name == "arrange")
+                UiDiagnosticEvent found = events[i];
+                if (found.Sequence <= loggedThrough) continue;
+                loggedThrough = found.Sequence;
+                if (found.Kind == UiDiagnosticKind.Fit && found.Overflow.HasValue)
                 {
-                    arrangeSamples += timing.Samples;
-                    arrangeTotal += timing.TotalMilliseconds;
-                    arrangeMax = Math.Max(arrangeMax, timing.MaxMilliseconds);
+                    Report(found.Overflow.Value);
                 }
-                else if (timing.Name == "draw")
+                else if (timingObservation && found.Kind == UiDiagnosticKind.Timing && found.Timing.HasValue)
                 {
-                    drawSamples += timing.Samples;
-                    drawTotal += timing.TotalMilliseconds;
-                    drawMax = Math.Max(drawMax, timing.MaxMilliseconds);
+                    UiDiagnosticTiming timing = found.Timing.Value;
+                    if (timing.Name == "arrange")
+                    {
+                        arrangeSamples += timing.Samples;
+                        arrangeTotal += timing.TotalMilliseconds;
+                        arrangeMax = Math.Max(arrangeMax, timing.MaxMilliseconds);
+                    }
+                    else if (timing.Name == "draw")
+                    {
+                        drawSamples += timing.Samples;
+                        drawTotal += timing.TotalMilliseconds;
+                        drawMax = Math.Max(drawMax, timing.MaxMilliseconds);
+                    }
                 }
             }
+        }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error))
+        {
+            SqueakLog.DiagnosticsUiFailed("AuditRead", error);
         }
     }
 
@@ -329,7 +337,8 @@ public sealed class UsTextFitAudit : IDisposable
         Publish();
         disposed = true;
 
-        DisableGeometry();
+        try { DisableGeometry(); }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditGeometryStop", error); }
         // This window's entry goes with it, so a later per-host command cannot find a closed window's scope
         // and drive an instrument nobody is drawing.
         for (int i = openScopes.Count - 1; i >= 0; i--)
@@ -730,7 +739,7 @@ public sealed class UsTextFitAudit : IDisposable
     {
         if (geometryRefused) return;
         geometryRefused = true;
-        SqueakLog.LayoutTrace(refusal == null
+        SqueakLog.LayoutTrace(() => refusal == null
             ? "geometry unavailable: this payload has no layout instrument (a release library package)"
             : "geometry unavailable: " + refusal.Message);
     }
@@ -738,13 +747,14 @@ public sealed class UsTextFitAudit : IDisposable
     /// <summary>Writes one capture to the existing layout-trace channel, one line per record.</summary>
     private static void WriteDump(string dump)
     {
+        if (!SqueakLog.ShouldEmitDev) return;
         int start = 0;
         while (start < dump.Length)
         {
             int end = dump.IndexOf('\n', start);
             if (end < 0) end = dump.Length;
             string line = dump.Substring(start, end - start).TrimEnd(LineEndings);
-            if (line.Length > 0) SqueakLog.LayoutTrace("geometry " + line);
+            if (line.Length > 0) SqueakLog.LayoutTrace(() => "geometry " + line);
             start = end + 1;
         }
     }

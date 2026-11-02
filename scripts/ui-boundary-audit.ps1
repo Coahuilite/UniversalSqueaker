@@ -284,6 +284,23 @@ $files = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -Filter '*.cs' -File 
     Sort-Object FullName)
 $hitsByFile = @{}
 $hoverCalls = 0
+# PM/CO adoption for DIAG-07 (WO-US06-DIAGNOSTICS-TOOL-20261029 r2 / A002):
+# clipboard is an explicit platform output, not rendering; FL has no adopted public setter.
+# This is NOT a file/directory whitelist: keep detecting GUIUtility and validate the complete
+# single-member seam below, including its sole setter and absence of any getter/other code.
+# Retire when an adopted public clipboard seam replaces it or feedback copying is retired.
+$clipboardRelative = 'Diagnostics/SqueakDiagnosticsClipboard.cs'
+$clipboardPath = Join-Path $sourceRoot $clipboardRelative
+$clipboardValid = $false
+if (Test-Path -LiteralPath $clipboardPath -PathType Leaf) {
+    $clipboardRaw = Get-Content -LiteralPath $clipboardPath -Raw
+    $clipboardCode = (Remove-CSharpComments $clipboardRaw) -replace '[\s\x01]', ''
+    $clipboardExpected = 'usingUnityEngine;namespaceUniversalSqueaker;internalstaticclassSqueakDiagnosticsClipboard{internalstaticvoidWrite(stringtext)=>GUIUtility.systemCopyBuffer=text;}'
+    $clipboardHits = @(Find-BackendHit $clipboardRelative $clipboardRaw)
+    $clipboardValid = $clipboardCode -ceq $clipboardExpected -and $clipboardHits.Count -eq 1 -and $clipboardHits[0].Match -ceq 'GUIUtility'
+    if ($clipboardValid) { Write-Host 'native-output: SqueakDiagnosticsClipboard.Write; exactly one systemCopyBuffer setter; no getter or rendering exemption' }
+    else { Add-Failure 'DIAG-07 native output must be the exact sole SqueakDiagnosticsClipboard.Write setter; getter/other GUIUtility or extra members are forbidden' }
+} else { Add-Failure 'DIAG-07 native clipboard output seam is missing' }
 foreach ($f in $files) {
     $rel = ($f.FullName.Substring($sourceRoot.Length) -replace '^[\\/]', '') -replace '\\', '/'
     $hits = @(Find-BackendHit $rel (Get-Content -LiteralPath $f.FullName -Raw))
@@ -293,6 +310,7 @@ foreach ($f in $files) {
 }
 
 foreach ($rel in @($hitsByFile.Keys | Where-Object { -not $Whitelist.Contains($_) } | Sort-Object)) {
+    if ($clipboardValid -and $rel -ceq $clipboardRelative) { continue }
     $detail = (@($hitsByFile[$rel] | Group-Object Line | ForEach-Object {
         $hitMatches = @($_.Group | ForEach-Object { $_.Match }) -join ', '
         "      $($_.Name): $($_.Group[0].Code)   [$hitMatches]"

@@ -54,7 +54,7 @@ public static class UsSwatches
         catch (Exception error)
         {
             table = new[] { new UsSwatch() };
-            Verse.Log.Error("[US] Palettes.xml is invalid; reinstall the mod to restore its embedded colour data. Using carrier defaults: " + error.Message);
+            SqueakLog.ThemeFallback("Palettes.xml:CarrierDefaults", error);
         }
     }
     public static IReadOnlyList<UsSwatch> All => table;

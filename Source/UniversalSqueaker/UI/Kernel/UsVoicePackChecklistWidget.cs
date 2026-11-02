@@ -31,6 +31,8 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
     // Every player-facing string this widget draws. Element ids and binding keys stay machine tokens.
     private const string KeyDormantBanner = "US.Packs.Checklist.DormantBanner";
     private const string KeyTargetUnavailableBanner = "US.Packs.Checklist.TargetUnavailableBanner";
+    private static string UnavailableKey(VoicePackDomainView domain) => domain.Scope == SqueakVoicePackScope.Race
+        ? "US.Packs.Checklist.RaceUnavailableBanner" : KeyTargetUnavailableBanner;
     private const string KeyConflictBanner = "US.Packs.Checklist.ConflictBanner";
     private const string KeyOrphanBanner = "US.Packs.Checklist.OrphanBanner";
     private const string KeyForgetUnavailable = "US.Packs.Checklist.ForgetUnavailable";
@@ -82,7 +84,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         if (domain.IsTargetUnavailable)
         {
-            height += BannerBand(ctx, ctx.Translation.Translate(KeyTargetUnavailableBanner)) + BannerGap;
+            height += BannerBand(ctx, ctx.Translation.Translate(UnavailableKey(domain))) + BannerGap;
         }
 
         if (domain.HasCanonicalConflict)
@@ -125,7 +127,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         if (domain.IsTargetUnavailable)
         {
-            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyTargetUnavailableBanner), ctx, BannerRole.Attention);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(UnavailableKey(domain)), ctx, BannerRole.Attention);
         }
 
         if (domain.HasCanonicalConflict)

@@ -163,7 +163,8 @@ public static class RaceBoardProjection
 
         var xenoShown = new List<XenotypeBoardRow>();
         bool xenoBandVisible = xenotypeDirectoryExpanded
-            && (group == UsBoardBrowsePolicy.BoardGroup.PlayerRaces || group == UsBoardBrowsePolicy.BoardGroup.Xenotypes || group == UsBoardBrowsePolicy.BoardGroup.All)
+            && (group == UsBoardBrowsePolicy.BoardGroup.PlayerRaces || group == UsBoardBrowsePolicy.BoardGroup.Xenotypes || group == UsBoardBrowsePolicy.BoardGroup.All
+                || group == UsBoardBrowsePolicy.BoardGroup.Human || group == UsBoardBrowsePolicy.BoardGroup.HarHumanlike)
             && filter == UsBoardBrowsePolicy.BoardFilter.None;
         IReadOnlyList<UsXenotypeBoardFacts> xenoFacts = bundle.Xenotypes;
         if (xenoBandVisible)
@@ -173,6 +174,15 @@ public static class RaceBoardProjection
                 UsXenotypeBoardFacts x = xenoFacts[i];
                 if (!UsBoardBrowsePolicy.MatchesXenotypeSearch(x.Identity, search ?? "")) continue;
                 if (sourcePackageId.Length > 0 && x.Identity.SourcePackageId != sourcePackageId) continue;
+                if (group == UsBoardBrowsePolicy.BoardGroup.Human || group == UsBoardBrowsePolicy.BoardGroup.HarHumanlike)
+                {
+                    bool parentMatches = false;
+                    foreach (var race in facts)
+                        if (UsBoardBrowsePolicy.InGroup(race.Identity, group))
+                            foreach (var pack in race.Packs)
+                                if (pack.Scope == SqueakVoicePackScope.Xenotype && pack.TargetDefName == x.Identity.DefName) parentMatches = true;
+                    if (!parentMatches) continue;
+                }
 
                 xenoShown.Add(new XenotypeBoardRow(
                     x.Identity.DefName,

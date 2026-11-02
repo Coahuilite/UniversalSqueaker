@@ -47,21 +47,21 @@
       <Row Id="voice-browse-tabs" Gap="6" Padding="0">
         <Widget Id="browse-packs" Kind="input/button" TextKey="US.UI.Packs" ActionBind="browse-packs" SelectedBind="voice-packs" Width="190" Height="28" />
         <Widget Id="browse-definitions" Kind="input/button" TextKey="US.UI.Definitions" ActionBind="browse-definitions" SelectedBind="voice-definitions" Width="190" Height="28" />
-        <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-packs" HelpRef="us/filter-bar/keyword" />
-        <Widget Id="home-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-definitions" HelpRef="us/race-board/search" />
         <Widget Id="voice-filter-toggle" Kind="input/button" TextKey="US.UI.Filters" ActionBind="voice-filters" SelectedBind="voice-filters-open" Width="84" Height="28" />
       </Row>
+      <Row Id="voice-search" Gap="6" Padding="0">
+        <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-packs" HelpRef="us/filter-bar/keyword" />
+        <Widget Id="home-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-definitions" HelpRef="us/race-board/search" />
+      </Row>
+      <Widget Id="voice-directory-back" Kind="input/button" TextKey="US.UI.Definitions" ActionBind="voice-back" VisibleBind="voice-directory-return" Width="190" Height="28" />
       <Column Id="home-pack-filters" Gap="4" Padding="0" VisibleBind="voice-packs">
-        <Column Id="voice-filter-body" Gap="4" Padding="0" VisibleBind="voice-filters-open">
+        <Scroll Id="voice-filter-body" Height="240" Gap="4" Padding="0" VisibleBind="voice-filters-open">
+          <Widget Id="packs-range" Kind="input/dropdown" Bind="pack-range" OptionsBind="pack-range-options" Height="28" />
           <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
-          <Row Id="packs-domain-filters" Gap="6" Padding="0">
-            <Widget Id="packs-race-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Height="26" HelpRef="us/filter-bar/race" />
-            <Widget Id="packs-xenotype-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Height="26" HelpRef="us/filter-bar/xenotype" />
-          </Row>
-        </Column>
+        </Scroll>
         <Row Id="voice-filter-summary-row" Padding="0" Gap="8">
-          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleBind="pack-filter-active" HelpRef="us/filter-bar/summary" />
-          <Widget Id="voice-filter-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="clear-pack-filters" PayloadBind="voice-empty" Width="70" Height="24" VisibleBind="pack-filter-active" />
+          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" HelpRef="us/filter-bar/summary" />
+          <Widget Id="voice-filter-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="clear-pack-filters" PayloadBind="voice-empty" Width="70" Height="24" />
         </Row>
         <Row Id="voice-stable-note" Gap="8" Padding="0" VisibleBind="voice-stable-filter">
           <Widget Id="voice-stable-text" Kind="text/wrapped" TextKey="US.UI.StableFilter" Emphasis="Muted" />
@@ -73,18 +73,19 @@
           <Repeat Id="packs-card-rows" Items="pack-card-keys" Template="pack-card-row" Gap="4" Padding="0" />
           <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleBind="pack-results-empty" />
           <Widget Id="packs-none" Kind="state/empty" TextKey="US.Packs.Results.None" VisibleBind="pack-no-packs" />
+          <Widget Id="voice-query-status" Kind="text/wrapped" Bind="voice-query-status" />
         </Scroll>
-        <Scroll Id="voice-detail-scroll" Width="440" Fill="true" Gap="8" Padding="0" VisibleBind="voice-detail-visible">
+        <Scroll Id="voice-detail-scroll" Width="440" Fill="true" Gap="8" Padding="0" VisibleBind="voice-detail-visible" CancelBind="voice-detail-cancel">
           <Widget Id="voice-detail-back" Kind="input/button" TextKey="US.UI.BackToList" ActionBind="voice-back" VisibleBind="voice-compact-back" Height="28" Width="160" />
           <Widget Id="voice-detail-title" Kind="text/wrapped" Bind="voice-detail-title" />
-          <Widget Id="voice-detail-meta" Kind="text/wrapped" Bind="voice-detail-meta" Emphasis="Muted" />
-          <Widget Id="voice-editing-target" Kind="text/wrapped" Bind="voice-editing-target" />
+          <Widget Id="voice-detail-meta" Kind="text/wrapped" Bind="voice-detail-meta" Emphasis="Muted" VisibleBind="voice-has-viewed-pack" />
+          <Widget Id="voice-editing-target" Kind="text/wrapped" Bind="voice-editing-target" VisibleBind="voice-has-edit-domain" />
           <Repeat Id="pack-detail-rows" Items="pack-card-keys" Template="pack-detail-row" Gap="4" Padding="0" />
-          <Widget Id="voice-semantics" Kind="text/wrapped" TextKey="US.UI.SelectionNote" Emphasis="Muted" />
+          <Widget Id="voice-semantics" Kind="text/wrapped" TextKey="US.UI.SelectionNote" Emphasis="Muted" VisibleBind="voice-has-viewed-pack" />
           <Widget Id="voice-domain-scope" Kind="text/wrapped" Bind="checklist-scope" VisibleBind="checklist-has-domain" />
           <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" VisibleBind="checklist-has-domain" />
-          <Widget Id="voice-to-behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="voice-behavior" Height="28" />
-          <Widget Id="voice-to-fallback" Kind="input/button" TextKey="US.UI.Fallback" ActionBind="voice-fallback" Height="28" />
+          <Widget Id="voice-to-behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="voice-behavior" Height="28" VisibleBind="voice-has-edit-domain" />
+          <Widget Id="voice-to-fallback" Kind="input/button" TextKey="US.UI.Fallback" ActionBind="voice-fallback" Height="28" VisibleBind="voice-can-fallback" />
         </Scroll>
       </Row>
       <Scroll Id="definition-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="voice-definitions">
@@ -242,6 +243,8 @@
       <Widget Id="transaction-diagnostics" Kind="text/wrapped" Bind="transaction-diagnostics" />
       <Section Id="diagnostics" Padding="12" Gap="8">
         <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpRef="us/diagnostics" />
+        <Widget Id="response-diagnostics-open" Kind="input/button" TextKey="US.Diagnostics.Capture.Open" ActionBind="open-response-diagnostics" Height="30" />
+        <Widget Id="response-diagnostics-entry-status" Kind="text/wrapped" Bind="response-diagnostics-entry-status" />
         <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpRef="us/diagnostics" />
         <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
           <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedBind="dev-logging-auto" ActionBind="set-dev-logging" PayloadBind="dev-logging-auto-value" HelpRef="us/diagnostics/logging-auto" />
@@ -307,11 +310,11 @@
     </Row>
   </Column>
   <Templates>
-    <Overlay Id="pack-card-row" Padding="0">
+    <Overlay Id="pack-card-row" Padding="0" VisibleBind="list-item-visible">
       <Widget Id="pack-card-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
       <Row Id="pack-card-row-header" Gap="4" Padding="0" VisibleBind="is-header">
         <Column Id="pack-card-row-header-gutter" Width="6" Gap="0" Padding="0" />
-        <Column Id="pack-card-row-header-text" Gap="2" Padding="0">
+        <Column Id="pack-card-row-header-text" WidthBind="content-width" Gap="2" Padding="0">
           <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/card" />
             <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" VisibleBind="has-meta" Emphasis="Muted" HelpRef="us/pack-cards/card" />
         </Column>
@@ -319,7 +322,7 @@
       </Row>
       <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleBind="in-list">
         <Column Id="pack-card-row-domain-gutter" Width="18" Gap="0" Padding="0" />
-        <Overlay Id="pack-card-row-domain-area" Padding="0">
+        <Overlay Id="pack-card-row-domain-area" WidthBind="content-width" Padding="0">
           <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadBind="payload" HelpRef="us/pack-cards/row" />
           <Row Id="pack-card-row-domain-content" Gap="0" Padding="0">
             <Column Id="pack-card-row-domain-inner-gutter" Width="6" Gap="0" Padding="0" />

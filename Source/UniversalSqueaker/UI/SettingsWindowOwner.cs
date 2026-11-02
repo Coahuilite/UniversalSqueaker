@@ -117,7 +117,7 @@ internal sealed class SettingsWindowOwner
                 catch { if (!list.Contains(window)) list.Insert(Math.Min(prior, list.Count), window); throw; }
             }
         }
-        else Log.Warning("usdiag UI=NativeWindowActivationUnavailable; existing US window retained");
+        else SqueakLog.NativeEntryUnavailable("NativeWindowActivationUnavailable:ExistingWindowRetained");
         // A higher-layer confirmation retains its native key ownership.
         if (stack.GetsInput(window)) stack.Notify_ManuallySetFocus(window);
     }

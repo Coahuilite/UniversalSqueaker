@@ -233,6 +233,7 @@ internal static partial class Program
         var stub = new StubMetrics();
         var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { shortAuthor, longAuthor } };
         using UiHost host = UsKernelSettingsHost.Create(fake, stub);
+        using var page = new Page(host);
         host.Bindings.Invoke("set-tab", "Packs");
         // The author control belongs to the initially collapsed advanced filters.
         host.Bindings.Invoke("voice-filters");
@@ -249,52 +250,48 @@ internal static partial class Program
         SetTranslatorResolver(ReadKeyedTable("English"));
         try
         {
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
-            host.DrawChecked(viewport); // prime the view cache and popup state
+            page.Draw(VerseUiExecution.Rect(viewport));
             UiFitAudit.Reset();
             reports.Clear();
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
-            host.DrawChecked(viewport);
+            page.Draw(VerseUiExecution.Rect(viewport));
             Assert(
                 reports.FindAll(r => r.ElementPath.Contains("filter-bar")).Count == 0,
-                "a selected long author must ellipsize inside the fixed trigger column, not overflow: "
+                "the selected author must fit its measured control without overflow: "
                 + DescribeOverflow(reports));
 
-            Rect anchor = new(300f, 200f, 143f, 24f);
-            host.Session.OpenPopup("pack-filter", VerseUiExecution.Rect(anchor));
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
-            host.DrawChecked(viewport);
-            Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer popupLayer),
-                "the opened pack-filter must publish its popup layer");
-            Rect popup = VerseUiExecution.Rect(popupLayer.Rect);
+            // WO-US17 r1 adopts bounded searchable candidates instead of the old unlimited popup.
+            // Keep this same long-credit scenario, display bounds, text-fit and exact-token guarantees.
+            host.SetScrollPosition("voice-filter-body", new UiLayoutPoint(0, 10000));
+            page.Draw(VerseUiExecution.Rect(viewport));
+            var trigger = page.Observation.Controls.Single(x => x.ControlKey.IndexOf("pack-author-open", StringComparison.Ordinal) >= 0);
+            Click(page, VerseUiExecution.Rect(viewport), trigger.Rect);
+            Assert(fake.ViewState.PackAuthorBrowse.SourcesOpen, "the actual author control opens its bounded candidate list");
+            host.Bindings.Set("pack-author-query", longAuthor.Substring(0, 10));
+            host.SetScrollPosition("voice-filter-body", new UiLayoutPoint(0, 10000));
+            page.Draw(VerseUiExecution.Rect(viewport));
+            Rect popup = VerseUiExecution.Rect(page.Observation.Controls.Single(x => x.ControlKey.IndexOf("pack-author-option", StringComparison.Ordinal) >= 0).Rect);
 
             Assert(cap < rawNeeded,
-                "the truncation clause needs a cap under the raw credit, or it asserts nothing: cap=" + cap);
+                "the display-bound clause needs a cap below the raw credit: cap=" + cap);
             Assert(popup.width < rawNeeded,
-                "the popup must follow the truncated display, not the raw credit: " + popup.width + " vs raw " + rawNeeded);
+                "the candidate follows the bounded display rather than the raw credit: " + popup.width + " vs raw " + rawNeeded);
             Assert(popup.width - 12f <= cap + 0.01f,
-                "the truncated display must fit the cap: " + (popup.width - 12f) + " > " + cap);
+                "the bounded candidate must fit the retained display cap: " + (popup.width - 12f) + " > " + cap);
             Assert(popup.width <= viewport.width + 0.01f,
-                "the grown popup must stay capped at the viewport: " + popup.width);
+                "the candidate must remain inside the viewport: " + popup.width);
 
             UiFitAudit.Reset();
             reports.Clear();
-            host.MeasureAndArrange(VerseUiExecution.Point(new UnityEngine.Vector2(viewport.width, viewport.height)));
-            host.DrawChecked(viewport); // repaint with the popup open: the row is measured against its band
+            page.Draw(VerseUiExecution.Rect(viewport));
             Assert(
                 reports.FindAll(r => r.ElementPath.Length == 0 || r.ElementPath.Contains("filter-bar")).Count == 0,
-                "the bounded popup must render its long row without overflow: " + DescribeOverflow(reports));
+                "the bounded candidate must render the long credit without overflow: " + DescribeOverflow(reports));
 
-            // The display-only proof: the option rows are drawn after content and outside the layout
-            // groups, so the popup layer's window-space rect is the row's own space. Row 1 is the
-            // over-cap author (row 0 is "AuthorA"), one OptionHeight below the popup top.
-            Vector2 rowClick = new(popup.x + 8f, popup.y + UiPopup.OptionHeight + UiPopup.OptionHeight / 2f);
-            DrawWithEvent(host, viewport, EventType.MouseDown, rowClick);
-            DrawWithEvent(host, viewport, EventType.MouseUp, rowClick);
-            Assert(!host.Session.IsPopupOpen("pack-filter"),
-                "clicking an option row must close the popup; the pointer pump did not reach the row");
+            Click(page, VerseUiExecution.Rect(viewport), VerseUiExecution.Rect(popup));
+            Assert(!fake.ViewState.PackAuthorBrowse.SourcesOpen,
+                "clicking the actual candidate closes its chooser exactly once");
             Assert(string.Equals(fake.LastPackFilter, longAuthor, StringComparison.Ordinal),
-                "the option row must write the machine token, not the truncated display: '"
+                "the candidate writes the complete machine token independently of its wrapped display: '"
                 + (fake.LastPackFilter ?? "(none)") + "'");
         }
         finally

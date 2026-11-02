@@ -46,6 +46,10 @@ public sealed class UsBrowseListView
     public static UsBrowseListView Project(IEnumerable<UsBrowseItem> eligible, UsBrowseListState state, bool raceList, int size = 8)
     {
         var all = eligible.ToArray();
+        var duplicateLabels = new HashSet<string>(all.GroupBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Select(x => x.Value).Distinct(StringComparer.Ordinal).Count() > 1).Select(g => g.Key), StringComparer.OrdinalIgnoreCase);
+        all = all.Select(x => duplicateLabels.Contains(x.Label)
+            ? new UsBrowseItem(x.Value, x.Label + " · " + (x.SourceName == "" ? x.SourceId : x.SourceName) + " · " + x.Value, x.SourceId, x.SourceName, x.Race) : x).ToArray();
         var rows = all.Where(x => (!raceList || x.Race.HasValue && UsBoardBrowsePolicy.InGroup(x.Race.Value, state.Group))
             && (state.SourcePackageId == "" || x.SourceId == state.SourcePackageId)
             && (Contains(x.Label, state.Query) || Contains(x.Value, state.Query)

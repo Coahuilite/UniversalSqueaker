@@ -181,13 +181,16 @@
   <US.VF1.State.Override>yours</US.VF1.State.Override>
   <US.VF1.State.Maintainer>shipped</US.VF1.State.Maintainer>
   <US.VF1.State.NoSound>no sound</US.VF1.State.NoSound>
-  <US.VF1.Status.Saved>Saved; this race updates immediately.</US.VF1.Status.Saved>
+  <US.VF1.Status.Saved>Saved; this race uses the new mapping at its next legal selection.</US.VF1.Status.Saved>
   <US.VF1.Status.SavedRestart>Saved; a race newly supported by this table starts routing at the next full game start.</US.VF1.Status.SavedRestart>
   <US.VF1.Status.CreatedRestart>Table created; it starts routing at the next full game start.</US.VF1.Status.CreatedRestart>
   <US.VF1.Status.Restored>Player overrides cleared; shipped data restored.</US.VF1.Status.Restored>
   <US.VF1.Status.NoMaintainerData>This is a player table - delete it instead of restoring.</US.VF1.Status.NoMaintainerData>
-  <US.VF1.Status.Deleted>Player table deleted; its support is withdrawn at the next full game start.</US.VF1.Status.Deleted>
+  <US.VF1.Status.Deleted>Player table deleted; the running mapping is updated. Any table-only comp admission is withdrawn at the next full game start.</US.VF1.Status.Deleted>
   <US.VF1.Status.DeleteRefusedMaintainer>A shipped table cannot be deleted; use Restore default.</US.VF1.Status.DeleteRefusedMaintainer>
+  <US.VF1.Status.Created>Table created; the admitted race uses it at its next legal selection.</US.VF1.Status.Created>
+  <US.VF1.Status.SavedNotAdopted>File saved, but the running audio catalog could not adopt it. Current responses keep the last usable catalog. See the log; a full game restart reloads the saved file.</US.VF1.Status.SavedNotAdopted>
+  <US.VF1.Status.DeletedNotAdopted>File deleted, but the running audio catalog could not adopt the change. Current responses keep the last usable catalog. See the log; a full game restart reloads the files.</US.VF1.Status.DeletedNotAdopted>
   <US.VF1.Status.SaveFailed>The save failed - the table on disk is unchanged. See the log for the reason.</US.VF1.Status.SaveFailed>
 
 
@@ -245,10 +248,10 @@
   <US.Packs.Checklist.ConflictBanner>Multiple Xenotype Defs share this target; routing fails closed until resolved.</US.Packs.Checklist.ConflictBanner>
   <US.Packs.Checklist.OrphanBanner>Selected pack keys are no longer installed. Use Forget dangling to clean them.</US.Packs.Checklist.OrphanBanner>
   <US.Packs.Checklist.ForgetUnavailable>Forget dangling</US.Packs.Checklist.ForgetUnavailable>
-  <US.Packs.Checklist.SearchPlaceholder>Search VoicePacks…</US.Packs.Checklist.SearchPlaceholder>
+  <US.Packs.Checklist.SearchPlaceholder>Search packs, targets, authors or sources…</US.Packs.Checklist.SearchPlaceholder>
   <US.Packs.Filter.Keyword>Keyword</US.Packs.Filter.Keyword>
   <US.Packs.Filter.SummaryCondition>{0}: {1}</US.Packs.Filter.SummaryCondition>
-  <US.Packs.Filter.SummaryCount>{0} cards</US.Packs.Filter.SummaryCount>
+  <US.Packs.Filter.SummaryCount>{0} matching packs</US.Packs.Filter.SummaryCount>
   <US.Packs.Card.Contents>Contents</US.Packs.Card.Contents>
   <US.Packs.Results.Empty>No VoicePack matches the current filters.</US.Packs.Results.Empty>
   <US.Packs.Results.None>No VoicePack is installed. Install a VoicePack that declares a raceDefName.</US.Packs.Results.None>
@@ -339,8 +342,8 @@
   <US.Help.PageTitle.HelpDrawer.Text>Page help explains the current page; a field explanation names that field and its target. The bottom panel stays on that topic while you read. Its title and Close stay visible while the text scrolls. Escape closes inner popups or edits first, then help, then returns from the business page. Changing tools closes help.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
-  <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>
-  <US.Help.ModeRow.Fallback.Text>Short-circuits through the tiers in order - xenotype pack, race pack, each pack's own fallback, then the built-in tier; only when all three miss does the (currently empty) built-in tier apply.</US.Help.ModeRow.Fallback.Text>
+  <US.Help.ModeRow.Vanilla.Text>Uses only the final fallback table for the current race and action; VoicePacks are not routed. US dispatches only when a usable mapping exists and normal response conditions are met. Without a usable mapping, US does not dispatch.</US.Help.ModeRow.Vanilla.Text>
+  <US.Help.ModeRow.Fallback.Text>Short-circuits through the tiers in order: xenotype pack, race pack, pack fallback, then the final fallback table for the current race and action. The final table is tried only when the first three tiers have no usable candidate. If no tier has a usable mapping, US does not dispatch.</US.Help.ModeRow.Fallback.Text>
   <US.Help.ModeRow.Remix.Text>Folds every tier's candidates for the domain - xenotype pack, race pack, pack fallback and built-in - into one equally weighted draw pool.</US.Help.ModeRow.Remix.Text>
   <US.Help.ModeRow.Disabled.Text>Bypasses this mod's audio path entirely - no VoicePack and no built-in audio is emitted - pawns behave as the base game defines, and all stored settings are kept.</US.Help.ModeRow.Disabled.Text>
   <US.Help.GlobalVolume.Overview>Global volume scales the final loudness of every squeak between 0% and 100%. 0% is not a bypass: selection and modulation still run, only the result is inaudible.</US.Help.GlobalVolume.Overview>
@@ -366,14 +369,14 @@
   <US.Help.BasicTuning.ScalePopulation.Text>When many US-connected pawns are within earshot, periodic squeaks thin out: the intervals lengthen and the probability of a random squeak attempt passing falls, both in proportion to the audible count divided by ten (the factor is never below one), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
-  <US.Help.Timing.Overview>Shows the actual ordinary or explicit development plan. Ordinary state waits start at 600 game ticks before activity, speed and audible-population factors. Hard action/shared limits remain unscaled; effective author and player overrides still apply.</US.Help.Timing.Overview>
+  <US.Help.Timing.Overview>Shows the actual ordinary or explicit development plan. Ordinary state waits start at 600 game ticks, combining activity, audible population and speed exactly once. Once the world is ready, ordinary automatic states use a stable subject phase: the extra success window is at most about 2 seconds and 20% of the effective wait; the extra retry window is at most about 0.25 seconds and half the base retry. Initial spread remains 600 game ticks. Speed changes affect new schedules; existing waits remain. Action/shared limits and the base retry stay in game ticks, and interaction seconds stay unchanged. Effective author and player overrides still apply.</US.Help.Timing.Overview>
   <US.Help.Timing.Interval.Label>Call Interval Master</US.Help.Timing.Interval.Label>
   <US.Help.Timing.Interval.Text>The hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). 1.0x uses the default rhythm; raise it to thin out dense crowds. The default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>Cooldown Multiplier</US.Help.Timing.Multiplier.Label>
   <US.Help.Timing.Multiplier.Text>Scales every action cooldown and the global interval at once: 0.5 halves the wait (twice as chatty), 2.0 doubles it. 1.0 is the authored timing.</US.Help.Timing.Multiplier.Text>
-  <US.Help.Diagnostics.Overview>Support tools: the developer log level and the vanilla debug-menu localization. Neither changes what pawns hear; they only affect the log file and the debug menu.</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.Overview>Open response diagnostics without developer mode or detailed logs. Close settings normally to resume play, select or lock a pawn, start recording, reproduce the problem, stop and copy feedback. The latest 64 results are kept; overwritten and missing evidence are marked. Opening the window only starts viewing. Diagnostics means the existing US panel; the embedded FL.UiKit geometry report is a separate UI-debug tool, not response feedback.</US.Help.Diagnostics.Overview>
   <US.Help.Diagnostics.LoggingAuto.Text>Follows the build: dev builds log in detail, release builds stay quiet. This is the default.</US.Help.Diagnostics.LoggingAuto.Text>
-  <US.Help.Diagnostics.LoggingEnabled.Text>Forces detailed routing logs on, even in release builds. Use it when reporting an audio problem; turn it back afterwards, the log grows fast.</US.Help.Diagnostics.LoggingEnabled.Text>
+  <US.Help.Diagnostics.LoggingEnabled.Text>Forces detailed logs on, even in release builds. Response output is limited to 64 attempts per pawn per 60 real seconds and renews automatically. This is not a sound limit. Normal feedback recording works with logging off; leave this off unless detailed logs are needed.</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>Forces all developer logging off, even in dev builds.</US.Help.Diagnostics.LoggingDisabled.Text>
   <US.Help.Diagnostics.LocalizeDebug.Text>When on, the vanilla debug menu shows Universal Squeaker's debug actions with translated names and categories. Only visible while developer mode is enabled.</US.Help.Diagnostics.LocalizeDebug.Text>
   <US.Help.Diagnostics.LayoutDiagnosis.Text>Developer tool. The status line says whether this window's layout is being captured, and if not, why: a release library package has no layout instrument, and no switch can create one.</US.Help.Diagnostics.LayoutDiagnosis.Text>
@@ -393,20 +396,20 @@
   <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>Applies only template-present fields to the selected exact player domains. Repeating the import does not duplicate rows; values omitted by the template preserve the player&apos;s existing fields.</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>Search, author, Race, Xenotype and state conditions narrow the same exact pack/domain projection. Enabled-only retains its initial members while you edit; Refresh or changing a filter recalculates membership. Collapsing filters keeps the active-condition summary and Clear visible.</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>The default range is humanlike, with HAR first; animals, other races and all targets remain reachable. Search, author, Race, Xenotype and state compose over exact pack/domain rows. Collapsing keeps the range, active conditions, matching-pack count and local Clear visible. Queries do not change editing or selections.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>Keyword</US.Help.FilterBar.Keyword.Label>
   <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching covers pack label, DefName, mod, author, key and provided domains. Open a matching pack to inspect its individual targets; search never changes selections.</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>Domain Filter Chips</US.Help.FilterBar.Domain.Label>
-  <US.Help.FilterBar.Domain.Text>Enabled, conflict and missing-selection conditions compose over exact domain rows. Enabled-only keeps edited rows until explicit refresh or filter change. All clears the composed conditions, including the keyword.</US.Help.FilterBar.Domain.Text>
-  <US.Help.FilterBar.Author.Text>Narrows the cards by author; packs without a declared author stand in by mod name. Matching is case-insensitive containment.</US.Help.FilterBar.Author.Text>
-  <US.Help.FilterBar.Race.Text>Narrows the domain rows to one race: that race's own domain and its xenotype domains stay, everything else steps out; the xenotype dropdown's options narrow with it. Translated names are shown.</US.Help.FilterBar.Race.Text>
-  <US.Help.FilterBar.Xenotype.Text>Narrows the domain rows to one xenotype domain; race domains step out while it is set. Translated names are shown.</US.Help.FilterBar.Xenotype.Text>
+  <US.Help.FilterBar.Domain.Text>Enabled, conflict and missing-selection conditions compose. Turning a row off updates its switch immediately; Enabled-only retains the row until Refresh or a query change. Default filters clears this page and returns to humanlike, retaining the viewed pack, editing target, pack selections and behavior source.</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.Author.Text>Expand author candidates to search and page, with at most eight per page. Typing selects nothing. Clicking a candidate filters packs; wrapped display never changes the complete author value. Undeclared authors use the pack source name. Matching remains case-insensitive containment.</US.Help.FilterBar.Author.Text>
+  <US.Help.FilterBar.Race.Text>Choosing a candidate filters to that race and its real xenotype supply. Races without packs remain available and are identified as such. Candidate search and paging do not switch the editing domain. Clearing candidate search is separate from clearing the Race condition.</US.Help.FilterBar.Race.Text>
+  <US.Help.FilterBar.Xenotype.Text>Without a Race condition, each Xenotype Def appears once and lists its real supplying parent domains. With Race set, results use that exact combination. Packless xenotypes remain; an unknown parent never becomes Human. Typing selects no first item. A Xenotype condition excludes race-only rows.</US.Help.FilterBar.Xenotype.Text>
   <US.Help.FilterBar.Summary.Label>Condition Echo</US.Help.FilterBar.Summary.Label>
-  <US.Help.FilterBar.Summary.Text>Names every condition that is active and counts the surviving cards. It is read-only and always agrees with the controls.</US.Help.FilterBar.Summary.Text>
+  <US.Help.FilterBar.Summary.Text>Shows the range, active non-default conditions and matching packs separately from global selected P/catalog Q. The keyword remains in its field instead of a duplicate label. Clear affects only this query and retains the current objects.</US.Help.FilterBar.Summary.Text>
   <US.Help.PackCards.Overview>Browse independent packs and inspect exact Race or legal Race/Xenotype targets. A single target has a direct switch; multi-target packs expose separate switches in detail. Selecting one target never enables every target.</US.Help.PackCards.Overview>
   <US.Help.PackCards.Card.Label>Pack Card</US.Help.PackCards.Card.Label>
-  <US.Help.PackCards.Card.Text>The header identifies the pack, source mod and author. The detail shows DefName and mapped-action count. A catalog mapping is not proof of native sound availability or audible playback.</US.Help.PackCards.Card.Text>
-  <US.Help.PackCards.Expand.Text>View the named pack in detail. Wide layout keeps list and detail together; compact layout replaces the list and provides Back to list without resetting its scroll, search or filters. This button never bulk-enables a pack.</US.Help.PackCards.Expand.Text>
+  <US.Help.PackCards.Card.Text>The pack name sits beside Contents and each exact target sits beside its switch. Only namesakes, exceptional states or multiple targets need extra list identity. Full source, author, DefName and mapped-action count belong in detail. A mapping is not native sound or listening evidence.</US.Help.PackCards.Card.Text>
+  <US.Help.PackCards.Expand.Text>View only the named pack, without selecting its first domain. Wide layout retains list and detail; compact Back and that layer&apos;s Escape retain the viewed identity, query and position. Filtering out a pack preserves its real details. Only explicit domain selection changes the editing target.</US.Help.PackCards.Expand.Text>
   <US.Help.PackCards.Row.Label>Domain Row</US.Help.PackCards.Row.Label>
   <US.Help.PackCards.Row.Text>Choose an exact domain as the context for behaviour or fallback tools. The row switch independently selects only this pack in this domain. Labels are presentation; identity remains pack key plus exact domain.</US.Help.PackCards.Row.Text>
   <US.Help.PackCards.Enable.Label>Enable Switch</US.Help.PackCards.Enable.Label>
@@ -641,7 +644,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Summary>Selected packs {0}/{1} · missing saved selections {2}</US.UI.Summary>
   <US.UI.StableFilter>Enabled filter retains these rows while you edit. Refresh or change a filter to recalculate.</US.UI.StableFilter>
   <US.UI.ChoosePack>View an audio pack</US.UI.ChoosePack>
-  <US.UI.ChoosePackNote>Open a pack to inspect its exact targets. A pack title never toggles all targets.</US.UI.ChoosePackNote>
+  <US.UI.ChoosePackNote>View a pack from the list, or choose a target from the directory.</US.UI.ChoosePackNote>
   <US.UI.BackToList>Back to list</US.UI.BackToList>
   <US.UI.ChooseDomain>Edit this target</US.UI.ChooseDomain>
   <US.UI.SelectedForDomain>Use this pack for this target</US.UI.SelectedForDomain>
@@ -747,4 +750,54 @@ Configuration/policy: {9}</US.Response.Details>
   <US.Browse.List.candidate>New table candidates</US.Browse.List.candidate>
   <US.Browse.List.sound>Core sounds</US.Browse.List.sound>
   <US.Browse.OffPage>outside this result page</US.Browse.OffPage>
+  <US.Diagnostics.Capture.Open>Open response diagnostics</US.Diagnostics.Capture.Open>
+  <US.Diagnostics.Capture.NoMap>Enter a map to observe responses.</US.Diagnostics.Capture.NoMap>
+  <US.Diagnostics.Capture.EntryHint>After opening, close settings normally to resume play with the diagnostic bar. Opening does not record.</US.Diagnostics.Capture.EntryHint>
+  <US.Diagnostics.Capture.Start>Start new recording</US.Diagnostics.Capture.Start>
+  <US.Diagnostics.Capture.Stop>Stop recording</US.Diagnostics.Capture.Stop>
+  <US.Diagnostics.Capture.Clear>Clear stopped recording</US.Diagnostics.Capture.Clear>
+  <US.Diagnostics.Capture.Copy>Copy feedback</US.Diagnostics.Capture.Copy>
+  <US.Diagnostics.Capture.Idle>Viewing · not recording</US.Diagnostics.Capture.Idle>
+  <US.Diagnostics.Capture.Recording>Recording</US.Diagnostics.Capture.Recording>
+  <US.Diagnostics.Capture.Stopped>Stopped</US.Diagnostics.Capture.Stopped>
+  <US.Diagnostics.Capture.Status>{0} · {1}
+Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.Diagnostics.Capture.Status>
+  <US.Diagnostics.Capture.Target>Responses · {0}</US.Diagnostics.Capture.Target>
+  <US.Diagnostics.Capture.Counts>Retained {0}/64 · overwritten {1}</US.Diagnostics.Capture.Counts>
+  <US.Diagnostics.Capture.Copied>Feedback copied. Paste it for the maintainer with a description of the problem.</US.Diagnostics.Capture.Copied>
+  <US.Diagnostics.Capture.CopyFailed>Copy not confirmed ({0}); evidence is retained. You can try copying again.</US.Diagnostics.Capture.CopyFailed>
+  <US.Diagnostics.Capture.Unavailable>This read-only source does not provide capture controls.</US.Diagnostics.Capture.Unavailable>
+  <US.Diagnostics.Capture.SearchTruncated>Search shows the first 64 matches; more exist. Narrow the query.</US.Diagnostics.Capture.SearchTruncated>
+  <US.Diagnostics.Capture.NotCaptured>Not captured</US.Diagnostics.Capture.NotCaptured>
+  <US.Diagnostics.Capture.ReadBasis>Saved facts only, not eligibility for the next response. Last successful read: {0} realtime seconds; failures {1} {2}</US.Diagnostics.Capture.ReadBasis>
+  <US.Diagnostics.Capture.SavedSecondsUntil>Previous interaction deadline: {0}s (historical)</US.Diagnostics.Capture.SavedSecondsUntil>
+  <US.Diagnostics.Capture.State.NoOwner>No owner</US.Diagnostics.Capture.State.NoOwner>
+  <US.Diagnostics.Capture.State.NotEvaluated>Unevaluated</US.Diagnostics.Capture.State.NotEvaluated>
+  <US.Diagnostics.Capture.State.NotCaptured>Not captured</US.Diagnostics.Capture.State.NotCaptured>
+  <US.Diagnostics.Capture.State.NotRequested>No request</US.Diagnostics.Capture.State.NotRequested>
+  <US.Diagnostics.Capture.State.Dispatched>Dispatched</US.Diagnostics.Capture.State.Dispatched>
+  <US.Diagnostics.Capture.State.AlreadyActive>Already active</US.Diagnostics.Capture.State.AlreadyActive>
+  <US.Diagnostics.Capture.State.Rejected>Rejected</US.Diagnostics.Capture.State.Rejected>
+  <US.Diagnostics.Capture.State.Indeterminate>Indeterminate</US.Diagnostics.Capture.State.Indeterminate>
+  <US.Diagnostics.Capture.State.ReadFailed>Read failed</US.Diagnostics.Capture.State.ReadFailed>
+  <US.Diagnostics.Capture.State.Stale>Stale · read failed</US.Diagnostics.Capture.State.Stale>
+  <US.Diagnostics.Capture.Fields>Fields truncated: {0}</US.Diagnostics.Capture.Fields>
+  <US.Packs.Filter.Default>Default filters</US.Packs.Filter.Default>
+  <US.Packs.Target.NoPacks>No VoicePack</US.Packs.Target.NoPacks>
+  <US.Browse.Group.HarHumanlike>HAR humanlike (except Human)</US.Browse.Group.HarHumanlike>
+  <US.Browse.Group.Human>Human and its xenotypes</US.Browse.Group.Human>
+  <US.Browse.ClearSearch>Clear search</US.Browse.ClearSearch>
+  <US.Browse.NoMatches>No matching results. Clear this query or adjust its conditions.</US.Browse.NoMatches>
+  <US.Browse.NoCandidates>No candidates are currently available.</US.Browse.NoCandidates>
+  <US.Browse.OptionsCount>{0} matching options · page {1}/{2}</US.Browse.OptionsCount>
+  <US.UI.PackUnavailable>Pack not loaded; viewing identity retained</US.UI.PackUnavailable>
+  <US.UI.HiddenPack>Outside the current results</US.UI.HiddenPack>
+  <US.UI.TargetNoPacks>No VoicePack serves this exact target. The editing target and saved selections are retained.</US.UI.TargetNoPacks>
+  <US.UI.TargetFiltered>This target has supply, but the current conditions do not match. Clear this page's filters.</US.UI.TargetFiltered>
+  <US.UI.BiotechOff>Biotech is inactive; xenotype selections are retained and currently unavailable.</US.UI.BiotechOff>
+  <US.VF1.TargetNeedsTable>This target has no fallback table. Select the candidate below and explicitly create it; sound selection is unavailable until then.</US.VF1.TargetNeedsTable>
+  <US.Diagnostics.Search.Viewport>Tracked targets in the current viewport</US.Diagnostics.Search.Viewport>
+  <US.Diagnostics.Search.Map>Current-map search (up to 64 matches returned)</US.Diagnostics.Search.Map>
+  <US.Diagnostics.Search.Returned>{0} targets returned</US.Diagnostics.Search.Returned>
+  <US.Packs.Checklist.RaceUnavailableBanner>This race definition is not loaded. Saved selections are retained for recovery.</US.Packs.Checklist.RaceUnavailableBanner>
 </LanguageData>
