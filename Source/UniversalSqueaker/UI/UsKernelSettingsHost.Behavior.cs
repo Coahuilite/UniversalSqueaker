@@ -40,6 +40,9 @@ public static partial class UsKernelSettingsHost
         var s = source.ViewState;
         var native = source as UsKernelSettingsSource;
         string T(string key) => t.Translate("US.B." + key);
+        bool contextControlsOpen = false;
+        b.BindReadOnly<bool>("b-context-open", () => contextControlsOpen);
+        writes.Command("b-context-toggle", () => { contextControlsOpen = !contextControlsOpen; bumper.Bump(); });
         string Race() => s.TuningLayer == 0 ? "" : s.TuningRaceDefName;
         string Child() => s.TuningLayer == 2 ? s.TuningXenotypeDefName : "";
         bool Valid() => s.TuningLayer == 0 || source.BuildView().Roster.Any(r => r.Race == s.TuningRaceDefName

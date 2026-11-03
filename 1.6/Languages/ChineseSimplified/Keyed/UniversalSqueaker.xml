@@ -696,7 +696,6 @@
   <US.UI.SourceBound>已指定</US.UI.SourceBound>
   <US.UI.ExplainEatDrug>药物筛选说明</US.UI.ExplainEatDrug>
   <US.UI.ExplainEatPhase>进食阶段说明</US.UI.ExplainEatPhase>
-  <US.UI.BackToVoices>返回语音管理</US.UI.BackToVoices>
   <US.UI.Nav.Output>输出</US.UI.Nav.Output>
   <US.UI.Nav.Restore>恢复</US.UI.Nav.Restore>
   <US.UI.Nav.Presets>预设</US.UI.Nav.Presets>
@@ -888,6 +887,7 @@
   <US.B.CurrentAction>当前动作</US.B.CurrentAction>
   <US.B.ActionFields>动作设置</US.B.ActionFields>
   <US.B.TechnicalDetails>技术详情</US.B.TechnicalDetails>
+  <US.B.LayerControls>编辑层与恢复</US.B.LayerControls>
   <US.B.Contributions>响应贡献</US.B.Contributions>
   <US.B.ContributionsHelp>仅修改已标明的动作与目标。留空继承，“否”和 0 是明确值。响应启用与参与分别保存。参数保持原单位；技术详情显示准确键，作者参数按作者约定填写。</US.B.ContributionsHelp>
   <US.B.FieldGroup.Age>年龄调制</US.B.FieldGroup.Age>

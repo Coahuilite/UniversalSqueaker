@@ -704,7 +704,6 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.SourceBound>Specified</US.UI.SourceBound>
   <US.UI.ExplainEatDrug>Drug filter</US.UI.ExplainEatDrug>
   <US.UI.ExplainEatPhase>Eating phase</US.UI.ExplainEatPhase>
-  <US.UI.BackToVoices>Back to Voices</US.UI.BackToVoices>
   <US.UI.Nav.Output>Output</US.UI.Nav.Output>
   <US.UI.Nav.Restore>Restore</US.UI.Nav.Restore>
   <US.UI.Nav.Presets>Presets</US.UI.Nav.Presets>
@@ -896,6 +895,7 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.B.CurrentAction>Current action</US.B.CurrentAction>
   <US.B.ActionFields>Action settings</US.B.ActionFields>
   <US.B.TechnicalDetails>Technical details</US.B.TechnicalDetails>
+  <US.B.LayerControls>Layer &amp; reset</US.B.LayerControls>
   <US.B.Contributions>Response contributions</US.B.Contributions>
   <US.B.ContributionsHelp>Edit the named action and target only. Blank inherits; No and 0 are explicit values. Response enablement and participation are separate. Parameters keep their original units. Technical details show exact IDs; author parameters use the author&apos;s units.</US.B.ContributionsHelp>
   <US.B.FieldGroup.Age>Age modulation</US.B.FieldGroup.Age>

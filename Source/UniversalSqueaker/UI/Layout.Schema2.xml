@@ -57,19 +57,19 @@
       <Widget Id="page-title" Kind="text/wrapped" Scheme="us-text-title" Bind="voice-page-title" />
       <Widget Id="topic-link" Kind="input/button" TextKey="US.UI.Help" ActionBind="open-topic" Width="90" Height="30" />
     </Row>
-    <Column Id="tool-nav" Gap="4" Padding="0" VisibleBind="page-tools-area">
-      <Wrap Id="tuning-nav" Cols="4" Gap="4" Padding="0" VisibleBind="b-tuning">
-        <Widget Id="nav-Behavior" Kind="input/button" TextKey="US.UI.Nav.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" SelectedBind="tool-is-Behavior" Height="30" />
-        <Widget Id="nav-Output" Kind="input/button" TextKey="US.UI.Nav.Output" ActionBind="go-page" PayloadBind="go-Output-payload" SelectedBind="tool-is-Output" Height="30" />
-        <Widget Id="nav-Fallback" Kind="input/button" TextKey="US.UI.Nav.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" SelectedBind="tool-is-Fallback" Height="30" />
-        <Widget Id="nav-Presets" Kind="input/button" TextKey="US.UI.Nav.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" SelectedBind="tool-is-Presets" Height="30" />
+    <Column Id="tool-nav" Gap="8" Padding="0" VisibleBind="page-tools-area">
+      <Widget Id="tool-nav-divider" Kind="chrome/rule" Thickness="1" Height="1" />
+      <Wrap Id="tuning-nav" Cols="4" MaxWidth="660" AlignX="Left" Gap="4" Padding="0" VisibleBind="b-tuning">
+        <Widget Id="nav-Behavior" Kind="input/button" TextKey="US.UI.Nav.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" SelectedBind="tool-is-Behavior" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Output" Kind="input/button" TextKey="US.UI.Nav.Output" ActionBind="go-page" PayloadBind="go-Output-payload" SelectedBind="tool-is-Output" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Fallback" Kind="input/button" TextKey="US.UI.Nav.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" SelectedBind="tool-is-Fallback" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Presets" Kind="input/button" TextKey="US.UI.Nav.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" SelectedBind="tool-is-Presets" Height="30" Emphasis="Muted" />
       </Wrap>
-      <Wrap Id="system-nav" Cols="3" Gap="4" Padding="0" VisibleBind="b-system">
-        <Widget Id="nav-Appearance" Kind="input/button" TextKey="US.UI.Nav.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" SelectedBind="tool-is-Appearance" Height="30" />
-        <Widget Id="nav-Diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" SelectedBind="tool-is-Diagnostics" Height="30" />
-        <Widget Id="nav-Restore" Kind="input/button" TextKey="US.UI.Nav.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" SelectedBind="tool-is-Restore" Height="30" />
+      <Wrap Id="system-nav" Cols="3" MaxWidth="500" AlignX="Left" Gap="4" Padding="0" VisibleBind="b-system">
+        <Widget Id="nav-Appearance" Kind="input/button" TextKey="US.UI.Nav.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" SelectedBind="tool-is-Appearance" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" SelectedBind="tool-is-Diagnostics" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Restore" Kind="input/button" TextKey="US.UI.Nav.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" SelectedBind="tool-is-Restore" Height="30" Emphasis="Muted" />
       </Wrap>
-      <Widget Id="home-return" Kind="input/button" TextKey="US.UI.BackToVoices" ActionBind="go-home" Width="172" Height="30" />
     </Column>
     <Column Id="business-body" Fill="true" Padding="0" Gap="0">
       <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices" Scheme="us-roster-body">
@@ -163,13 +163,14 @@
         </Row>
       </Column>
       <Column Id="page-Behavior-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="page-Behavior" CancelBind="cancel-tuning-context">
-        <Wrap Id="b-layer-ladder" Cols="3" Gap="4" Padding="0">
+        <Widget Id="edit-domain-context" Kind="text/wrapped" Bind="edit-domain-context" />
+        <Widget Id="b-context-toggle" Kind="input/button" TextKey="US.B.LayerControls" ActionBind="b-context-toggle" SelectedBind="b-context-open" Width="180" AlignX="Left" Height="30" />
+        <Wrap Id="b-layer-ladder" Cols="3" Gap="4" Padding="0" VisibleBind="b-context-open">
           <Widget Id="b-layer-0" Kind="input/button" TextKey="US.UI.PawnProfile" ActionBind="b-layer-0" SelectedBind="b-layer-is-0" Height="30" />
           <Widget Id="b-layer-1" Kind="input/button" TextKey="US.Tuning.Layer.Race" ActionBind="b-layer-1" SelectedBind="b-layer-is-1" Height="30" />
           <Widget Id="b-layer-2" Kind="input/button" TextKey="US.Tuning.Layer.Xenotype" ActionBind="b-layer-2" SelectedBind="b-layer-is-2" Height="30" />
         </Wrap>
-        <Widget Id="edit-domain-context" Kind="text/wrapped" Bind="edit-domain-context" />
-        <Widget Id="b-area-reset" Kind="input/button" TextKey="US.Reset.Area" ActionBind="b-area-reset" Height="30" Width="180" />
+        <Widget Id="b-area-reset" Kind="input/button" TextKey="US.Reset.Area" ActionBind="b-area-reset" Height="30" Width="180" VisibleBind="b-context-open" />
         <Widget Id="b-action-invalid" Kind="text/wrapped" TextKey="US.B.InvalidTarget" VisibleBind="b-action-invalid" />
         <Scroll Id="b-actions-scroll" Fill="true" Gap="0" Padding="0" CancelBind="cancel-tuning-target" Scheme="us-tuning-body">
           <Repeat Id="b-actions" Items="b-action-keys" Template="b-action-row" Gap="0" Padding="0" />
@@ -359,54 +360,53 @@
       </Scroll>
       <Scroll Id="page-Diagnostics-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Diagnostics">
         <Widget Id="missing-selections-title" Kind="text/wrapped" TextKey="US.UI.MissingSelections" VisibleBind="voice-has-missing" />
-        <Repeat Id="b-missing-rows" Items="b-missing-keys" Template="b-missing-row" Gap="4" Padding="0" />
-        <Widget Id="dependency-status" Kind="text/wrapped" Bind="dependency-status" />
-        <Widget Id="kernel-status-raw" Kind="text/wrapped" Bind="kernel-status-raw" />
+        <Repeat Id="b-missing-rows" Items="b-missing-keys" Template="b-missing-row" Gap="4" Padding="0" VisibleBind="voice-has-missing" />
         <Widget Id="b-publication-note" Kind="text/wrapped" TextKey="US.B.PublicationPending" VisibleBind="b-publication-pending" />
-        <Widget Id="transaction-diagnostics" Kind="text/wrapped" Bind="transaction-diagnostics" />
-        <Section Id="diagnostics" Padding="12" Gap="8">
-          <Widget Id="diagnostics-header" Kind="us/section-header" Scheme="us-text-title" TitleKey="US.Section.Diagnostics" HelpRef="us/diagnostics" />
-          <Widget Id="response-diagnostics-open" Kind="input/button" TextKey="US.Diagnostics.Capture.Open" ActionBind="open-response-diagnostics" Height="30" />
-          <Widget Id="response-diagnostics-entry-status" Kind="text/wrapped" Bind="response-diagnostics-entry-status" />
-          <Widget Id="b-dev-toggle" Kind="input/button" TextKey="US.B.DeveloperTools" ActionBind="b-dev-toggle" Height="30" />
-          <Column Id="b-dev-tools" Gap="6" Padding="0" VisibleBind="b-dev-open">
-            <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpRef="us/diagnostics" />
-            <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
-              <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedBind="dev-logging-auto" ActionBind="set-dev-logging" PayloadBind="dev-logging-auto-value" HelpRef="us/diagnostics/logging-auto" />
-              <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedBind="dev-logging-enabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-enabled-value" HelpRef="us/diagnostics/logging-enabled" />
-              <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedBind="dev-logging-disabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-disabled-value" HelpRef="us/diagnostics/logging-disabled" />
-            </Row>
-            <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpRef="us/diagnostics/localize-debug" />
-              <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedBind="localize-debug-menu" Width="36" Height="30" HelpRef="us/diagnostics/localize-debug" AlignX="Left" />
+        <Widget Id="diagnostics-header" Kind="us/section-header" Scheme="us-text-title" TitleKey="US.Section.Diagnostics" HelpRef="us/diagnostics" />
+        <Widget Id="response-diagnostics-open" Kind="input/button" TextKey="US.Diagnostics.Capture.Open" ActionBind="open-response-diagnostics" Height="30" />
+        <Widget Id="response-diagnostics-entry-status" Kind="text/wrapped" Bind="response-diagnostics-entry-status" />
+        <Widget Id="b-diagnostic-details-toggle" Kind="input/button" TextKey="US.B.TechnicalDetails" ActionBind="b-diagnostic-details-toggle" SelectedBind="b-diagnostic-details-open" Width="200" MaxWidth="200" AlignX="Left" Height="30" />
+        <Widget Id="dependency-status" Kind="text/wrapped" Bind="dependency-status" VisibleBind="b-diagnostic-details-open" Scheme="us-text-meta" Emphasis="Muted" />
+        <Widget Id="kernel-status-raw" Kind="text/wrapped" Bind="kernel-status-raw" VisibleBind="b-diagnostic-details-open" Scheme="us-text-meta" Emphasis="Muted" />
+        <Widget Id="transaction-diagnostics" Kind="text/wrapped" Bind="transaction-diagnostics" VisibleBind="b-transaction-visible" Scheme="us-text-meta" Emphasis="Muted" />
+        <Widget Id="b-dev-toggle" Kind="input/button" TextKey="US.B.DeveloperTools" ActionBind="b-dev-toggle" SelectedBind="b-dev-open" Width="Auto" AlignX="Left" Height="30" />
+        <Column Id="b-dev-tools" Gap="6" Padding="0" VisibleBind="b-dev-open">
+          <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpRef="us/diagnostics" />
+          <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
+            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedBind="dev-logging-auto" ActionBind="set-dev-logging" PayloadBind="dev-logging-auto-value" HelpRef="us/diagnostics/logging-auto" />
+            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedBind="dev-logging-enabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-enabled-value" HelpRef="us/diagnostics/logging-enabled" />
+            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedBind="dev-logging-disabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-disabled-value" HelpRef="us/diagnostics/logging-disabled" />
+          </Row>
+          <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpRef="us/diagnostics/localize-debug" />
+            <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedBind="localize-debug-menu" Width="36" Height="30" HelpRef="us/diagnostics/localize-debug" AlignX="Left" />
+            </Column>
+          </Row>
+          <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" AlignX="Left" HelpRef="us/reset-area/button" />
+          <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
+          <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpRef="us/diagnostics/layout-diagnosis" />
+          <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
+            <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
+              <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedBind="layout-capture" Width="36" Height="30" HelpRef="us/diagnostics/layout-capture" AlignX="Left" />
               </Column>
             </Row>
-            <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" AlignX="Left" HelpRef="us/reset-area/button" />
-            <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
-            <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpRef="us/diagnostics/layout-diagnosis" />
-            <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
-              <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-                <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
-                <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
-                  <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedBind="layout-capture" Width="36" Height="30" HelpRef="us/diagnostics/layout-capture" AlignX="Left" />
-                </Column>
-              </Row>
-              <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-                <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
-                <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
-                  <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedBind="layout-outline" Width="36" Height="30" HelpRef="us/diagnostics/layout-outline" AlignX="Left" />
-                </Column>
-              </Row>
-              <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpRef="us/diagnostics/layout-report" />
-              <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpRef="us/diagnostics/layout-report" />
-              <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-                <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
-                <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedBind="dev-panel-open" Width="172" Height="24" HelpRef="us/diagnostics/layout-diagnosis" />
-              </Row>
-            </Column>
+            <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
+              <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedBind="layout-outline" Width="36" Height="30" HelpRef="us/diagnostics/layout-outline" AlignX="Left" />
+              </Column>
+            </Row>
+            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpRef="us/diagnostics/layout-report" />
+            <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpRef="us/diagnostics/layout-report" />
+            <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
+              <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedBind="dev-panel-open" Width="172" Height="24" HelpRef="us/diagnostics/layout-diagnosis" />
+            </Row>
           </Column>
-        </Section>
+        </Column>
       </Scroll>
       <Scroll Id="page-Restore-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Restore">
         <Widget Id="restore-note" Kind="text/wrapped" TextKey="US.UI.RestoreNote" />

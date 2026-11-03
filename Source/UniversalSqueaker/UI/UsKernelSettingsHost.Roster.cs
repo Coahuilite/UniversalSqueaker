@@ -339,6 +339,11 @@ public static partial class UsKernelSettingsHost
             return key;
         }).ToArray());
         b.BindReadOnly<bool>("b-publication-pending", () => native?.PublicationPending == true);
+        bool diagnosticDetailsOpen = false;
+        b.BindReadOnly<bool>("b-diagnostic-details-open", () => diagnosticDetailsOpen);
+        writes.Command("b-diagnostic-details-toggle", () => { diagnosticDetailsOpen = !diagnosticDetailsOpen; Bump(); });
+        b.BindReadOnly<bool>("b-transaction-visible", () => diagnosticDetailsOpen && b.TryGet("transaction-diagnostics", out string detail)
+            && !string.IsNullOrWhiteSpace(detail));
         bool developerToolsOpen = false;
         b.BindReadOnly<bool>("b-dev-open", () => developerToolsOpen);
         writes.Command("b-dev-toggle", () => { developerToolsOpen = !developerToolsOpen; Bump(); });
