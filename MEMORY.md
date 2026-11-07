@@ -1,5 +1,7 @@
 # MEMORY
 
+Current development policy: follow RimWorld **1.7** APIs/namespaces without a game minor-build whitelist. Normative tooling/stage boundaries: `docs/openspec/specs/developer-preview/spec.md`; implementation gaps remain in the specification's linked status page. Historical fixed-input evidence is not a support ceiling.
+
 > Durable facts, rules and pointers only. Session narrative, finished-implementation detail, raw logs and
 > commit chains live in `OBLIVIONIS.md` (cold archive); per-incident history lives in the git log. The action
 > surface is `TODO.md`. Code and the carrier outrank this file.
@@ -13,7 +15,11 @@
 
 ## Development state (US0.6.x first-publication baseline)
 
+The Legacy08 offline behavior provider uses the production finite source/bindings and author-document projection; the read-only diagnostics screen mark shares one author definition and painter between the thin game projection and preview. K4 caches only each evidence object's lazy technical body. Architecture and current native evidence/limits are in `docs/development/offline-workbench-20261106.md` and `diagnostics-screen-mark-20261106.md`; the offline preview does not replace game acceptance. The selected c3-dev game candidate carries the original r6 checklist.
+
 Current contract authority is `docs/specification.md`; source coverage, implementation gaps and evidence layers are linked there. Former full specifications are preserved in `docs/archive/specs-before-20261029/`. Documentation cutover did not repair production or change accepted payload identities. The 2026-10-29 contract repair connects protected named production diagnostics, committed VF1 tables to the existing audio publisher, and independent loaded canonical identity facts; current implementation/evidence status lives in the linked development pages.
+
+The B r6 Dev pair at `dist/ui-diagnostics-20261105/delivery-r6-dev/` was received and locally accepted. The complete c3-dev candidate superseded it for the selected 1.6 delivery; r6 remains available for recovery, and the inherited native acceptance remains open. A009 compiles A008's geometry/report wiring against formally fixed FL producer-r5-dev, with actual US_DEV Host diagnostics/independent-outline, shell/Remix and UiLogic evidence. The old r5 Release is withdrawn from recommendation and preserved unchanged. Exact dirty source/check provenance, usage and retained Report/sampler dynamic, source-list/O5/author-popup/native/1.7 gaps are in `docs/development/ui-diagnostics-20261105.md`; no native performance or dedicated 1.7-reference build is established.
 
 The RW17 basic-compatibility candidate adapts clip readiness to the loaded audio API while retaining the completed native-pool check and the 1.6 Loaded requirement. It consumes the cleared fixed FL Release producer at `ferritelib/dist/rw17-basic-compat-20261030/producer-release-r1/FerriteLib`, with both game versions explicitly sharing the 1.6 payload. The AudioBinding/author-log fidelity repair, C1 single-string CLR entry restoration and C2 author-field provenance boundary are recorded in `docs/development/specification/open-issues.md`; the current fixed US interface is `dist/rw16-17-pack-layout-20261101/INTERFACE-r1.md`. Ordinary stable phase remains adopted under POL-03; its original implementation and coverage boundaries are in `docs/development/specification/implementation.md`. Earlier packages retain their original evidence and known limitations. Native pack-layout, phase, sound and rendering acceptance remain separate; this is not a published release.
 

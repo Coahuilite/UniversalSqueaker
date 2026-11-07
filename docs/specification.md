@@ -4,6 +4,8 @@
 
 **状态：现行。** 本入口及下列正文自2026-10-29在本地取代旧整编规格。适用US0.6.x／RimWorld1.6.4871（net472）；API及Config面向首次公开基线。规格采用不是发布或运行验收；[实现偏差与证据](development/specification/open-issues.md)可直接查到。
 
+2026-11-06补录工具／预览与性能边界：维护线已具备真实0.8工作台、紧凑行为页、K4与US屏幕标记；完整同源窗口和虚拟舞台仍待实现。新原生开发统一跟随 **RimWorld 1.7**，不锁小构建号；本1.6维护候选与验收责任保持。[开放项](development/specification/open-issues.md)持实际分线状态。
+
 ## 组合与唯一归属
 
 ```text
@@ -32,6 +34,7 @@ UI／帮助／诊断 ← 有效配置解释、当次结果和真实实例证据
 | [完整Core Work](openspec/specs/game-work/spec.md) | 20 WorkType／105 Giver／78 Job-driver精确范围 | Work适配维护者 |
 | [UI消费](openspec/specs/ui-consumption/spec.md) | 同窗／草稿、过滤、工具、帮助、布局与颜色默认 | UI消费者 |
 | [诊断与证据](openspec/specs/diagnostics/spec.md) | mode／级别／失败隔离、结果和运行证据层 | 日志／诊断维护者 |
+| [同源开发预览](openspec/specs/developer-preview/spec.md) | 隔离样例、完整窗口、热改／agent、工具与业务诊断分工 | UI／开发辅助维护者 |
 
 不按类数或审计行数拆spec，不要求新增运行时连接类。具体符号与当前生产者→入口→消费者在[实现映射](development/specification/implementation.md)，逐条来源、合并和后续替代在[覆盖表](development/specification/coverage.md)。两者不另定义行为。
 

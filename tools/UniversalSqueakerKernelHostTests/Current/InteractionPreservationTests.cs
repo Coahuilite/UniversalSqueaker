@@ -173,7 +173,7 @@ internal static class InteractionPreservationTests
                 Program.Check(affected.Length == 0, language + " actual long footer and help bands fit measured text: " + string.Join("|", affected.Select(x => x.ElementPath + ":" + x.Needed + "/" + x.Available)));
                 var layout = page.Host.MeasureAndArrange(view.Size);
                 Program.Check(layout.RectById["help-title"].XMax <= layout.RectById["help-close"].X + .05f
-                    && layout.RectById["help-close"].Height == 28
+                    && layout.RectById["help-close"].Height == 30
                     && layout.RectById["help-scroll"].YMax <= layout.RectById["footer-band"].Y + .05f,
                     "actual fixed help title/Close hit bands and independently wrapped footer do not overlap");
                 int prior = reports.Count;

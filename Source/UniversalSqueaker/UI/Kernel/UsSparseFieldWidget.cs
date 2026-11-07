@@ -7,7 +7,7 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>Sparse numeric parsing over FL's native editor, focus, IME and capture owner.</summary>
-public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
+public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
 {
     public const string KindName = "us/sparse-field";
     private UiElementSpec spec = UiElementSpec.Empty;
@@ -17,6 +17,7 @@ public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
         KindName, () => new UsSparseFieldWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"),
             new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Bind", binding: UiBindingRole.Value), new UiAttributeDefinition("Field"),
             new UiAttributeDefinition("LabelKey"), new UiAttributeDefinition("EffectiveBind", binding: UiBindingRole.Value), new UiAttributeDefinition("OptionsBind", binding: UiBindingRole.Choices),
+            new UiAttributeDefinition("LabelBind", binding: UiBindingRole.Value), new UiAttributeDefinition("HelpRefBind", binding: UiBindingRole.Value), new UiAttributeDefinition("HelpContextBind", binding: UiBindingRole.Value),
             new UiAttributeDefinition("HelpAction", binding: UiBindingRole.Command), new UiAttributeDefinition("HelpPayload", binding: UiBindingRole.Value))));
     public void Configure(UiElementSpec value) => spec = value;
     private string Binding => spec.TryGetAttribute("Bind", out string key) ? key : spec.Id;
@@ -27,6 +28,8 @@ public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
         bindings.ValidateValue<string>(Binding, path);
         if (Attr("EffectiveBind") != "") bindings.ValidateValue<string>(Attr("EffectiveBind"), path);
         if (Attr("OptionsBind") != "" && bindings.Choices(Attr("OptionsBind")).ValueType != typeof(string)) throw new InvalidOperationException("Sparse boolean choices must be strings at " + path);
+        foreach (string name in new[] { "LabelBind", "HelpRefBind", "HelpContextBind" })
+            if (Attr(name) != "") bindings.ValidateValue<string>(Attr(name), path);
         if (Attr("HelpAction") != "") { bindings.ValidateAction<string>(Attr("HelpAction"), path); bindings.ValidateValue<string>(Attr("HelpPayload"), path); }
     }
     private float LabelHeight(UiWidgetContext ctx) => Attr("LabelKey") == "" ? 0 : UsKernelDraw.Text(ctx).MeasureText(ctx.Translation.Translate(Attr("LabelKey")), ctx.ViewWidth) + 2;
@@ -34,11 +37,17 @@ public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
         : UsKernelDraw.Text(ctx).MeasureText(ctx.Bindings.Get<string>(Attr("EffectiveBind")), width);
     private string ErrorText(UiWidgetContext ctx) => ctx.Translation.Translate(Field == "activity" ? "US.Activity.Invalid" : "US.UI.RowInvalid");
     private bool InvalidDraft(UiWidgetContext ctx) => observedEditor?.Valid == false;
-    public float Measure(UiWidgetContext ctx) => LabelHeight(ctx) + UsKernelDraw.ControlHeight(ctx)
+    public float Measure(UiWidgetContext ctx) => Attr("LabelBind") != "" ? CompactLayout(ctx, ctx.ViewWidth).Height : LabelHeight(ctx) + UsKernelDraw.ControlHeight(ctx)
         + (Attr("EffectiveBind") == "" ? 0 : 2 + EffectiveHeight(ctx, ctx.ViewWidth))
         + (InvalidDraft(ctx) ? 2 + UsKernelDraw.Text(ctx).MeasureText(ErrorText(ctx), ctx.ViewWidth) : 0);
     public IEnumerable<UiPointerRegion> PointerRegions(UiWidgetContext ctx, UiLayoutRect bounds)
     {
+        if (Attr("LabelBind") != "")
+        {
+            var layout = CompactLayout(ctx, bounds.Width);
+            yield return new UiPointerRegion(new UiLayoutRect(bounds.X + layout.FieldX, bounds.Y + layout.FieldY, layout.FieldWidth, layout.FieldHeight));
+            yield break;
+        }
         float label = LabelHeight(ctx); yield return new UiPointerRegion(new UiLayoutRect(bounds.X, bounds.Y + label, bounds.Width, UsKernelDraw.ControlHeight(ctx)));
     }
     private bool Parse(string text, out string value)
@@ -52,6 +61,7 @@ public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
     }
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
+        if (Attr("LabelBind") != "") { DrawCompact(rect, ctx); return; }
         string binding = Binding;
         float label = LabelHeight(ctx);
         if (label > 0) UsKernelDraw.StyledLabel(ctx, new UiLayoutRect(rect.X, rect.Y, rect.Width, label - 2), ctx.Translation.Translate(Attr("LabelKey")));
@@ -79,6 +89,75 @@ public sealed class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
         {
             float y = fieldRect.YMax + 2 + (Attr("EffectiveBind") == "" ? 0 : 2 + EffectiveHeight(ctx, rect.Width));
             UsKernelDraw.StyledLabel(ctx, new UiLayoutRect(rect.X, y, rect.Width, UsKernelDraw.Text(ctx).MeasureText(ErrorText(ctx), rect.Width)), ErrorText(ctx), tone: UiStatusTone.Danger);
+        }
+    }
+
+    private struct FieldLayout
+    {
+        internal float LabelWidth, LabelHeight, FieldX, FieldY, FieldWidth, FieldHeight, EffectiveX, EffectiveY, EffectiveWidth, EffectiveHeight, ErrorY, ErrorHeight, Height;
+        internal string Label, Effective;
+    }
+    private FieldLayout CompactLayout(UiWidgetContext ctx, float width)
+    {
+        var text = UsKernelDraw.Text(ctx);
+        bool inline = width >= 540;
+        var layout = new FieldLayout {
+            Label = ctx.Bindings.Get<string>(Attr("LabelBind")),
+            Effective = Attr("EffectiveBind") == "" ? "" : ctx.Bindings.Get<string>(Attr("EffectiveBind")),
+            LabelWidth = inline ? Math.Min(220, width * .32f) : width,
+            FieldWidth = Math.Min(160, width), FieldHeight = UsKernelDraw.ControlHeight(ctx, 30)
+        };
+        layout.LabelHeight = text.MeasureText(layout.Label, Math.Max(1, layout.LabelWidth));
+        layout.FieldX = inline ? layout.LabelWidth + 8 : 0;
+        layout.FieldY = inline ? 0 : layout.LabelHeight + 4;
+        bool effectiveInline = width - layout.FieldX - layout.FieldWidth - 8 >= 140;
+        layout.EffectiveX = effectiveInline ? layout.FieldX + layout.FieldWidth + 8 : 0;
+        layout.EffectiveY = effectiveInline ? layout.FieldY : layout.FieldY + layout.FieldHeight + 4;
+        layout.EffectiveWidth = Math.Max(1, width - layout.EffectiveX);
+        layout.EffectiveHeight = layout.Effective == "" ? 0 : text.MeasureText(layout.Effective, layout.EffectiveWidth);
+        layout.Height = Math.Max(layout.LabelHeight, Math.Max(layout.FieldY + layout.FieldHeight, layout.EffectiveY + layout.EffectiveHeight));
+        if (InvalidDraft(ctx))
+        {
+            layout.ErrorY = layout.Height + 4;
+            layout.ErrorHeight = text.MeasureText(ErrorText(ctx), Math.Max(1, width));
+            layout.Height = layout.ErrorY + layout.ErrorHeight;
+        }
+        return layout;
+    }
+    private void DrawCompact(UiLayoutRect rect, UiWidgetContext ctx)
+    {
+        var layout = CompactLayout(ctx, rect.Width);
+        UsKernelDraw.StyledLabel(ctx, new UiLayoutRect(rect.X, rect.Y, layout.LabelWidth, layout.LabelHeight), layout.Label, anchor: UiTextAnchor.UpperLeft);
+        var field = new UiLayoutRect(rect.X + layout.FieldX, rect.Y + layout.FieldY, layout.FieldWidth, layout.FieldHeight);
+        if (Attr("OptionsBind") != "")
+        {
+            var choices = ctx.Bindings.Choices(Attr("OptionsBind")).Read().Select(x => new UiChoice<string>(x.TextKey == "" ? x.Text : ctx.Translation.Translate(x.TextKey), (string)x.Value!, x.HelpRef)).ToArray();
+            UsKernelDraw.StyledDropdown(field, Binding, ctx, ctx.Bindings.Get<string>(Binding), choices, value => ctx.Bindings.Set(Binding, value));
+        }
+        else
+        {
+            bool wasInvalid = InvalidDraft(ctx);
+            ctx.Controls.Edit(field, ctx, Binding, ctx.Bindings.Get<string>(Binding), x => x, Parse, false, false,
+                value => ctx.Bindings.Set(Binding, value), () => ctx.Bindings.Get<string>(Binding));
+            observedEditor = ctx.Controls.Editor<string>(ctx, Binding, x => x, Parse);
+            if (wasInvalid != InvalidDraft(ctx)) ctx.Invalidate();
+            if (observedEditor.Modified || !observedEditor.Valid)
+                UiThemeDraw.Solid(ctx.Drawing, new UiLayoutRect(field.X, field.YMax - 2, field.Width, 2), ctx.Theme[observedEditor.Valid ? UiPaletteRole.Accent : UiPaletteRole.DangerBorder]);
+        }
+        if (layout.EffectiveHeight > 0) UsKernelDraw.StyledLabel(ctx,
+            new UiLayoutRect(rect.X + layout.EffectiveX, rect.Y + layout.EffectiveY, layout.EffectiveWidth, layout.EffectiveHeight), layout.Effective, anchor: UiTextAnchor.UpperLeft);
+        if (layout.ErrorHeight > 0) UsKernelDraw.StyledLabel(ctx, new UiLayoutRect(rect.X, rect.Y + layout.ErrorY, rect.Width, layout.ErrorHeight), ErrorText(ctx), tone: UiStatusTone.Danger);
+        if (Attr("HelpRefBind") != "")
+        {
+            string topic = ctx.Bindings.Get<string>(Attr("HelpRefBind"));
+            if (topic.Length > 0 && ctx.Controls.IsMouseOver(rect, ctx))
+            {
+                ctx.Session.PublishHelp(topic);
+                var anchor = ctx.State(UsHelpAnchor.StateKey, () => new UsHelpAnchor());
+                anchor.Topic = topic; anchor.PublishedPass = ctx.Session.Frame;
+                anchor.Label = layout.Label;
+                anchor.Context = Attr("HelpContextBind") == "" ? "" : ctx.Bindings.Get<string>(Attr("HelpContextBind"));
+            }
         }
     }
 }

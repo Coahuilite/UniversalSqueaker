@@ -694,9 +694,11 @@ public static class UsDiagnosticsProjection
 
     /// <summary>The row's compact time-basis word (the full phrase is the band heading's job).</summary>
     public static string BasisText(UsDiagGateLine gate, Func<string, string> tr)
-        => gate.Basis == UsDiagBasis.PreviousEvaluation || gate.Basis == UsDiagBasis.PreviousDispatch
-            ? K(tr, "US.Diagnostics.Basis.Previous")
-            : K(tr, "US.Diagnostics.Basis.Current");
+        => K(tr, gate.Basis switch {
+            UsDiagBasis.PreviousEvaluation => "US.Diagnostics.Basis.Previous",
+            UsDiagBasis.PreviousDispatch => "US.Diagnostics.Basis.Dispatch",
+            UsDiagBasis.CurrentObservation => "US.Diagnostics.Basis.Current",
+            _ => "US.Diagnostics.Basis.Unknown" });
 
     /// <summary>
     /// The row's reason line, or empty. An N/A always explains WHY it does not apply, and a Pending row

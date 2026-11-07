@@ -12,7 +12,7 @@
   <US.Diagnostics.LockedTag>locked</US.Diagnostics.LockedTag>
   <US.Diagnostics.Bar>Collapse</US.Diagnostics.Bar>
   <US.Diagnostics.Page.Format>page {0}/{1} - total {2}</US.Diagnostics.Page.Format>
-  <US.Diagnostics.Search.Placeholder>Search pawns on this map...</US.Diagnostics.Search.Placeholder>
+  <US.Diagnostics.Search.Placeholder>Search targets</US.Diagnostics.Search.Placeholder>
   <US.Diagnostics.Search.None>No match on this map</US.Diagnostics.Search.None>
   <US.Diagnostics.Monitor.Empty>Waiting for the first update...</US.Diagnostics.Monitor.Empty>
   <US.Diagnostics.Detail.Empty>Select a pawn to inspect it</US.Diagnostics.Detail.Empty>
@@ -73,7 +73,7 @@
   <US.Diagnostics.Geometry.Report.Unavailable>No report can be written: this build has no layout instrument.</US.Diagnostics.Geometry.Report.Unavailable>
   <US.Diagnostics.Geometry.Report.NoScope>No report can be written: this page has no diagnosis scope.</US.Diagnostics.Geometry.Report.NoScope>
   <US.Diagnostics.Geometry.Report.Waiting>Report requested: it is written on the next drawn pass.</US.Diagnostics.Geometry.Report.Waiting>
-  <US.Diagnostics.Geometry.Report.Written>Report written to the layout log: pass {0}.</US.Diagnostics.Geometry.Report.Written>
+  <US.Diagnostics.Geometry.Report.Written>Geometry report generated: pass {0}.</US.Diagnostics.Geometry.Report.Written>
   <US.Diagnostics.Geometry.Report.NotProduced>No report produced: the capture was empty. Try again after the next drawn pass.</US.Diagnostics.Geometry.Report.NotProduced>
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>
@@ -132,17 +132,31 @@
   <US.DevPanel.Title>US developer panel</US.DevPanel.Title>
   <US.DevPanel.Target>Target</US.DevPanel.Target>
   <US.DevPanel.Target.Settings>Settings page</US.DevPanel.Target.Settings>
-  <US.DevPanel.Target.Dialog>Remix dialog</US.DevPanel.Target.Dialog>
+  <US.DevPanel.Target.Dialog>Confirmation dialog</US.DevPanel.Target.Dialog>
   <US.DevPanel.Target.Diagnostics>Diagnostics panel</US.DevPanel.Target.Diagnostics>
   <US.DevPanel.Capture>Capture</US.DevPanel.Capture>
   <US.DevPanel.Outline>Outline</US.DevPanel.Outline>
   <US.DevPanel.Report>Report</US.DevPanel.Report>
+  <US.DevPanel.Sample>Sample settings page</US.DevPanel.Sample>
+  <US.DevPanel.Sample.Ready>Ready: one 32 Host-pass sample. Results: UI.cost in the log.</US.DevPanel.Sample.Ready>
+  <US.DevPanel.Sample.NeedsEnabled>Select Explicit Enabled logging to sample.</US.DevPanel.Sample.NeedsEnabled>
+  <US.DevPanel.Sample.Unavailable>Sampling needs this panel's live Settings target; dialogs are not supported.</US.DevPanel.Sample.Unavailable>
+  <US.DevPanel.Sample.Queued>Settings #{0}: queued for its next pass.</US.DevPanel.Sample.Queued>
+  <US.DevPanel.Sample.Cancelled>Settings #{0}: ended before sampling began.</US.DevPanel.Sample.Cancelled>
+  <US.DevPanel.Sample.Sampling>Sampling</US.DevPanel.Sample.Sampling>
+  <US.DevPanel.Sample.Complete>Complete · UI.cost log</US.DevPanel.Sample.Complete>
+  <US.DevPanel.Sample.Partial>Ended early</US.DevPanel.Sample.Partial>
+  <US.DevPanel.Sample.Status>{0} · {1}/{2} Host passes
+{3} · Settings #{4} · start {5} · {6}</US.DevPanel.Sample.Status>
+  <US.DevPanel.Sample.SceneChanged>Scene changed during the sample; read it as mixed work.</US.DevPanel.Sample.SceneChanged>
+  <US.DevPanel.Sample.ModeEnded>Logging mode ended the sample.</US.DevPanel.Sample.ModeEnded>
+  <US.DevPanel.Sample.TargetEnded>The target was released.</US.DevPanel.Sample.TargetEnded>
   <US.DevPanel.Status.Idle>Ready.</US.DevPanel.Status.Idle>
   <US.DevPanel.Status.Capture>Capture</US.DevPanel.Status.Capture>
   <US.DevPanel.Status.Overlay>Outline</US.DevPanel.Status.Overlay>
   <US.DevPanel.Status.Page>Switched to</US.DevPanel.Status.Page>
   <US.DevPanel.Status.NoSettings>Settings window is closed - page buttons need it open.</US.DevPanel.Status.NoSettings>
-  <US.DevPanel.Status.ReportWritten>Report written</US.DevPanel.Status.ReportWritten>
+  <US.DevPanel.Status.ReportWritten>Report generated</US.DevPanel.Status.ReportWritten>
   <US.DevPanel.Status.ReportWaiting>Report requested - waiting for the next pass</US.DevPanel.Status.ReportWaiting>
   <US.DevPanel.Status.ReportUnavailable>Report unavailable for this target</US.DevPanel.Status.ReportUnavailable>
   <US.Diagnostics.DevPanel.Label>Developer panel: capture, outline and report for the settings page and its confirmation dialog, from any page.</US.Diagnostics.DevPanel.Label>
@@ -330,7 +344,7 @@
   <US.Help.PageTitle.Apply.Label>Editing and saving</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>Ordinary edits take effect immediately and save automatically shortly afterwards. Source and action-field edits first attempt saving: failure keeps the previous configuration; saved-but-not-applied changes can be inspected in Diagnostics without saving again. Closing saves applied edits and discards unconfirmed drafts.</US.Help.PageTitle.Apply.Text>
   <US.Help.PageTitle.HelpDrawer.Label>Detailed help &amp; return</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>Page help explains the current page; a field explanation names that field and its target. The bottom panel stays on that topic while you read. Its title and Close stay visible while the text scrolls. Escape closes inner popups or edits first, then help, then returns from the business page. Changing tools closes help.</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Text>Page help toggles open or closed. It starts with the page overview, then follows real field hover with the exact target. Moving into help holds its last content for reading; the next valid hover replaces it. Hover never reopens closed help. Reopening the same context keeps its reading position; a new target starts at the top. Escape closes inner menus or edits first, then help, then returns from the business page.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>Uses only the final fallback table for the current race and action; VoicePacks are not routed. US dispatches only when a usable mapping exists and normal response conditions are met. Without a usable mapping, US does not dispatch.</US.Help.ModeRow.Vanilla.Text>
@@ -365,7 +379,7 @@
   <US.Help.Timing.Interval.Text>The hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). 1.0x uses the default rhythm; raise it to thin out dense crowds. The default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>Cooldown Multiplier</US.Help.Timing.Multiplier.Label>
   <US.Help.Timing.Multiplier.Text>Scales every action cooldown and the global interval at once: 0.5 halves the wait (twice as chatty), 2.0 doubles it. 1.0 is the authored timing.</US.Help.Timing.Multiplier.Text>
-  <US.Help.Diagnostics.Overview>Open response diagnostics without developer mode or detailed logs. Close settings normally to resume play, select or lock a pawn, start recording, reproduce the problem, stop and copy feedback. The latest 64 results are kept; overwritten and missing evidence are marked. Opening the window only starts viewing. Diagnostics means the existing US panel; the embedded FL.UiKit geometry report is a separate UI-debug tool, not response feedback.</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.Overview>Response diagnostics needs neither developer mode nor detailed logs. Close settings normally to resume play, then search and choose a target inside the diagnostics panel. Start recording, reproduce normally, stop and copy feedback. Start does not require a successful snapshot. Viewing B leaves A recording; Stop applies to the recorded target. The latest 64 results are retained, with overwrites and missing data marked. Details lead with conclusions and saved events; the technical reader provides scrollable, selectable full fields. Feedback keeps its allowlist and size limit. Opening alone never records. FL.UiKit geometry reports are separate UI-debug tools.</US.Help.Diagnostics.Overview>
   <US.Help.Diagnostics.LoggingAuto.Text>Follows the build: dev builds log in detail, release builds stay quiet. This is the default.</US.Help.Diagnostics.LoggingAuto.Text>
   <US.Help.Diagnostics.LoggingEnabled.Text>Forces detailed logs on, even in release builds. Response output is limited to 64 attempts per pawn per 60 real seconds and renews automatically. This is not a sound limit. Normal feedback recording works with logging off; leave this off unless detailed logs are needed.</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>Forces all developer logging off, even in dev builds.</US.Help.Diagnostics.LoggingDisabled.Text>
@@ -389,14 +403,14 @@
   <US.Help.PresetList.Import.Text>Applies only template-present fields to the selected exact player domains. Repeating the import does not duplicate rows; values omitted by the template preserve the player's existing fields.</US.Help.PresetList.Import.Text>
   <US.Help.FilterBar.Overview>The default range is humanlike, with HAR first; animals, other races and all targets remain reachable. Search, author, Race, Xenotype and state compose over exact pack/domain rows. Collapsing keeps the range, active conditions, matching-pack count and local Clear visible. Queries do not change editing or selections.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>Keyword</US.Help.FilterBar.Keyword.Label>
-  <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching covers pack label, DefName, mod, author, key and provided domains. Open a matching pack to inspect its individual targets; search never changes selections.</US.Help.FilterBar.Keyword.Text>
+  <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching covers target names and identities in the target list; in the pack list it covers pack label, DefName, mod, author, key and provided domains. Open a matching pack to inspect its individual targets. Category, source and coverage filters still apply; search never changes selections or the editing domain.</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>Domain Filter Chips</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>Enabled, conflict and missing-selection conditions compose. Turning a row off updates its switch immediately; Enabled-only retains the row until Refresh or a query change. Default filters clears this page and returns to humanlike, retaining the viewed pack, editing target, pack selections and behavior source.</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.Author.Text>Expand author candidates to search and page, with at most eight per page. Typing selects nothing. Clicking a candidate filters packs; wrapped display never changes the complete author value. Undeclared authors use the pack source name. Matching remains case-insensitive containment.</US.Help.FilterBar.Author.Text>
   <US.Help.FilterBar.Race.Text>Choosing a candidate filters to that race and its real xenotype supply. Races without packs remain available and are identified as such. Candidate search and paging do not switch the editing domain. Clearing candidate search is separate from clearing the Race condition.</US.Help.FilterBar.Race.Text>
   <US.Help.FilterBar.Xenotype.Text>Without a Race condition, each Xenotype Def appears once and lists its real supplying parent domains. With Race set, results use that exact combination. Packless xenotypes remain; an unknown parent never becomes Human. Typing selects no first item. A Xenotype condition excludes race-only rows.</US.Help.FilterBar.Xenotype.Text>
   <US.Help.FilterBar.Summary.Label>Condition Echo</US.Help.FilterBar.Summary.Label>
-  <US.Help.FilterBar.Summary.Text>Shows the range, active non-default conditions and matching packs separately from global selected P/catalog Q. The keyword remains in its field instead of a duplicate label. Clear affects only this query and retains the current objects.</US.Help.FilterBar.Summary.Text>
+  <US.Help.FilterBar.Summary.Text>Shows the category, source and coverage conditions, with matching results against the eligible inventory in that category before paging. These are separate from the global selected-pack/catalog totals. The keyword remains in its field instead of a duplicate label. Clear resets only this list's query and conditions to humanlike; it retains the viewed objects, selections and editing domain.</US.Help.FilterBar.Summary.Text>
   <US.Help.PackCards.Overview>Browse independent packs and inspect exact Race or legal Race/Xenotype targets. A single target has a direct switch; multi-target packs expose separate switches in detail. Selecting one target never enables every target.</US.Help.PackCards.Overview>
   <US.Help.PackCards.Card.Label>Pack Card</US.Help.PackCards.Card.Label>
   <US.Help.PackCards.Card.Text>The pack name sits beside Contents and each exact target sits beside its switch. Only namesakes, exceptional states or multiple targets need extra list identity. Full source, author, DefName and mapped-action count belong in detail. A mapping is not native sound or listening evidence.</US.Help.PackCards.Card.Text>
@@ -419,13 +433,13 @@
   <US.Diagnostics.Gate.Group.Game>Game side</US.Diagnostics.Gate.Group.Game>
   <US.Diagnostics.Gate.Group.Rules>Rules side</US.Diagnostics.Gate.Group.Rules>
   <US.Diagnostics.Gate.Group.Audio>Audio side</US.Diagnostics.Gate.Group.Audio>
-  <US.Diagnostics.Raw.Show>Show raw values</US.Diagnostics.Raw.Show>
+  <US.Diagnostics.Raw.Show>Read full technical information</US.Diagnostics.Raw.Show>
   <US.Diagnostics.Raw.Hide>Hide raw values</US.Diagnostics.Raw.Hide>
   <US.Diagnostics.Bar.Identity>Sound log</US.Diagnostics.Bar.Identity>
   <US.Diagnostics.Bar.IdentityLocked>Sound log (locked: {0})</US.Diagnostics.Bar.IdentityLocked>
   <US.Diagnostics.Bar.Scale>{0} targets</US.Diagnostics.Bar.Scale>
-  <US.Diagnostics.Bar.Recording>Recording</US.Diagnostics.Bar.Recording>
-  <US.Diagnostics.Bar.Paused>Paused</US.Diagnostics.Bar.Paused>
+  <US.Diagnostics.Bar.Recording>Viewing</US.Diagnostics.Bar.Recording>
+  <US.Diagnostics.Bar.Paused>Game paused</US.Diagnostics.Bar.Paused>
   <US.Diagnostics.Bar.Activity.Recent>Last {0}  {1}  {2}</US.Diagnostics.Bar.Activity.Recent>
   <US.Diagnostics.Bar.Activity.Never>No sound received yet</US.Diagnostics.Bar.Activity.Never>
   <US.Diagnostics.Bar.Activity.Stale>{0} min without a sound, last {1}</US.Diagnostics.Bar.Activity.Stale>
@@ -718,7 +732,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.Kernel.ExplicitDevelopmentCandidate>An explicitly selected development plan is active. Sound still depends on the response conditions.</US.Kernel.ExplicitDevelopmentCandidate>
   <US.Kernel.OrdinaryActive>Ordinary responses are ready. The current mode, selected packs and response conditions determine whether sound can play.</US.Kernel.OrdinaryActive>
   <US.Kernel.PolicySelectionRequired>The response runtime is not ready. Pack selection is retained; check diagnostics for unavailable prerequisites.</US.Kernel.PolicySelectionRequired>
-  <US.UI.CloseHelp>Close help</US.UI.CloseHelp>
+  <US.UI.CloseHelp>Hide help</US.UI.CloseHelp>
   <US.Theme.BlackGold.Note>Near-black surfaces and clear pale text; gold marks actions and selection. Green success, amber warning and red error remain distinct.</US.Theme.BlackGold.Note>
   <US.Theme.BlackGold.Label>Black &amp; gold</US.Theme.BlackGold.Label>
   <US.Browse.Group.PlayerRaces>Humanoids + xenotypes</US.Browse.Group.PlayerRaces>
@@ -744,9 +758,9 @@ Configuration/policy: {9}</US.Response.Details>
   <US.Diagnostics.Capture.EntryHint>After opening, close settings normally to resume play with the diagnostic bar. Opening does not record.</US.Diagnostics.Capture.EntryHint>
   <US.Diagnostics.Capture.Start>Start new recording</US.Diagnostics.Capture.Start>
   <US.Diagnostics.Capture.Stop>Stop recording</US.Diagnostics.Capture.Stop>
-  <US.Diagnostics.Capture.Clear>Clear stopped recording</US.Diagnostics.Capture.Clear>
+  <US.Diagnostics.Capture.Clear>Clear</US.Diagnostics.Capture.Clear>
   <US.Diagnostics.Capture.Copy>Copy feedback</US.Diagnostics.Capture.Copy>
-  <US.Diagnostics.Capture.Idle>Viewing · not recording</US.Diagnostics.Capture.Idle>
+  <US.Diagnostics.Capture.Idle>Not recording</US.Diagnostics.Capture.Idle>
   <US.Diagnostics.Capture.Recording>Recording</US.Diagnostics.Capture.Recording>
   <US.Diagnostics.Capture.Stopped>Stopped</US.Diagnostics.Capture.Stopped>
   <US.Diagnostics.Capture.Status>{0} · {1}
@@ -890,8 +904,8 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.B.Restore.Rejected>Restore rejected; previous values kept.</US.B.Restore.Rejected>
   <US.B.Help>Targets lists every loaded identity, with HAR humanlike first. Expand a race for its actual xenotype domains. One-pack rows have an exact-target switch; multi-pack rows open independent choices. Packs is a separate browsing lens: Contents does not change the working target. Queries never select a result. Enabled rows remain until Refresh or a query change. Tuning edits the named layer; System contains appearance, diagnostics and restores. The configured path reads declarations, not playback.</US.B.Help>
   <US.B.ImportNoChange>No action row imported; no save queued.</US.B.ImportNoChange>
-  <US.B.Advanced>Advanced</US.B.Advanced>
-  <US.B.CollapseAdvanced>Collapse</US.B.CollapseAdvanced>
+  <US.B.Advanced>Show parameters</US.B.Advanced>
+  <US.B.CollapseAdvanced>Hide parameters</US.B.CollapseAdvanced>
   <US.B.CurrentAction>Current action</US.B.CurrentAction>
   <US.B.ActionFields>Action settings</US.B.ActionFields>
   <US.B.TechnicalDetails>Technical details</US.B.TechnicalDetails>
@@ -927,4 +941,19 @@ Observed {3} · retained {2}/64 · overwritten {4} · capture failures {5}</US.D
   <US.B.FieldNote.Response>Enables this declared response, separately from participation. Inherit keeps the upstream choice.</US.B.FieldNote.Response>
   <US.B.FieldNote.AuthorParameter>Use the author&apos;s parameter units and range. Blank inherits; 0 is an explicit value.</US.B.FieldNote.AuthorParameter>
   <US.B.FieldInherit>Inherit</US.B.FieldInherit>
+  <US.Diagnostics.Technical.Back>Back to diagnostics</US.Diagnostics.Technical.Back>
+  <US.Diagnostics.Technical.Seconds>Convert simulation time at 60 ticks per second (not interaction real seconds)</US.Diagnostics.Technical.Seconds>
+  <US.Diagnostics.Basis.Dispatch>previous dispatch</US.Diagnostics.Basis.Dispatch>
+  <US.Diagnostics.Basis.Unknown>basis unavailable</US.Diagnostics.Basis.Unknown>
+  <US.B.FieldGroup.Opportunity>Opportunities and intervals</US.B.FieldGroup.Opportunity>
+  <US.B.FieldGroup.Output>Output multipliers</US.B.FieldGroup.Output>
+  <US.B.FieldGroup.Responses>Response participation</US.B.FieldGroup.Responses>
+  <US.B.FieldInherited>Inherited</US.B.FieldInherited>
+  <US.B.FieldOwn>Local override</US.B.FieldOwn>
+<US.Diagnostics.Viewing>Viewing</US.Diagnostics.Viewing>
+  <US.B.SourceSnapshotAvailable>Available</US.B.SourceSnapshotAvailable>
+  <US.Diagnostics.Technical.Open>Technical data</US.Diagnostics.Technical.Open>
+  <US.B.Help.RosterSearch>Search the current target or voice-pack list by name or identity. Existing category, source and coverage filters still apply. Searching does not choose a target, enable a pack or change the editing domain.</US.B.Help.RosterSearch>
+  <US.B.Help.RosterTargets>Browse loaded targets, including those without voice packs. Open a target to inspect its configured supply; only an explicit toggle changes that exact domain. Biotech and legal Race/Xenotype identity still govern edits.</US.B.Help.RosterTargets>
+  <US.B.Help.RosterPacks>Browse voice packs and open their contents before changing a domain. Viewing a pack does not select an editing target, enable its contents or change the routing mode.</US.B.Help.RosterPacks>
 </LanguageData>

@@ -24,13 +24,14 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
 
     internal void Begin(bool fitEnabled)
     {
+        height = width = environmentCapture = modeDraw = selectionDraw = default;
         fitEnabledAtStart = fitEnabled;
         active = true;
     }
 
     public float MeasureText(string text, UiFont font, float availableWidth)
     {
-        if (!active) return source.MeasureText(text, font, availableWidth);
+        if (!active || !SqueakLog.ShouldEmitDev) return source.MeasureText(text, font, availableWidth);
         long started = Stopwatch.GetTimestamp();
         try { return source.MeasureText(text, font, availableWidth); }
         finally { height.Add(Stopwatch.GetTimestamp() - started); }
@@ -38,7 +39,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
 
     public float MeasureWidth(string text, UiFont font)
     {
-        if (!active) return source.MeasureWidth(text, font);
+        if (!active || !SqueakLog.ShouldEmitDev) return source.MeasureWidth(text, font);
         long started = Stopwatch.GetTimestamp();
         try { return source.MeasureWidth(text, font); }
         finally { width.Add(Stopwatch.GetTimestamp() - started); }
@@ -46,7 +47,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
 
     public UiMeasureInputs? CaptureEnvironment(UiFont font)
     {
-        if (!active) return environment?.CaptureEnvironment(font);
+        if (!active || !SqueakLog.ShouldEmitDev) return environment?.CaptureEnvironment(font);
         long started = Stopwatch.GetTimestamp();
         try { return environment?.CaptureEnvironment(font); }
         finally { environmentCapture.Add(Stopwatch.GetTimestamp() - started); }
@@ -57,7 +58,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     {
         if (fonts == null && !font.Size.HasValue) return MeasureText(text, font.Alias, availableWidth);
         var capable = fonts ?? throw new NotSupportedException("Resolve the effective font before numeric measurement.");
-        if (!active) return capable.MeasureText(text, font, availableWidth, purpose);
+        if (!active || !SqueakLog.ShouldEmitDev) return capable.MeasureText(text, font, availableWidth, purpose);
         long started = Stopwatch.GetTimestamp();
         try { return capable.MeasureText(text, font, availableWidth, purpose); }
         finally { height.Add(Stopwatch.GetTimestamp() - started); }
@@ -66,7 +67,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     {
         if (fonts == null && !font.Size.HasValue) return MeasureWidth(text, font.Alias);
         var capable = fonts ?? throw new NotSupportedException("Resolve the effective font before numeric measurement.");
-        if (!active) return capable.MeasureWidth(text, font, purpose);
+        if (!active || !SqueakLog.ShouldEmitDev) return capable.MeasureWidth(text, font, purpose);
         long started = Stopwatch.GetTimestamp();
         try { return capable.MeasureWidth(text, font, purpose); }
         finally { width.Add(Stopwatch.GetTimestamp() - started); }
@@ -74,7 +75,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     public UiMeasureInputs? CaptureEnvironment(UiTextFont font, UiTextPurpose purpose)
     {
         if (fonts == null && !font.Size.HasValue) return CaptureEnvironment(font.Alias);
-        if (!active) return fonts?.CaptureEnvironment(font, purpose);
+        if (!active || !SqueakLog.ShouldEmitDev) return fonts?.CaptureEnvironment(font, purpose);
         long started = Stopwatch.GetTimestamp();
         try { return fonts?.CaptureEnvironment(font, purpose); }
         finally { environmentCapture.Add(Stopwatch.GetTimestamp() - started); }
@@ -84,6 +85,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     {
         if (!active) return;
         active = false;
+        if (!SqueakLog.ShouldEmitDev) return; // Cleanup is independent of the current output gate.
         SqueakLog.LayoutTrace(() => string.Format(CultureInfo.InvariantCulture,
             "UI.cost metrics passes={0} partial={1} fit_enabled_at_start={2} "
             + "height_calls={3} height_total_ms={4:F3} height_max_ms={5:F3} "
@@ -104,7 +106,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
 
     internal static DrawScope ObserveDraw(UiWidgetContext context, bool modeRow)
     {
-        return context.Metrics is UsUiCostMetrics metrics && metrics.active
+        return context.Metrics is UsUiCostMetrics metrics && metrics.active && SqueakLog.ShouldEmitDev
             ? new DrawScope(metrics, modeRow) : default;
     }
 

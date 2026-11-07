@@ -9,7 +9,7 @@ namespace UniversalSqueaker.UI;
 public static partial class UsKernelSettingsHost
 {
     // Repeat identities cannot contain ActionId's slash. Business identities stay in typed closures.
-    private static string RosterKey(string value) => BitConverter.ToString(Encoding.UTF8.GetBytes(value)).Replace("-", "");
+
     private static bool TuningPage(string page) => page == "Behavior" || page == "Output" || page == "Fallback" || page == "Presets";
 
     private static void BindRoster(IUsKernelSettingsSource source, UsWriteBindings writes, SessionRevisionBumper bumper, IUiTranslation t)
@@ -132,15 +132,23 @@ public static partial class UsKernelSettingsHost
             packRows = rows; packsView = view; packConditions = identity + "\n" + s.RosterPackRetentionIdentity;
             return paged ? UsBrowseListView.Slice(rows, q.Page, 12, out _, out _) : rows;
         }
+        object? sourcesInput = null;
+        string sourcesQuery = "";
+        bool sourcesDefinitions = false;
+        IReadOnlyList<UsBrowseItem> sourceRows = Array.Empty<UsBrowseItem>();
         IReadOnlyList<UsBrowseItem> Sources(bool paged)
         {
             var q = Browse();
+            object input = s.BrowseDefinitions ? RaceDefinitionCatalog.Current : (object)source.BuildView();
+            if (ReferenceEquals(sourcesInput, input) && sourcesQuery == q.SourceQuery && sourcesDefinitions == s.BrowseDefinitions)
+                return paged ? UsBrowseListView.Slice(sourceRows, q.SourcePage, 5, out _, out _) : sourceRows;
             var all = s.BrowseDefinitions
                 ? RaceDefinitionCatalog.Current.Races.Select(x => new UsBrowseItem(x.SourcePackageId, x.SourcePackageName))
                     .Concat(RaceDefinitionCatalog.Current.Xenotypes.Select(x => new UsBrowseItem(x.SourcePackageId, x.SourcePackageName)))
                 : source.BuildView().AllPackCards.Select(p => new UsBrowseItem(p.Key.Split(':')[0], p.ModName));
             var rows = all.Where(x => x.Value != "").GroupBy(x => x.Value, StringComparer.Ordinal).Select(g => g.First())
                 .Where(x => UsBrowseListView.Contains(x.Value + " " + x.Label, q.SourceQuery)).OrderBy(x => x.Label, StringComparer.Ordinal).ToArray();
+            sourcesInput = input; sourcesQuery = q.SourceQuery; sourcesDefinitions = s.BrowseDefinitions; sourceRows = rows;
             return paged ? UsBrowseListView.Slice(rows, q.SourcePage, 5, out _, out _) : rows;
         }
         void Page(int delta) { int count = s.BrowseDefinitions ? Targets(false).Count : Packs(false).Count; Browse().Page = Math.Max(0, Math.Min(Math.Max(0, (count - 1) / 12), Browse().Page + delta)); Bump(); }

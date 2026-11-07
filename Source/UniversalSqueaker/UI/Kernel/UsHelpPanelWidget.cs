@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using Verse;
+
+
 
 using FerriteLib.UiKit.Kernel;
 
@@ -46,7 +46,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         internal UiTextFont LabelRequested, BodyRequested;
         internal UiTextPurpose Purpose;
         internal float Height => Padding * 2f + (HideTitle ? 0 : HeaderHeight + TitleGap + ContentGap)
-            + LabelHeight + 2f + BodyHeight + 4f;
+            + (HideTitle ? 0 : LabelHeight + 2f) + BodyHeight + 4f;
         internal bool Matches(UsHelpPanelLogic.HelpPanelDisplay display, string header)
             => Header == header && Label == display.LabelText && Body == display.BodyText;
     }
@@ -80,7 +80,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         var display = ResolveFrameDisplay(ctx, CurrentSection(ctx), state.HasObservedHover ? state.ObservedHoverRef : null);
         string header = TitleHidden ? "" : HeaderText(ctx, display);
         var label = UsKernelDraw.Text(ctx);
-        var body = UsKernelDraw.Text(ctx, UiFont.Tiny);
+        var body = UsKernelDraw.Text(ctx);
         var measured = new MeasuredDisplay {
             Width = textWidth, HideTitle = TitleHidden, Header = header,
             Label = display.LabelText, Body = display.BodyText,
@@ -132,7 +132,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         state.ObservedHoverRef = pinned ? "" : ctx.Session.CurrentHelpRef ?? "";
         MeasuredDisplay? measured = state.Measured.FindLast(value => value.Width == textWidth && value.HideTitle == TitleHidden);
         var label = UsKernelDraw.TextForDrawing(ctx);
-        var body = UsKernelDraw.TextForDrawing(ctx, UiFont.Tiny);
+        var body = UsKernelDraw.TextForDrawing(ctx);
         var labelEnvironment = label.CaptureEnvironment();
         var bodyEnvironment = body.CaptureEnvironment();
         if (measured == null || measured.LabelFont != label.Font || measured.BodyFont != body.Font || measured.Purpose != label.Purpose
@@ -158,11 +158,14 @@ public sealed class UsHelpPanelWidget : IUiWidget
             label.Draw(headerRect, measured.Header, ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text);
             y += headerRect.Height + TitleGap + ContentGap;
         }
-        label.Draw(new UiLayoutRect(x, y, textWidth, measured.LabelHeight), measured.Label,
-            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text, UiTextAnchor.UpperLeft);
-        y += measured.LabelHeight + 2f;
+        if (!measured.HideTitle)
+        {
+            label.Draw(new UiLayoutRect(x, y, textWidth, measured.LabelHeight), measured.Label,
+                ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text, UiTextAnchor.UpperLeft);
+            y += measured.LabelHeight + 2f;
+        }
         body.Draw(new UiLayoutRect(x, y, textWidth, measured.BodyHeight), measured.Body,
-            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, UiEmphasis.Muted, writable: !ctx.IsDisabled).Text, UiTextAnchor.UpperLeft);
+            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text, UiTextAnchor.UpperLeft);
     }
 
     /// <summary>The section this panel is currently falling back to (null when none is active).</summary>
@@ -177,7 +180,8 @@ public sealed class UsHelpPanelWidget : IUiWidget
     /// CurrentHelpRef is a catalog reference, not a binding or a raw current-frame hit.</summary>
     private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section, string? observedHoverRef = null)
     {
-        string current = ctx.Bindings.TryGet("pinned-help-ref", out string pinned) && pinned.Length > 0
+        string current = ctx.Bindings.TryGet("help-display-ref", out string displayed) ? displayed
+            : ctx.Bindings.TryGet("pinned-help-ref", out string pinned) && pinned.Length > 0
             ? pinned : ctx.Session.CurrentHelpRef ?? observedHoverRef ?? "";
         return UsHelpPanelLogic.Resolve(section, current, TranslationSeam(ctx));
     }

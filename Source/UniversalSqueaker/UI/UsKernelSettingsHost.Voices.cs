@@ -8,15 +8,9 @@ namespace UniversalSqueaker.UI;
 
 public static partial class UsKernelSettingsHost
 {
+    internal static void NavigateBehaviorOutput(VoicePacksPageState state) => NavigatePage(state, "Output");
     private static readonly string[] ToolPages = { "Behavior", "Presets", "Output", "Fallback", "Appearance", "Diagnostics", "Restore" };
     private static bool IsToolPage(string page) => Array.IndexOf(ToolPages, page) >= 0;
-    private static string PageHelpRef(VoicePacksPageState state) => state.Page switch
-    {
-        "Voices" => "us/roster",
-        "Behavior" => "us/scope-tree", "Presets" => "us/preset-list", "Output" => "us/basic-tuning",
-        "Fallback" => "us/fallback-editor", "Appearance" => "us/theme-picker",
-        "Diagnostics" => "us/diagnostics", "Restore" => "us/reset-center", _ => "us/page-title"
-    };
     private static string LegacyPage(string tab) => tab switch { "Tuning" => "Behavior", "Presets" => "Presets", "Advanced" => "Diagnostics", _ => "Voices" };
     private static void SetPage(VoicePacksPageState state, string page)
     {
@@ -24,6 +18,7 @@ public static partial class UsKernelSettingsHost
         {
             state.HelpPanelOpen = false;
             state.PinnedHelpRef = ""; state.PinnedHelpContext = "";
+            state.FollowHelpRef = ""; state.FollowHelpContext = ""; state.FollowHelpLabel = ""; state.HelpScope = "";
         }
         state.Page = page;
         if (IsToolPage(page)) state.LastToolPage = page;
@@ -85,57 +80,7 @@ public static partial class UsKernelSettingsHost
         if (rosterChanged) host.UpdateDefinition(PageDefinition(state.WideLayout, state.HelpHeight, rosterWide));
         float listWidth = Math.Max(300, Math.Min(400, (available.X - 24) * .4f));
         if (Math.Abs(state.RosterListWidth - listWidth) > .01f) { state.RosterListWidth = listWidth; host.Invalidate(); }
-        if (!state.HelpPanelOpen) return;
-        var ctx = host.CreateContext(available.X);
-        var helpNode = host.Session.GetNodeByElementId("help-panel");
-        if (helpNode == null)
-        {
-            host.MeasureAndArrange(available);
-            helpNode = host.Session.GetNodeByElementId("help-panel");
-        }
-        if (helpNode == null) return;
-        // CreateContext is intentionally unresolving. Apply against its authoritative Host theme,
-        // not a previously resolved element theme, before sharing the widget's actual font pair.
-        ctx = UiTextFonts.Apply(ctx.WithNode(helpNode), ctx.Theme);
-        string topic = state.PinnedHelpRef.Length > 0 ? state.PinnedHelpRef : host.Session.CurrentHelpRef ?? "";
-        UsHelpCatalog.TryGetSection(host.Bindings.TryGet("help-section-ref", out string section) ? section : "", out var fallback);
-        var display = UsHelpPanelLogic.Resolve(fallback, topic, key => UsKernelDraw.Keyed(ctx, key));
-        string text = display.TitleText + "\n" + display.LabelText + "\n" + display.BodyText + "\n" + state.PinnedHelpContext;
-        var labelRun = UsKernelDraw.Text(ctx);
-        var bodyRun = UsKernelDraw.Text(ctx, UiFont.Tiny);
-        var small = labelRun.CaptureEnvironment();
-        var tiny = bodyRun.CaptureEnvironment();
-        if (state.HelpLayoutRevision == host.Session.ContentRevision && state.HelpViewWidth == available.X
-            && state.HelpViewHeight == available.Y && state.HelpLayoutText == text && small != null && tiny != null
-            && state.HelpLabelFont == labelRun.Font && state.HelpBodyFont == bodyRun.Font && state.HelpTextPurpose == labelRun.Purpose
-            && state.HelpLabelRequested == labelRun.Requested && state.HelpBodyRequested == bodyRun.Requested
-            && small.Equals(state.HelpSmallEnvironment) && tiny.Equals(state.HelpTinyEnvironment)) return;
-        // Current text/environment may change without a business write (language or hover grace).
-        if (state.HelpLayoutText != text || !Equals(small, state.HelpSmallEnvironment)
-            || !Equals(tiny, state.HelpTinyEnvironment) || state.HelpLabelFont != labelRun.Font || state.HelpBodyFont != bodyRun.Font
-            || state.HelpLabelRequested != labelRun.Requested || state.HelpBodyRequested != bodyRun.Requested
-            || state.HelpTextPurpose != labelRun.Purpose) host.Invalidate();
-        for (int pass = 0; pass < 2; pass++)
-        {
-            var layout = host.MeasureAndArrange(available);
-            if (!layout.RectById.TryGetValue("business-body", out var body)
-                || !layout.RectById.TryGetValue("footer-band", out var footer)
-                || !layout.RectById.TryGetValue("help-header", out var header)
-                || !layout.ScrollContents.TryGetValue("help-scroll", out var content)) break;
-            // Use the real available bottom and measured footer height: an initial oversized
-            // placeholder may itself push footer.Y down. Padding/gaps belong to our manifest,
-            // not to copied window chrome. The resulting cap is independent of that placeholder.
-            float budget = Math.Max(0f, (available.Y - 12f - footer.Height - 6f - body.Y) / 3f);
-            float height = Math.Min(budget, header.Height + 4f + content.Height);
-            if (Math.Abs(state.HelpHeight - height) < .01f) break;
-            state.HelpHeight = height;
-            host.UpdateDefinition(PageDefinition(state.WideLayout, height, state.RosterIsWide));
-        }
-        state.HelpViewWidth = available.X; state.HelpViewHeight = available.Y;
-        state.HelpLayoutText = text; state.HelpLayoutRevision = host.Session.ContentRevision;
-        state.HelpSmallEnvironment = small; state.HelpTinyEnvironment = tiny;
-        state.HelpLabelFont = labelRun.Font; state.HelpBodyFont = bodyRun.Font; state.HelpTextPurpose = labelRun.Purpose;
-        state.HelpLabelRequested = labelRun.Requested; state.HelpBodyRequested = bodyRun.Requested;
+        PrepareHelpLayout(host, state, available, height => host.UpdateDefinition(PageDefinition(state.WideLayout, height, state.RosterIsWide)));
     }
 
     private static void BindVoiceManagement(IUsKernelSettingsSource source, UsWriteBindings writes,
@@ -155,9 +100,11 @@ public static partial class UsKernelSettingsHost
             s.TuningLayer == 0 ? "" : s.TuningRaceDefName, s.TuningLayer == 2 ? s.TuningXenotypeDefName : "");
         void OpenHelp(string topic, string context)
         {
-            bool changed = s.PinnedHelpRef != topic || s.PinnedHelpContext != context;
-            s.PinnedHelpRef = topic;
-            s.PinnedHelpContext = context;
+            bool changed = DisplayHelpRef(s) != topic || DisplayHelpContext(s) != context;
+            s.PinnedHelpRef = ""; s.PinnedHelpContext = "";
+            s.FollowHelpRef = topic; s.FollowHelpContext = context;
+            s.FollowHelpLabel = "";
+            s.HelpScope = HelpScope(source);
             s.HelpPanelOpen = true;
             if (changed) bumper.ResetHelpScroll();
             bumper.Bump();
@@ -292,7 +239,9 @@ public static partial class UsKernelSettingsHost
             Go("Behavior");
         }, () => EditingDomain().HasValue);
         writes.Command("open-topic", () => {
-            OpenHelp(PageHelpRef(s), T(s.Page));
+            if (s.HelpPanelOpen) { s.HelpPanelOpen = false; bumper.Bump(); return; }
+            if (s.HelpScope != HelpScope(source) || s.FollowHelpRef == "") OpenHelp(PageHelpRef(s), HelpPageContext(source, t));
+            else { s.HelpPanelOpen = true; bumper.Bump(); }
         });
         writes.Action<string>("explain-topic", topic => OpenHelp(topic,
             topic.StartsWith("us/basic-tuning/", StringComparison.Ordinal) || topic.StartsWith("us/behavior-source/", StringComparison.Ordinal)
@@ -303,10 +252,18 @@ public static partial class UsKernelSettingsHost
             b.BindReadOnly<string>("explain:" + topic, () => topic);
         b.BindReadOnly<string>("pinned-help-ref", () => s.PinnedHelpRef);
         b.BindReadOnly<string>("pinned-help-context", () => s.PinnedHelpContext);
+        b.BindReadOnly<string>("help-display-ref", () => DisplayHelpRef(s));
+        b.BindReadOnly<string>("help-display-context", () => DisplayHelpContext(s));
+        b.BindReadOnly<string>("help-scope", () => HelpScope(source));
+        b.BindReadOnly<string>("help-page-context", () => HelpPageContext(source, t));
+        b.BindReadOnly<string>("help-toggle-label", () => s.HelpPanelOpen ? t.Translate("US.UI.CloseHelp") : t.Translate("US.UI.Help"));
+        b.BindReadOnly<bool>("help-closed", () => !s.HelpPanelOpen);
         b.BindReadOnly<string>("help-title", () => {
+            if (s.PinnedHelpRef.Length == 0 && s.FollowHelpLabel.Length > 0) return s.FollowHelpLabel;
             UsHelpCatalog.TryGetSection(source.SectionHelpRef(s.ActiveSectionKey), out var section);
-            var display = UsHelpPanelLogic.Resolve(section, s.PinnedHelpRef, t.Translate);
-            return UsHelpCatalog.TryFindItem(s.PinnedHelpRef, out _, out _) ? display.LabelText : display.TitleText;
+            string topic = DisplayHelpRef(s);
+            var display = UsHelpPanelLogic.Resolve(section, topic, t.Translate);
+            return UsHelpCatalog.TryFindItem(topic, out _, out _) ? display.LabelText : display.TitleText;
         });
         b.BindReadOnly<string>("voice-missing-selections", () => { source.BuildView(); return s.MissingSelections; });
         b.BindReadOnly<bool>("voice-has-missing", () => { source.BuildView(); return s.OrphanSelectionCount > 0; });

@@ -26,7 +26,11 @@ public static class UsTheme
     {
         get
         {
+#if US_PREVIEW_NEUTRAL
+            string id = UsSwatches.DefaultId;
+#else
             string id = SqueakerMod.Settings?.uiSwatchId ?? "";
+#endif
             return UsSwatches.IsKnown(id) ? id : UsSwatches.DefaultId;
         }
     }
@@ -154,9 +158,13 @@ public static class UsTheme
         }
         catch (Exception error)
         {
+#if US_PREVIEW_NEUTRAL
+            throw new InvalidOperationException("Invalid author preview theme.", error);
+#else
             SqueakLog.ThemeFallback("us-root:CarrierVanilla", error);
             schemeIssues.Add("parse failure: " + error.Message);
             return UiStyleDocument.Empty;
+#endif
         }
     }
 }

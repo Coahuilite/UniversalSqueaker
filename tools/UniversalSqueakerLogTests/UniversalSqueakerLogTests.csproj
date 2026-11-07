@@ -21,6 +21,7 @@
   <ItemGroup>
     <!-- 日志编译集 = Source/UniversalSqueaker/Logging/*.cs；Verse 由本工具 stub 提供。 -->
     <Compile Include="..\..\Source\UniversalSqueaker\Logging\SqueakLog.cs" Link="SqueakLog.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Logging\UsLoggingMode.cs" Link="UsLoggingMode.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Logging\SqueakLogProtocol.cs" Link="SqueakLogProtocol.cs" />
   </ItemGroup>
 

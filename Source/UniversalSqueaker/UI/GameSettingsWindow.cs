@@ -50,9 +50,30 @@ public sealed class GameSettingsWindow : UiWindowHost
     private UsKernelSettingsSource? source;
     private Rect lastContentRect;
     private const int UiCostSamplePasses = 32;
-    private bool uiCostSampling;
+    private enum CostSampleState { Idle, Queued, Sampling, Complete, Partial }
+    private CostSampleState uiCostState;
+    private bool costRequested;
     private int uiCostFirstPass;
     private UsUiCostMetrics? uiCostMetrics;
+    private UiHost? uiCostHost;
+    private int uiCostSequence, uiCostSession, uiCostPasses, uiCostRevision, uiCostDefinition;
+    private string uiCostPage = "", uiCostTrigger = "", uiCostEndReason = "";
+    private bool uiCostSceneChanged, uiCostPanel, uiCostFit, uiCostDetail;
+    private UsTextFitAudit.DevGeometryStatus uiCostGeometry;
+    private Vector2 uiCostSize;
+    private UiNode? uiCostScroll, uiCostHelpScroll;
+    private UiLayoutPoint uiCostScrollStart, uiCostHelpStart;
+
+    // An optional capability on the actual Host's existing root state, not another global index.
+    private sealed class CostSampleTarget { internal GameSettingsWindow? Owner; }
+    private static CostSampleTarget SampleTarget(UiHost host)
+        => host.CreateContext(1).State("us/settings-cost-sample", () => new CostSampleTarget());
+    internal static GameSettingsWindow? CostSampleOwner(UiHost? host)
+    {
+        if (host == null || !host.Session.IsActive) return null;
+        var owner = SampleTarget(host).Owner;
+        return ReferenceEquals(owner?.Host, host) ? owner : null;
+    }
 
     /// <summary>SA1.3: ONE Remix confirmation flow per parent window. Created with the host (the mode
     /// write below is the only writer it gates) and released at PostClose: closing the parent can never
@@ -70,6 +91,11 @@ public sealed class GameSettingsWindow : UiWindowHost
         absorbInputAroundWindow = true;
         closeOnClickedOutside = false;
         preventCameraMotion = true;
+        HostAttached += host => {
+            SampleTarget(host).Owner = this;
+            Dev.UsDevPanelTargets.SettingsHost = host;
+        };
+        HostDetached += ReleaseCostSampleTarget;
     }
 
     protected override UiTheme Theme => WindowTheme;
@@ -133,26 +159,20 @@ public sealed class GameSettingsWindow : UiWindowHost
         // the mode write registers against it, released in PostClose so no dialog or staged commit can
         // outlive the page that created it.
         remixFlow = new RemixConfirmationFlow(Find.WindowStack);
-        uiCostMetrics = sampleCosts ? new UsUiCostMetrics(new VerseTextMetrics(VerseFerriteTextMetrics.Instance)) : null;
-        UiHost host = uiCostMetrics == null ? UsKernelSettingsHost.Create(source, remixFlow)
-            : UsKernelSettingsHost.Create(source, uiCostMetrics, out _, remixFlow);
+        uiCostMetrics = new UsUiCostMetrics(new VerseTextMetrics(VerseFerriteTextMetrics.Instance));
+        UiHost host = UsKernelSettingsHost.Create(source, uiCostMetrics, out _, remixFlow);
         // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
         // subscription and are measured with THIS host's ruler.
         //
         // `SqueakLog.ShouldEmitDev` is still the policy, but it now selects the FIT AUDIT rather than whether
         // a scope exists at all: with detailed logging off this window is a geometry-only handle (nothing is
         // measured, the process-wide switch is untouched) and the layout-diagnosis controls still work.
-        audit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        audit = UsTextFitAudit.OpenForWindow(host);
         if (sampleCosts)
         {
-            audit.BeginTimingObservation();
-            uiCostSampling = true;
-            uiCostFirstPass = host.Session.Frame;
-            source.BeginUiCostSample(System.Diagnostics.Stopwatch.GetTimestamp() - started);
-            uiCostMetrics!.Begin(UiFitAudit.Enabled);
+            costRequested = true;
+            BeginUiCostObservation(host, "open", System.Diagnostics.Stopwatch.GetTimestamp() - started);
         }
-        // DT1: the dev panel's default target - registered with the host, cleared in PreClose.
-        UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = host;
         return host;
     }
 
@@ -179,6 +199,22 @@ public sealed class GameSettingsWindow : UiWindowHost
     protected override void BeforeDraw(Rect contentRect)
     {
         source?.SynchronizeRuntimePolicy();
+        bool requested = SqueakLog.ShouldEmitDev && SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled;
+        if (!requested) EndUiCostObservation(true, "US.DevPanel.Sample.ModeEnded");
+        audit?.SynchronizePolicy(SqueakLog.ShouldEmitDev);
+        // Drain the previous completed pass before arming a new observation window.
+        audit?.Publish();
+        ObserveUiCostScene();
+        if (uiCostState == CostSampleState.Sampling && Host != null && Host.Session.Frame - uiCostFirstPass >= UiCostSamplePasses)
+            EndUiCostObservation(false);
+        if (Host != null && requested != costRequested)
+        {
+            costRequested = requested;
+            if (requested && uiCostState != CostSampleState.Queued)
+                BeginUiCostObservation(Host, "enabled", -1);
+        }
+        if (Host != null && requested && uiCostState == CostSampleState.Queued)
+            BeginUiCostObservation(Host, "dev-panel", -1);
         if (contentRect.size != lastContentRect.size)
         {
             bool wide = WindowChromeLayout.UsesWideLayout(contentRect.width, contentRect.height);
@@ -194,15 +230,6 @@ public sealed class GameSettingsWindow : UiWindowHost
                 if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide, source!.ViewState.HelpHeight, source.ViewState.RosterIsWide));
                 else Host.Invalidate();
             }
-        }
-        // The per-host channel is a BOUNDED RING, not a push sink: drain what the previous pass's chrome
-        // and page draw published before this pass adds to it, so a frame's findings cannot be pushed out
-        // of the ring unread (FL-20).
-        audit?.Publish();
-        // Drain the completed previous pass first. One window, one finite aggregate, then off.
-        if (uiCostSampling && Host != null && Host.Session.Frame - uiCostFirstPass >= UiCostSamplePasses)
-        {
-            EndUiCostObservation(false);
         }
         // R3-B's one-shot report. It runs here, before the pass draws, so the capture it prints is the last
         // pass that COMPLETED - the request is made during a draw, and this is the next one. One request is
@@ -244,30 +271,133 @@ public sealed class GameSettingsWindow : UiWindowHost
         SqueakLog.SettingsOpenFailed(error);
     }
 
-    private void EndUiCostObservation(bool partial)
+    internal bool CanQueueUiCostSample => Host?.Session.IsActive == true
+        && SqueakLog.ShouldEmitDev && SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled
+        && uiCostState != CostSampleState.Queued && uiCostState != CostSampleState.Sampling;
+
+    internal void QueueUiCostSample()
     {
-        if (!uiCostSampling || Host == null) return;
+        if (!CanQueueUiCostSample) return;
+        uiCostState = CostSampleState.Queued;
+        uiCostSession = Host!.Session.Identity;
+        uiCostPage = source!.ViewState.Page;
+        uiCostTrigger = "dev-panel";
+        uiCostPasses = 0;
+        uiCostFirstPass = -1;
+        uiCostSceneChanged = false;
+        uiCostEndReason = "";
+        // No page write, invalidation, edit/scroll operation or Begin call here.
+    }
+
+    internal string UiCostSampleStatus
+    {
+        get
+        {
+            if (uiCostState == CostSampleState.Idle)
+                return (CanQueueUiCostSample ? "US.DevPanel.Sample.Ready" : "US.DevPanel.Sample.NeedsEnabled").Translate();
+            if (uiCostState == CostSampleState.Queued) return "US.DevPanel.Sample.Queued".Translate(uiCostSession);
+            if (uiCostState == CostSampleState.Partial && uiCostFirstPass < 0)
+                return "US.DevPanel.Sample.Cancelled".Translate(uiCostSession).ToString()
+                    + (uiCostEndReason.Length == 0 ? "" : "\n" + uiCostEndReason.Translate().ToString());
+            string state = uiCostState == CostSampleState.Sampling ? "US.DevPanel.Sample.Sampling"
+                : uiCostState == CostSampleState.Complete ? "US.DevPanel.Sample.Complete" : "US.DevPanel.Sample.Partial";
+            int passes = uiCostState == CostSampleState.Sampling && uiCostHost != null
+                ? uiCostHost.Session.Frame - uiCostFirstPass : uiCostPasses;
+            string display = "US.DevPanel.Sample.Status".Translate(state.Translate(), passes, UiCostSamplePasses,
+                uiCostPage, uiCostSession, uiCostFirstPass, uiCostTrigger).ToString();
+            return display + (uiCostSceneChanged ? "\n" + "US.DevPanel.Sample.SceneChanged".Translate().ToString() : "")
+                + (uiCostEndReason.Length == 0 ? "" : "\n" + uiCostEndReason.Translate().ToString())
+                + (SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled ? "" : "\n" + "US.DevPanel.Sample.NeedsEnabled".Translate().ToString());
+        }
+    }
+
+    private void BeginUiCostObservation(UiHost host, string trigger, long creationTicks)
+    {
+        uiCostHost = host;
+        uiCostSequence++;
+        uiCostSession = host.Session.Identity;
+        uiCostFirstPass = host.Session.Frame;
+        uiCostPage = source!.ViewState.Page;
+        uiCostTrigger = trigger;
+        uiCostEndReason = "";
+        uiCostSceneChanged = false;
+        uiCostRevision = host.Session.ContentRevision;
+        uiCostDefinition = host.Session.DefinitionRevision;
+        uiCostSize = lastContentRect.size;
+        uiCostPanel = Dev.UsDevPanelWindow.Active != null;
+        uiCostFit = UiFitAudit.Enabled;
+        uiCostDetail = SqueakLog.ShouldEmitDev;
+        uiCostGeometry = UsTextFitAudit.GetDevGeometryStatus(host);
+        string scroll = uiCostPage switch { "Behavior" => "b-actions-scroll", "Voices" => source.ViewState.DetailOpen
+            ? "voice-detail-scroll" : "voice-list-scroll", "Fallback" => "b-final-table-scroll", _ => "page-" + uiCostPage + "-scroll" };
+        uiCostScroll = host.Session.GetNodeByElementId(scroll);
+        uiCostHelpScroll = host.Session.GetNodeByElementId("help-scroll");
+        uiCostScrollStart = host.Session.GetScrollPosition(uiCostScroll!);
+        uiCostHelpStart = host.Session.GetScrollPosition(uiCostHelpScroll!);
+        audit?.BeginTimingObservation();
+        source.BeginUiCostSample(creationTicks);
+        uiCostMetrics?.Begin(UiFitAudit.Enabled);
+        uiCostState = CostSampleState.Sampling;
+        SqueakLog.LayoutTrace(() => UiCostSampleIdentity() + " state=started creation=" + (creationTicks < 0 ? "NotCaptured" : "Captured")
+            + " dev_panel_at_start=" + uiCostPanel + " detail_at_start=" + uiCostDetail + " fit_at_start=" + uiCostFit + " geometry_at_start=" + uiCostGeometry);
+    }
+
+    private string UiCostSampleIdentity() => "UI.cost sample=" + uiCostSequence + " target=settings session=" + uiCostSession
+        + " page_start=" + uiCostPage + " first_pass=" + uiCostFirstPass + " trigger=" + uiCostTrigger;
+
+    private void ObserveUiCostScene()
+    {
+        var host = uiCostHost;
+        if (uiCostState != CostSampleState.Sampling || host == null) return;
+        uiCostSceneChanged |= host.Session.ContentRevision != uiCostRevision || host.Session.DefinitionRevision != uiCostDefinition
+            || source?.ViewState.Page != uiCostPage || lastContentRect.size != uiCostSize
+            || host.Session.GetScrollPosition(uiCostScroll!) != uiCostScrollStart || host.Session.GetScrollPosition(uiCostHelpScroll!) != uiCostHelpStart
+            || (Dev.UsDevPanelWindow.Active != null) != uiCostPanel || UiFitAudit.Enabled != uiCostFit
+            || SqueakLog.ShouldEmitDev != uiCostDetail || UsTextFitAudit.GetDevGeometryStatus(host) != uiCostGeometry;
+    }
+
+    private void EndUiCostObservation(bool partial, string reason = "")
+    {
+        if (uiCostState == CostSampleState.Queued)
+        {
+            uiCostState = CostSampleState.Partial;
+            uiCostEndReason = reason;
+            return;
+        }
+        if (uiCostState != CostSampleState.Sampling || uiCostHost == null) return;
+        ObserveUiCostScene();
+        uiCostPasses = uiCostHost.Session.Frame - uiCostFirstPass;
+        uiCostState = partial ? CostSampleState.Partial : CostSampleState.Complete;
+        uiCostEndReason = reason;
+        SqueakLog.LayoutTrace(() => UiCostSampleIdentity() + " state=" + (partial ? "partial" : "complete")
+            + " last_pass=" + uiCostHost.Session.Frame + " passes=" + uiCostPasses + " scene_changed=" + uiCostSceneChanged
+            + " page_end=" + source?.ViewState.Page + " revision_start=" + uiCostRevision + " revision_end=" + uiCostHost.Session.ContentRevision
+            + " dev_panel_at_end=" + (Dev.UsDevPanelWindow.Active != null) + " detail_at_end=" + SqueakLog.ShouldEmitDev
+            + " fit_at_end=" + UiFitAudit.Enabled + " geometry_at_end=" + UsTextFitAudit.GetDevGeometryStatus(uiCostHost));
         // Drain both phase accumulators before disabling sampling/disposal, including early Close.
         audit?.EndTimingObservation(partial);
-        source?.EndUiCostSample(Host.Session.Frame - uiCostFirstPass, partial);
-        uiCostMetrics?.Complete(Host.Session.Frame - uiCostFirstPass, partial);
-        uiCostSampling = false;
+        source?.EndUiCostSample(uiCostPasses, partial);
+        uiCostMetrics?.Complete(uiCostPasses, partial);
+        uiCostHost = null;
+        uiCostScroll = uiCostHelpScroll = null;
+    }
+
+    private void ReleaseCostSampleTarget(UiHost host)
+    {
+        EndUiCostObservation(true, "US.DevPanel.Sample.TargetEnded");
+        SampleTarget(host).Owner = null;
+        if (ReferenceEquals(Dev.UsDevPanelTargets.SettingsHost, host)) Dev.UsDevPanelTargets.SettingsHost = null;
+        audit?.Dispose();
+        audit = null;
     }
 
     public override void PreClose()
     {
-        EndUiCostObservation(true);
+        EndUiCostObservation(true, "US.DevPanel.Sample.TargetEnded");
         // Live writes already reached the ordinary queue; retained-only drafts are abandoned on close.
         if (Host?.InputState.IsEditing == true) Host.TryHandleCancel();
-        // Final drain + release this window's hold on the process-wide detection switch, BEFORE the shell
-        // disposes the host and with it the subscription.
-        audit?.Dispose();
-        audit = null;
-        if (UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost == Host)
-        {
-            UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = null;
-        }
-        // Disposing the page host and its session is the shell's job.
+        // HostDetached clears the optional capability/target and audit before shell disposal,
+        // on both Close and failed passes. It receives the real released host even after Host=null.
         base.PreClose();
     }
 }

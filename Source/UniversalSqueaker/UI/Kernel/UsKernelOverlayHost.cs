@@ -33,13 +33,15 @@ public static class UsKernelOverlayHost
         var bindings = new UiBindings();
         bindings.BindReadOnly<string>("camera-readout", () => source.ReadoutText);
 
-        return new UiHost(
-            Source,
+        UiHost host = VerseUiDiagnosticLog.CreateHost(
+            UsUiDiagnostics.Consumer, Source,
             manifest,
             bindings,
             UsTheme.Surface(),
             VerseFerriteTextMetrics.Instance,
-            new UsKernelTranslation());
+            new UsKernelTranslation(), options: UsUiDiagnostics.Options());
+        UsUiDiagnostics.Adopt(host);
+        return host;
     }
 
     private static string ReadManifest()

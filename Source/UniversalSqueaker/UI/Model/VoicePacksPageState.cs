@@ -19,6 +19,8 @@ public sealed class VoicePacksPageState
     public readonly List<string> PageHistory = new();
     public string PinnedHelpRef = "";
     public string PinnedHelpContext = "";
+    // Normal page help follows real anchors, then holds its last readable presentation.
+    internal string FollowHelpRef = "", FollowHelpContext = "", FollowHelpLabel = "", HelpScope = "";
     public bool BrowseDefinitions = true;
     public string LastTuningPage = "Behavior", LastSystemPage = "Appearance";
     public readonly UsBrowseListState RosterBrowse = new(), RosterPackBrowse = new();
@@ -33,7 +35,7 @@ public sealed class VoicePacksPageState
     public bool RestoreAllOpen;
     public bool WideLayout;
     // Null until a real content box is supplied; standalone hosts retain their original layout input.
-    internal bool? RosterWideLayout;
+    internal bool? RosterWideLayout = null;
     internal bool RosterIsWide => RosterWideLayout ?? WideLayout;
     public bool DetailOpen;
     public bool PackArrivalFromDirectory;
@@ -141,6 +143,7 @@ public sealed class VoicePacksPageState
     public void Reset()
     {
         Page = "Voices"; LastToolPage = "Behavior"; PinnedHelpRef = ""; PinnedHelpContext = "";
+        FollowHelpRef = FollowHelpContext = FollowHelpLabel = HelpScope = "";
         HelpHeight = 128f; HelpViewWidth = HelpViewHeight = 0; HelpLayoutRevision = -1; HelpLayoutText = "";
         HelpLabelFont = HelpBodyFont = HelpLabelRequested = HelpBodyRequested = null;
         HelpSmallEnvironment = HelpTinyEnvironment = null;

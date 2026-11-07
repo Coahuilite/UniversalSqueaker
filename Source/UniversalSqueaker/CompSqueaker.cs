@@ -94,13 +94,15 @@ public partial class CompSqueaker : ThingComp
 
     /// <summary>
     /// S4 diagnostics: the head mark is drawn from the IMGUI pass by
-    /// <see cref="Patches.Patch_MapInterface_DiagnosticsMarks"/>, never from the thing render pass.
+    /// <see cref="Patch_MapInterface_DiagnosticsMarks"/>, never from the thing render pass.
     /// <c>ThingComp.PostDraw</c> is reached through <c>Pawn.Draw &#8594; Comps_PostDraw()</c>
     /// (RimWorld <c>Verse/Pawn.cs:2754</c>) during thing rendering, and <c>GenMapUI.DrawText</c> goes
     /// through the game's IMGUI text path: the first real run logged "You can only call GUI functions
     /// from inside OnGUI" 8558 times there and no mark ever appeared.
     ///
-    /// Returns true when the mark was drawn. This method performs no error handling of its own - the
+    /// The cached glyph/colour now delegate to the shared neutral screen-mark widget through the
+    /// session-owned thin projection adapter. Returns true when the mark was drawn.
+    /// This method performs no error handling of its own - the
     /// caller owns the phase it runs in and the once-per-failure report - so the draw stays a plain draw
     /// and a failure cannot be swallowed silently.
     /// </summary>
@@ -116,16 +118,7 @@ public partial class CompSqueaker : ThingComp
             return false;
         }
 
-        Vector2 position = new(Pawn.DrawPos.x, Pawn.DrawPos.z + 1.15f);
-        // GenMapUI.DrawText is locked to Tiny font, so visibility comes from a 4-direction
-        // black outline (same pattern as the overlay's DrawMark).
-        const float edge = 0.05f;
-        GenMapUI.DrawText(position + new Vector2(-edge, 0f), mark, Color.black);
-        GenMapUI.DrawText(position + new Vector2(edge, 0f), mark, Color.black);
-        GenMapUI.DrawText(position + new Vector2(0f, -edge), mark, Color.black);
-        GenMapUI.DrawText(position + new Vector2(0f, edge), mark, Color.black);
-        GenMapUI.DrawText(position, mark, color);
-        return true;
+        return SqueakDiagnosticsOverlay.DrawCachedMark(Pawn, mark, color);
     }
 
     public override void PostDestroy(DestroyMode mode, Map previousMap)

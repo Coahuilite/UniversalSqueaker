@@ -33,6 +33,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     // Armed only by an explicitly requested, per-window diagnostic sample. No object labels/values.
     internal void BeginUiCostSample(long creationTicks)
     {
+        uiViewReads = uiViewBuilds = uiViewTicks = uiViewMaxTicks = 0;
         uiCostActive = true;
         uiCreateTicks = creationTicks;
     }
@@ -43,8 +44,8 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         uiCostActive = false;
         double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
         SqueakLog.LayoutTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
-            "UI.cost passes={0} partial={1} create_ms={2:F3} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
-            passes, partial, Milliseconds(uiCreateTicks), uiViewReads, uiViewBuilds,
+            "UI.cost passes={0} partial={1} create_ms={2} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
+            passes, partial, uiCreateTicks < 0 ? "NotCaptured" : Milliseconds(uiCreateTicks).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), uiViewReads, uiViewBuilds,
             Milliseconds(uiViewTicks), Milliseconds(uiViewMaxTicks)));
     }
 
@@ -81,8 +82,8 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public VoicePacksViewState BuildView()
     {
-        long started = uiCostActive ? Stopwatch.GetTimestamp() : 0;
-        if (uiCostActive) uiViewReads++;
+        long started = uiCostActive && SqueakLog.ShouldEmitDev ? Stopwatch.GetTimestamp() : 0;
+        if (uiCostActive && SqueakLog.ShouldEmitDev) uiViewReads++;
         try
         {
             int revision = revisionSource != null ? revisionSource() : Time.frameCount;
@@ -91,7 +92,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
             if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
                 || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions) || !ReferenceEquals(cachedPolicy, policy))
             {
-                if (uiCostActive) uiViewBuilds++;
+                if (uiCostActive && SqueakLog.ShouldEmitDev) uiViewBuilds++;
                 cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state, ImageOf);
                 cachedRevision = revision;
                 cachedConfiguration = configuration;
@@ -103,7 +104,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         }
         finally
         {
-            if (uiCostActive)
+            if (uiCostActive && SqueakLog.ShouldEmitDev)
             {
                 long ticks = Stopwatch.GetTimestamp() - started;
                 uiViewTicks += ticks;
@@ -211,6 +212,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     public void SetDevLoggingMode(SqueakDevLoggingMode mode)
     {
         settings.SetDevLoggingMode(mode);
+        UsTextFitAudit.SynchronizeWindowPolicies();
     }
 
     // === Developer layout diagnosis (R3-B) =====================================================
@@ -218,8 +220,6 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     // switches over this window's own diagnostic scope. The geometry instrument is per HOST, so enabling it
     // here cannot reach the diagnostics panel's host or any other window's.
     private UiHost? host;
-    private bool layoutCaptureOn;
-    private bool layoutOutlineOn;
 
     /// <summary>
     /// A report was asked for and has not been produced yet. The window consumes this after a real draw pass
@@ -227,6 +227,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     /// cleared in the same call that produces it, so the next pass reports nothing new.
     /// </summary>
     private bool layoutReportPending;
+    private int requestedAfterReportPass = -1;
 
     /// <summary>
     /// What this window's Report control is currently saying (RPT1.1). It is written ONLY where one of the
@@ -281,10 +282,12 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     }
 
     /// <summary>The switch's own checked state: what the instrument actually honoured, never the request.</summary>
-    public bool LayoutCaptureOn => layoutCaptureOn;
+    public bool LayoutCaptureOn => UsTextFitAudit.GetDevGeometryStatus(host)
+        is UsTextFitAudit.DevGeometryStatus.Active or UsTextFitAudit.DevGeometryStatus.Overlay;
 
-    /// <summary>Whether the captured-rect outline is on for this window (blanked when capture is off).</summary>
-    public bool LayoutOutlineOn => layoutOutlineOn;
+    /// <summary>Actual independent outline state, including changes made by the companion panel.</summary>
+    public bool LayoutOutlineOn => UsTextFitAudit.GetDevGeometryStatus(host)
+        is UsTextFitAudit.DevGeometryStatus.OutlineOnly or UsTextFitAudit.DevGeometryStatus.Overlay;
 
     /// <summary>
     /// The status sentence for the developer. The "unavailable" state is derived from the CARRIER, not from a
@@ -394,11 +397,8 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public void SetLayoutCapture(bool on)
     {
-        bool honoured = UsTextFitAudit.SetGeometryCapture(host, on);
-        // A refusal is a status, not a silent no-op: the switch stays where the instrument actually is, and a
-        // refused capture cannot leave an outline switched on over nothing.
-        layoutCaptureOn = honoured && on;
-        if (!honoured && on) layoutOutlineOn = false;
+        UsTextFitAudit.SetGeometryCapture(host, on);
+        // Readback comes from the one audit owner, not a second copy of the two switch states.
         // The instrument moved, so a sentence that described the OLD instrument state ("capture is off") must
         // not stay up: drop back to "nothing asked yet" and let the sentence follow the instrument (RPT1.2).
         if (reportOutcome != LayoutReportOutcome.Waiting
@@ -411,8 +411,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public void SetLayoutOutline(bool on)
     {
-        bool honoured = UsTextFitAudit.SetGeometryOverlay(host, on);
-        layoutOutlineOn = honoured && on;
+        UsTextFitAudit.SetGeometryOverlay(host, on);
     }
 
     public void OpenDeveloperPanel() => UniversalSqueaker.UI.Dev.UsDevPanelWindow.OpenOrFocus();
@@ -427,6 +426,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         layoutReportPending = UsTextFitAudit.RequestGeometryReport(host);
         if (layoutReportPending)
         {
+            requestedAfterReportPass = UsTextFitAudit.FindOpenScope(host)?.LastGeometryReportPass ?? -1;
             // Accepted: the line now says what happens next, not that it already succeeded (RPT1.1).
             reportOutcome = LayoutReportOutcome.Waiting;
             return;
@@ -451,6 +451,11 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         if (!layoutReportPending || host == null) return -1;
 
         int pass = UsTextFitAudit.PublishGeometryReport(host);
+        var scope = UsTextFitAudit.FindOpenScope(host);
+        // The window's audit may already have published during this BeforeDraw. Adopt that
+        // actual newer receipt, never an old report merely because one exists (RPT1 D1).
+        if (pass < 0 && scope != null && scope.LastGeometryReportPass > requestedAfterReportPass)
+            pass = scope.LastGeometryReportPass;
         if (pass >= 0)
         {
             layoutReportPending = false;

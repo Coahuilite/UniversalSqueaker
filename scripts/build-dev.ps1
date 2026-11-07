@@ -1,13 +1,13 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
-    [string]$FerriteLibArtifactPath
+    [string]$FerriteLibArtifactPath,
+    [string]$OutputRoot
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# A consumer build reads a selected carrier; it never rebuilds another repository.
+# pack-dev owns selection for this invocation; it validates before any build or write.
 $root = [IO.Path]::GetFullPath($ProjectRoot)
-$carrier = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
-& (Join-Path $PSScriptRoot 'pack-dev.ps1') -ProjectRoot $root -FerriteLibArtifactPath $carrier
+& (Join-Path $PSScriptRoot 'pack-dev.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath -OutputRoot $OutputRoot
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

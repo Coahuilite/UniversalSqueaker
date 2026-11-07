@@ -186,7 +186,7 @@ public sealed class UsConfirmWindow
         if (host == null) throw new ArgumentNullException(nameof(host));
         dialogHost = host;
         dialogAudit?.Dispose();
-        dialogAudit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        dialogAudit = UsTextFitAudit.OpenForWindow(host);
         UniversalSqueaker.UI.Dev.UsDevPanelTargets.DialogHost = host;
     }
 
@@ -228,13 +228,15 @@ public sealed class UsConfirmWindow
         protected override ITextMetrics Metrics => flow.dialogMetrics;
         protected override string Title => flow.title;
         protected override string CloseText => "US.Common.Cancel".Translate();
+        protected override void BeforeDraw(Rect contentRect) => flow.dialogAudit?.Publish();
         protected override Func<Vector2>? InitialSizePolicy => AppliedOptions?.InitialSize is Vector2 size ? () => size : null;
         protected override void DrawNotice(Rect rect, UiWindowNotice notice) => UiTextFonts.Resolve(flow.dialogMetrics,
             text, UiTextFonts.Requested(WindowTheme), elementPath: "us/confirm/notice").Draw(VerseUiExecution.Rect(rect),
                 (notice == UiWindowNotice.Prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title").Translate(),
                 WindowTheme.Styles.Resolve(UiStatusTone.Neutral).Text);
-        protected override UiHost CreateHost() => new(Consumer + "/" + WindowKind, UiLayoutManifest.Parse(flow.PageXml), flow.bindings,
-            WindowTheme, flow.dialogMetrics, new UsKernelTranslation());
+        protected override UiHost CreateHost() => UsUiDiagnostics.Adopt(VerseUiDiagnosticLog.CreateHost(UsUiDiagnostics.Consumer,
+            Consumer + "/" + WindowKind, UiLayoutManifest.Parse(flow.PageXml), flow.bindings,
+            WindowTheme, flow.dialogMetrics, new UsKernelTranslation(), options: UsUiDiagnostics.Options()));
         internal UiTextRun MessageText() => UiTextFonts.Resolve(flow.dialogMetrics, text,
             new UiTextFont(WindowTheme.DefaultFont, MessageFontSize), elementPath: "us/confirm/message");
     }

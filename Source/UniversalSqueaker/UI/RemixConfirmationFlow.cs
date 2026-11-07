@@ -21,8 +21,8 @@ namespace UniversalSqueaker.UI;
 /// </para>
 ///
 /// <para>
-/// <b>What the carrier provides.</b> The window is the library's own <see cref="UiPageWindow"/> -
-/// the declarative page shell - opened through a per-flow <see cref="UiWindowCatalog"/> whose stack is
+/// <b>What the carrier provides.</b> The window uses the library's <see cref="UiWindowHost"/>
+/// execution/lifecycle shell, opened through a per-flow <see cref="UiWindowCatalog"/> whose stack is
 /// the game's. The two steps are ONE window with two gated sections (<c>confirm-step1</c> /
 /// <c>confirm-step2</c>): the button row keeps its two slots and swaps their occupants, which is what
 /// makes the same-coordinate click land on Cancel. Enter cannot bypass the two explicit choices
@@ -105,7 +105,7 @@ public sealed class RemixConfirmationFlow
     /// <summary>
     /// The dialog page's own command/value table, exposed read-only so the harness can drive the exact
     /// commands the real buttons fire (<c>confirm-continue</c> / <c>confirm-cancel</c> /
-    /// <c>confirm-enable</c>) without a game WindowStack loop. It is the SAME table the UiPageWindow
+    /// <c>confirm-enable</c>) without a game WindowStack loop. It is the SAME table the dialog Host
     /// draws against; opening the dialog in production wires it to that window.
     /// </summary>
     public IUiBindingAccess DialogBindings => bindings;
@@ -166,18 +166,7 @@ public sealed class RemixConfirmationFlow
 
     private UiWindowHost CreateWindow(UiWindowKey windowKey)
     {
-        UiPageWindow window = new(
-            windowKey,
-            manifest,
-            bindings,
-            theme,
-            new UsKernelTranslation(),
-            "US.Remix.Confirm.Title".Translate(),
-            "US.Common.Cancel".Translate(),
-            notice => (notice == UiWindowNotice.Prerequisite
-                ? "US.Remix.Notice.Prerequisite"
-                : "US.Remix.Notice.Unavailable").Translate(),
-            metrics: dialogMetrics);
+        RemixPageWindow window = new(this, windowKey);
         // F01/US-UI1: the confirmation outranks the Dialog main window AND the SubSuper dev tools -
         // the measured 1.6 reference order puts Super on top (UsDevPanelWindow's constructor cites it).
         window.layer = WindowLayer.Super;
@@ -202,6 +191,31 @@ public sealed class RemixConfirmationFlow
         return window;
     }
 
+    // The same catalog, manifest, bindings, metrics and inherited execution lifecycle. This small
+    // adapter supplies US's log consumer BEFORE construction without changing the catalog key/source.
+    private sealed class RemixPageWindow : UiWindowHost
+    {
+        private readonly RemixConfirmationFlow flow;
+        private readonly UiWindowKey key;
+        private readonly VerseTextExecution text;
+        internal RemixPageWindow(RemixConfirmationFlow flow, UiWindowKey key)
+        { this.flow = flow; this.key = key; text = new VerseTextExecution(Execution); }
+        protected override UiTheme Theme => flow.theme;
+        protected override ITextMetrics Metrics => flow.dialogMetrics!;
+        protected override string Title => "US.Remix.Confirm.Title".Translate();
+        protected override string CloseText => "US.Common.Cancel".Translate();
+        protected override Func<Vector2>? InitialSizePolicy => AppliedOptions?.InitialSize is Vector2 size ? () => size : null;
+        protected override bool CanClose() => AppliedOptions?.CanClose == null || AppliedOptions.CanClose(key);
+        protected override void BeforeDraw(Rect contentRect) => flow.dialogAudit?.Publish();
+        protected override void DrawNotice(Rect rect, UiWindowNotice notice) => UiTextFonts.Resolve(flow.dialogMetrics!,
+            text, UiTextFonts.Requested(flow.theme), elementPath: "us/remix-confirm/notice").Draw(VerseUiExecution.Rect(rect),
+                (notice == UiWindowNotice.Prerequisite ? "US.Remix.Notice.Prerequisite" : "US.Remix.Notice.Unavailable").Translate(),
+                flow.theme.Styles.Resolve(UiStatusTone.Neutral).Text);
+        protected override UiHost CreateHost() => UsUiDiagnostics.Adopt(VerseUiDiagnosticLog.CreateHost(UsUiDiagnostics.Consumer,
+            key.Consumer + "/" + key.WindowKind, flow.manifest, flow.bindings, flow.theme,
+            flow.dialogMetrics!, new UsKernelTranslation(), options: UsUiDiagnostics.Options()));
+    }
+
     /// <summary>
     /// The ONE path by which a dialog page host starts driving this flow: production reaches it through
     /// the window's <c>HostAttached</c> event, and the harness reaches it by building a real UiHost over
@@ -217,7 +231,7 @@ public sealed class RemixConfirmationFlow
         // the previous scope before the new one opens, so no stale scope can be targeted by the
         // developer commands after its host is gone.
         dialogAudit?.Dispose();
-        dialogAudit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        dialogAudit = UsTextFitAudit.OpenForWindow(host);
         UniversalSqueaker.UI.Dev.UsDevPanelTargets.DialogHost = host;
     }
 

@@ -5,7 +5,9 @@ param(
     # CONTENTS of the stage dir, so unzipping into Mods/ scattered a loose LoadFolders.xml. The engine can
     # still write a correctly shaped archive when someone asks for one; nothing on this path asks.
     [string]$FerriteLibArtifactPath,
-    [switch]$Zip
+    [switch]$Zip,
+    # Optional fixed delivery; omitted preserves the existing dist/dev and build slots.
+    [string]$OutputRoot
 )
 
 Set-StrictMode -Version Latest
@@ -20,8 +22,17 @@ function Resolve-NormalizedPath {
 $root = Resolve-NormalizedPath -Path $ProjectRoot
 $carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
-$devDir = Join-Path $root 'dist\dev'
+$devDir = if ($OutputRoot) { [IO.Path]::GetFullPath($OutputRoot, $root) } else { Join-Path $root 'dist/dev' }
 $stageDir = Join-Path $devDir 'UniversalSqueaker'
+$buildArguments = @()
+if ($OutputRoot) {
+    $distPrefix = [IO.Path]::GetFullPath((Join-Path $root 'dist')) + [IO.Path]::DirectorySeparatorChar
+    if (-not $devDir.StartsWith($distPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'OutputRoot must be under this repository dist.' }
+    foreach ($output in @($stageDir, (Join-Path $devDir 'build'), (Join-Path $devDir 'obj'), (Join-Path $devDir '.staging-UniversalSqueaker'))) {
+        if (Test-Path -LiteralPath $output) { throw "Choose a fresh OutputRoot; output already exists: $output" }
+    }
+    $buildArguments = @("-p:BaseIntermediateOutputPath=$devDir/obj/", "-p:OutputPath=$devDir/build/")
+}
 
 [xml]$projectXml = Get-Content -LiteralPath $projectFile -Raw
 $versionNode = $projectXml.SelectSingleNode('/Project/PropertyGroup/Version')
@@ -35,7 +46,7 @@ if ($null -eq $versionNode -or [string]::IsNullOrWhiteSpace($versionNode.InnerTe
 $versionLabel = $versionNode.InnerText.Trim()
 
 # Build Dev into its own directory, against precisely the selected read-only carrier.
-& dotnet build $projectFile -c Dev --no-incremental "-p:FerriteLibArtifactPath=$carrierDll" --nologo -v minimal
+& dotnet build $projectFile -c Dev --no-incremental "-p:FerriteLibArtifactPath=$carrierDll" @buildArguments --nologo -v minimal
 if ($LASTEXITCODE -ne 0) { throw 'Dev build failed.' }
 
 try {
@@ -75,6 +86,7 @@ $stageArgs = @{
     CommitLabel  = "$shortCommit$dirtySuffix"
 }
 if ($Zip) { $stageArgs['CreateZip'] = $true }
+if ($OutputRoot) { $stageArgs.PayloadDllPath = Join-Path $devDir 'build/UniversalSqueaker.dll' }
 
 & (Join-Path $PSScriptRoot 'stage-package.ps1') @stageArgs
 

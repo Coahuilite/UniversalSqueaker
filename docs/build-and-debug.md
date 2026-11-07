@@ -22,6 +22,14 @@ The carrier must already exist. Obtain it from its owner or the agreed paired de
 - US builds into `dist/build/<Configuration>`. `build-dev.ps1` stages `dist/dev/UniversalSqueaker`; `pack-dev.ps1 -Zip` additionally creates an archive.
 - The compiler records the carrier identity. Staging rejects a different selected DLL and records the pairing in `version.txt`; failed staging preserves the previous delivered folder.
 
+For an isolated fixed delivery, append `-OutputRoot 'dist/<fresh-attempt>'` to `build-dev.ps1`
+or `pack-dev.ps1`. Build/obj/package outputs must not already exist there; omitting the option retains
+the original build slots and `dist/dev` workflow. `build-dev` delegates raw selection to `pack-dev`,
+which resolves once before building. The independently callable stager validates the selected input
+again after the build and checks the compiler's recorded carrier identity; no caller-supplied bypass
+or cross-invocation cache is accepted. Configuration/identity stamps still use the existing pwsh child
+reader so packaging does not retain loaded input assemblies. No Node runtime is required.
+
 Explicit Release verification:
 
 ```powershell
@@ -55,6 +63,17 @@ The [r2 contract](specification.md) and [author guide](us-kernel-0.6-authoring-z
 Gate15 scans the payload and Host against `tools/FerriteLib08.Stubs`. Host builds these through the Verse and InputLegacy roots: their ProjectReferences supply the same five doubles. No current csproj references `tools/FerriteLib.Stubs`; the separate definition-directory harness also references the0.8 sources. Historical gate16 is preserved in `scripts/verify-historical-inputs.ps1`, with its original recorded integrity expectations. It protects archived0.7 sources, not the current product. The producer and its package are never build targets. Standalone Reset/DefinitionDirectory projects remain separately callable; they are not silently counted in the current full-entry groups.
 
 The list is an entry point, not proof that a candidate passed it. Reuse evidence only for applicable inputs. Pure logic, runtime doubles and native game are different evidence; a live Host is not proof that a widget avoided recovery.
+
+### Select the checks affected by a local change
+
+From this checkout's root, these existing entries exercise the production Core without a FerriteLib carrier:
+
+```powershell
+dotnet run --project tools/UniversalSqueakerKernelTests -c Release
+dotnet run --project tools/UniversalSqueakerRefactorCoreTests -c Release
+```
+
+The first checks selector contracts, the frozen routing corpus and determinism; the second checks the current response, configuration and authoring contracts. Run the entry relevant to the changed contract, and run both when both are affected. Neither checks native adapters or the game. For a changed adapter, carrier or package, also exercise its affected existing path; keep the complete `verify-local.ps1` entry for its CI and release purpose. A documentation-only edit does not by itself invalidate unchanged code evidence.
 
 ### One restore owner, one build per identical tool input
 

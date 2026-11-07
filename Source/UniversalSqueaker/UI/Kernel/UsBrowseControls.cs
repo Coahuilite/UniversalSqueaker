@@ -51,7 +51,12 @@ internal static class UsBrowseControls
             Label(UsKernelDraw.Keyed(ctx, id == "directory" ? "US.Browse.List.directory" : id == "table" ? "US.Browse.List.table"
                 : id == "candidate" ? "US.Browse.List.candidate" : "US.Browse.List.sound"));
             float queryWidth = raceList ? Math.Max(1, width * .55f) : width;
-            if (draw) UsKernelDraw.LiveTextField(new UiLayoutRect(x, y, queryWidth, controlHeight), ctx, id + "-browse-query");
+            if (draw)
+            {
+                var queryRect = new UiLayoutRect(x, y, queryWidth, controlHeight);
+                UsKernelDraw.HelpHover(queryRect, ctx, "us/race-board/search");
+                UsKernelDraw.LiveTextField(queryRect, ctx, id + "-browse-query");
+            }
             if (raceList && draw)
             {
                 var groups = new List<KeyValuePair<string, string>>();

@@ -35,36 +35,11 @@ public sealed partial class UsKernelSettingsSource
     {
         if (action == "" || SqueakerMod.Instance == null) return false;
         var value = settings.ReadPlayerActionOverride(action, race, child);
-        text = text.Trim();
-        bool? boolean = null;
-        long? ticks = null;
-        double? scalar = null;
-        bool valid = true;
-        if (text != "")
+        if (!UsBehaviorFieldValues.TryWrite(value, field, text, out bool invalid))
         {
-            if (field == "interval") { valid = long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed); ticks = parsed; }
-            else if (field == "volume" || field == "pitch" || field == "interaction-seconds" || field.StartsWith("parameter:", StringComparison.Ordinal)) { valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed); scalar = parsed; }
-            else { valid = bool.TryParse(text, out bool parsed); boolean = parsed; }
+            if (invalid) { RowDiagnostic = "US.UI.RowInvalid"; rowResults[RowIdentity(action, race, child)] = RowDiagnostic; }
+            return false;
         }
-        if (!valid) { RowDiagnostic = "US.UI.RowInvalid"; rowResults[RowIdentity(action, race, child)] = RowDiagnostic; return false; }
-        switch (field)
-        {
-            case "enabled": value.Enabled = boolean; break;
-            case "interval": value.SimulationIntervalTicks = ticks; break;
-            case "interaction-seconds": value.InteractionIntervalSeconds = scalar; break;
-            case "volume": value.Volume = scalar; break;
-            case "pitch": value.Pitch = scalar; break;
-            case "talking": value.TalkingEnabled = boolean; break;
-            case "age": value.AgeEnabled = boolean; break;
-            case "mood": value.MoodEnabled = boolean; break;
-            default:
-                if (field.StartsWith("parameter:", StringComparison.Ordinal)) { string key = field.Substring(10); if (scalar.HasValue) value.ResponseParameters[key] = scalar.Value; else value.ResponseParameters.Remove(key); }
-                else if (field.StartsWith("response:", StringComparison.Ordinal)) { string key = field.Substring(9); if (boolean.HasValue) value.ResponseEnabled[key] = boolean.Value; else value.ResponseEnabled.Remove(key); }
-                else if (field.StartsWith("participation:", StringComparison.Ordinal)) { string key = field.Substring(14); if (boolean.HasValue) value.Participation[key] = boolean.Value; else value.Participation.Remove(key); }
-                else return false;
-                break;
-        }
-        if (!value.Valid) { RowDiagnostic = "US.UI.RowInvalid"; rowResults[RowIdentity(action, race, child)] = RowDiagnostic; return false; }
         bool committed = SqueakerMod.Instance.TryCommitBehaviorOverride("Pawn", "", race, child,
             action, value, out string diagnostic);
         RowDiagnostic = committed ? diagnostic.StartsWith("Committed:", StringComparison.Ordinal)
@@ -80,12 +55,24 @@ public sealed partial class UsKernelSettingsSource
         new BehaviorDomain("Pawn", "", state.TuningRaceDefName, state.TuningLayer == 2 ? state.TuningXenotypeDefName : "");
 
     private const string RejectedSourceChoice = "\0rejected-behavior-source";
+    private string? sourceXmlRead;
+    private BehaviorDomain? sourceDomainRead;
+    private BehaviorBinding sourceBindingRead = new();
+    private string sourceReadFailure = "";
     private bool TryReadSource(out BehaviorBinding binding, out string failure)
     {
-        binding = new BehaviorBinding(); failure = "";
-        if (SourceDomain is not BehaviorDomain domain) return true;
-        try { binding = BehaviorSourceState.FromXml(settings.behaviorSourcesXml).Read(domain); return true; }
-        catch (Exception error) { failure = error.GetType().Name + ":" + error.Message; return false; }
+        var domain = SourceDomain;
+        string xml = settings.behaviorSourcesXml;
+        if (sourceXmlRead != xml || !Equals(sourceDomainRead, domain))
+        {
+            sourceXmlRead = xml; sourceDomainRead = domain;
+            sourceBindingRead = new BehaviorBinding(); sourceReadFailure = "";
+            if (domain != null)
+                try { sourceBindingRead = BehaviorSourceState.FromXml(xml).Read(domain); }
+                catch (Exception error) { sourceReadFailure = error.GetType().Name + ":" + error.Message; }
+        }
+        binding = sourceBindingRead; failure = sourceReadFailure;
+        return failure == "";
     }
     public string SelectedSource
     {
@@ -143,6 +130,18 @@ public sealed partial class UsKernelSettingsSource
             if (parts.Length > 1 && parts[1] != "") note += "\n" + parts[1];
         }
         return note;
+    }
+
+    internal string SourceStatusSummary(IUiTranslation t)
+    {
+        if (SourceDomain == null) return t.Translate("US.UI.SourceChooseDomain");
+        if (!TryReadSource(out var binding, out _) || binding.RejectedTimingXml != ""
+            || state.SourceChangeDiagnostic.StartsWith("US.UI.SourceRejected", StringComparison.Ordinal)
+            || state.SourceChangeDiagnostic.StartsWith("US.UI.SourcePublishFailed", StringComparison.Ordinal)) return SourceStatus(t);
+        string intent = binding.Intent switch { BehaviorSourceIntent.Bound => "US.UI.SourceBound",
+            BehaviorSourceIntent.Inherit => "US.UI.SourceInherit", _ => "US.UI.SourceUnconfigured" };
+        return t.Translate("US.UI.SourceStatus") + ": " + t.Translate(intent) + " · " + t.Translate("US.B.LastGood")
+            + ": " + t.Translate(binding.Snapshot == null ? "US.B.NotSupplied" : "US.B.SourceSnapshotAvailable");
     }
 
     internal void SetContentLayout(bool wide)

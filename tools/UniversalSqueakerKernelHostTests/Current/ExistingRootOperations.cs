@@ -89,31 +89,35 @@ internal static partial class Program
     {
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
+        using var page = new Page(host, Fl08PublicObservation.ExecutionFor(host));
         host.Bindings.Invoke("set-tab", "Tuning");
         // The covered element this lane asserts against is the help panel, which only exists while help
         // is open (the shipped default is retracted).
         host.Bindings.Set("help-open", true);
         Rect viewport = new(0f, 0f, 800f, 600f);
-        // UIR-001: the rule bands joined the Tuning tab, so the scope-tree composite sits below the
-        // fold at scroll 0 and the dropdown never draws - scroll it into view first (the player can).
+        // WO r6: the B action sheet owns the real typed dropdown. Reveal its actual trigger;
+        // the retired composite id and a fixed 700px offset cannot establish input eligibility.
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
-        UiNode? foldNode = host.Session.GetNodeByElementId("page-Behavior-scroll");
+        UiNode? foldNode = host.Session.GetNodeByElementId("b-actions-scroll");
         Assert(foldNode != null, "the content scroll must exist to reach the scope tree");
-        host.Session.SetScrollPosition(foldNode!, VerseUiExecution.Point(new Vector2(0f, 700f)));
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
         host.DrawChecked(viewport);
 
-        // Deliberately stale seed: the composite must replace it with its drawn trigger's live anchor.
-        // This lane no longer teleports the popup over another widget to force a flip. FL owns the
-        // independent below/flip/clamp geometry lanes; here we assert publication, live attachment and
-        // dispatch for a covered point through the actual production composite.
-        Rect anchor = new(620f, 560f, 120f, 22f);
+        // Opening is an actual visible press/release, not a synthetic stale popup anchor.
+        // The anchor assertion below now compares with that real trigger at the same precision.
+        Rect anchor = default;
         string? publishedBy = null;
         Rect popup = default;
         UiNode? popupOwner = null;
         foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
         {
-            host.Session.OpenPopup("scope-tree-scope-" + Uri.EscapeDataString(key), VerseUiExecution.Rect(anchor));
+            string? header = host.Bindings.Get<IReadOnlyList<string>>("b-action-keys").FirstOrDefault(item =>
+                item.EndsWith("-H", StringComparison.Ordinal)
+                && host.Bindings.Get<string>(UsWriteBindings.ItemKey("b-action-keys", item, "payload")) == key);
+            if (header == null) continue;
+            UiLayoutRect trigger = WindowRect(page, VerseUiExecution.Rect(viewport), "b-action-scope#" + header);
+            anchor = VerseUiExecution.Rect(trigger);
+            Click(page, VerseUiExecution.Rect(viewport), trigger);
             host.DrawChecked(viewport);
             if (TryGetPopupHitLayer(host.Session, out UiHitLayer layer))
             {
@@ -133,8 +137,11 @@ internal static partial class Program
         Assert(popup.y >= -0.01f && popup.yMax <= 600f + 0.01f,
             "composite popup must stay inside the host viewport: " + popup);
         UiLayoutRect? liveAnchor = host.Session.OpenPopupAnchor;
-        Assert(liveAnchor.HasValue && Math.Abs(liveAnchor.Value.Y - anchor.y) > 0.01f,
-            "the composite must replace the stale opening anchor with its actual trigger");
+        Assert(liveAnchor.HasValue && Math.Abs(liveAnchor.Value.Y - anchor.y) < 0.01f
+                && Math.Abs(liveAnchor.Value.X - anchor.x) < 0.01f
+                && Math.Abs(liveAnchor.Value.Width - anchor.width) < 0.01f
+                && Math.Abs(liveAnchor.Value.Height - anchor.height) < 0.01f,
+            "the popup must use its actual visible trigger's opening anchor");
         Assert(liveAnchor.HasValue && (Math.Abs(popup.y - liveAnchor.Value.YMax) < 0.01f
             || Math.Abs(popup.yMax - liveAnchor.Value.Y) < 0.01f),
             "the composite popup must attach immediately below or above its live trigger");
@@ -188,15 +195,15 @@ internal static partial class Program
     {
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
+        using var page = new Page(host, Fl08PublicObservation.ExecutionFor(host));
         host.Bindings.Invoke("set-tab", "Tuning");
         host.Bindings.Set("help-open", false);
         Rect viewport = new(0f, 0f, 800f, 600f);
-        // UIR-001: the rule bands joined the Tuning tab, so the scope rows sit below the fold at top
-        // scroll; reveal them once, and every popup helper below draws against live rows.
+        // The current sheet reveals each actual typed trigger through the existing scroll/hit helper.
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
-        UiNode? revealNode = host.Session.GetNodeByElementId("page-Behavior-scroll");
+        UiNode? revealNode = host.Session.GetNodeByElementId("b-actions-scroll");
         Assert(revealNode != null, "the content scroll node must exist to reach the scope rows");
-        host.Session.SetScrollTarget("scope-tree");
+        host.Session.SetScrollTarget("b-actions");
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(800f, 600f)));
         host.DrawChecked(viewport);
 
@@ -204,14 +211,14 @@ internal static partial class Program
         // the lane must say so rather than pass on a no-op commit.
         Assert(fake.LastActionScope == null, "the lane starts from a clean commit record");
 
-        BehaviorScope? committed = ClickScopeOption(host, fake, viewport, CoreActions.Eat, BehaviorScope.Disabled);
+        BehaviorScope? committed = ClickScopeOption(page, fake, viewport, CoreActions.Eat, BehaviorScope.Disabled);
         Assert(committed == BehaviorScope.Disabled,
             "a chosen scope option must commit the real enum instance, got "
             + (committed.HasValue ? committed.Value.ToString() : "null"));
         Assert(fake.LastActionKey == CoreActions.Eat && fake.LastActionScope == BehaviorScope.Disabled,
             "and it must arrive at SetActionScope unchanged");
 
-        committed = ClickScopeOption(host, fake, viewport, CoreActions.Draft, null);
+        committed = ClickScopeOption(page, fake, viewport, CoreActions.Draft, null);
         Assert(committed == null,
             "a row with no own scope must commit null (inherit), not a default scope - got "
             + (committed.HasValue ? committed.Value.ToString() : "null"));
@@ -220,7 +227,7 @@ internal static partial class Program
 
         // A press that misses the option list must not write anything: the typed path is not a wider target
         // than the row hit rule was.
-        PressScopePopup(host, fake, viewport, CoreActions.Draft, out Rect missed);
+        PressScopePopup(page, fake, viewport, CoreActions.Draft, out Rect missed);
         Assert(fake.LastActionKey == null && fake.LastActionScope == null,
             "a press outside the option list must not commit any scope ("
             + missed + " is outside the popup)");
@@ -521,12 +528,16 @@ internal static partial class Program
     }
 
     private static void PressScopePopup(
-        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, out Rect popup)
+        Page page, RecordingSettingsSource fake, Rect viewport, string actionKey, out Rect popup)
     {
+        UiHost host = page.Host;
         fake.LastActionScope = null;
         fake.LastActionKey = null;
         host.Session.ClosePopup();
-        host.Session.OpenPopup("scope-tree-scope-" + Uri.EscapeDataString(actionKey), VerseUiExecution.Rect(new Rect(600f, 200f, 120f, 24f)));
+        string header = host.Bindings.Get<IReadOnlyList<string>>("b-action-keys").First(item =>
+            item.EndsWith("-H", StringComparison.Ordinal)
+            && host.Bindings.Get<string>(UsWriteBindings.ItemKey("b-action-keys", item, "payload")) == actionKey);
+        Press(page, VerseUiExecution.Rect(viewport), "b-action-scope#" + header);
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(viewport.width, viewport.height)));
         host.DrawChecked(viewport);
         Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
@@ -539,8 +550,9 @@ internal static partial class Program
     }
 
     private static BehaviorScope? ClickScopeOption(
-        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, BehaviorScope? target)
+        Page page, RecordingSettingsSource fake, Rect viewport, string actionKey, BehaviorScope? target)
     {
+        UiHost host = page.Host;
         // The option list the widget builds: Auto (null) first, then the action's supported states. Locating
         // the target the same way the widget does keeps the ROW index honest without this lane re-deriving
         // the filtering rule.
@@ -561,7 +573,10 @@ internal static partial class Program
         fake.LastActionScope = null;
         fake.LastActionKey = null;
         host.Session.ClosePopup();
-        host.Session.OpenPopup("scope-tree-scope-" + Uri.EscapeDataString(actionKey), VerseUiExecution.Rect(new Rect(600f, 200f, 120f, 24f)));
+        string header = host.Bindings.Get<IReadOnlyList<string>>("b-action-keys").First(item =>
+            item.EndsWith("-H", StringComparison.Ordinal)
+            && host.Bindings.Get<string>(UsWriteBindings.ItemKey("b-action-keys", item, "payload")) == actionKey);
+        Press(page, VerseUiExecution.Rect(viewport), "b-action-scope#" + header);
         host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(viewport.width, viewport.height)));
         host.DrawChecked(viewport);
 

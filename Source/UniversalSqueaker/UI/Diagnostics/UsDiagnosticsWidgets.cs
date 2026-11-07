@@ -148,7 +148,7 @@ public static class UsDiagGlyphs
 public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
 {
     public const string KindName = "us/diag/toolbar";
-    private const float ButtonHeight = 22f;
+    private const float ButtonHeight = 30f;
     private const float Gap = 4f;
 
     public override string Kind => KindName;
@@ -162,41 +162,114 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
         bindings.ValidateAction<int>(UsDiagnosticsHost.KeyLock, elementPath);
     }
 
-    protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f : ButtonHeight + Gap;
+    protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f
+        : Scope == "capture" ? CaptureLayout(new UiLayoutRect(0, 0, ctx.ViewWidth, 0), ctx, false) : ButtonHeight + Gap;
 
     protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
+        if (Scope == "capture") { CaptureLayout(rect, ctx, true); return; }
 
         var b = ctx.Bindings;
         float y = rect.Y;
         float x = rect.X;
 
-        bool seconds = GetBool(b, UsDiagnosticsHost.KeySeconds);
-        UiLayoutRect secondsRect = new(x, y, 40f, ButtonHeight);
-        if (UsKernelDraw.SelectionButton(secondsRect, ctx, seconds ? "s" : "t", ctx.Theme, seconds, controlId: UsDiagnosticsHost.KeySeconds))
-        {
-            b.Set(UsDiagnosticsHost.KeySeconds, !seconds);
-        }
-
-        x += 40f + Gap;
+        // Units stay with their time fields/technical reader, never a misleading tracking switch.
         if (Scope == "main" && GetBool(b, UsDiagnosticsHost.KeyCanLock))
         {
-            UiLayoutRect lockRect = new(x, y, 56f, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(lockRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Lock"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyLock))
+            string label = UsKernelDraw.Keyed(ctx, "US.Diagnostics.Lock");
+            float lockWidth = UsKernelDraw.Text(ctx).MeasureWidth(label) + UsKernelDraw.SelectionButtonLabelInset * 2;
+            UiLayoutRect lockRect = new(x, y, lockWidth, ButtonHeight);
+            if (UsKernelDraw.StyledButton(lockRect, ctx, label, false, controlId: UsDiagnosticsHost.KeyLock))
             {
                 b.Invoke(UsDiagnosticsHost.KeyLock, 0);
             }
 
-            x += 56f + Gap;
+            x += lockWidth + Gap;
         }
 
         float collapseWidth = Math.Max(1f, rect.XMax - x);
         UiLayoutRect collapseRect = new(x, y, collapseWidth, ButtonHeight);
-        if (UsKernelDraw.SelectionButton(collapseRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyCollapsed))
+        if (UsKernelDraw.StyledButton(collapseRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar"), false, controlId: UsDiagnosticsHost.KeyCollapsed))
         {
             b.Set(UsDiagnosticsHost.KeyCollapsed, true);
         }
+    }
+
+    private sealed class CaptureDisplay
+    {
+        internal float Width, Height;
+        internal string Status = "";
+        internal UiLayoutRect StatusRect;
+        internal readonly List<(string Command, string Label, bool Secondary, UiLayoutRect Rect)> Actions = new();
+        internal UiTextFont Font;
+        internal UiMeasureInputs? Environment;
+    }
+    private static CaptureDisplay CapturePresentation(UiWidgetContext ctx, float width)
+    {
+        var display = new CaptureDisplay { Width = width };
+        var text = UsKernelDraw.Text(ctx);
+        display.Font = text.Font; display.Environment = text.CaptureEnvironment();
+        if (!GetBool(ctx.Bindings, "diag-capture-visible")) return display;
+        float x = 0, y = 0, row = UsKernelDraw.ControlHeight(ctx, 30);
+        void Add(bool visible, string caption, string command, bool secondary = false)
+        {
+            if (!visible) return;
+            string label = UsKernelDraw.Keyed(ctx, caption);
+            float w = Math.Min(width, text.MeasureWidth(label) + UsKernelDraw.SelectionButtonLabelInset * 2);
+            if (x > 0 && x + w > width) { x = 0; y += row + Gap; }
+            display.Actions.Add((command, label, secondary, new UiLayoutRect(x, y, w, row)));
+            x += w + Gap;
+        }
+        Add(GetBool(ctx.Bindings, "diag-capture-start-visible"), "US.Diagnostics.Capture.Start", "diag-capture-start");
+        Add(GetBool(ctx.Bindings, "diag-capture-stop-visible"), "US.Diagnostics.Capture.Stop", "diag-capture-stop");
+        Add(true, "US.Diagnostics.Capture.Copy", "diag-capture-copy");
+        Add(GetBool(ctx.Bindings, "diag-capture-technical-visible"), "US.Diagnostics.Technical.Open", "diag-open-technical", true);
+        Add(GetBool(ctx.Bindings, "diag-capture-clear-visible"), "US.Diagnostics.Capture.Clear", "diag-capture-clear", true);
+        y += row + Gap;
+        display.Status = GetString(ctx.Bindings, "diag-capture-status");
+        float h = text.MeasureText(display.Status, width);
+        display.StatusRect = new UiLayoutRect(0, y, width, h);
+        display.Height = y + h;
+        return display;
+    }
+    // Natural packing and paint share one captured presentation. Clicks take effect after paint.
+    internal static float CaptureLayout(UiLayoutRect rect, UiWidgetContext ctx, bool paint)
+    {
+        var captured = ctx.State("diag-capture-measured", () => new List<CaptureDisplay>());
+        if (!paint)
+        {
+            var current = CapturePresentation(ctx, Math.Max(1, rect.Width));
+            captured.RemoveAll(x => x.Width == current.Width);
+            captured.Add(current);
+            if (captured.Count > 4) captured.RemoveAt(0);
+            return current.Height;
+        }
+        var display = captured.FindLast(x => x.Width == rect.Width);
+        var text = UsKernelDraw.TextForDrawing(ctx);
+        if (display == null || display.Font != text.Font || !Equals(display.Environment, text.CaptureEnvironment()))
+        { ctx.Invalidate(); return rect.Height; }
+        string? command = null;
+        foreach (var action in display.Actions)
+        {
+            var hit = new UiLayoutRect(rect.X + action.Rect.X, rect.Y + action.Rect.Y, action.Rect.Width, action.Rect.Height);
+            bool pressed;
+            if (action.Secondary)
+            {
+                var outlet = new UiLayoutRect(hit.X + UsKernelDraw.SelectionButtonLabelInset, hit.Y,
+                    Math.Max(1, hit.Width - UsKernelDraw.SelectionButtonLabelInset * 2), hit.Height);
+                text.Draw(outlet, UsKernelDraw.Ellipsized(action.Label, text, outlet.Width),
+                    ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, UiEmphasis.Muted).Text, singleLine: true);
+                pressed = ctx.Controls.Activation(hit, ctx, action.Command, action.Command).Request;
+            }
+            else pressed = UsKernelDraw.StyledButton(hit, ctx, action.Label, false, controlId: action.Command);
+            if (pressed) command = action.Command;
+        }
+        var status = display.StatusRect;
+        text.Draw(new UiLayoutRect(rect.X + status.X, rect.Y + status.Y, status.Width, status.Height), display.Status,
+            ctx.Theme[UiPaletteRole.Foreground], UiTextAnchor.UpperLeft);
+        if (command != null) ctx.Bindings.Invoke(command);
+        return display.Height;
     }
 }
 
@@ -209,7 +282,7 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
 public sealed class UsDiagNavWidget : UsDiagWidgetBase
 {
     public const string KindName = "us/diag/nav";
-    private const float RowHeight = 24f;
+    private const float RowHeight = 30f;
 
     public override string Kind => KindName;
 
@@ -229,7 +302,7 @@ public sealed class UsDiagNavWidget : UsDiagWidgetBase
         if (IsCollapsed(ctx) || !ShowBack(ctx)) return;
 
         string label = UsDiagGlyphs.PrevText(ctx) + " " + UsKernelDraw.Keyed(ctx, "US.Diagnostics.Nav.Back");
-        if (UsKernelDraw.SelectionButton(new UiLayoutRect(rect.X, rect.Y, rect.Width, RowHeight), ctx, label, ctx.Theme, false, controlId: UsDiagnosticsHost.KeyNavView))
+        if (UsKernelDraw.StyledButton(new UiLayoutRect(rect.X, rect.Y, rect.Width, RowHeight), ctx, label, false, controlId: UsDiagnosticsHost.KeyNavView))
         {
             ctx.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.List);
         }
@@ -422,8 +495,7 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
 }
 
 /// <summary>The paged, searchable summary list: one search field + 8 rows (the shared summary-row
-/// layout). Row click routes through the source: a viewport pawn drills in via game selection, a
-/// search-only (off-screen) hit locks and detaches a detail window. The same widget serves the wide
+/// layout). A row click browses that pawn without a vanilla selection or capture write. The same widget serves the wide
 /// master column and the narrow list view - only the arrangement differs.</summary>
 public sealed class UsDiagListWidget : UsDiagWidgetBase
 {
@@ -458,7 +530,7 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     /// DX1.4: the field reserves the MEASURED Small line plus its 2+2 insets - the fixed 24 left the
     /// text box 20px where the engine asked for 22 (the logged need22/have20 pair).</summary>
     internal static float FieldHeightFor(UiWidgetContext ctx)
-        => Math.Max(FieldHeight, ctx.Metrics.MeasureText("Ag", UiFont.Small, 10000f) + 4f);
+        => UsKernelDraw.ControlHeight(ctx, 30);
 
     /// <summary>DX1.3: the 232px master column cannot carry six single-line columns without crushing
     /// the name; the wide navigation list can. The painter and this height arithmetic read ONE
@@ -468,10 +540,17 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     internal static float RowHeightFor(UiWidgetContext ctx) => TwoLine(ctx) ? TwoLineRowHeight : RowHeight;
 
     internal static float BodyHeight(UiWidgetContext ctx)
-        => FieldHeightFor(ctx) + QueryStatusHeight(ctx) + UsDiagnosticsProjection.RowsPerPage * RowHeightFor(ctx);
+    {
+        float height = FieldHeightFor(ctx) + QueryStatusHeight(ctx);
+        if (ctx.Bindings.TryGet(UsDiagnosticsHost.KeyRows, out IReadOnlyList<UsDiagRow> rows) && rows.Count > 0)
+            foreach (var row in rows) height += UsDiagRowPainter.Height(ctx, row, ctx.ViewWidth);
+        else height += UsKernelDraw.Text(ctx).MeasureText(UsKernelDraw.Keyed(ctx,
+            GetString(ctx.Bindings, UsDiagnosticsHost.KeySearch).Length > 0 ? "US.Diagnostics.Search.None" : "US.Diagnostics.Panel.Empty"), Math.Max(1, ctx.ViewWidth - 8));
+        return height;
+    }
     private static string QueryStatus(UiWidgetContext ctx) => GetString(ctx.Bindings, "diag-query-status");
-    private static float QueryStatusHeight(UiWidgetContext ctx)
-        => string.IsNullOrEmpty(QueryStatus(ctx)) ? 0 : UsKernelDraw.TextBandHeight(Math.Max(1, ctx.ViewWidth - 8), ctx, QueryStatus(ctx), UiFont.Small, 24);
+    internal static float QueryStatusHeight(UiWidgetContext ctx)
+        => string.IsNullOrEmpty(QueryStatus(ctx)) ? 0 : UsKernelDraw.Text(ctx).MeasureText(QueryStatus(ctx), Math.Max(1, ctx.ViewWidth - 8));
 
     protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
     {
@@ -487,11 +566,11 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     {
         var b = ctx.Bindings;
         string query = DrawSearchField(new UiLayoutRect(rect.X, rect.Y, Math.Max(1, rect.Width - 64), FieldHeightFor(ctx)), ctx);
-        if (UsKernelDraw.SelectionButton(new UiLayoutRect(rect.XMax - 60, rect.Y, 60, FieldHeightFor(ctx)), ctx,
-            UsKernelDraw.Keyed(ctx, "US.Browse.Clear"), ctx.Theme, false, controlId: "diag-search-clear")) b.Set(UsDiagnosticsHost.KeySearch, "");
+        if (UsKernelDraw.StyledButton(new UiLayoutRect(rect.XMax - 60, rect.Y, 60, FieldHeightFor(ctx)), ctx,
+            UsKernelDraw.Keyed(ctx, "US.Browse.Clear"), false, controlId: "diag-search-clear")) b.Set(UsDiagnosticsHost.KeySearch, "");
         float y = rect.Y + FieldHeightFor(ctx);
         float scopeHeight = QueryStatusHeight(ctx);
-        if (scopeHeight > 0) UsKernelDraw.Label(new UiLayoutRect(rect.X + 4, y, Math.Max(1, rect.Width - 8), scopeHeight), QueryStatus(ctx), ctx, UiFont.Small);
+        if (scopeHeight > 0) UsKernelDraw.StyledLabel(ctx, new UiLayoutRect(rect.X + 4, y, Math.Max(1, rect.Width - 8), scopeHeight), QueryStatus(ctx), anchor: UiTextAnchor.UpperLeft);
         y += scopeHeight;
 
         if (!b.TryGet(UsDiagnosticsHost.KeyRows, out IReadOnlyList<UsDiagRow>? rows) || rows == null || rows.Count == 0)
@@ -499,33 +578,22 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
             string note = query.Length > 0
                 ? UsKernelDraw.Keyed(ctx, "US.Diagnostics.Search.None")
                 : UsKernelDraw.Keyed(ctx, "US.Diagnostics.Panel.Empty");
-            UsKernelDraw.Label(new UiLayoutRect(rect.X + 4f, y, Math.Max(1f, rect.Width - 8f), RowHeight), note, ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft);
+            float h = UsKernelDraw.Text(ctx).MeasureText(note, Math.Max(1, rect.Width - 8));
+            UsKernelDraw.StyledLabel(ctx, new UiLayoutRect(rect.X + 4, y, Math.Max(1, rect.Width - 8), h), note, anchor: UiTextAnchor.UpperLeft);
             return;
         }
-
-        // D6: one advance per numeric column for the whole page, measured in the font the cells are
-        // drawn with, so the column scans vertically instead of per-row.
-        List<string> cooldowns = new(rows.Count);
-        List<string> audios = new(rows.Count);
-        for (int i = 0; i < rows.Count; i++)
-        {
-            cooldowns.Add(rows[i].CooldownText);
-            audios.Add(rows[i].AudioText);
-        }
-
-        Func<string, float> measure = text => ctx.Metrics.MeasureWidth(text, UiFont.Tiny);
-        float cooldownWidth = UsDiagnosticsProjection.NumericColumnWidth(cooldowns, measure);
-        float audioWidth = UsDiagnosticsProjection.NumericColumnWidth(audios, measure);
 
         for (int i = 0; i < rows.Count; i++)
         {
             UsDiagRow row = rows[i];
-            UiLayoutRect rowRect = new(rect.X, y + i * RowHeightFor(ctx), rect.Width, RowHeightFor(ctx));
+            float rowHeight = UsDiagRowPainter.Height(ctx, row, rect.Width);
+            UiLayoutRect rowRect = new(rect.X, y, rect.Width, rowHeight);
             bool hovered = ctx.Controls.IsMouseOver(rowRect);
             // A locked row is unavailable, not selected: it takes the disabled rail (hatch) so the hatch
             // and the selected plane can never be confused for one another.
             UsKernelDraw.RowSurface(ctx.Drawing, rowRect, ctx.Theme, hovered, row.Locked ? UsKernelDraw.RowRail.Disabled : UsKernelDraw.RowRail.None);
-            UsDiagRowPainter.Paint(rowRect, row, ctx, cooldownWidth, audioWidth);
+            UsDiagRowPainter.Paint(rowRect, row, ctx);
+            y += rowHeight;
             if (ctx.Controls.Activation(rowRect, ctx, UsDiagnosticsHost.KeyRowClick, "row", row.PawnId).Request)
             {
                 b.Invoke(UsDiagnosticsHost.KeyRowClick, row.PawnId);
@@ -542,7 +610,7 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
         UiLayoutRect textRect = new(rect.X + 6f, rect.Y + 2f, Math.Max(1f, rect.Width - 12f), Math.Max(1f, rect.Height - 4f));
         UiEditSession<string> editor = UsKernelDraw.LiveTextField(textRect, ctx, UsDiagnosticsHost.KeySearch);
         if (!editor.Focused && editor.Draft.Length == 0)
-            UsKernelDraw.Label(textRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Search.Placeholder"), ctx, UiFont.Small, UiTextAnchor.MiddleLeft);
+            UsKernelDraw.StyledLabel(ctx, textRect, UsKernelDraw.Ellipsized(UsKernelDraw.Keyed(ctx, "US.Diagnostics.Search.Placeholder"), UsKernelDraw.Text(ctx), textRect.Width), singleLine: true);
         return editor.Draft;
     }
 }
@@ -554,7 +622,7 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
 public sealed class UsDiagPagerWidget : UsDiagWidgetBase
 {
     public const string KindName = "us/diag/pager";
-    private const float RowHeight = 22f;
+    private const float RowHeight = 30f;
     private const float ButtonPad = 8f;
 
     public override string Kind => KindName;
@@ -587,25 +655,25 @@ public sealed class UsDiagPagerWidget : UsDiagWidgetBase
 
         string prev = UsDiagGlyphs.PrevText(ctx);
         string next = UsDiagGlyphs.NextText(ctx);
-        float prevWidth = ctx.Metrics.MeasureWidth(prev, UiFont.Tiny) + ButtonPad * 2f;
-        float nextWidth = ctx.Metrics.MeasureWidth(next, UiFont.Tiny) + ButtonPad * 2f;
+        float prevWidth = UsKernelDraw.Text(ctx).MeasureWidth(prev) + ButtonPad * 2f;
+        float nextWidth = UsKernelDraw.Text(ctx).MeasureWidth(next) + ButtonPad * 2f;
 
-        if (page > 0 && UsKernelDraw.SelectionButton(new UiLayoutRect(rect.X, rect.Y, prevWidth, RowHeight), ctx, prev, ctx.Theme, false, controlId: "page-previous", itemKey: page))
+        if (page > 0 && UsKernelDraw.StyledButton(new UiLayoutRect(rect.X, rect.Y, prevWidth, RowHeight), ctx, prev, false, controlId: "page-previous", itemKey: page))
         {
             b.Set(UsDiagnosticsHost.KeyPage, page - 1);
         }
 
-        if (page < pages - 1 && UsKernelDraw.SelectionButton(new UiLayoutRect(rect.XMax - nextWidth, rect.Y, nextWidth, RowHeight), ctx, next, ctx.Theme, false, controlId: "page-next", itemKey: page))
+        if (page < pages - 1 && UsKernelDraw.StyledButton(new UiLayoutRect(rect.XMax - nextWidth, rect.Y, nextWidth, RowHeight), ctx, next, false, controlId: "page-next", itemKey: page))
         {
             b.Set(UsDiagnosticsHost.KeyPage, page + 1);
         }
 
         float textX = rect.X + prevWidth + 4f;
         float textW = Math.Max(1f, rect.Width - prevWidth - nextWidth - 8f);
-        UsKernelDraw.Label(
+        UsKernelDraw.StyledLabel(ctx,
             new UiLayoutRect(textX, rect.Y, textW, RowHeight),
             string.Format(UsKernelDraw.Keyed(ctx, "US.Diagnostics.Page.Format"), page + 1, pages, total),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleCenter);
+            anchor: UiTextAnchor.MiddleCenter, singleLine: true);
     }
 }
 
@@ -618,512 +686,165 @@ public sealed class UsDiagPagerWidget : UsDiagWidgetBase
 public sealed class UsDiagDetailWidget : UsDiagWidgetBase
 {
     public const string KindName = "us/diag/detail";
-
-    private const float HeaderHeight = 28f;
-    private const float SectionHeight = 18f;
-    private const float GroupTitleHeight = 18f;
-    private const float BadgeWidth = 72f;
-    private const float Gap = 4f;
-
-    /// <summary>Leading indent of the condition rows: the rail plus the state shape live here.</summary>
-    private const float Indent = 18f;
-    private const float StatusWidth = 66f;
-    private const float BasisWidth = 52f;
-    private const float CellGap = 4f;
-    private const float NameShare = 0.42f;
-
     public override string Kind => KindName;
-
-    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName, () => new UsDiagDetailWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Scope"))));
-
+    public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope, KindName,
+        () => new UsDiagDetailWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"), new UiAttributeDefinition("Kind"), new UiAttributeDefinition("Scope"))));
     public override void Validate(IUiBindingAccess bindings, string elementPath)
     {
-        // Reads only (TryGet degrades); the lock action is validated by the toolbar that invokes it.
         bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyRawOpen, elementPath);
-        // The three group fold switches are written by the headings this widget draws.
-        bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyGroupGame, elementPath);
-        bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyGroupRules, elementPath);
-        bindings.ValidateValue<bool>(UsDiagnosticsHost.KeyGroupAudio, elementPath);
+        foreach (UsDiagGateGroup group in Enum.GetValues(typeof(UsDiagGateGroup)))
+            bindings.ValidateValue<bool>(UsDiagnosticsHost.GroupKey(group), elementPath);
     }
-
-    protected override float FallbackHeight(UiWidgetContext ctx) => HeaderHeight + SectionHeight * 3f + LineHeight * 22f;
-
-    protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f : DetailHeight(ctx, ctx.ViewWidth);
-
-    /// <summary>
-    /// The detail column's measured height for a given arranged width. A one-label paragraph gets the
-    /// lines it needs instead of a fixed band, so a long Chinese value or reason receives real height;
-    /// no number here shrinks a font.
-    /// </summary>
-    internal static float DetailHeight(UiWidgetContext ctx, float arrangedWidth)
-    {
-        if (!ctx.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) || detail == null) return EmptyHeight(ctx);
-
-        float width = Math.Max(1f, arrangedWidth);
-        float content = Math.Max(1f, width - Indent);
-        float height = HeaderHeight
-            + SectionHeight + MeasuredTextHeight(ctx, detail.Summary.Headline, Math.Max(1f, width - 12f))
-            + MeasuredTextHeight(ctx, detail.Summary.Detail, Math.Max(1f, width - 12f))
-            + SectionHeight
-            + MeasuredTextHeight(ctx, detail.Previous.EvaluationLine, content)
-            + MeasuredTextHeight(ctx, detail.Previous.DispatchLine, content)
-            + SectionHeight;
-
-        for (int band = 0; band < BandCount; band++)
-        {
-            UsDiagGateGroup group = BandGroup(band);
-            UsDiagBasis basis = BandBasis(band);
-            if (!HasRows(detail, group, basis)) continue;
-            if (!IsGroupOpen(ctx, group))
-            {
-                // A folded group keeps ONE heading (its first band's), so the developer still sees that
-                // the group and its rows exist; its rows contribute no height at all.
-                if (IsFirstBandOfGroup(band)) height += GroupTitleHeight;
-                continue;
-            }
-
-            height += GroupTitleHeight;
-            for (int i = 0; i < detail.Gates.Count; i++)
-            {
-                if (detail.Gates[i].Group != group || detail.Gates[i].Basis != basis) continue;
-                height += RowHeight(ctx, detail.Gates[i], content);
-            }
-        }
-
-        height += SectionHeight; // the raw-values disclosure
-        if (GetBool(ctx.Bindings, UsDiagnosticsHost.KeyRawOpen)) height += LineHeight * 2f;
-        return height + Gap;
-    }
-
-    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx)
-    {
-        if (IsCollapsed(ctx)) return;
-        DrawDetail(rect, ctx);
-    }
-
-    /// <summary>The detail content, reusable by the narrow navigation body.</summary>
+    protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0 : DetailHeight(ctx, ctx.ViewWidth);
+    protected override void DrawBody(UiLayoutRect rect, UiWidgetContext ctx) { if (!IsCollapsed(ctx)) DrawDetail(rect, ctx); }
+    internal static float DetailHeight(UiWidgetContext ctx, float width) => Layout(new UiLayoutRect(0, 0, width, 0), ctx, false);
     internal static void DrawDetail(UiLayoutRect rect, UiWidgetContext ctx)
     {
+        float wanted = Layout(rect, ctx, true);
+        if (Math.Abs(wanted - rect.Height) > .5f) ctx.Node?.MarkDirty();
+    }
+    // One measured single-column flow. Long status, values and reasons receive the same width at paint.
+    private static float Layout(UiLayoutRect rect, UiWidgetContext ctx, bool paint)
+    {
+        float y = rect.Y, width = Math.Max(1, rect.Width);
+        var text = UsKernelDraw.Text(ctx);
+        float Line(string value, UiColour? ink = null, float indent = 0)
+        {
+            if (string.IsNullOrEmpty(value)) return 0;
+            float w = Math.Max(1, width - indent);
+            float h = text.MeasureText(value, w);
+            if (paint) UsKernelDraw.TextForDrawing(ctx).Draw(new UiLayoutRect(rect.X + indent, y, w, h), value,
+                ink ?? ctx.Theme[UiPaletteRole.Foreground], UiTextAnchor.UpperLeft);
+            y += h;
+            return h;
+        }
+        void GateHeading(UsDiagGateLine gate)
+        {
+            // Keep the status its own semantic/colour outlet, without adding a vertical row.
+            // Both bands wrap at their actual painted widths with the same body run.
+            float available = Math.Max(1, width - 8);
+            float statusWidth = Math.Max(1, Math.Min(text.MeasureWidth(gate.Status), available * .5f));
+            float nameWidth = Math.Max(1, available - statusWidth - 6);
+            float height = Math.Max(text.MeasureText(gate.Name, nameWidth), text.MeasureText(gate.Status, statusWidth));
+            if (paint)
+            {
+                var drawing = UsKernelDraw.TextForDrawing(ctx);
+                drawing.Draw(new UiLayoutRect(rect.X + 8, y, nameWidth, height), gate.Name,
+                    ctx.Theme[UiPaletteRole.Foreground], UiTextAnchor.UpperLeft);
+                drawing.Draw(new UiLayoutRect(rect.X + 8 + nameWidth + 6, y, statusWidth, height), gate.Status,
+                    UsDiagPaint.Status(ctx.Theme, gate.State), UiTextAnchor.UpperLeft);
+            }
+            y += height;
+        }
+        string Tr(string key) => UsKernelDraw.Keyed(ctx, key);
+        float Button(string label, string id, object? key = null)
+        {
+            float h = Math.Max(UsKernelDraw.ControlHeight(ctx, 30), text.MeasureText(label, Math.Max(1, width - 12)));
+            bool pressed = paint && UsKernelDraw.SelectionButton(new UiLayoutRect(rect.X, y, width, h), ctx, label, ctx.Theme, false,
+                font: UiFont.Small, controlId: id, itemKey: key);
+            y += h + 4;
+            return pressed ? 1 : 0;
+        }
         if (!ctx.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) || detail == null)
         {
-            DrawEmpty(rect, ctx);
-            return;
+            Line(Tr("US.Diagnostics.Summary.Incomplete")); y += 4;
+            Line(Tr("US.Diagnostics.Detail.Empty"));
+            return y - rect.Y + 8;
         }
-
-        // The widget's own geometry is measured, so a subject whose value shapes change must ask for a
-        // re-measure instead of drawing into a stale band. The node's dirty flag is the engine's own
-        // invalidation axis; the frame after the change gets the new geometry.
-        float wanted = DetailHeight(ctx, ctx.ViewWidth);
-        if (Math.Abs(wanted - rect.Height) > 0.5f)
+        string titleText = Tr("US.Diagnostics.Viewing") + " · " + detail.PawnText;
+        var titleRun = UiTextFonts.Resolve(ctx.Metrics, paint ? ctx.Drawing : null, new UiTextFont(UiFont.Medium, 22), elementPath: ctx.ElementPath);
+        float titleHeight = titleRun.MeasureText(titleText, width);
+        if (paint) titleRun.Draw(new UiLayoutRect(rect.X, y, width, titleHeight), titleText, ctx.Theme[UiPaletteRole.Foreground], UiTextAnchor.UpperLeft);
+        y += titleHeight + 4;
+        Line(detail.ObservationStatus ?? Tr(detail.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"));
+        y += 8;
+        Line(detail.Summary.Headline);
+        Line(detail.Summary.Detail); y += 8;
+        Line(detail.Previous.Heading.Length == 0 ? Tr("US.Diagnostics.Section.Previous") : detail.Previous.Heading);
+        Line(detail.Previous.EvaluationLine);
+        Line(detail.Previous.DispatchLine); y += 8;
+        if (ctx.Bindings.TryGet("diag-history", out IReadOnlyList<UsDiagEvent> history) && history.Count > 0)
         {
-            ctx.Node?.MarkDirty();
-        }
-
-        float width = Math.Max(1f, rect.Width);
-        float content = Math.Max(1f, width - Indent);
-        float y = rect.Y;
-
-        // 1. Identity + readiness. The badge is NEUTRAL for a ready pawn and attention-cyan for a
-        // blocked one: a diagnostic block is not a destructive action and must not borrow the danger
-        // family the carrier's Warning/Danger alias would give it.
-        UiLayoutRect badgeRect = new(rect.XMax - BadgeWidth, y + 3f, BadgeWidth, HeaderHeight - 6f);
-        if (detail.ObservationStatus != null)
-        {
-            UiThemeDraw.Surface(ctx.Drawing, badgeRect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
-            UsKernelDraw.Label(badgeRect, detail.ObservationStatus, ctx, UiFont.Tiny, UiTextAnchor.MiddleCenter, singleLine: true);
-        }
-        else if (detail.Ready)
-        {
-            UiThemeDraw.Surface(ctx.Drawing, badgeRect, ctx.Theme, ctx.Theme[UiPaletteRole.ControlSurface], ctx.Theme[UiPaletteRole.Border]);
-            UsKernelDraw.Label(badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Ready"), ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleCenter, singleLine: true);
-        }
-        else
-        {
-            UsAttention.Badge(ctx.Drawing, badgeRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Blocked"), ctx.Theme);
-        }
-
-        float labelWidth = Math.Max(1f, badgeRect.X - rect.X - 8f);
-        UsKernelDraw.Label(
-            new UiLayoutRect(rect.X, y, labelWidth, HeaderHeight),
-            UsKernelDraw.Ellipsized(detail.PawnText, ctx, UiFont.Small, labelWidth),
-            ctx, UiFont.Small, UiTextAnchor.MiddleLeft);
-        if (detail.Locked)
-        {
-            UsKernelDraw.Label(
-                new UiLayoutRect(badgeRect.X - 44f, y + 5f, 40f, 18f),
-                UsKernelDraw.Keyed(ctx, "US.Diagnostics.LockedTag"),
-                ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleRight);
-        }
-
-        y += HeaderHeight;
-
-        // 2. Current observations: the summary speaks ONLY for rows that are current observations, and
-        // its own quote may be "no block found" or "state incomplete" - never a remembered failure.
-        y = Section(y, rect, ctx, "US.Diagnostics.Section.Current");
-        y = DrawSummary(y, rect, ctx, detail.Summary);
-
-        // 3. Previous evaluation / last dispatch, in its own band with its own recency.
-        y = Section(y, rect, ctx, "US.Diagnostics.Section.Previous");
-        if (detail.Previous.EvaluationLine.Length > 0)
-        {
-            y = Wrapped(y, rect, ctx, detail.Previous.EvaluationLine, ctx.Theme[UiPaletteRole.Foreground]);
-        }
-
-        if (detail.Previous.DispatchLine.Length > 0)
-        {
-            y = Wrapped(y, rect, ctx, detail.Previous.DispatchLine, ctx.Theme[UiPaletteRole.SecondaryForeground]);
-        }
-
-        // 4. The conditions, grouped by side and split by clock basis inside a group.
-        UsKernelDraw.Label(
-            new UiLayoutRect(rect.X, y, rect.Width, SectionHeight),
-            string.Format(UsKernelDraw.Keyed(ctx, "US.Diagnostics.Section.ChainCount"), detail.Gates.Count),
-            ctx,
-            UiFont.Tiny,
-            UiTextAnchor.MiddleLeft,
-            singleLine: true);
-        y += SectionHeight;
-        int firstCurrentBlock = UsDiagnosticsProjection.FirstCurrentBlockIndex(detail.Gates);
-        for (int band = 0; band < BandCount; band++)
-        {
-            UsDiagGateGroup group = BandGroup(band);
-            UsDiagBasis basis = BandBasis(band);
-            if (!HasRows(detail, group, basis)) continue;
-
-            bool open = IsGroupOpen(ctx, group);
-            if (!open && !IsFirstBandOfGroup(band)) continue;
-
-            // Composed from two real keys rather than one format key: the group name must survive a host
-            // that resolves no placeholder (the harness's own translation seam), and the basis word is
-            // the same one each row's basis cell shows.
-            string groupName = UsKernelDraw.Keyed(ctx, GroupKey(group));
-            string heading = open
-                ? "[-] " + groupName + " · " + UsKernelDraw.Keyed(ctx,
-                    basis == UsDiagBasis.CurrentObservation ? "US.Diagnostics.Basis.Current" : "US.Diagnostics.Basis.Previous")
-                : "[+] " + groupName;
-            UiLayoutRect headingRect = new(rect.X, y, rect.Width, GroupTitleHeight);
-            if (UsKernelDraw.SelectionButton(headingRect, ctx, heading, ctx.Theme, false, controlId: "group-toggle", itemKey: (group, basis)))
+            Line(GetString(ctx.Bindings, "diag-history-identity"));
+            long selected = ctx.Bindings.Get<long>("diag-event-selected");
+            foreach (var entry in history)
             {
-                // The ONLY writer of this switch: the developer's click. A value update cannot reach it.
+                if (Button(entry.Summary, "diag-event", entry.Sequence) != 0)
+                    ctx.Bindings.Set("diag-event-selected", entry.Sequence);
+                if (entry.Sequence == selected || selected < 0 && ReferenceEquals(entry, history[0])) Line(entry.Reason);
+            }
+            y += 8;
+        }
+        int firstBlock = UsDiagnosticsProjection.FirstCurrentBlockIndex(detail.Gates);
+        foreach (UsDiagGateGroup group in Enum.GetValues(typeof(UsDiagGateGroup)))
+        {
+            bool any = false;
+            foreach (var gate in detail.Gates) if (gate.Group == group) { any = true; break; }
+            if (!any) continue;
+            bool open = !ctx.Bindings.TryGet(UsDiagnosticsHost.GroupKey(group), out bool value) || value;
+            string groupKey = group == UsDiagGateGroup.Game ? "US.Diagnostics.Gate.Group.Game" : group == UsDiagGateGroup.Rules
+                ? "US.Diagnostics.Gate.Group.Rules" : "US.Diagnostics.Gate.Group.Audio";
+            if (Button((open ? "− " : "+ ") + Tr(groupKey), "group-toggle", group) != 0)
                 ctx.Bindings.Set(UsDiagnosticsHost.GroupKey(group), !open);
-            }
-
-            y += GroupTitleHeight;
             if (!open) continue;
-
-            for (int i = 0; i < detail.Gates.Count; i++)
+            // Preserve every supplied basis, including Rules/PreviousEvaluation and Unknown.
+            foreach (UsDiagBasis basis in Enum.GetValues(typeof(UsDiagBasis)))
             {
-                UsDiagGateLine gate = detail.Gates[i];
-                if (gate.Group != group || gate.Basis != basis) continue;
-                y = DrawGate(y, rect, ctx, gate, content, i == firstCurrentBlock);
+                bool heading = false;
+                for (int i = 0; i < detail.Gates.Count; i++)
+                {
+                    var gate = detail.Gates[i];
+                    if (gate.Group != group || gate.Basis != basis) continue;
+                    if (!heading) { Line(UsDiagnosticsProjection.BasisText(gate, Tr)); heading = true; }
+                    float top = y;
+                    GateHeading(gate);
+                    Line(gate.Value, ctx.Theme[UiPaletteRole.Foreground], 8);
+                    Line(UsDiagnosticsProjection.ReasonText(gate, Tr), ctx.Theme[UiPaletteRole.Foreground], 8);
+                    if (paint)
+                    {
+                        var rail = new UiLayoutRect(rect.X, top, 2, y - top);
+                        if (i == firstBlock) UsAttention.Rail(ctx.Drawing, rail, ctx.Theme);
+                        else UiThemeDraw.Solid(ctx.Drawing, rail, ctx.Theme[UiPaletteRole.Divider]);
+                    }
+                    y += 6;
+                }
             }
+            y += 4;
         }
-
-        // 5. Raw values: folded away by default - they are evidence, not the answer.
-        bool rawOpen = GetBool(ctx.Bindings, UsDiagnosticsHost.KeyRawOpen);
-        UiLayoutRect rawToggle = new(rect.X, y, rect.Width, SectionHeight);
-        if (UsKernelDraw.SelectionButton(rawToggle, ctx, UsKernelDraw.Keyed(ctx, rawOpen ? "US.Diagnostics.Raw.Hide" : "US.Diagnostics.Raw.Show"), ctx.Theme, false, controlId: UsDiagnosticsHost.KeyRawOpen))
-        {
-            ctx.Bindings.Set(UsDiagnosticsHost.KeyRawOpen, !rawOpen);
-        }
-
-        y += SectionHeight;
-        if (rawOpen)
-        {
-            y = FieldRow(y, rect, ctx, "US.Diagnostics.Field.CurrentAction", detail.ActionText);
-            y = FieldRow(y, rect, ctx, "US.Diagnostics.Field.LastDispatch", detail.AudioText);
-        }
-    }
-
-    private static void DrawEmpty(UiLayoutRect rect, UiWidgetContext ctx)
-    {
-        // "Current state incomplete" is the honest headline when there is no subject at all; the second
-        // line says what to do about it. Neither is a pass state and neither implies "not reached".
-        float y = rect.Y + 8f;
-        UsKernelDraw.Label(new UiLayoutRect(rect.X + 8f, y, Math.Max(1f, rect.Width - 16f), LineHeight),
-            UsKernelDraw.Keyed(ctx, "US.Diagnostics.Summary.Incomplete"), ctx, UiFont.Small, UiTextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(rect.X + 8f, y + LineHeight, Math.Max(1f, rect.Width - 16f), LineHeight),
-            UsKernelDraw.Keyed(ctx, "US.Diagnostics.Detail.Empty"), ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
-    }
-
-    private static float EmptyHeight(UiWidgetContext ctx) => LineHeight * 2f + 16f;
-
-    /// <summary>True while at least one row of this (group, basis) band exists in the current chain.</summary>
-    private static bool HasRows(UsDiagDetail detail, UsDiagGateGroup group, UsDiagBasis basis)
-    {
-        for (int i = 0; i < detail.Gates.Count; i++)
-        {
-            if (detail.Gates[i].Group == group && detail.Gates[i].Basis == basis) return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Which band is the group's first. A folded group draws exactly one heading, at its first band, so
-    /// the four (group, basis) bands never produce two collapsed headings for one group.
-    /// </summary>
-    private static bool IsFirstBandOfGroup(int band) => band == 0 || band == 1 || band == 2;
-
-    /// <summary>The group's fold switch: page state, all three open by default, only a click writes it.</summary>
-    private static bool IsGroupOpen(UiWidgetContext ctx, UsDiagGateGroup group)
-        => !ctx.Bindings.TryGet(UsDiagnosticsHost.GroupKey(group), out bool open) || open;
-
-    private static float DrawSummary(float y, UiLayoutRect rect, UiWidgetContext ctx, UsDiagCurrentSummary summary)
-    {
-        float width = Math.Max(1f, rect.Width - 12f);
-        float headlineHeight = MeasuredTextHeight(ctx, summary.Headline, width);
-        if (summary.HasCurrentBlock)
-        {
-            // The primary finding gets the attention treatment: a neutral fill with a cyan border and a
-            // cyan label. It is the ONE place the attention substrate is used as a band.
-            UsAttention.Band(ctx.Drawing, new UiLayoutRect(rect.X, y, rect.Width, headlineHeight), ctx.Theme);
-            UsKernelDraw.Label(
-                new UiLayoutRect(rect.X + 6f, y, Math.Max(1f, rect.Width - 12f), headlineHeight),
-                summary.Headline,
-                ctx,
-                UsAttention.Brush,
-                UiFont.Tiny,
-                UiTextAnchor.MiddleLeft);
-        }
-        else
-        {
-            UsKernelDraw.Label(new UiLayoutRect(rect.X, y, width, headlineHeight), summary.Headline, ctx, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
-        }
-
-        y += headlineHeight;
-        if (summary.Detail.Length > 0)
-        {
-            float detailHeight = MeasuredTextHeight(ctx, summary.Detail, width);
-            UsKernelDraw.Label(new UiLayoutRect(rect.X, y, width, detailHeight), summary.Detail, ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft);
-            y += detailHeight;
-        }
-
-        return y;
-    }
-
-    /// <summary>
-    /// One condition row. Layout is status | name | value | basis, with an indented reason line when the
-    /// row has one (an N/A explanation or a Pending reason). The value column takes what is left, wraps to
-    /// a measured number of lines and keeps neutral ink; the status cell is the ONLY place the attention
-    /// marker appears.
-    /// </summary>
-    private static float DrawGate(float y, UiLayoutRect rect, UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, bool firstCurrentBlock)
-    {
-        Func<string, string> tr = key => UsKernelDraw.Keyed(ctx, key);
-        float rowSpan = RowSpan(ctx, gate, contentWidth);
-        float reasonSpan = ReasonSpan(ctx, gate, contentWidth, tr);
-        float rowHeight = rowSpan + reasonSpan + 2f;
-        float lineSpan = rowSpan;
-        float nameWidth = Math.Max(1f, (contentWidth - StatusWidth - BasisWidth - CellGap * 3f) * NameShare);
-        float valueWidth = Math.Max(1f, contentWidth - StatusWidth - BasisWidth - nameWidth - CellGap * 3f);
-        float x = rect.X + Indent;
-        float right = rect.X + Indent + contentWidth;
-
-        // The rail: attention cyan on the first CURRENT block (the row the summary quotes), the plain
-        // divider elsewhere. "First" is carried by this rail, never by repeating the status word.
-        if (firstCurrentBlock)
-        {
-            UsAttention.Rail(ctx.Drawing, new UiLayoutRect(rect.X, y, 2f, rowHeight), ctx.Theme);
-        }
-        else
-        {
-            UiThemeDraw.Solid(ctx.Drawing, new UiLayoutRect(rect.X, y, 2f, rowHeight), ctx.Theme[UiPaletteRole.Divider]);
-        }
-
-        UsKernelDraw.Label(new UiLayoutRect(x, y, StatusWidth, lineSpan), gate.Status, ctx, UsDiagPaint.Status(ctx.Theme, gate.State), UiFont.Tiny, UiTextAnchor.MiddleLeft);
-        UsKernelDraw.Label(new UiLayoutRect(x + StatusWidth + CellGap, y, nameWidth, lineSpan), gate.Name, ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft);
-        UsKernelDraw.Label(
-            new UiLayoutRect(x + StatusWidth + CellGap + nameWidth + CellGap, y, valueWidth, lineSpan),
-            gate.Value,
-            ctx,
-            UsDiagPaint.Value(ctx.Theme, gate.State),
-            UiFont.Tiny,
-            UiTextAnchor.MiddleRight,
-            singleLine: false);
-        UsKernelDraw.Label(
-            new UiLayoutRect(right - BasisWidth, y, BasisWidth, lineSpan),
-            UsDiagnosticsProjection.BasisText(gate, tr),
-            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
-
-        if (reasonSpan > 0f)
-        {
-            float reasonWidth = Math.Max(1f, contentWidth - 12f);
-            UsKernelDraw.Label(
-                new UiLayoutRect(x + 12f, y + lineSpan, reasonWidth, reasonSpan),
-                UsDiagnosticsProjection.ReasonText(gate, tr),
-                ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: false);
-        }
-
-        return y + rowHeight;
-    }
-
-    private static bool HasReason(UsDiagGateLine gate)
-        => gate.State == UsDiagGateState.NA || gate.State == UsDiagGateState.Pending;
-
-    /// <summary>
-    /// A condition row's measured height: the taller of the wrapped name and the wrapped value, plus
-    /// the reason block when the row has one - all through MeasuredTextHeight, so measure and draw
-    /// share one ruler and one width (DX1.5). Long Chinese values therefore receive real height
-    /// instead of being clipped or shrunk.
-    /// </summary>
-    private static float RowHeight(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth)
-        => RowSpan(ctx, gate, contentWidth)
-            + ReasonSpan(ctx, gate, contentWidth, key => UsKernelDraw.Keyed(ctx, key)) + 2f;
-
-    private static float RowSpan(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth)
-    {
-        float nameWidth = Math.Max(1f, (contentWidth - StatusWidth - BasisWidth - CellGap * 3f) * NameShare);
-        float valueWidth = Math.Max(1f, contentWidth - StatusWidth - BasisWidth - nameWidth - CellGap * 3f);
-        return Math.Max(MeasuredTextHeight(ctx, gate.Name, nameWidth), MeasuredTextHeight(ctx, gate.Value, valueWidth));
-    }
-
-    private static float ReasonSpan(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, Func<string, string> tr)
-        => HasReason(gate) ? MeasuredTextHeight(ctx, UsDiagnosticsProjection.ReasonText(gate, tr), Math.Max(1f, contentWidth - 12f)) : 0f;
-
-    private const int BandCount = 4;
-
-    private static UsDiagGateGroup BandGroup(int band) => band switch
-    {
-        0 => UsDiagGateGroup.Game,
-        1 => UsDiagGateGroup.Rules,
-        2 => UsDiagGateGroup.Audio,
-        _ => UsDiagGateGroup.Audio,
-    };
-
-    private static UsDiagBasis BandBasis(int band)
-        => band < 3 ? UsDiagBasis.CurrentObservation : UsDiagBasis.PreviousEvaluation;
-
-    private static string GroupKey(UsDiagGateGroup group) => group switch
-    {
-        UsDiagGateGroup.Game => "US.Diagnostics.Gate.Group.Game",
-        UsDiagGateGroup.Rules => "US.Diagnostics.Gate.Group.Rules",
-        _ => "US.Diagnostics.Gate.Group.Audio",
-    };
-
-    private static float Section(float y, UiLayoutRect rect, UiWidgetContext ctx, string key)
-    {
-        UsKernelDraw.Label(new UiLayoutRect(rect.X, y, rect.Width, SectionHeight), UsKernelDraw.Keyed(ctx, key), ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        return y + SectionHeight;
-    }
-
-    private static float Wrapped(float y, UiLayoutRect rect, UiWidgetContext ctx, string text, UiColour color)
-    {
-        float width = Math.Max(1f, rect.Width - Indent);
-        float height = MeasuredTextHeight(ctx, text, width);
-        UsKernelDraw.Label(new UiLayoutRect(rect.X + Indent, y, width, height), text, ctx, color, UiFont.Tiny, UiTextAnchor.MiddleLeft);
-        return y + height;
-    }
-
-    private static float FieldRow(float y, UiLayoutRect rect, UiWidgetContext ctx, string labelKey, string value)
-    {
-        float nameWidth = rect.Width * 0.38f - 4f;
-        float valueX = rect.X + nameWidth + 4f;
-        float valueWidth = Math.Max(1f, rect.Width - nameWidth - 4f);
-        float valueHeight = MeasuredTextHeight(ctx, value, valueWidth);
-        UsKernelDraw.Label(new UiLayoutRect(rect.X, y, nameWidth, LineHeight), UsKernelDraw.Keyed(ctx, labelKey), ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(valueX, y, valueWidth, valueHeight), value, ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: false);
-        return y + Math.Max(LineHeight, valueHeight);
+        if (Button(Tr("US.Diagnostics.Raw.Show"), UsDiagnosticsHost.KeyRawOpen) != 0)
+            ctx.Bindings.Set(UsDiagnosticsHost.KeyRawOpen, true);
+        return y - rect.Y + 4;
     }
 }
-
 /// <summary>The summary-row layout used by the list: dot | pawn | action | cooldown | audio | status.
 /// Column widths live here so the uses never drift apart. The two numeric columns arrive with their
 /// column advance (D6) so every row in one page right-aligns on the same edge. The status word is
 /// NEUTRAL for a ready row and attention-cyan for a blocked one.</summary>
 internal static class UsDiagRowPainter
 {
-    private const float DotWidth = 16f;
-    private const float ActionWidth = 48f;
-    private const float CooldownWidth = 84f;
-    private const float AudioWidth = 44f;
-    private const float StatusWidth = 40f;
-    private const float CellGap = 4f;
-    private const float TwoLineHeight = 18f;
-
-    /// <summary>DX1.3: the narrowest row that can carry the six single-line columns without stealing
-    /// the name's real budget: dot + an 80px name floor + action + cooldown + audio + status + five
-    /// gaps. Below it the row splits into two lines instead of crushing the identity - the measured
-    /// 232px defect had pawnWidth = max(1, negative) with the action column invading the dot.</summary>
-    internal const float SingleLineMinimum = DotWidth + 80f + ActionWidth + CooldownWidth + AudioWidth + StatusWidth + 5f * CellGap;
-
-    internal static void Paint(UiLayoutRect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth = 0f, float audioWidth = 0f)
+    internal const float SingleLineMinimum = 352;
+    private static string State(UsDiagRow row, UiWidgetContext ctx) => row.ObservationStatus
+        ?? UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked");
+    private static string Summary(UsDiagRow row) => row.ActionText + " · " + row.CooldownText;
+    internal static float Height(UiWidgetContext ctx, UsDiagRow row, float width)
     {
-        if (rect.Width < SingleLineMinimum)
-        {
-            PaintTwoLine(rect, row, ctx, cooldownWidth, audioWidth);
-            return;
-        }
-
-        UiColour dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
-        float x = rect.X + 2f;
-        // D7: the dot is a glyph until the font says it cannot draw one, then it is the state word.
-        string dot = UsDiagGlyphs.DotText(ctx, row.Tone);
-        UsKernelDraw.Label(new UiLayoutRect(x, rect.Y, DotWidth, rect.Height), dot, ctx, dotColor, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        x += DotWidth;
-
-        float statusX = rect.XMax - StatusWidth;
-        float audioX = statusX - AudioWidth - CellGap;
-        float cooldownX = audioX - CooldownWidth - CellGap;
-        float actionX = cooldownX - ActionWidth - CellGap;
-        float pawnWidth = Math.Max(1f, actionX - x - CellGap);
-
-        Func<string, float> measure = text => ctx.Metrics.MeasureWidth(text, UiFont.Tiny);
-        UsKernelDraw.Label(new UiLayoutRect(x, rect.Y, pawnWidth, rect.Height),
-            UsKernelDraw.Ellipsized(row.PawnText, ctx, UiFont.Tiny, pawnWidth),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(actionX, rect.Y, ActionWidth, rect.Height),
-            UsKernelDraw.Ellipsized(row.ActionText, ctx, UiFont.Tiny, ActionWidth),
-            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(cooldownX, rect.Y, CooldownWidth, rect.Height),
-            UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.CooldownText, cooldownWidth, measure), ctx, UiFont.Tiny, CooldownWidth),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(audioX, rect.Y, AudioWidth, rect.Height),
-            UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.AudioText, audioWidth, measure), ctx, UiFont.Tiny, AudioWidth),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(statusX, rect.Y, StatusWidth, rect.Height),
-            row.ObservationStatus ?? UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
-            ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
+        var text = UsKernelDraw.Text(ctx);
+        float available = Math.Max(1, width - 12);
+        return text.MeasureText(row.PawnText, available) + text.MeasureText(State(row, ctx), available)
+            + text.MeasureText(Summary(row), available) + 12;
     }
-
-    /// <summary>DX1.3: below the single-line budget the row splits. Line one keeps the IDENTITY -
-    /// dot, the pawn name at the wide share (explicitly ellipsized, never dimmed away), status; line
-    /// two carries the numbers on the SAME measured column budgets - action left, cooldown and audio
-    /// right-aligned. Every cell clips through Ellipsized at exactly the width it measured, so values
-    /// cannot bleed into each other and the caller's rowRect stays the one hit band.</summary>
-    private static void PaintTwoLine(UiLayoutRect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth, float audioWidth)
+    internal static void Paint(UiLayoutRect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth = 0, float audioWidth = 0)
     {
-        UiColour dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
-        Func<string, float> measure = text => ctx.Metrics.MeasureWidth(text, UiFont.Tiny);
-        var first = new UiLayoutRect(rect.X, rect.Y, rect.Width, TwoLineHeight);
-        var second = new UiLayoutRect(rect.X, rect.Y + TwoLineHeight, rect.Width, Math.Max(1f, rect.Height - TwoLineHeight));
-
-        float x = first.X + 2f;
-        string dot = UsDiagGlyphs.DotText(ctx, row.Tone);
-        UsKernelDraw.Label(new UiLayoutRect(x, first.Y, DotWidth, first.Height), dot, ctx, dotColor, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        x += DotWidth;
-
-        float pawnWidth = Math.Max(1f, first.XMax - StatusWidth - CellGap - x);
-        UsKernelDraw.Label(new UiLayoutRect(x, first.Y, pawnWidth, first.Height),
-            UsKernelDraw.Ellipsized(row.PawnText, ctx, UiFont.Tiny, pawnWidth),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(first.XMax - StatusWidth, first.Y, StatusWidth, first.Height),
-            row.ObservationStatus ?? UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
-            ctx, row.Ready ? ctx.Theme[UiPaletteRole.SecondaryForeground] : UsAttention.Brush, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
-
-        float cw = Mathf.Clamp(cooldownWidth > 0f ? cooldownWidth : CooldownWidth, 24f, CooldownWidth);
-        float aw = Mathf.Clamp(audioWidth > 0f ? audioWidth : AudioWidth, 20f, AudioWidth);
-        float audioX = second.XMax - aw;
-        float cooldownX = audioX - CellGap - cw;
-        float actionWidth = Math.Max(1f, cooldownX - CellGap - (second.X + 2f));
-        UsKernelDraw.Label(new UiLayoutRect(second.X + 2f, second.Y, actionWidth, second.Height),
-            UsKernelDraw.Ellipsized(row.ActionText, ctx, UiFont.Tiny, actionWidth),
-            ctx, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(cooldownX, second.Y, cw, second.Height),
-            UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.CooldownText, cw, measure), ctx, UiFont.Tiny, cw),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
-        UsKernelDraw.Label(new UiLayoutRect(audioX, second.Y, aw, second.Height),
-            UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.AudioText, aw, measure), ctx, UiFont.Tiny, aw),
-            ctx, UiFont.Tiny, UiTextAnchor.MiddleRight, singleLine: true);
+        var text = UsKernelDraw.Text(ctx);
+        float y = rect.Y + 4, width = Math.Max(1, rect.Width - 12);
+        void Line(string value, UiColour ink)
+        {
+            float h = text.MeasureText(value, width);
+            UsKernelDraw.TextForDrawing(ctx).Draw(new UiLayoutRect(rect.X + 6, y, width, h), value, ink, UiTextAnchor.UpperLeft);
+            y += h;
+        }
+        Line(row.PawnText, ctx.Theme[UiPaletteRole.Foreground]);
+        Line(State(row, ctx), row.Tone == UsDiagDotTone.Blocked ? UsAttention.Brush : ctx.Theme[UiPaletteRole.Foreground]);
+        Line(Summary(row), ctx.Theme[UiPaletteRole.SecondaryForeground]);
     }
 }

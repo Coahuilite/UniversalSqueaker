@@ -5,7 +5,18 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — US0.6 specification and open product work
+## Product work and outstanding acceptance
+
+Items here describe product needs and retained acceptance limits; they do not authorize immediate execution.
+Select work under the current task and permissions. The approved virtual stage is not yet implemented.
+
+- Implement the approved full same-source window preview and its isolation/lifetime contract under
+  `docs/openspec/specs/developer-preview/spec.md`; follow current RimWorld 1.7 APIs, not a minor-build lock.
+  The linked implementation status distinguishes the 0.8 maintenance delivery from pending 0.9 ports.
+
+- **Offline workbench (WO 20261106 r4):** `candidate-us-c4` carries unchanged u3/m2 and the c3 US_DEV / original r6 FER_DEV pair, with fixed p5/c4 and the visible-by-default launcher; c2/c3 remain unchanged. Actual c1/p3 native5000 layout/watch/last-good/semantic and mark paint evidence is linked in `docs/development/offline-workbench-20261106.md` and `diagnostics-screen-mark-20261106.md`. Final p5/c4 Label Small/16 and bounded timing evidence are recorded; Editor preset fallback is allowed. Physical input and accurate 1.6 game projection remain open. PM has accepted c3-dev as the complete r6 replacement; preserve r6 and earlier candidates for recovery, and carry the outstanding native checklist forward.
+
+- B A009's full local Dev pair/source/check/USE is `dist/ui-diagnostics-20261105/delivery-r6-dev/`, as historical r6 input; c3-dev is now the PM-selected complete replacement. The later offline-workbench authorization is separate; native pending alone grants no further work. The old r5 Release stays withdrawn/preserved. Current entry coverage and exact Report/32-pass/source-list/O5/author-popup/native/1.7 gaps are in `docs/development/ui-diagnostics-20261105.md`; no new cases, game operation or publication authority.
 
 - The full current specification is `docs/specification.md`; source coverage and preserved pre-cutover texts are linked there. The 2026-10-29 repair implements protected production logs, VF1 audio publication and canonical identity independence. Paired technical consumption is complete; remaining native checks and the separate clean-release identity are tracked in `docs/development/specification/open-issues.md`; the earlier documentation cutover alone did not implement them.
 - The ea610fa/FL833c14f4 pair received overall internal-trial acceptance. Preserve it and its detailed evidence gaps; do not repeat accepted performance or manufacture individual native passes. Prepare an independent clean localRC candidate. Future FL rc2 mainSHA/asset and US remote coordinate changes are PM-owned; no silent RC1 fallback or fabricated SHA. Release scope and upgrade guidance live in docs/releases/v0.6.0-rc1.md.

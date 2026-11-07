@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using Verse;
+
+
 
 using FerriteLib.UiKit.Kernel;
 
@@ -114,7 +114,9 @@ public sealed class UsKernelFooterWidget : IUiWidget
         {
             if (ReportedStatusTokens.Add(token ?? ""))
             {
+#if !US_PREVIEW_NEUTRAL
                 SqueakLog.SaveStatusUnknown(token ?? "");
+#endif
             }
             return token ?? "";
         }

@@ -21,7 +21,7 @@ namespace UniversalSqueaker.UiLogicTests;
 ///      second palette/surface/text helper set.
 ///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the three
 ///      Schema2 manifests reference (both directions, parsed — not substring-guessed).
-///   4. The only embedded UI manifests are the three Schema2 files (settings, overlay, SA1.3 dialog).
+///   4. The embedded UI manifests are the settings, overlay, SA1.3 dialog and WB7 screen-mark Schema2 files.
 ///   5. The help catalog, the manifests' HelpRef attributes, the section help-key map and the
 ///      panel's item-count height formula agree with each other (no manifest/catalog drift in
 ///      either direction, no unreachable or empty catalog entries).
@@ -120,8 +120,10 @@ internal static class UiSourceInvariantTests
         // into the settings funnel is the next adopter's work. The count is pinned so a new registration
         // there is a deliberate act (re-cut this number in that batch) rather than an invisible write key.
         int exempt = CountWriteRegistrations(File.ReadAllText(panelExemption));
-        Assert(exempt == 12,
-            "UI/Diagnostics/UsDiagnosticsHost.cs is expected to carry 12 write registrations (its own host and "
+        // WO IMP-3 adds the technical open/back commands and event selection on this same
+        // diagnostics Host/clock. Capture commands still use their existing write funnel.
+        Assert(exempt == 15,
+            "UI/Diagnostics/UsDiagnosticsHost.cs is expected to carry 15 write registrations (its own host and "
             + "its own revision clock, exempt from the settings-page funnel), got " + exempt
             + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
 
@@ -150,8 +152,9 @@ internal static class UiSourceInvariantTests
         // picks) on a window that exists only while the settings window is open, never settings-page
         // write keys. The count is pinned so a new tool button is a deliberate act.
         int devPanelExempt = CountWriteRegistrations(File.ReadAllText(devPanelExemption));
-        Assert(devPanelExempt == 9,
-            "UI/Dev/UsDevPanelWindow.cs is expected to carry 9 write registrations (its own host and"
+        // WO r8 adds only dev-sample; target/capture/outline/page/report remain the same nine.
+        Assert(devPanelExempt == 10,
+            "UI/Dev/UsDevPanelWindow.cs is expected to carry 10 write registrations (its own host and"
             + " clock, exempt from the settings-page funnel), got " + devPanelExempt
             + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
 
@@ -535,7 +538,7 @@ internal static class UiSourceInvariantTests
         }
     }
 
-    // 4. Only the two Schema2 manifests are embedded (and exist on disk).
+    // 4. The exact production Schema2/resource inventory, including the authorized WB7 mark definition.
     private static void VerifyEmbeddedManifestsAreSchema2Only(string root)
     {
         string proj = File.ReadAllText(
@@ -553,11 +556,11 @@ internal static class UiSourceInvariantTests
             search = end;
         }
 
-        Assert(embedded.Count == 4,
-            "three UI manifests plus the single WO16 colour-data resource are embedded, found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
+        Assert(embedded.Count == 5,
+            "four UI manifests plus the single WO16 colour-data resource are embedded, found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
         Assert(embedded.Contains("Layout.Schema2.xml") && embedded.Contains("Layout.Overlay.Schema2.xml")
-                && embedded.Contains("Layout.RemixConfirm.Schema2.xml") && embedded.Contains("Palettes.xml"),
-            "the embedded manifests must be the settings page, the overlay and the SA1.3 Remix dialog, got ["
+                && embedded.Contains("Layout.RemixConfirm.Schema2.xml") && embedded.Contains("Layout.DiagnosticsMark.Schema2.xml") && embedded.Contains("Palettes.xml"),
+            "the embedded manifests must be settings, camera overlay, SA1.3 Remix and WB7 screen mark, got ["
             + string.Join(",", embedded) + "]");
         Assert(!proj.Contains("\\Layout.xml") && !proj.Contains("/Layout.xml"),
             "the legacy UI/Layout.xml must not be embedded or referenced");
@@ -567,7 +570,7 @@ internal static class UiSourceInvariantTests
         {
             string name = Path.GetFileName(xml);
             Assert(name == "Layout.Schema2.xml" || name == "Layout.Overlay.Schema2.xml"
-                    || name == "Layout.RemixConfirm.Schema2.xml",
+                    || name == "Layout.RemixConfirm.Schema2.xml" || name == "Layout.DiagnosticsMark.Schema2.xml",
                 "the UI tree may only carry Schema2 manifests, found " + xml);
         }
     }
@@ -628,9 +631,10 @@ internal static class UiSourceInvariantTests
 
     // 5b. Panel: a pure read surface (D2 ruling - the index list and pinned selection are gone), and
     // since FL P3 the hover CLAIM is session state: the panel sizes its text band from the
-    // actual displayed text, resolves through the pure logic seam, and reads
-    // UiSession.CurrentHelpRef. Claims arrive only from the mid-column controls through the single outlet,
-    // UsKernelDraw.HelpHover -> Session.PublishHelp. The consumer-side grace machine that used to own
+    // actual displayed text with its paired UiTextRun (body16 from the page scheme), resolves through
+    // the pure logic seam, and reads UiSession.CurrentHelpRef. Standard HelpRef and composite controls
+    // publish on that session; normal pages hold reading state, independent consumers retain grace.
+    // The consumer-side grace machine that used to own
     // this must stay deleted - re-growing it would put two owners on one clock.
     private static void VerifyHelpPanelWiringAndHeightFormula(string root)
     {
@@ -638,12 +642,12 @@ internal static class UiSourceInvariantTests
         CheckSourceContains(panel, new[]
         {
             "ValidateValue<string>(\"help-section-ref\"",
-            "Band(ctx, display.BodyText, textWidth, UiFont.Tiny)",
-            "ctx.Session.CurrentHelpRef ?? \"\"",
+            "BodyHeight = Band(body, display.BodyText, textWidth)",
+            "ctx.Session.CurrentHelpRef ?? observedHoverRef ?? \"\"",
             "TranslationSeam(ctx)",
         },
         "the help panel must validate its one read key, size its text band from the actual displayed "
-        + "body text, take the claim from the session, and resolve its display "
+        + "body text through its paired body16 run, take the claim from the session, and resolve its display "
         + "through the pure logic seam with the Host translation seam applied in one pass");
         CheckSourceDoesNotContain(panel, "ctx.Bindings.Invoke",
             "the help panel is read-only: no write channel survives the D2 index-list cut");
@@ -691,16 +695,16 @@ internal static class UiSourceInvariantTests
         // registration must go through the funnel" half is owned by
         // VerifyWriteBindingsGoThroughTheRegistry, so the receiver is deliberately not pinned here.
         Assert(host.Contains("BindReadOnly<string>(\"help-section-ref\"")
-               && host.Contains("host.Session.HelpGracePasses = HelpHoverGracePasses")
+               && host.Contains("host.Session.HelpGracePasses = 0")
                && !host.Contains("set-help-hover")
                && host.Contains("Action<string>(\"scroll-to\""),
-            "the Host owns help-section-ref/scroll-to wiring, sets the grace length on the session, "
+            "the normal Host owns help-section-ref/scroll-to wiring and requests fresh session claims for reading-hold, "
             + "and the retired hover/selection channels stay dead (single event authority)");
     }
 
 
-    // 5c. The C+A wiring table, both directions: every two-segment "us/<section>/<item>" literal in
-    // the widget tree must be a real catalog item (a claim that resolves to nothing is a silent
+    // 5c. The C+A wiring table, both directions: every two-segment "us/<section>/<item>" claim in
+    // the widget tree or a manifest-bound topic producer must be a real catalog item (a claim that resolves to nothing is a silent
     // dead hover), and every catalog item must be claimed by some control (an entry no control
     // owns is dead catalog content the panel index would show forever). This is the drift pin for
     // "feature exists, wiring lost": adding a help entry without wiring it, or rewiring a control
@@ -742,6 +746,28 @@ internal static class UiSourceInvariantTests
             {
                 claimed.Add(key);
             }
+        }
+
+        // B's retained fields publish HelpRef through the Repeat item's field-topic binding.
+        // Follow that actual consumer -> producer -> field-set chain, not the help catalog.
+        // This deliberately recognizes this one existing declaration, not arbitrary C# expressions:
+        // an unknown binding/changed generator must fail rather than silently supply no claims.
+        foreach (string binding in EnumerateManifestAttributes(
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpRefBind").Distinct())
+        {
+            if (binding != "field-topic")
+                throw new InvalidOperationException("Unrecognized manifest help-topic producer: " + binding);
+            string behavior = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.Behavior.cs"));
+            var topic = System.Text.RegularExpressions.Regex.Match(behavior,
+                @"b\.BindReadOnly<string>\(Address\(""field-topic""\), \(\) => Contribution\(field\) \? ""(?<contribution>[^""]+)"" : ""(?<prefix>[^""]+)"" \+ field\);");
+            var fields = System.Text.RegularExpressions.Regex.Match(behavior,
+                @"var fields = new\[\] \{(?<items>[^}]+)\}\s*\.Concat\(native\.ContributionFields\(");
+            if (!topic.Success || !fields.Success)
+                throw new InvalidOperationException("The bound field-topic/retained field-set producer changed; re-point this guard deliberately.");
+            foreach (System.Text.RegularExpressions.Match field in System.Text.RegularExpressions.Regex.Matches(
+                         fields.Groups["items"].Value, "\"([^\"]+)\""))
+                claimed.Add(topic.Groups["prefix"].Value + field.Groups[1].Value);
+            claimed.Add(topic.Groups["contribution"].Value);
         }
 
         Assert(claimed.Count > 0, "the widget tree claims no help item keys at all; the scan is broken");
@@ -933,7 +959,7 @@ internal static class UiSourceInvariantTests
             "an unknown footer save-status token must be reported once per value (drift guard)");
     }
 
-    // 10. WO r3 replaces the reserved bottom band with one fixed-topic content page and Back.
+    // 10. WO IMP-2 retains one independent help drawer with follow/reading-hold and Back.
     // Keep the original visibility, single-owner, retained-node and translated-control guards;
     // migrate their location/state authority, rather than requiring the retired presentation.
     private static void VerifyHelpPanelIsIndependentState(string root)
@@ -953,7 +979,7 @@ internal static class UiSourceInvariantTests
             "the bottom help follows independent per-window visibility, not the business page selection");
         Assert(band.SelectSingleNode("Scroll[@Id='help-scroll'][@Fill='true']") != null,
             "help has its own shrinking scroll below its fixed header");
-        Assert(band.GetAttribute("Height") == "128" && File.ReadAllText(Path.Combine(ui, "UsKernelSettingsHost.Voices.cs")).Contains("float budget = Math.Max(0f, (available.Y - 12f - footer.Height - 6f - body.Y) / 3f)"),
+        Assert(band.GetAttribute("Height") == "128" && File.ReadAllText(Path.Combine(ui, "UsKernelSettingsHost.PagePreparation.cs")).Contains("float budget = Math.Max(0f, (available.Y - 12f - footer.Height - 6f - body.Y) / 3f)"),
             "the initial placeholder is replaced by the actual arranged one-third body budget, not a permanent 140 band");
 
         // The retired machinery must stay retired: a reappearing derived key means the drawer presentation
@@ -969,8 +995,10 @@ internal static class UiSourceInvariantTests
                 && document.SelectNodes("//*[@VisibleBind='help-open-narrow']").Count == 0
                 && document.SelectNodes("//*[@VisibleBind='body-visible']").Count == 0,
             "retired width-derived help/body visibility keys must stay absent");
-        Assert(document.SelectNodes("//*[@ActionBind='open-topic']").Count == 1,
-            "exactly ONE element opens the fixed help topic");
+        Assert(document.SelectNodes("//*[@ActionBind='open-topic']").Count == 2
+                && document.SelectSingleNode("//*[@Id='topic-link'][@ActionBind='open-topic'][@VisibleBind='help-closed']") != null
+                && document.SelectSingleNode("//*[@Id='topic-link-close'][@ActionBind='open-topic'][@VisibleBind='help-open']") != null,
+            "one logical help toggle uses exactly two mutually exclusive open/close caption elements");
         Assert(document.SelectNodes("//*[@ActionBind='toggle-help-panel']").Count == 0,
             "no second help-toggle presentation may return");
         XmlElement? footer = document.SelectSingleNode("//*[@Id='footer-band']") as XmlElement;
@@ -981,18 +1009,18 @@ internal static class UiSourceInvariantTests
             "the footer holds real save status/Retry without a help reservation or switch");
         XmlElement? header = document.SelectSingleNode("//*[@Id='header-band']") as XmlElement;
         Assert(header != null && header.SelectSingleNode("*[@Id='topic-link'][@ActionBind='open-topic']") != null
-                && header.SelectSingleNode("*[@Id='home-return'][@ActionBind='go-home']") != null,
+                && header.SelectSingleNode("*[@Id='nav-Voices'][@ActionBind='go-home']") != null,
             "the shared header exposes the detailed-help entry and explicit return");
 
         string hostPath = Path.Combine(ui, "UsKernelSettingsHost.cs");
         CheckSourceContains(Path.Combine(ui, "UsKernelSettingsHost.Voices.cs"), new[]
         {
             "\"open-topic\"",
-            "s.PinnedHelpRef = topic",
-            "OpenHelp(PageHelpRef(s), T(s.Page))",
+            "s.FollowHelpRef = topic",
+            "OpenHelp(PageHelpRef(s), HelpPageContext(source, t))",
             "ReturnToPreviousPage(s)",
         },
-        "the Host captures the topic and owns return navigation on the same page state");
+        "the Host follows the current topic/context and owns return navigation on the same page state");
         foreach (string retired in new[] { "\"help-open-wide\"", "\"help-open-narrow\"", "\"body-visible\"", "pageWidthFeed" })
         {
             CheckSourceDoesNotContain(hostPath, retired,
@@ -1000,8 +1028,8 @@ internal static class UiSourceInvariantTests
         }
 
         string statePath = Path.Combine(ui, "Model", "VoicePacksPageState.cs");
-        CheckSourceContains(statePath, new[] { "PinnedHelpRef", "PageHistory" },
-            "fixed topic and return history belong to the per-window state");
+        CheckSourceContains(statePath, new[] { "FollowHelpRef", "PageHistory" },
+            "followed topic and return history belong to the per-window state");
         Assert(File.ReadAllText(statePath).Contains("public string Page = \"Voices\";")
                 && File.ReadAllText(statePath).Contains("public string PinnedHelpRef = \"\";"),
             "the window opens on Voices without an invented fixed topic");

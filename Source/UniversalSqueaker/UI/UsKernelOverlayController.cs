@@ -77,6 +77,7 @@ public sealed class UsKernelOverlayController : IDisposable
 
         try
         {
+            UsUiDiagnostics.Synchronize(host!);
             // Only commit the row cursor when the kernel overlay actually drew. If DrawFrame throws
             // and the caller falls back to the legacy pure-Verse readout, curBaseY must remain
             // untouched so the fallback does not double-reserve the row height.

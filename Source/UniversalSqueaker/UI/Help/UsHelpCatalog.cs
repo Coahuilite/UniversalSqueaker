@@ -69,7 +69,11 @@ internal static class UsHelpCatalog
 {
     private static readonly Dictionary<string, HelpSection> Sections = new(StringComparer.Ordinal)
     {
-        ["us/roster"] = new HelpSection("us/roster", "US.B.Voices", "US.B.Help", Array.Empty<HelpItem>()),
+        ["us/roster"] = new HelpSection("us/roster", "US.B.Voices", "US.B.Help", new[] {
+            new HelpItem("us/roster/search", "US.B.Search", "US.B.Help.RosterSearch"),
+            new HelpItem("us/roster/targets", "US.B.Targets", "US.B.Help.RosterTargets"),
+            new HelpItem("us/roster/packs", "US.UI.Packs", "US.B.Help.RosterPacks"),
+        }),
         ["us/behavior-source"] = new HelpSection("us/behavior-source", "US.UI.Help.Source.Title", "US.UI.Help.Source.Text", new[]
         {
             new HelpItem("us/behavior-source/selection", "US.UI.Help.Source.Title", "US.UI.Help.Source.Text"),
@@ -103,9 +107,8 @@ internal static class UsHelpCatalog
                     "us/page-title/apply",
                     "US.Help.PageTitle.Apply.Label",
                     "US.Help.PageTitle.Apply.Text"),
-                // The footer Help switch (BH1): the single control that shows/hides the bottom help panel.
-                // W1 wires the matching HelpHover claim through the declared element's HelpRef; without that
-                // literal this entry is unclaimed and the claim<->catalog gate flags it.
+                // The current page-title context owns the help/follow/return explanation. Keep it
+                // outside the reading area: hovering Close must not replace the text/scroll being closed.
                 new HelpItem(
                     "us/page-title/help-drawer",
                     "US.Help.PageTitle.HelpDrawer.Label",

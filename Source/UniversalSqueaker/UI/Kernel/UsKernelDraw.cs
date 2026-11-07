@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
+
 
 using FerriteLib.UiKit.Kernel;
 
@@ -123,7 +123,7 @@ public static partial class UsKernelDraw
 
     private static UiLayoutRect LeftRail(UiLayoutRect rect, float width)
     {
-        return new UiLayoutRect(rect.X, rect.Y, Mathf.Max(1f, Mathf.Min(width, rect.Width)), rect.Height);
+        return new UiLayoutRect(rect.X, rect.Y, Math.Max(1f, Math.Min(width, rect.Width)), rect.Height);
     }
 
     /// <summary>Diagonal hatching as 1px dashes stepped along the diagonal. The lab uses
@@ -134,14 +134,14 @@ public static partial class UsKernelDraw
     public static void Hatch(IUiDrawing drawing, UiLayoutRect rect, UiColour ink, float pitch)
     {
         if (rect.Width <= 0f || rect.Height <= 0f || pitch <= 0f) return;
-        float step = Mathf.Max(2f, pitch);
+        float step = Math.Max(2f, pitch);
         for (float offset = -rect.Height; offset < rect.Width; offset += step * 2f)
         {
             for (float y = 0f; y < rect.Height; y += step)
             {
                 float start = rect.X + offset + y;
-                float left = Mathf.Max(rect.X, start);
-                float right = Mathf.Min(rect.XMax, start + step);
+                float left = Math.Max(rect.X, start);
+                float right = Math.Min(rect.XMax, start + step);
                 if (right - left <= 0f) continue;
                 UiThemeDraw.Solid(drawing, new UiLayoutRect(left, rect.Y + y, right - left, 1f), ink);
             }
@@ -160,7 +160,7 @@ public static partial class UsKernelDraw
             case StateShape.Unavailable:
                 UiThemeDraw.Surface(drawing, rect, theme, default(UiColour), theme[UiPaletteRole.SecondaryForeground]);
                 Hatch(drawing,
-                    new UiLayoutRect(rect.X + 1f, rect.Y + 1f, Mathf.Max(1f, rect.Width - 2f), Mathf.Max(1f, rect.Height - 2f)),
+                    new UiLayoutRect(rect.X + 1f, rect.Y + 1f, Math.Max(1f, rect.Width - 2f), Math.Max(1f, rect.Height - 2f)),
                     theme[UiPaletteRole.PanelSurface],
                     ShapeHatchPitch);
                 break;
@@ -177,10 +177,10 @@ public static partial class UsKernelDraw
     /// <summary>Scanline disc: one rect per row, so the shape is exact at any cell size.</summary>
     private static void Disc(IUiDrawing drawing, UiLayoutRect rect, UiColour ink)
     {
-        float radius = Mathf.Min(rect.Width, rect.Height) * 0.5f;
+        float radius = Math.Min(rect.Width, rect.Height) * 0.5f;
         float centreX = rect.X + rect.Width * 0.5f;
         float centreY = rect.Y + rect.Height * 0.5f;
-        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.Height));
+        int rows = Math.Max(1, (int)Math.Ceiling(rect.Height));
         for (int i = 0; i < rows; i++)
         {
             float y = rect.Y + i;
@@ -189,7 +189,7 @@ public static partial class UsKernelDraw
             // the trip guard caught exactly that (2026-09-12) - a consumer-side call to a member the double
             // lacks. The value is identical for this geometry, and the missing stub member is reported to the
             // carrier instead of being papered over.
-            float half = (float)Math.Sqrt(Mathf.Max(0f, radius * radius - dy * dy));
+            float half = (float)Math.Sqrt(Math.Max(0f, radius * radius - dy * dy));
             if (half <= 0.05f) continue;
             UiThemeDraw.Solid(drawing, new UiLayoutRect(centreX - half, y, half * 2f, 1f), ink);
         }
@@ -198,19 +198,19 @@ public static partial class UsKernelDraw
     /// <summary>Outline ring of the requested thickness around the same disc.</summary>
     private static void Ring(IUiDrawing drawing, UiLayoutRect rect, UiColour ink, float thickness)
     {
-        float radius = Mathf.Min(rect.Width, rect.Height) * 0.5f;
-        float inner = Mathf.Max(0f, radius - thickness);
+        float radius = Math.Min(rect.Width, rect.Height) * 0.5f;
+        float inner = Math.Max(0f, radius - thickness);
         float centreX = rect.X + rect.Width * 0.5f;
         float centreY = rect.Y + rect.Height * 0.5f;
-        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.Height));
+        int rows = Math.Max(1, (int)Math.Ceiling(rect.Height));
         for (int i = 0; i < rows; i++)
         {
             float y = rect.Y + i;
             float dy = y + 0.5f - centreY;
-            float outerHalf = (float)Math.Sqrt(Mathf.Max(0f, radius * radius - dy * dy));
+            float outerHalf = (float)Math.Sqrt(Math.Max(0f, radius * radius - dy * dy));
             if (outerHalf <= 0.05f) continue;
-            float innerHalf = (float)Math.Sqrt(Mathf.Max(0f, inner * inner - dy * dy));
-            float band = Mathf.Max(1f, outerHalf - innerHalf);
+            float innerHalf = (float)Math.Sqrt(Math.Max(0f, inner * inner - dy * dy));
+            float band = Math.Max(1f, outerHalf - innerHalf);
             UiThemeDraw.Solid(drawing, new UiLayoutRect(centreX - outerHalf, y, band, 1f), ink);
             if (innerHalf > 0.05f)
             {
@@ -223,7 +223,7 @@ public static partial class UsKernelDraw
     /// which is the closest an axis-aligned fill gets to the spec's dashed ring at a 10px cell.</summary>
     private static void DottedCircle(IUiDrawing drawing, UiLayoutRect rect, UiColour ink)
     {
-        float radius = Mathf.Max(0.5f, Mathf.Min(rect.Width, rect.Height) * 0.5f - 1f);
+        float radius = Math.Max(0.5f, Math.Min(rect.Width, rect.Height) * 0.5f - 1f);
         float centreX = rect.X + rect.Width * 0.5f;
         float centreY = rect.Y + rect.Height * 0.5f;
         const int Steps = 20;
@@ -303,7 +303,7 @@ public static partial class UsKernelDraw
         // repainted with the box's own plane, so the border stops short of each corner. A real rounded
         // corner needs a primitive the backend contact does not expose (UiThemeDraw has exactly one fill -
         // an axis-aligned rect - on purpose, so the contact stays gateable).
-        float cut = Mathf.Min(CheckboxCornerCut, Mathf.Min(rect.Width, rect.Height) * 0.25f);
+        float cut = Math.Min(CheckboxCornerCut, Math.Min(rect.Width, rect.Height) * 0.25f);
         UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.X, rect.Y, cut, cut), theme[UiPaletteRole.ControlSurface]);
         UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.XMax - cut, rect.Y, cut, cut), theme[UiPaletteRole.ControlSurface]);
         UiThemeDraw.Solid(drawing, new UiLayoutRect(rect.X, rect.YMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
@@ -315,9 +315,9 @@ public static partial class UsKernelDraw
         // checked box is an ink-solid square with a check mark in the border colour, and the accent would
         // put a fourth accent on every screen that has a checkbox. The lane pins that this fill is the ink
         // token and that no accent colour is painted with it.
-        UiLayoutRect ink = new UiLayoutRect(rect.X + 3f, rect.Y + 3f, Mathf.Max(1f, rect.Width - 6f), Mathf.Max(1f, rect.Height - 6f));
+        UiLayoutRect ink = new UiLayoutRect(rect.X + 3f, rect.Y + 3f, Math.Max(1f, rect.Width - 6f), Math.Max(1f, rect.Height - 6f));
         UiThemeDraw.Surface(drawing, ink, theme, theme[UiPaletteRole.Foreground], theme[UiPaletteRole.Foreground]);
-        CheckMark(drawing, new UiLayoutRect(ink.X + 1f, ink.Y + 1f, Mathf.Max(1f, ink.Width - 2f), Mathf.Max(1f, ink.Height - 2f)), theme[UiPaletteRole.Border]);
+        CheckMark(drawing, new UiLayoutRect(ink.X + 1f, ink.Y + 1f, Math.Max(1f, ink.Width - 2f), Math.Max(1f, ink.Height - 2f)), theme[UiPaletteRole.Border]);
     }
 
     /// <summary>The spec's border-coloured check mark. The library has no line primitive, so each stroke is
@@ -335,7 +335,7 @@ public static partial class UsKernelDraw
     {
         float dx = x1 - x0;
         float dy = y1 - y0;
-        int steps = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) / cell));
+        int steps = Math.Max(1, (int)Math.Ceiling(Math.Max(Math.Abs(dx), Math.Abs(dy)) / cell));
         for (int i = 0; i <= steps; i++)
         {
             float t = i / (float)steps;
@@ -352,7 +352,7 @@ public static partial class UsKernelDraw
 
     public static float RowVisualHeight(UiWidgetContext ctx) => ctx.Theme.Geometry.RowHeight;
 
-    public static float RowHitHeight(UiWidgetContext ctx) => Mathf.Max(RowMinHit, RowVisualHeight(ctx));
+    public static float RowHitHeight(UiWidgetContext ctx) => Math.Max(RowMinHit, RowVisualHeight(ctx));
 
     /// <summary>The hit band of a row: the row is hit at 24px even when its visual is 20px (dense), so the
     /// band is centred on the visual row and may extend past it.</summary>
@@ -366,7 +366,7 @@ public static partial class UsKernelDraw
     /// list instead of a stack of boxes.</summary>
     public static void RowBottomLine(IUiDrawing drawing, UiLayoutRect row, UiTheme theme)
     {
-        float hairline = Mathf.Max(1f, theme.Geometry.Hairline);
+        float hairline = Math.Max(1f, theme.Geometry.Hairline);
         UiThemeDraw.Solid(drawing, new UiLayoutRect(row.X, row.YMax - hairline, row.Width, hairline), theme[UiPaletteRole.Divider]);
     }
 
@@ -412,8 +412,8 @@ public static partial class UsKernelDraw
     /// </summary>
     public static UiLayoutRect ControlColumnRect(UiLayoutRect row)
     {
-        float available = Mathf.Max(1f, row.Width - RowLeftPadding - ControlColumnRightInset);
-        float width = Mathf.Min(ControlColumnWidth, available);
+        float available = Math.Max(1f, row.Width - RowLeftPadding - ControlColumnRightInset);
+        float width = Math.Min(ControlColumnWidth, available);
         return new UiLayoutRect(row.XMax - ControlColumnRightInset - width, row.Y, width, row.Height);
     }
 
@@ -423,9 +423,9 @@ public static partial class UsKernelDraw
     /// </summary>
     public static float RowLabelWidth(float rowWidth)
     {
-        float available = Mathf.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset);
-        float column = Mathf.Min(ControlColumnWidth, available);
-        return Mathf.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset - column - ControlColumnLabelGap);
+        float available = Math.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset);
+        float column = Math.Min(ControlColumnWidth, available);
+        return Math.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset - column - ControlColumnLabelGap);
     }
 
     public static float RowLabelWidth(UiLayoutRect row) => RowLabelWidth(row.Width);
@@ -443,7 +443,7 @@ public static partial class UsKernelDraw
     /// </summary>
     public static float RowLabelHeight(float rowWidth, UiWidgetContext ctx, string text, UiFont font = UiFont.Small)
     {
-        return Mathf.Max(RowVisualHeight(ctx), ctx.Metrics.MeasureText(text ?? "", font, RowLabelWidth(rowWidth)));
+        return Math.Max(RowVisualHeight(ctx), ctx.Metrics.MeasureText(text ?? "", font, RowLabelWidth(rowWidth)));
     }
 
     /// <summary>A measured band for text that is not a support row's label (the row's own stacked heading,
@@ -451,7 +451,7 @@ public static partial class UsKernelDraw
     /// <paramref name="floor"/>.</summary>
     public static float TextBandHeight(float width, UiWidgetContext ctx, string text, UiFont font, float floor)
     {
-        return Mathf.Max(floor, ctx.Metrics.MeasureText(text ?? "", font, Mathf.Max(1f, width)));
+        return Math.Max(floor, ctx.Metrics.MeasureText(text ?? "", font, Math.Max(1f, width)));
     }
 
     /// <summary>One equal-width segmented cell inside the control column.</summary>
@@ -465,14 +465,14 @@ public static partial class UsKernelDraw
     /// <summary>Width of one equal segmented cell for a given column width.</summary>
     public static float SegmentedCellWidth(float columnWidth, int count)
     {
-        if (count <= 0) return Mathf.Max(1f, columnWidth);
-        return Mathf.Max(1f, (columnWidth - SegmentedCellGap * (count - 1)) / count);
+        if (count <= 0) return Math.Max(1f, columnWidth);
+        return Math.Max(1f, (columnWidth - SegmentedCellGap * (count - 1)) / count);
     }
 
     /// <summary>Text band inside one segmented cell (the same inset SelectionButton uses).</summary>
     public static float SegmentedCellLabelWidth(float columnWidth, int count)
     {
-        return Mathf.Max(1f, SegmentedCellWidth(columnWidth, count) - SelectionButtonLabelInset * 2f);
+        return Math.Max(1f, SegmentedCellWidth(columnWidth, count) - SelectionButtonLabelInset * 2f);
     }
 
     /// <summary>
@@ -577,12 +577,37 @@ public static partial class UsKernelDraw
     /// <returns>Whether the pointer is over the rect, so callers can reuse it for row highlighting.</returns>
     public static bool HelpHover(UiLayoutRect rect, UiWidgetContext ctx, string helpRef)
     {
-        bool hovered = ctx.Controls.IsMouseOver(rect);
+        // Remember the composite's declared general topic for its OWN popup's empty options.
+        // This is authored metadata, not a hover claim; covered/clipped content cannot publish.
+        if (!string.IsNullOrEmpty(helpRef))
+        {
+            var general = ctx.State("us/composite-help", () => new CompositeHelp());
+            general.Topic = helpRef; general.Pass = ctx.Session.Frame;
+        }
+        bool hovered = ctx.Controls.IsMouseOver(rect, ctx);
         if (hovered && !string.IsNullOrEmpty(helpRef))
         {
             ctx.Session.PublishHelp(helpRef); // A catalog reference, not translated text.
         }
         return hovered;
+    }
+
+    private sealed class CompositeHelp
+    {
+        internal string Topic = "";
+        internal int Pass = -1;
+    }
+
+    private static void PopupHelp<T>(UiWidgetContext owner, IReadOnlyList<UiChoice<T>> choices, int hovered)
+    {
+        if (hovered < 0 || hovered >= choices.Count) return;
+        string topic = choices[hovered].HelpRef;
+        if (string.IsNullOrEmpty(topic))
+        {
+            var general = owner.State("us/composite-help", () => new CompositeHelp());
+            if (general.Pass == owner.Session.Frame) topic = general.Topic;
+        }
+        if (!string.IsNullOrEmpty(topic)) owner.Session.PublishHelp(topic);
     }
 
     /// <summary>
@@ -603,7 +628,7 @@ public static partial class UsKernelDraw
     {
         RowSurface(ctx.Drawing, rect, theme, ctx.Controls.IsMouseOver(rect), selected ? RowRail.Selected : RowRail.None, danger);
         Label(ctx.Drawing,
-            new UiLayoutRect(rect.X + SelectionButtonLabelInset, rect.Y, Mathf.Max(1f, rect.Width - SelectionButtonLabelInset * 2f), rect.Height),
+            new UiLayoutRect(rect.X + SelectionButtonLabelInset, rect.Y, Math.Max(1f, rect.Width - SelectionButtonLabelInset * 2f), rect.Height),
             label,
             theme,
             danger ? theme[UiPaletteRole.DangerForeground] : selected ? theme[UiPaletteRole.SelectedForeground] : theme[UiPaletteRole.Foreground],
@@ -637,6 +662,7 @@ public static partial class UsKernelDraw
         IReadOnlyList<UiChoice<T>> choices, Action<T> onSelected)
     {
         if (choices.Count == 0) return;
+        UiWidgetContext helpOwner = ctx;
         ctx = ctx.Child(popupId); // Distinct triggers must not share one interaction node.
         string display = "";
         for (int i = 0; i < choices.Count; i++)
@@ -666,8 +692,7 @@ public static partial class UsKernelDraw
             try
             {
                 int hovered = UiPopup.DrawChoices(popup, popupId, ctx, choices, current, onSelected);
-                if (hovered >= 0 && !string.IsNullOrEmpty(choices[hovered].HelpRef))
-                    ctx.Session.PublishHelp(choices[hovered].HelpRef);
+                if (ctx.Session.IsActive && ctx.Session.IsPopupOpen(popupId)) PopupHelp(helpOwner, choices, hovered);
             }
             finally { UiFitAudit.EndElement(); }
         });
@@ -735,7 +760,7 @@ public static partial class UsKernelDraw
     /// wrap into two (a fixed band wants the per-line number, not the wrapped one).</summary>
     public static float LineHeightOf(UiWidgetContext ctx, UiFont font)
     {
-        return Mathf.Max(1f, ctx.Metrics.MeasureText("Ag", font, 100000f));
+        return Math.Max(1f, ctx.Metrics.MeasureText("Ag", font, 100000f));
     }
 
     /// <summary>Card frame with a title header; returns the inner body rect.</summary>
@@ -743,22 +768,22 @@ public static partial class UsKernelDraw
     {
         UiThemeDraw.Panel(drawing, rect, theme);
         Label(drawing,
-            new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + 2f, Mathf.Max(1f, rect.Width - UsCardLayout.Padding * 2f), 22f),
+            new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + 2f, Math.Max(1f, rect.Width - UsCardLayout.Padding * 2f), 22f),
             title,
             theme,
             theme[UiPaletteRole.Foreground],
             UiFont.Small,
             UiTextAnchor.MiddleLeft);
         UiThemeDraw.Surface(drawing,
-            new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + UsCardLayout.HeaderHeight - 2f, Mathf.Max(1f, rect.Width - UsCardLayout.Padding * 2f), 1f),
+            new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + UsCardLayout.HeaderHeight - 2f, Math.Max(1f, rect.Width - UsCardLayout.Padding * 2f), 1f),
             theme,
             theme[UiPaletteRole.Divider],
             theme[UiPaletteRole.Divider]);
         return new UiLayoutRect(
             rect.X + UsCardLayout.Padding,
             rect.Y + UsCardLayout.HeaderHeight + UsCardLayout.HeaderGap,
-            Mathf.Max(1f, rect.Width - UsCardLayout.Padding * 2f),
-            Mathf.Max(1f, rect.Height - UsCardLayout.HeaderHeight - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2f));
+            Math.Max(1f, rect.Width - UsCardLayout.Padding * 2f),
+            Math.Max(1f, rect.Height - UsCardLayout.HeaderHeight - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2f));
     }
 
     /// <summary>Border drawn around the card the help panel is currently explaining (follows the live

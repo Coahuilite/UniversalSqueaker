@@ -8,11 +8,16 @@ namespace UniversalSqueaker.UI;
 
 public static partial class UsKernelSettingsHost
 {
+#if !US_PREVIEW_NEUTRAL
     private static string TuningContextLabel(IUsKernelSettingsSource source, IUiTranslation t, int layer, string race, string child)
+        => layer == 0 ? t.Translate("US.UI.PawnProfile") : TuningContextLabel(source.BuildView().Roster, t, layer, race, child);
+
+#endif
+    private static string TuningContextLabel(IReadOnlyList<UsRosterTarget> roster, IUiTranslation t, int layer, string race, string child)
     {
         if (layer == 0) return t.Translate("US.UI.PawnProfile");
         string identity = race + (child == "" ? "" : " / " + child);
-        var target = source.BuildView().Roster.FirstOrDefault(r => r.Race == race && r.Xeno == child);
+        var target = roster.FirstOrDefault(r => r.Race == race && r.Xeno == child);
         string label = target?.Label ?? identity;
         return t.Translate(layer == 1 ? "US.Tuning.Layer.Race" : "US.Tuning.Layer.Xenotype") + ": "
             + label + (label == identity ? "" : " [" + identity + "]");
@@ -34,18 +39,23 @@ public static partial class UsKernelSettingsHost
         internal string FieldKey(string field) => Key + "-F-" + RosterKey(field);
     }
 
+#if !US_PREVIEW_NEUTRAL
     private static void BindBehaviorSheet(IUsKernelSettingsSource source, UsWriteBindings writes, SessionRevisionBumper bumper, IUiTranslation t)
+        => BindBehaviorSheet(new UsSettingsBehaviorPageSource(source), writes, bumper, t);
+
+#endif
+    private static void BindBehaviorSheet(IUsBehaviorPageSource source, UsWriteBindings writes, SessionRevisionBumper bumper, IUiTranslation t)
     {
         var b = writes.Bindings;
         var s = source.ViewState;
-        var native = source as UsKernelSettingsSource;
+        var native = source.Fields;
         string T(string key) => t.Translate("US.B." + key);
         bool contextControlsOpen = false;
         b.BindReadOnly<bool>("b-context-open", () => contextControlsOpen);
         writes.Command("b-context-toggle", () => { contextControlsOpen = !contextControlsOpen; bumper.Bump(); });
         string Race() => s.TuningLayer == 0 ? "" : s.TuningRaceDefName;
         string Child() => s.TuningLayer == 2 ? s.TuningXenotypeDefName : "";
-        bool Valid() => s.TuningLayer == 0 || source.BuildView().Roster.Any(r => r.Race == s.TuningRaceDefName
+        bool Valid() => s.TuningLayer == 0 || source.ReadView().Roster.Any(r => r.Race == s.TuningRaceDefName
             && (s.TuningLayer == 1 ? r.Xeno == "" && r.LoadedRace : r.Xeno == s.TuningXenotypeDefName && r.Editable));
         for (int i = 0; i < 3; i++)
         {
@@ -55,21 +65,21 @@ public static partial class UsKernelSettingsHost
             writes.Command("b-layer-" + i, () => {
                 if (layer > 0)
                 {
-                    var row = source.BuildView().Roster.FirstOrDefault(r => r.Race == s.SelectedRaceDefName && r.Xeno == (layer == 2 ? s.SelectedTargetName : ""));
+                    var row = source.ReadView().Roster.FirstOrDefault(r => r.Race == s.SelectedRaceDefName && r.Xeno == (layer == 2 ? s.SelectedTargetName : ""));
                     if (row == null || (layer == 2 ? !row.Editable || row.Xeno == "" : !row.LoadedRace)) return;
                     source.SetTuningDomain(row.Race, layer == 2 ? row.Xeno : "");
                 }
                 source.SetTuningLayer(layer); bumper.Bump();
-            }, () => layer == 0 || source.BuildView().Roster.Any(r => r.Race == s.SelectedRaceDefName && (layer == 1 ? r.Xeno == "" && r.LoadedRace : r.Xeno == s.SelectedTargetName && r.Xeno != "" && r.Editable)));
+            }, () => layer == 0 || source.ReadView().Roster.Any(r => r.Race == s.SelectedRaceDefName && (layer == 1 ? r.Xeno == "" && r.LoadedRace : r.Xeno == s.SelectedTargetName && r.Xeno != "" && r.Editable)));
         }
         b.BindReadOnly<bool>("b-action-invalid", () => !Valid());
         writes.Command("b-area-reset", () => {
             string token = s.TuningLayer + "\n" + Race() + "\n" + Child();
-            UsConfirmWindow.Open(t.Translate("US.Reset.Area"), t.Translate("US.Reset.Area.Action.Confirm") + "\n" + (s.TuningLayer == 0 ? t.Translate("US.UI.PawnProfile") : Race() + (Child() == "" ? "" : " / " + Child())),
+            source.ConfirmAreaReset(t.Translate("US.Reset.Area"), t.Translate("US.Reset.Area.Action.Confirm") + "\n" + (s.TuningLayer == 0 ? t.Translate("US.UI.PawnProfile") : Race() + (Child() == "" ? "" : " / " + Child())),
                 t.Translate("US.Reset.Confirm"), () => {
                     if (Valid() && token == s.TuningLayer + "\n" + Race() + "\n" + Child()) b.TryInvokeCommand("reset-action-area");
                 });
-        }, Valid);
+        }, () => Valid() && source.CanConfirmAreaReset);
 
         var retainedRows = new List<TuningActionRow>();
         var knownRows = new HashSet<string>(StringComparer.Ordinal);
@@ -101,39 +111,68 @@ public static partial class UsKernelSettingsHost
         int ActionOrder(string action) { int index = Array.IndexOf(order, action); return index < 0 ? int.MaxValue : index; }
         int Group(string action) => !Kernel.BuiltInActionKeys.Contains(action) ? 2
             : ActionScopeRules.GroupFor(action) == ActionScopeGroup.PlayerTriggered ? 0 : 1;
+        UsBehaviorPageView? actionProjectionView = null;
+        var actionProjection = new Dictionary<string, ActionScopeRowView>(StringComparer.Ordinal);
+        var groupFirst = new Dictionary<int, string>();
+        ActionScopeRowView[] orderedActions = Array.Empty<ActionScopeRowView>();
+        void RefreshActionProjection()
+        {
+            var view = source.ReadView();
+            if (ReferenceEquals(actionProjectionView, view)) return;
+            orderedActions = view.ActionScopes.OrderBy(r => ActionOrder(r.ActionKey)).ThenBy(r => r.ActionKey, StringComparer.Ordinal).ToArray();
+            actionProjection.Clear(); groupFirst.Clear();
+            foreach (var action in orderedActions)
+            {
+                actionProjection[action.ActionKey] = action;
+                if (!groupFirst.ContainsKey(Group(action.ActionKey))) groupFirst.Add(Group(action.ActionKey), action.ActionKey);
+            }
+            actionProjectionView = view;
+        }
         bool SameDomain(TuningActionRow row) => s.TuningLayer == row.Layer && Race() == row.Race && Child() == row.Child;
         ActionScopeRowView? ActionRow(TuningActionRow row)
         {
-            var view = source.BuildView();
             if (!SameDomain(row)) return null;
-            foreach (var current in view.ActionScopes) if (current.ActionKey == row.Action) return current;
-            return null;
+            RefreshActionProjection();
+            return actionProjection.TryGetValue(row.Action, out var current) ? current : (ActionScopeRowView?)null;
         }
         bool Current(TuningActionRow row) => SameDomain(row) && ActionRow(row).HasValue;
         bool Expanded(TuningActionRow row) => Current(row) && s.TuningSelectedAction == row.Action && Valid() && SameDomain(row);
-        string Context(TuningActionRow row) => TuningContextLabel(source, t, row.Layer, row.Race, row.Child);
+        string Context(TuningActionRow row) => row.Layer == 0 ? t.Translate("US.UI.PawnProfile")
+            : TuningContextLabel(source.ReadView().Roster, t, row.Layer, row.Race, row.Child);
         bool Contribution(string field) => field.Contains(":");
         string FieldTitle(string field) => Contribution(field) ? UsTuningFieldPresentation.For(field).Title(field, t) : t.Translate("US.UI.Field." + field);
-        string FieldGroup(string field) => Contribution(field) ? UsTuningFieldPresentation.For(field).GroupKey : "US.B.ActionFields";
+        string FieldGroup(string field) => Contribution(field) ? UsTuningFieldPresentation.For(field).GroupKey
+            : field == "volume" || field == "pitch" ? "US.B.FieldGroup.Output"
+            : field == "talking" || field == "age" || field == "mood" ? "US.B.FieldGroup.Responses" : "US.B.FieldGroup.Opportunity";
 
         // One flat Repeat: header, advanced fields, contributions, then restores for each action.
         // Hidden entries stay in this ordered set. No nested Repeat or global-binding escape is used;
         // collapsing/reopening and exact-domain switches retain the same field node and draft.
+        UsBehaviorPageView? keysView = null;
+        string keysContext = "";
+        IReadOnlyList<string> retainedKeys = Array.Empty<string>();
+        var sortedRows = new List<TuningActionRow>();
         b.BindReadOnly<IReadOnlyList<string>>("b-action-keys", () => {
-            var view = source.BuildView();
+            var view = source.ReadView();
             int layer = s.TuningLayer;
             string race = Race(), child = Child();
-            foreach (var action in view.ActionScopes.OrderBy(r => ActionOrder(r.ActionKey)).ThenBy(r => r.ActionKey, StringComparer.Ordinal))
+            string context = layer + "\n" + race + "\n" + child + "\n" + s.TuningSelectedAction;
+            if (ReferenceEquals(keysView, view) && keysContext == context) return retainedKeys;
+            RefreshActionProjection();
+            bool added = false;
+            foreach (var action in orderedActions)
             {
                 string key = RosterKey(action.ActionKey + "\n" + layer + "\n" + race + "\n" + child);
                 if (!knownRows.Add(key)) continue;
                 var row = new TuningActionRow(key, action.ActionKey, layer, race, child);
                 retainedRows.Add(row);
+                added = true;
                 BindItem(row, key + "-H", "", false);
                 BindItem(row, key + "-Z", "", true);
             }
             var keys = new List<string>();
-            foreach (var row in retainedRows.OrderBy(r => ActionOrder(r.Action)).ThenBy(r => r.Action, StringComparer.Ordinal))
+            if (added) { sortedRows = retainedRows.OrderBy(r => ActionOrder(r.Action)).ThenBy(r => r.Action, StringComparer.Ordinal).ToList(); }
+            foreach (var row in sortedRows)
             {
                 keys.Add(row.Key + "-H");
                 if (native != null && Expanded(row))
@@ -151,7 +190,8 @@ public static partial class UsKernelSettingsHost
                 keys.AddRange(row.Fields.Select(row.FieldKey));
                 keys.Add(row.Key + "-Z");
             }
-            return keys;
+            keysView = view; keysContext = context;
+            return retainedKeys = keys;
         });
 
         void BindItem(TuningActionRow row, string key, string field, bool footer)
@@ -177,9 +217,8 @@ public static partial class UsKernelSettingsHost
             b.BindReadOnly<bool>(Address("visible"), () => header ? Current(row) : Expanded(row));
             b.BindReadOnly<bool>(Address("header"), () => header);
             b.BindReadOnly<bool>(Address("footer"), () => footer);
-            b.BindReadOnly<bool>(Address("group-first"), () => header && Current(row) && source.BuildView().ActionScopes
-                .Where(r => Group(r.ActionKey) == Group(action)).OrderBy(r => ActionOrder(r.ActionKey))
-                .ThenBy(r => r.ActionKey, StringComparer.Ordinal).First().ActionKey == action);
+            b.BindReadOnly<bool>(Address("group-first"), () => header && Current(row)
+                && groupFirst.TryGetValue(Group(action), out string? first) && first == action);
             b.BindReadOnly<string>(Address("group"), () => Group(action) == 2 ? T("Custom") : t.Translate(Group(action) == 0
                 ? "US.Tuning.Group.PlayerTriggered" : "US.Tuning.Group.SystemOrEvent"));
             b.BindReadOnly<string>(Address("title"), () => ActionRow(row)?.DisplayName ?? action);
@@ -207,17 +246,27 @@ public static partial class UsKernelSettingsHost
             }, Editable);
             void Help(string topic)
             {
-                s.PinnedHelpRef = topic; s.PinnedHelpContext = (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row)
+                string context = (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row)
                     + (field == "" ? "" : "\n" + FieldTitle(field));
-                s.HelpPanelOpen = true; bumper.ResetHelpScroll(); bumper.Bump();
+                bool changed = DisplayHelpRef(s) != topic || DisplayHelpContext(s) != context;
+                s.PinnedHelpRef = s.PinnedHelpContext = ""; s.FollowHelpRef = topic; s.FollowHelpContext = context;
+                s.FollowHelpLabel = field == "" ? "" : FieldTitle(field);
+                s.HelpScope = HelpScope(s); s.HelpPanelOpen = true;
+                if (changed) bumper.ResetHelpScroll();
+                bumper.Bump();
             }
             b.BindReadOnly<bool>(Address("source-visible"), () => header && Expanded(row) && native != null);
-            b.BindChoices<string>(Address("source-options"), () => header && Expanded(row) ? native?.SourceChoices(t) ?? Array.Empty<UiChoice<string>>() : Array.Empty<UiChoice<string>>());
+            IReadOnlyList<UiChoice<string>> SourceChoices() => header && Expanded(row)
+                ? native?.SourceChoices(t) ?? Array.Empty<UiChoice<string>>() : Array.Empty<UiChoice<string>>();
+            // Keep the source explanation, but do not reserve an empty dropdown row for Pawn profile.
+            b.BindReadOnly<bool>(Address("source-controls-visible"), () => SourceChoices().Count != 0);
+            b.BindChoices<string>(Address("source-options"), SourceChoices);
             writes.ItemValue<string>("b-action-keys", key, "source", () => SameDomain(row) ? native?.SelectedSource ?? "" : "", value => {
                 if (!header || !Expanded(row) || native == null) return;
                 native.CommitSource(value); bumper.Bump();
             });
-            b.BindReadOnly<string>(Address("source-status"), () => Expanded(row) ? native?.SourceStatus(t) ?? "" : "");
+            b.BindReadOnly<string>(Address("source-status"), () => header && Expanded(row) ? native?.SourceStatusSummary(t) ?? "" : "");
+            b.BindReadOnly<string>(Address("source-technical"), () => header && Expanded(row) && row.Details ? native?.SourceStatus(t) ?? "" : "");
             b.BindReadOnly<string>(Address("source-topic"), () => "us/behavior-source/selection");
             writes.ItemAction<string>("b-action-keys", key, "explain-source", Help);
             b.BindReadOnly<bool>(Address("timing-kind-choice"), () => !Kernel.BuiltInActionKeys.Contains(action));
@@ -248,13 +297,15 @@ public static partial class UsKernelSettingsHost
                 bool committed = native.TryCommitActionField(field, value, action, race, child); bumper.Bump();
                 if (!committed) throw new InvalidOperationException(native.RowResult(action, race, child));
             });
-            b.BindReadOnly<string>(Address("field-effective"), () => field == "" ? "" : native?.EffectiveField(field, action, race, child, t) ?? "");
+            b.BindReadOnly<string>(Address("field-effective"), () => !FieldVisible() ? "" : native?.EffectiveFieldSummary(field, action, race, child, t) ?? "");
+            b.BindReadOnly<string>(Address("field-provenance"), () => !FieldVisible() || !row.Details ? "" : native?.EffectiveField(field, action, race, child, t) ?? "");
             b.BindReadOnly<string>(Address("field-topic"), () => Contribution(field) ? "us/action-fields/contributions" : "us/action-fields/" + field);
+            b.BindReadOnly<string>(Address("field-help-context"), () => (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row));
             writes.ItemAction<string>("b-action-keys", key, "explain-field", Help);
             b.BindReadOnly<string>(Address("technical-key"), () => field);
             b.BindReadOnly<bool>(Address("details"), () => Expanded(row) && row.Details);
             writes.ItemCommand("b-action-keys", key, "toggle-details", () => { row.Details = !row.Details; bumper.Bump(); }, () => footer && Expanded(row));
-            b.BindReadOnly<string>(Address("explanation"), () => ActionRow(row)?.Explanation ?? "");
+            b.BindReadOnly<string>(Address("explanation"), () => footer && Expanded(row) && row.Details ? ActionRow(row)?.Explanation ?? "" : "");
             b.BindReadOnly<string>(Address("row-result"), () => {
                 string raw = native?.RowResult(action, race, child) ?? "";
                 var parts = raw.Split(new[] { '\n' }, 2);
@@ -275,7 +326,7 @@ public static partial class UsKernelSettingsHost
                 }
                 else { source.ResetActionToPreset(action); bumper.Bump(); }
             }, () => footer && Expanded(row) && ActionRow(row)?.PresetResetReady == true);
-            writes.ItemCommand("b-action-keys", key, "rules-output", () => { NavigatePage(s, "Output"); bumper.Bump(); }, () => footer && Expanded(row));
+            writes.ItemCommand("b-action-keys", key, "rules-output", () => { source.OpenOutput(); bumper.Bump(); }, () => footer && Expanded(row) && source.CanOpenOutput);
         }
         foreach (var tuple in new[] { ("eat-phase", CoreActions.Eat, "phase"), ("eat-nutrition", CoreActions.Eat, "nutritionScope"), ("eat-drug", CoreActions.Eat, "drugScope"),
             ("select-player", CoreActions.Select, "selectRequirePlayerControlled"), ("select-awake", CoreActions.Select, "selectRequireAwake"), ("select-not-downed", CoreActions.Select, "selectRequireNotDowned") })

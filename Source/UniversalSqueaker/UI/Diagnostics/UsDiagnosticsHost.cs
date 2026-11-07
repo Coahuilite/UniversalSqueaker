@@ -47,6 +47,29 @@ public static class UsDiagnosticsHost
         return flipped;
     }
 
+    /// <summary>The list task needs its measured search/scope, three complete rows and pager;
+    /// fixed controls are budgeted separately. The window still clamps to the actual scaled screen.</summary>
+    internal static float MinimumListContentHeight(IUsDiagnosticsSource source, UiHost host, float width)
+    {
+        float inner = Math.Max(1, width - UsDiagnosticsProjection.PagePadding * 2);
+        var ctx = host.CreateContext(inner);
+        UiNode? list = host.Session.GetNodeByElementId("diag-nav-body") ?? host.Session.GetNodeByElementId("diag-list");
+        if (list == null) return 0; // First opening uses the existing compact shape until its real nodes exist.
+        ctx = UiTextFonts.Apply(ctx.WithNode(list), ctx.Theme);
+        float listHeight = UsDiagListWidget.FieldHeightFor(ctx) + UsDiagListWidget.QueryStatusHeight(ctx) + UsDiagPagerWidget.BodyHeight;
+        var rows = source.PageRows;
+        for (int i = 0; i < Math.Min(3, rows.Count); i++) listHeight += UsDiagRowPainter.Height(ctx, rows[i], inner);
+        if (rows.Count == 0) listHeight += UsKernelDraw.Text(ctx).MeasureText("US.Diagnostics.Panel.Empty".Translate(), inner);
+        float footer = 0;
+        if (host.Session.GetNodeByElementId("diag-capture") is UiNode capture)
+        {
+            var footerContext = host.CreateContext(width);
+            footerContext = UiTextFonts.Apply(footerContext.WithNode(capture), footerContext.Theme);
+            footer = UsDiagToolbarWidget.CaptureLayout(new UiLayoutRect(0, 0, width, 0), footerContext, false);
+        }
+        return listHeight + 34 + UsDiagnosticsProjection.PagePadding * 2 + footer + 4;
+    }
+
     public static UiHost Create(IUsDiagnosticsSource source, string pageXml, ITextMetrics metrics)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -57,14 +80,14 @@ public static class UsDiagnosticsHost
         UiLayoutManifest manifest = UiLayoutManifest.Parse(pageXml);
         DiagRevisionBumper bumper = new();
         UiBindings bindings = BuildBindings(source, bumper);
-        UiHost host = new(
-            UsKernelWidgetRegistrar.Scope,
+        UiHost host = VerseUiDiagnosticLog.CreateHost(
+            UsUiDiagnostics.Consumer, UsKernelWidgetRegistrar.Scope,
             manifest,
             bindings,
             UsTheme.Surface(),
             metrics,
-            new UsKernelTranslation());
-        host.Session.Controls.Trace = SqueakLog.PopupTrace;
+            new UsKernelTranslation(), options: UsUiDiagnostics.Options());
+        UsUiDiagnostics.Adopt(host);
         bumper.Attach(host.Session);
         return host;
     }
@@ -132,12 +155,32 @@ public static class UsDiagnosticsHost
         b.BindValue<UsDiagNavView>(KeyNavView, () => source.NavigationView,
             value => { source.NavigationView = value; bump(); });
         b.BindReadOnly<bool>(KeyShowBack, () => source.ShowBackControl);
+        b.BindReadOnly<bool>("diag-list-view", () => source.NavigationView == UsDiagNavView.List);
+        b.BindReadOnly<bool>("diag-detail-view", () => source.NavigationView != UsDiagNavView.List);
+        b.BindReadOnly<bool>("diag-technical-visible", () => !source.Collapsed && source.RawOpen);
+        b.BindReadOnly<bool>("diag-reading-visible", () => !source.Collapsed && !source.RawOpen);
+        int technicalRevision = -1;
+        bool technicalSeconds = false;
+        UsDiagDetail? technicalDetail = null;
+        string technicalText = "";
+        b.BindReadOnly<string>("diag-technical-text", () => {
+            if (!source.RawOpen) return "";
+            var detail = source.Detail;
+            if (technicalRevision != source.Revision || technicalSeconds != source.ShowSeconds || !ReferenceEquals(detail, technicalDetail))
+            {
+                technicalText = TechnicalText(source); technicalRevision = source.Revision;
+                technicalSeconds = source.ShowSeconds; technicalDetail = detail;
+            }
+            return technicalText;
+        });
+        b.BindCommand("diag-technical-back", () => { source.RawOpen = false; bump(); });
+        b.BindCommand("diag-open-technical", () => { source.RawOpen = true; bump(); });
 
         // The presentation pair. One authority (the source's own narrow decision), two keys: the
         // read-only getters are evaluated by the arrange pass, and ApplyContentWidth moves the content
         // revision when the width crosses the threshold.
-        b.BindReadOnly<bool>(KeyWide, () => !source.Narrow);
-        b.BindReadOnly<bool>(KeyNarrow, () => source.Narrow);
+        b.BindReadOnly<bool>(KeyWide, () => !source.Narrow && !source.RawOpen && !source.Collapsed);
+        b.BindReadOnly<bool>(KeyNarrow, () => source.Narrow && !source.RawOpen && !source.Collapsed);
 
         // One fold switch per group. A write goes through the binding, so the switch is page state on
         // the same clock as every other display write - and NOTHING in the data path touches it, which
@@ -153,6 +196,10 @@ public static class UsDiagnosticsHost
         b.BindReadOnly<int>(KeyTotal, () => source.TotalRowCount);
         b.BindReadOnly<int>(KeyPageCount, () => source.PageCount);
         b.BindReadOnly<UsDiagDetail?>(KeyDetail, () => source.Detail);
+        var history = source as IUsDiagnosticsHistorySource;
+        b.BindReadOnly<string>("diag-history-identity", () => history?.HistoryIdentity ?? "");
+        b.BindReadOnly<IReadOnlyList<UsDiagEvent>>("diag-history", () => history?.History ?? Array.Empty<UsDiagEvent>());
+        b.BindValue<long>("diag-event-selected", () => history?.SelectedEvent ?? -1, value => { if (history != null) history.SelectedEvent = value; bump(); });
         b.BindReadOnly<UsDiagRow?>(KeyMonitor, () => source.MonitorRow);
         b.BindReadOnly<UsDiagBarModel>(KeyBar, () => source.Bar!);
         b.BindReadOnly<bool>(KeyCanLock, () => source.CanLockDisplayed);
@@ -161,7 +208,12 @@ public static class UsDiagnosticsHost
         b.BindAction<int>(KeyLock, _ => source.LockDisplayed());
         // A row click can also change the narrow navigation view, so it bumps like any display write;
         // the source's own drill-in/lock decision is untouched.
-        b.BindAction<int>(KeyRowClick, pawnId => { source.ClickRow(pawnId); bump(); });
+        b.BindAction<int>(KeyRowClick, pawnId => {
+            var previous = source.Detail;
+            source.ClickRow(pawnId);
+            if (!ReferenceEquals(previous, source.Detail)) bumper.ResetDetailScroll();
+            bump();
+        });
         b.BindCommand(KeyClose, source.RequestClose);
 
         var capture = source as IUsDiagnosticsCaptureSource;
@@ -169,6 +221,8 @@ public static class UsDiagnosticsHost
         b.BindReadOnly<bool>("diag-capture-start-visible", () => capture?.CaptureControlsVisible == true && capture.CanStartCapture);
         b.BindReadOnly<bool>("diag-capture-stop-visible", () => capture?.CaptureControlsVisible == true && capture.Recording);
         b.BindReadOnly<bool>("diag-capture-clear-visible", () => capture?.CaptureControlsVisible == true && capture.CanClearCapture);
+        b.BindReadOnly<bool>("diag-capture-technical-visible", () => !source.RawOpen && capture?.CaptureControlsVisible == true
+            && (capture.Recording || capture.CanClearCapture));
         b.BindReadOnly<string>("diag-capture-status", () => capture?.CaptureStatus ?? "US.Diagnostics.Capture.Unavailable".Translate());
         var writes = new UsWriteBindings(b);
         writes.Command("diag-capture-start", () => { capture?.StartCapture(); bump(); }, () => capture?.CanStartCapture == true);
@@ -179,11 +233,37 @@ public static class UsDiagnosticsHost
         return b;
     }
 
+    private static string TechnicalText(IUsDiagnosticsSource source)
+    {
+        if (!source.RawOpen) return ""; // Do not format hidden evidence.
+        var d = source.Detail;
+        var text = new System.Text.StringBuilder();
+        if (d != null)
+        {
+            text.AppendLine(d.PawnText).AppendLine(d.ObservationStatus).AppendLine(d.Summary.Headline).AppendLine(d.Summary.Detail);
+            text.AppendLine(d.Previous.Heading).AppendLine(d.Previous.EvaluationLine).AppendLine(d.Previous.DispatchLine);
+            text.Append("action=").AppendLine(d.ActionText).Append("last_dispatch=").AppendLine(d.AudioText);
+            foreach (var gate in d.Gates)
+                text.Append('[').Append(gate.Group).Append(" / ").Append(gate.Basis).Append("] ").Append(gate.Name)
+                    .Append(" · ").Append(gate.Status).Append(" · ").Append(gate.Value).Append(" · ")
+                    .AppendLine(UsDiagnosticsProjection.ReasonText(gate, key => key.Translate()));
+        }
+        if (source is IUsDiagnosticsTechnicalSource native) text.AppendLine(native.TechnicalText);
+        return text.ToString();
+    }
+
     private sealed class DiagRevisionBumper
     {
         private UiSession? session;
 
         public void Attach(UiSession value) => session = value;
+
+        internal void ResetDetailScroll()
+        {
+            if (session == null) return;
+            foreach (string id in new[] { "diag-detail-scroll", "diag-nav-detail-scroll", "diag-technical-scroll" })
+                if (session.GetNodeByElementId(id) is UiNode node) session.SetScrollPosition(node, UiLayoutPoint.Zero);
+        }
 
         public void Bump()
         {

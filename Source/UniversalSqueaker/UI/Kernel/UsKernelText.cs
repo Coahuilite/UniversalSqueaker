@@ -93,6 +93,7 @@ public static partial class UsKernelDraw
         IReadOnlyList<UiChoice<T>> choices, Action<T> onSelected)
     {
         if (choices.Count == 0) return;
+        UiWidgetContext helpOwner = ctx;
         ctx = ctx.Child(popupId);
         var text = UiTextFonts.Resolve(ctx);
         string display = "";
@@ -115,7 +116,7 @@ public static partial class UsKernelDraw
             UiFitAudit.BeginElement(ctx.ElementPath + "/popup");
             try {
                 int hovered = UiPopup.DrawChoices(popup, popupId, ctx, choices, current, onSelected);
-                if (hovered >= 0 && choices[hovered].HelpRef.Length > 0) ctx.Session.PublishHelp(choices[hovered].HelpRef);
+                if (ctx.Session.IsActive && ctx.Session.IsPopupOpen(popupId)) PopupHelp(helpOwner, choices, hovered);
             }
             finally { UiFitAudit.EndElement(); }
         });

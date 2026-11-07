@@ -141,6 +141,16 @@ internal static class Fl08PublicObservation
                 var declarations = BoundDropdowns(host.Manifest.Roots, id).ToArray();
                 if (declarations.Length == 1) owner = host.Session.GetNodeByElementId(declarations[0]);
             }
+            // WO r6 scope fixtures now enter the real materialized B dropdown. Its item binding
+            // is not a literal in the template manifest: use the existing public popup target fact,
+            // tied to the actual native trigger, rather than infer an owner from a label/index.
+            UiNode? trigger = host.Session.LastInteractionNode;
+            if (owner == null && trigger?.ElementId.StartsWith("b-action-scope#", StringComparison.Ordinal) == true)
+            {
+                string? target = host.Observe(new UiObservationBudget(1, 32)).Facts
+                    .FirstOrDefault(fact => fact.Name == "popup-owner-node")?.Value;
+                if (target == trigger.Id.Key) owner = trigger;
+            }
             owner = owner
                 ?? throw new InvalidOperationException("No declared US owner for observed popup " + id);
             // US composites now own each popup through their public named child context.

@@ -1,6 +1,14 @@
 # 现行保证与开放实现偏差
 本页是[规格](../../specification.md)的实现与证据状态；技术修复、原生运行与玩家听感分别记录。
 
+## 2026-11-06 规格对账与当前维护候选
+
+已补录三组导航、真实780／440与900区域断点、紧凑动作行、同源开发预览和Core性能边界；UI-07纠正旧文档漂移，不改生产政策。0.8工作台、真实Core样例、文档热改、K4正文缓存与US屏幕标记已实现，范围分别见[工作台](../offline-workbench-20261106.md)与[屏幕控件](../diagnostics-screen-mark-20261106.md)。完整同源游戏窗口／虚拟舞台尚未实现；新1.7开发跟随当前接口，不锁小构建号，不能据此删改1.6维护条件。
+
+PM已接受c3-dev完整接替r6当前候选；原r6留回退，UI／查看B录制A／展开收起采样、Report连续／原位32-pass及准确1.6输入投影／生命周期未验项转入新候选。下文r6阶段“待核收”等措辞保其历史时点，不是当前包推荐。此次仅文档修订，未新增运行证据。K5 Root.Update／Pawn扫描架构改造仍缺热点依据，未采用。
+
+**2026-11-05 B Dev本地交付：** A009已用正式固定producer-r5-dev编译US Dev，形成`delivery-r6-dev`两根完整成品，待CO／PM核收；旧r5 Release已撤回推荐但不覆盖。实际Dev诊断575（含per-Host／独立outline分支）、shell13／Remix11、UiLogic及准确source/check见[实施检查点](../ui-diagnostics-20261105.md)。A008目标／报告／释放修复已编译，Report连续pending／新原位32-pass组合仍无动态覆盖；作者旧popup无同合同映射、来源列表直接查选／长来源、O5及native／独立1.7缺口保留。更早未变证据只按原输入层复用，以下旧候选不重标新Dev。
+
 ## F01 日志出口与失败隔离
 **实现：** 2026-10-29已恢复DIAG-02／03。原36个出口沿具名`SqueakLog`事件／取证入口进入受保护格式化与唯一`SqueakLogSink.Emit`；原生Log不再位于业务／UI。当前`kernel.response`使用明确fmt=3，不双发旧裸response／OneShot文本。未改义的fmt=1／2 API仍保原字段，VF1必要store failure按现行DIAG-02更正为Daily warning。r4收取纠正其及其他现行Daily故障在Auto／Disabled下缺必要上下文的遗漏：安全HumanSentence保已捕获身份／阶段、异常类型与清洗原因，不依赖详细suffix；VF1六出口具名stage并参与once键。
 

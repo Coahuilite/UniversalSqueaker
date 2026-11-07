@@ -2,6 +2,27 @@ using System.Collections.Generic;
 
 namespace UniversalSqueaker.UI;
 
+/// <summary>Optional native saved-evidence reader; independent legacy read-only sources remain valid.</summary>
+public interface IUsDiagnosticsTechnicalSource
+{
+    string TechnicalText { get; }
+}
+
+/// <summary>Optional saved single-capture history. Reading/selection never evaluates a response.</summary>
+public interface IUsDiagnosticsHistorySource
+{
+    string HistoryIdentity { get; }
+    IReadOnlyList<UsDiagEvent> History { get; }
+    long SelectedEvent { get; set; }
+}
+
+public sealed class UsDiagEvent
+{
+    public readonly long Sequence;
+    public readonly string Summary, Reason;
+    public UsDiagEvent(long sequence, string summary, string reason) { Sequence = sequence; Summary = summary; Reason = reason; }
+}
+
 /// <summary>Opt-in player capture controls. Existing read-only sources need not implement this.</summary>
 public interface IUsDiagnosticsCaptureSource
 {
@@ -56,7 +77,7 @@ public interface IUsDiagnosticsSource
     int TotalRowCount { get; }
     int PageCount { get; }
 
-    /// <summary>The detail shown in this page's detail column (main: live selection; lock window: the pinned pawn).</summary>
+    /// <summary>The detail shown here (main: panel browsing; lock window: the pinned pawn).</summary>
     UsDiagDetail? Detail { get; }
 
     /// <summary>The collapsed-bar row (main: last CHANGED pawn; lock window: its own pawn).</summary>
@@ -68,7 +89,7 @@ public interface IUsDiagnosticsSource
     /// </summary>
     UsDiagBarModel? Bar { get; }
 
-    /// <summary>The detail column's raw-values block: folded by default, so evidence never leads.</summary>
+    /// <summary>Full technical reader, closed by default; closing restores the original detail/list view.</summary>
     bool RawOpen { get; set; }
 
     /// <summary>

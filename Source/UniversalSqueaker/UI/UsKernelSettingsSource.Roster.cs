@@ -20,37 +20,35 @@ public sealed partial class UsKernelSettingsSource
     private readonly Dictionary<string, string> rowResults = new(StringComparer.Ordinal);
     private static string RowIdentity(string action, string race, string child) => action + "\n" + race + "\n" + child;
     public string RowResult(string action, string race, string child) => rowResults.TryGetValue(RowIdentity(action, race, child), out var result) ? result : "";
-    private static object? FieldValue(BehaviorValues v, string field) => field switch
+    private static object? FieldValue(BehaviorValues v, string field) => UsBehaviorFieldValues.Read(v, field);
+    private static string FormatField(object? value) => UsBehaviorFieldValues.Format(value);
+    private VoicePacksViewState? effectiveFieldsView;
+    private readonly Dictionary<string, (EffectiveBehavior State, BehaviorValues Values, BehaviorValues Own)> effectiveFields = new(StringComparer.Ordinal);
+    private (EffectiveBehavior State, BehaviorValues Values, BehaviorValues Own) ReadEffectiveFields(string action, string race, string child)
     {
-        "enabled" => v.Enabled, "scope" => v.Scope, "interval" => v.SimulationIntervalTicks,
-        "interaction-seconds" => v.InteractionIntervalSeconds, "volume" => v.Volume, "pitch" => v.Pitch,
-        "talking" => v.TalkingEnabled, "age" => v.AgeEnabled, "mood" => v.MoodEnabled,
-        "phase" => v.Phase, "nutritionScope" => v.NutritionScope, "drugScope" => v.DrugScope,
-        "selectRequirePlayerControlled" => v.SelectRequirePlayerControlled, "selectRequireAwake" => v.SelectRequireAwake,
-        "selectRequireNotDowned" => v.SelectRequireNotDowned,
-        _ => field.StartsWith("parameter:", StringComparison.Ordinal) && v.ResponseParameters.TryGetValue(field.Substring(10), out var number) ? number
-            : field.StartsWith("response:", StringComparison.Ordinal) && v.ResponseEnabled.TryGetValue(field.Substring(9), out var enabled) ? enabled
-            : field.StartsWith("participation:", StringComparison.Ordinal) && v.Participation.TryGetValue(field.Substring(14), out var participates) ? participates : null
-    };
-    private static string FormatField(object? value) => value is IFormattable number ? number.ToString(null, CultureInfo.InvariantCulture) : value?.ToString() ?? "";
+        var view = BuildView();
+        if (!ReferenceEquals(effectiveFieldsView, view)) { effectiveFields.Clear(); effectiveFieldsView = view; }
+        string key = RowIdentity(action, race, child);
+        if (effectiveFields.TryGetValue(key, out var result)) return result;
+        var effective = SqueakerRuntime.Explain(settings.CaptureBehaviorConfiguration(), action, race, child);
+        return effectiveFields[key] = (effective, effective.Read(), settings.ReadPlayerActionOverride(action, race, child));
+    }
     public string EffectiveField(string field, string action, string race, string child, IUiTranslation t)
+        => EffectiveField(field, action, race, child, t, false);
+    internal string EffectiveFieldSummary(string field, string action, string race, string child, IUiTranslation t)
+        => EffectiveField(field, action, race, child, t, true);
+    private string EffectiveField(string field, string action, string race, string child, IUiTranslation t, bool compact)
     {
         if (!SqueakerRuntime.Definitions.Actions.Any(x => x.Key == action)) return t.Translate("US.B.Unknown");
-        var effective = SqueakerRuntime.Explain(settings.CaptureBehaviorConfiguration(), action, race, child);
-        var value = FieldValue(effective.Read(), field);
-        string originKey = field switch { "interval" => "simulationIntervalTicks", "interaction-seconds" => "interactionIntervalSeconds",
-            "talking" => "talkingEnabled", "age" => "ageEnabled", "mood" => "moodEnabled", _ => field };
-        string origin = effective.Origins.TryGetValue(originKey, out var actual) ? actual : t.Translate("US.B.NotSupplied");
-        string display = value is bool boolean ? t.Translate(boolean ? "US.UI.Yes" : "US.UI.No") : FormatField(value);
-        return "→ " + (display == "" ? t.Translate("US.B.NotSupplied") : display)
-            + (field == "interval" ? " tick" : field == "interaction-seconds" ? " s" : field == "volume" || field == "pitch" ? " ×" : "")
-            + "  ← " + origin + (effective.Paused ? "\n" + effective.Failure : "");
+        var read = ReadEffectiveFields(action, race, child);
+        return UsBehaviorFieldValues.Effective(field, read.State, read.Values, read.Own, t, compact);
     }
     public IReadOnlyList<string> ContributionFields(string action, string race, string child)
     {
         if (!SqueakerRuntime.Definitions.Actions.Any(x => x.Key == action)) return Array.Empty<string>();
-        var effective = SqueakerRuntime.Explain(settings.CaptureBehaviorConfiguration(), action, race, child).Read();
-        var own = settings.ReadPlayerActionOverride(action, race, child);
+        var read = ReadEffectiveFields(action, race, child);
+        var effective = read.Values;
+        var own = read.Own;
         // No response parameter schema is exposed by IUsResponseRule: show actual folded/own keys.
         return Array.AsReadOnly(effective.PresentKeys().Concat(own.PresentKeys())
             .Where(x => x.StartsWith("parameter:", StringComparison.Ordinal) || x.StartsWith("response:", StringComparison.Ordinal) || x.StartsWith("participation:", StringComparison.Ordinal))

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
@@ -14,6 +15,7 @@ public static class UsKernelWidgetRegistrar
     public const string Scope = "coahuilite.universalsqueaker";
 
     private static readonly object Gate = new();
+#if !US_PREVIEW_NEUTRAL
     private static bool registered;
 
     public static void EnsureRegistered()
@@ -49,13 +51,11 @@ public static class UsKernelWidgetRegistrar
             // switch appearance now expresses, in the shared vocabulary, over the shared input path.
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();
-            UsSparseFieldWidget.Register();
+            EnsureBehaviorRegistered();
             // T3-2: UsDiagnosticsWidget is retired with its kind. The Overview diagnostics card is a declared
             // Section over atoms now (three input/button options + one string action + the page's own square
             // toggle), so the registration line and the widget file went together.
             UsPresetListWidget.Register();
-            UsKernelFooterWidget.Register();
-            UsHelpPanelWidget.Register();
             UsCameraReadoutWidget.Register();
             // UIR-002/003: the Overview's all-loaded-race board - conditional status sentences over a
             // runtime-variable row set with two distinct write exits (navigation + exact enable). One
@@ -66,6 +66,19 @@ public static class UsKernelWidgetRegistrar
             // editor under its own return layer, not a second authority.
 
             registered = true;
+        }
+    }
+#endif
+
+    /// <summary>The same registered kinds used by the production behavior/help region.</summary>
+    public static void EnsureBehaviorRegistered()
+    {
+        lock (Gate)
+        {
+            var kinds = UiWidgetRegistry.KnownKinds(Scope);
+            if (!kinds.Contains(UsSparseFieldWidget.KindName)) UsSparseFieldWidget.Register();
+            if (!kinds.Contains(UsKernelFooterWidget.Kind)) UsKernelFooterWidget.Register();
+            if (!kinds.Contains(UsHelpPanelWidget.Kind)) UsHelpPanelWidget.Register();
         }
     }
 
