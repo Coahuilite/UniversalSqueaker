@@ -21,13 +21,19 @@ internal sealed class GameSettingsPersistence
     internal void Tick()
     {
         RepairPublication();
-        Flush();
+        FlushPhysical();
         Owner.TickStatus(Time.realtimeSinceStartup);
     }
     internal void Flush(bool force = false, bool closing = false)
     {
         if (settings.IsConfigurationUnreadable) return;
         RepairPublication();
+        FlushPhysical(force, closing);
+    }
+    // One outer Tick/Flush owns one publication attempt; physical saving never repairs recursively.
+    private void FlushPhysical(bool force = false, bool closing = false)
+    {
+        if (settings.IsConfigurationUnreadable) return;
         Owner.Flush(Time.realtimeSinceStartup, frameworkWrite, force, closing);
         if (Owner.State == SettingsSaveState.Failed && notifiedFailure != Owner.Generation)
         {

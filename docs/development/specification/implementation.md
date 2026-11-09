@@ -1,5 +1,5 @@
 # 实现与采用映射
-状态：开发记录，不替代[现行规格](../../specification.md)。源码HEAD仍3e42cc180f91f5f58b040724e4ad76ea060802e6，2026-10-29合同修复为其上未提交实现；继承的规格重建成果保留。当前技术配对与运行证据不改签旧接受身份。
+状态：开发记录，不替代[现行规格](../../specification.md)。下文2026-10-29记录以当时3e42cc180f91f5f58b040724e4ad76ea060802e6及dirty为输入，不是当前工作副本身份；继承的规格重建成果保留。当前技术配对与运行证据不改签旧接受身份。
 
 | 能力／连接 | 实际caller → owner → consumer（路径相对Source/UniversalSqueaker） | 寿命／证据边 |
 | --- | --- | --- |
@@ -22,6 +22,22 @@
 | 普通稳定相位（已采用） | GameComponent世界就绪 → adapter供seed／稳定ID／独立目标倍率 → StatePhaseInput／ResponseFrame → 原ResponseSession／DecisionState | 普通CreateOrdinary实际安装us.state-phase/1；Kernel按POL-03算归一化窗口并保存H抬期输入。零seed有效，未ready为null，跨Game清理；无seed旧CLR入口保持 |
 
 具体原版方法／参数／事实与Unknown见[facts](facts.md)；Core完整原版工作清单在[GAMEWORK附录](../../openspec/specs/game-work/spec.md)。逐源码删除／替代映射继续保留[refactor-removals.csv](../../refactor-removals.csv)，它不是现行规则清单。
+
+## 持续授权与设置发布恢复（2026-11-09）
+
+RESP-08的Audio身份变化现经`PublishFallbackAudio → PawnResponseAdapter.Maintain → ResponseSession.Review → AudioCatalog／SqueakPoolRegistry.Authorizes`到达原持续槽。adapter比较配置和Audio对象引用，不比局部revision；目录定义由该adapter的只读catalog持有。有效Sustainer建立时，槽仅增加保存原中性AudioCandidate，结束或自然失活后释放该引用。
+
+复核的是原请求域、供音域／层、包、entry及AudioId的当前供给，不重新执行selector。删除／改写该最终表映射、撤回原entry／包、当前域／年龄／彩蛋／选包／模式或playability使原供给不再合法时，以`CurrentAudioAuthorizationUnavailable`走原Stop。其他域或映射变化、权重／局部调制变化、出现另一候选或更早来源层，不单独切断仍合法的原供给；局部请求参数保持，当前G继续沿自有Sample更新。这采用AUDIO-01／04的准确来源、OUT-07的同槽不重选和OUT-08的“未中选不是依据失效”；FA2仍只在后续合法机会选新音。OneShot无槽、不裁尾，owner／W／root／冷却与截止均不重置。
+
+K2的`GameSettingsPersistence.Tick`与显式`Flush`各只进入一次`RepairPublication`，随后共用不递归修发布的`FlushPhysical`。后续维护、显式Retry或关闭仍可修复pending；保存owner的requested／persisted／failed generation、关闭一次物理重试及写中较新编辑不变。物理已提交但发布失败仍可为Saved且PublicationPending；修发布不重写已成功文件。
+
+两条宿主线采用相同业务源码。现有Core／OneShot与AudioBinding through入口可分别核保存owner和持续配置复核；它们没有Audio单独换引用／撤回供给或同Tick发布次数的精确场景，不能冒称这些分支已有动态前失败／后成功。固定R1依赖、实际构建／运行与原生未验边界由本切片交付收据记录；旧冻结包不更新。
+
+## B维护线与独立09消费的边界
+
+本根保持FL0.8／net472维护路径、c3-dev及原r6恢复配对；[工作台](../offline-workbench-20261106.md)和[屏幕标记](../diagnostics-screen-mark-20261106.md)持真实Core样例、紧凑行、K4对象内缓存及session-owned屏幕绘制的实际接线和证据。US业务Kernel、Overlay单录制slot、原窗口采样／日志与内嵌Dev入口保原owner和原使用条件，未因独立Tools或09窗壳而迁走。
+
+2026-11-08修订CORE-07／DIAG及预览正文只明确这些职责、成本含义和显式预算能力的适用边界；本根没有移植09完整窗／纯自然叶预算，也没有产品代码变化。独立09已由US r6／FL v3经Tools r13实际消费并获PM技术核收，用户待验不等于本地从未运行；这些仍不是B线运行证据。B的世界投影／UIScale／Pawn与Map寿命／浏览B录制A、UI层级、收展采样、Report连续链／原位32-pass／partial继续由原候选及原owner承担。
 
 ## 保留名称的不同含义
 ActionPlan是不可变动作输入，不是会话／请求／成立证明。BehaviorValues是稀疏贡献，EffectiveBehavior是fold结果与归因，BehaviorConfiguration是配置修订，RuntimeView是三个引用。PlaybackRequest与Receipt分别是输出申请与四结果。XML sound／sounds是SoundDef引用，EntryKey保条目身份，AudioId保真实资源身份。UsBehaviorPresetDef是玩家显式复制模板，不是绑定作者来源。

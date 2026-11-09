@@ -27,10 +27,12 @@ public sealed class SustainedPlayback
     private string key = "";
     private int priority;
     private Condition? condition;
+    private AudioCandidate? audio;
     private long nextReview;
     public string LastEndReason { get; private set; } = "";
     public bool Active => handle?.Active == true;
     public string ActiveKey => Active ? key : "";
+    internal AudioCandidate? ActiveAudio => Active ? audio : null;
     public bool ReviewDue(long tick) => Active && tick >= nextReview;
 
     public PlaybackReceipt Dispatch(PlaybackRequest request, bool sustainedMaterial, Func<SustainedStart> startPrepared)
@@ -74,6 +76,7 @@ public sealed class SustainedPlayback
             key = request.Action;
             priority = request.Priority;
             condition = request.Condition;
+            audio = request.Audio;
             nextReview = TickDeadline.Add(request.Tick, 60);
         }
         return result.Receipt;
@@ -115,6 +118,7 @@ public sealed class SustainedPlayback
         else
         {
             handle = null;
+            audio = null;
         }
     }
     public bool Stop(string reason)
@@ -123,6 +127,7 @@ public sealed class SustainedPlayback
         handle = null;
         key = "";
         condition = null;
+        audio = null;
         LastEndReason = reason;
         try
         {

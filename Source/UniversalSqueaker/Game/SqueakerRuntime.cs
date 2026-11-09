@@ -52,6 +52,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private bool diagnosticFaultReported;
     private bool endFaultReported;
     private BehaviorConfiguration? reviewedConfiguration;
+    private Kernel.AudioCatalog? reviewedAudio;
     private BehaviorConfiguration? configuration;
     private IReadOnlyDictionary<string, EffectiveBehavior> effectiveActions => owner.EffectiveActions;
     private string resultEvidence = "";
@@ -259,11 +260,13 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         { EndSustained("SubjectOrServiceUnavailable"); return; }
         var configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
         // Revision numbers are publisher-local; a replacement snapshot may reuse the same number.
-        bool changed = !ReferenceEquals(configuration, reviewedConfiguration);
+        var audio = SqueakerRuntime.Audio;
+        bool changed = !ReferenceEquals(configuration, reviewedConfiguration) || !ReferenceEquals(audio, reviewedAudio);
         if (owner.ActiveAction != "" && (force || changed || owner.ReviewDue(Find.TickManager.TicksGame)))
         {
-            owner.Review(new RuntimeView(catalog, configuration, SqueakerRuntime.Audio), Capture(configuration, null), candidate, force || changed);
+            owner.Review(new RuntimeView(catalog, configuration, audio), Capture(configuration, null), candidate, force || changed);
             reviewedConfiguration = configuration;
+            reviewedAudio = audio;
             ReportEndFault();
         }
         owner.Maintain();
@@ -683,7 +686,7 @@ public static class SqueakerRuntime
     {
         if (!UnityData.IsInMainThread) throw new InvalidOperationException("FallbackAudioOwnerThreadRequired");
         // Construct fully before replacing Audio. Existing sessions capture the new reference at their
-        // next legal selection; no session, opportunity, deadline, W or native comp is touched.
+        // next maintenance/selection; no session, opportunity, deadline, W or native comp is reset.
         var candidate = new Kernel.AudioCatalog(audioInputs.Entries, SqueakKernelAdapter.BuildBuiltIn(committed));
         Audio = candidate;
     }

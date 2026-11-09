@@ -4,6 +4,38 @@ Select the fixed FerriteLib 0.8 package you intend to test with, then build US a
 
 The RW17 basic-compatibility candidate explicitly maps both game versions to the shared `1.6` payload. It still targets net472 and compiles against Krafs.Rimworld.Ref 1.6.4871; the 1.7 API/IL review is a separate evidence layer. The release-gate repair uses the fixed `ferritelib/dist/release-gate-20261101/producer-release-r1/FerriteLib` input with `Private=false`; its actual US compiler/runtime pairing is recorded in [the fixed interface](../dist/release-gate-20261101/INTERFACE-r1.md). The earlier `rw17-basic-compat-20261030` input remains a preserved historical candidate. Native 1.7 sound and rendering remain awaiting human verification.
 
+## Accurate 1.6 maintenance candidate
+
+The current complete local pair is [vc-us-a002-r2](../dist/rw16-validation-closure-20261109/us-a002-r2/USE-zh.md).
+Its default `game-dev-pair` actually consumes the CO-cleared FL08 A002 Dev carrier (MVID
+`bf3ca125-fb06-46a1-b3d5-52289260434e`) with a freshly compiled US Dev and the existing compiler-reference
+receipt. Both Dev DLLs now have neutral CodeView paths and no observed personal-path text. The
+ordinary `game-release-pair` reuses the accepted, unchanged US/FL Release files and evidence; it was
+not rebuilt or rerun in this continuation. Both configurations are net472/x64 for accurate1.6.
+The blocked `us-a002-r1` Dev is preserved as an intermediate, not relabelled as a finished candidate.
+
+O5 separates the current production `packs-keyword`/`b-query` edit from an explicitly fixture-authored
+field exercising the retained `search-text` registry/source contract. Original held-property,
+Live-count, draft, palette/Host/editor identity, conflict, Cancel-zero and normalized request/read-model/
+Accept-no-repeat assertions remain. The O5 sample supplies its existing complete pack facts; it does
+not invent query counters or production normalization. The only earlier US product repair uses the
+net472-compatible `String.Split(char[])` overload in Roster's pack-source projection. This continuation
+changes no US product/fixture source, API, default, Live policy or use condition.
+
+New Dev product/Host builds have zero warnings/errors; actual new-US/new-FL O5 passed32 and the original
+manifest/bilingual-help/layout entry passed479, with compiler receipt and original staging gates passing.
+Release retains r1's32/479 on its unchanged exact DLLs. These are product-DLL/platform-double checks,
+not full Host-suite, game/input/IME acceptance or the original32-Host-pass sampling gate.
+The [evidence sheet](../dist/rw16-validation-closure-20261109/us-a002-r2/EVIDENCE-zh.md) identifies actual
+inputs, reuse and original failures. The candidate includes paired ZIPs, identities, current US Source
+Form and separate FL Dev/Release Source Forms matching their actual build origins.
+
+The [A001 saving follow-up](../dist/rw16-validation-closure-20261109/us-a001-r1/EVIDENCE-zh.md) retains
+accepted SettingsMigration Release results: commit27/0 and ordinary133/0, with saving source/fixture
+unchanged. FL's accepted independent checks retain their original inputs. PM selection and accurate1.6
+rendering/input/IME/audio/lifetime, B-browse/A-record, Report continuity and original32-Host-pass/partial
+conditions stay with their existing owners. Original a001-r2/r1/c3-dev/C4/r6 recovery pairs remain unchanged.
+
 ## Local Dev workflow
 
 From the US repository root:

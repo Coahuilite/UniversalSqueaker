@@ -8,15 +8,18 @@
 ## Product work and outstanding acceptance
 
 Items here describe product needs and retained acceptance limits; they do not authorize immediate execution.
-Select work under the current task and permissions. The approved virtual stage is not yet implemented.
+Select work under the assigned task and permissions. This root remains the B / FL0.8 maintenance line; the completed independent FL0.9 stage is not a B port or B native acceptance. The completed stage and the new preacceptance documentation goal are separate; PM / the maintainer retain user acceptance.
 
-- Implement the approved full same-source window preview and its isolation/lifetime contract under
+- The full same-source window and isolation/lifetime contract remains an unported need for this maintenance line, under
   `docs/openspec/specs/developer-preview/spec.md`; follow current RimWorld 1.7 APIs, not a minor-build lock.
-  The linked implementation status distinguishes the 0.8 maintenance delivery from pending 0.9 ports.
+  The linked implementation status separates this maintenance delivery from the later 0.9 implementation; this item grants no porting or runtime authorization.
 
 - **Offline workbench (WO 20261106 r4):** `candidate-us-c4` carries unchanged u3/m2 and the c3 US_DEV / original r6 FER_DEV pair, with fixed p5/c4 and the visible-by-default launcher; c2/c3 remain unchanged. Actual c1/p3 native5000 layout/watch/last-good/semantic and mark paint evidence is linked in `docs/development/offline-workbench-20261106.md` and `diagnostics-screen-mark-20261106.md`. Final p5/c4 Label Small/16 and bounded timing evidence are recorded; Editor preset fallback is allowed. Physical input and accurate 1.6 game projection remain open. PM has accepted c3-dev as the complete r6 replacement; preserve r6 and earlier candidates for recovery, and carry the outstanding native checklist forward.
 
-- B A009's full local Dev pair/source/check/USE is `dist/ui-diagnostics-20261105/delivery-r6-dev/`, as historical r6 input; c3-dev is now the PM-selected complete replacement. The later offline-workbench authorization is separate; native pending alone grants no further work. The old r5 Release stays withdrawn/preserved. Current entry coverage and exact Report/32-pass/source-list/O5/author-popup/native/1.7 gaps are in `docs/development/ui-diagnostics-20261105.md`; no new cases, game operation or publication authority.
+- **Accurate 1.6 maintenance candidate (DSP-VC-US-A002 r1 / WO r3):** current complete pair is [us-a002-r2](dist/rw16-validation-closure-20261109/us-a002-r2/USE-zh.md). CO-cleared FL A002 Dev is actually consumed by a new US Dev build/Host, compiler receipt and original staging gates pass, O5 passes32 and manifest passes479 with platform doubles. Both Dev DLLs have neutral CodeView paths; the prior privacy blocker is resolved. Release files and r1 evidence are reused unchanged, not rebuilt/rerun. US source/fixture remains the accepted O5 split plus the earlier one-line net472 Split repair, preserving all original assertions and use conditions. Separate FL Dev/Release Source Forms match their origins. Old us-a002-r1 remains the blocked intermediate; earlier a001-r2/r1/c3-dev/C4/r6 and original failures remain unchanged. WO-RW16-VALIDATION-CLOSURE-20261109 r4 accepts this local engineering pair; native/game/input/IME/audio/lifetime, B-browse/A-record, Report and original32-Host-pass/partial gates remain open. This is not full Host or native acceptance or adoption of the future published rc2 asset.
+- **Accepted independent validation (DSP-VC-US-A001 r1):** SettingsMigration Release commit27/0 and ordinary133/0 retain their accepted production-source/Scribe-double inputs; saving code and fixture are unchanged, so no rerun. [A001 evidence](dist/rw16-validation-closure-20261109/us-a001-r1/EVIDENCE-zh.md) keeps its original O5 mapping failure and context; WO r3/A002 supersedes only its pending-scenario continuation. FL's independent checks remain its accepted evidence, not new A002 runs.
+
+- B A009's full local Dev pair/source/check/USE is `dist/ui-diagnostics-20261105/delivery-r6-dev/`, as historical r6 input; c3-dev was the PM-selected complete replacement before the new engineering pair. Native pending alone grants no further work. The old r5 Release stays withdrawn/preserved. Current entry coverage and exact Report/32-pass/source-list/O5/author-popup/native/1.7 gaps are in `docs/development/ui-diagnostics-20261105.md`; no new cases, game operation or publication authority.
 
 - The full current specification is `docs/specification.md`; source coverage and preserved pre-cutover texts are linked there. The 2026-10-29 repair implements protected production logs, VF1 audio publication and canonical identity independence. Paired technical consumption is complete; remaining native checks and the separate clean-release identity are tracked in `docs/development/specification/open-issues.md`; the earlier documentation cutover alone did not implement them.
 - The ea610fa/FL833c14f4 pair received overall internal-trial acceptance. Preserve it and its detailed evidence gaps; do not repeat accepted performance or manufacture individual native passes. Prepare an independent clean localRC candidate. Future FL rc2 mainSHA/asset and US remote coordinate changes are PM-owned; no silent RC1 fallback or fabricated SHA. Release scope and upgrade guidance live in docs/releases/v0.6.0-rc1.md.
@@ -25,8 +28,27 @@ Select work under the current task and permissions. The approved virtual stage i
 - Official Pawn Select defaults are settled and implemented as three independent adjustable true qualifications. Do not reopen this decision or change fixed accepted-feedback/final-subject evidence. Eat Whole/Any/Any is also settled.
 - Core Work facts remain the approved twenty WorkTypes/105 givers and78 exact Job/driver pairs, with patient/DLC/world boundaries. Ordinary Work AnyOccurrence, exact Attack execution support, PlayerCoreEquip plus ActiveCommand, MentalBreak four successful sources, cadence/order/shared permissions are now adopted; do not reopen or expand them through name scans. Sources still require explicit selection, and every package retains its human contract/result gates.
 - Installed1.6.4871 method bodies are now available under the specific read-only task authorization. Preserve the named Social Goto Core-Def gap; no wider installation reads. Native loading, real Scribe/Config, screen and listening remain human gates, separately for all fifteen packages.
-- The FL0.8 public-API migration is the fixed dependency baseline for the authorized UIUX redesign; the consumer guide distinguishes current public-execution coverage from unported old fixture behavior. Use explicit fixed package input; do not restore the old0.7 fallback. The real RC asset and approved repository/tag/full-commit inputs are available; CI preserves main and runs the same gates on0.6.x push/PR-base. PM owns external integration; missing coordinates still fail before checkout. UI/UX design/implementation and native paired acceptance follow their own authorization.
+- The FL0.8 public-API migration is the fixed dependency baseline for later authorized UIUX work; the consumer guide distinguishes current public-execution coverage from unported old fixture behavior. The accepted local pair is not the future rc2 asset: record the actual published repository/tag/full commit/asset and compile/run against it before calling the new baseline adopted. No old0.7/rc1 or moving-ref fallback is allowed. The current CI gates target main/0.6.x; a B working-branch push alone is not full-gates evidence. External integration follows the assigned release task, and US main/publication and UI redesign remain separate authorizations.
 - RW17 remaining acceptance requires human observation of actual 1.6/1.7 sound, rendering, ordinary interaction and the adopted phase with the fixed pair. C2 preserves the original single-string CLR entry and author-log provenance boundary. Historical Core/audio/logging evidence remains in `docs/development/specification/open-issues.md` and the action/phase interface `dist/rw16-17-action-ux-20261031/INTERFACE-r4.md`. The pack-layout correction and its native-picture limitation are linked by `dist/rw16-17-pack-layout-20261101/INTERFACE-r1.md`; the rejected R5 pack geometry is not restored by old identity checks. Current mechanical delivery contains only FL and US and retains its separate owner; installed audio/races remain external. Earlier failure logs and packages remain unchanged.
+## Local review checkpoint
+
+- **Owner:** US B Worker, TASK-VC-US / A002 (DSP-VC-US-A002 r1), report r2 continuation.
+- **reviewed-through:** retains the original O5 necessity/owner/assertion review, sample corrections,
+  net472 Split repair and A001 independent evidence. This continuation covers the CO-cleared FL A002
+  input, identical US product/fixture source, fresh isolated actual Dev compile/Host/stage, compiler
+  receipt, O5 32 and manifest 479, neutral CodeView paths and exact Release-file reuse. No Release
+  rebuild/rerun or unrelated check is attributed to this continuation. Current documentation and
+  matching source/archive delivery are owned by the r2 report's final closeout record.
+- **reviewed_at:** 2026-11-09T14:14:07.5635163+08:00 (**Asia/Hong_Kong**, actual clock).
+  Actual product-DLL/platform-double evidence; native game/input/IME acceptance remains separate.
+- **Lessons / Seen:** existing valid-fixture/evidence-layer/scoped-cleanup rules apply. Preserve the
+  original nonempty-catalog precondition and corrected sample, not a fallback-band success. PDB-free
+  staging alone does not remove CodeView paths: actual DLL inspection is retained with the paired
+  inputs. No new lesson file/Seen or protocol/map change is needed.
+- **Remaining owner/action:** CO consumes the completed pair and r2 report for PM selection. The
+  former FL privacy dependency is resolved; the old us-a002-r1 Dev remains an intermediate. PM and
+  maintainer retain accurate 1.6 rendering/input/IME/audio/lifetime, B-browse/A-record, hierarchy,
+  Report continuity and original32-Host-pass/partial gates. Independent 0.9 work remains outside scope.
 ## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical

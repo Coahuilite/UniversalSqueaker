@@ -145,7 +145,7 @@ public static partial class UsKernelSettingsHost
             var all = s.BrowseDefinitions
                 ? RaceDefinitionCatalog.Current.Races.Select(x => new UsBrowseItem(x.SourcePackageId, x.SourcePackageName))
                     .Concat(RaceDefinitionCatalog.Current.Xenotypes.Select(x => new UsBrowseItem(x.SourcePackageId, x.SourcePackageName)))
-                : source.BuildView().AllPackCards.Select(p => new UsBrowseItem(p.Key.Split(':')[0], p.ModName));
+                : source.BuildView().AllPackCards.Select(p => new UsBrowseItem(p.Key.Split(new[] { ':' })[0], p.ModName));
             var rows = all.Where(x => x.Value != "").GroupBy(x => x.Value, StringComparer.Ordinal).Select(g => g.First())
                 .Where(x => UsBrowseListView.Contains(x.Value + " " + x.Label, q.SourceQuery)).OrderBy(x => x.Label, StringComparer.Ordinal).ToArray();
             sourcesInput = input; sourcesQuery = q.SourceQuery; sourcesDefinitions = s.BrowseDefinitions; sourceRows = rows;

@@ -316,7 +316,7 @@ internal static partial class Program
     private static bool ParseText(string text, out string value) { value = text; return true; }
     private static void EditingAndProperties()
     {
-        var source = new RecordingSettingsSource { RichData = true };
+        var source = new RecordingSettingsSource { RichData = true, IncludeRosterPackCatalog = true };
         using var page = new Page(UsKernelSettingsHost.Create(source, Metrics));
         page.Draw(View);
         var field = page.Host.ElementProperties("global-volume-slider");
@@ -332,9 +332,48 @@ internal static partial class Program
         Check(metrics["RowHeight"].Value == 56, "remove reveals current ancestor");
         parent.Metric("RowHeight").Remove(); page.Draw(View);
         Check(metrics["RowHeight"].Value == original, "remove restores declaration geometry");
+        CurrentRosterEditing(page, source);
+        SupportedSearchTextEditing();
+    }
+    private static void CurrentRosterEditing(Page page, RecordingSettingsSource source)
+    {
+        Console.WriteLine("O5 current production manifest: packs-keyword / b-query");
         page.Host.Bindings.Invoke("set-tab", "Packs");
+        page.Host.Bindings.TryInvokeCommand("browse-packs");
+        // This offline source has pack pairs but no loaded native race catalog. Select the
+        // supported All scope explicitly; do not mistake an empty default scope for search output.
+        page.Host.Bindings.Set("b-range", "All");
+        page.Draw(View);
+        Check(!page.Host.Bindings.Get<bool>("b-no-results"), "current pack browse starts with actual results");
         Press(page, View, "packs-keyword");
         UiNode node = page.Host.Session.GetNodeByElementId("packs-keyword")!;
+        UiWidgetContext ctx = page.Host.CreateContext(View.Width).WithNode(node);
+        var editor = ctx.Controls.Editor<string>(ctx, "b-query", v => v, ParseText);
+        source.ViewState.RosterPackBrowse.Page = 2;
+        InjectText(page, View, " O5-no-such-pack ");
+        Check(source.ViewState.RosterPackBrowse.Query == " O5-no-such-pack "
+            && source.ViewState.RosterPackBrowse.Page == 0 && page.Host.Bindings.Get<bool>("b-no-results")
+            && source.ViewState.RosterBrowse.Query == "" && source.ViewState.SearchText == "" && source.SearchWriteCount == 0,
+            "current native Live input updates only the pack browse query, resets its page and filters its results");
+        int identity = page.Host.Session.Identity;
+        UsKernelSettingsHost.ApplySwatchLive(new GameSettings(), page.Host, UsTheme.ChromeTheme, "blackgold");
+        page.Draw(View);
+        Check(page.Host.Session.Identity == identity && editor.Draft == " O5-no-such-pack "
+            && ReferenceEquals(editor, ctx.Controls.Editor<string>(ctx, "b-query", v => v, ParseText)),
+            "current production query retains Host/editor and user draft across the US palette change");
+    }
+    private static void SupportedSearchTextEditing()
+    {
+        Console.WriteLine("O5 retained SearchText contract: fixture-authored field, not current production UI");
+        var source = new RecordingSettingsSource { RichData = true };
+        using var page = new Page(UsKernelSettingsHost.Create(source, Metrics));
+        page.Draw(View);
+        // No current production field binds search-text. Adopt a separate author definition BEFORE
+        // clicking; keep the actual US registry, source route and attached revision owner unchanged.
+        page.Host.UpdateDefinition(UiLayoutManifest.Parse("<UiPage Schema=\"2\" Source=\"" + Scope
+            + "\"><Widget Id=\"o5-search-text\" Kind=\"input/text-field\" Bind=\"search-text\" Live=\"true\" Height=\"28\" /></UiPage>"));
+        Press(page, View, "o5-search-text");
+        UiNode node = page.Host.Session.GetNodeByElementId("o5-search-text")!;
         UiWidgetContext ctx = page.Host.CreateContext(View.Width).WithNode(node);
         var editor = ctx.Controls.Editor<string>(ctx, "search-text", v => v, ParseText);
         InjectText(page, View, " LOCAL ");
@@ -348,10 +387,10 @@ internal static partial class Program
         page.Host.SetDisplayDemand(false); source.SetSearchText("external"); page.Host.Invalidate();
         page.Host.SetDisplayDemand(true); page.Draw(View);
         Check(editor.Draft == " LOCAL " && editor.Conflict && source.SearchWriteCount == 2, "hide/show retains conflict with actual changed model, no automatic write");
-        Press(page, View, "packs-keyword");
+        Press(page, View, "o5-search-text");
         Check(page.Host.TryHandleCancel(), "actual active editor handles Cancel"); page.Draw(View);
         Check(editor.Draft == "external" && source.SearchWriteCount == 2, "Cancel follows latest model and writes zero");
-        Press(page, View, "packs-keyword"); source.SearchTransform = value => value.Trim().ToLowerInvariant();
+        Press(page, View, "o5-search-text"); source.SearchTransform = value => value.Trim().ToLowerInvariant();
         InjectText(page, View, " NEXT ");
         Check(source.LastSearchRequest == " NEXT " && source.LastSearchText == "next" && source.SearchWriteCount == 3, "request text remains distinct from normalized business model");
         Check(page.Host.TryHandleAccept(), "actual Live confirmation handled"); page.Draw(View);

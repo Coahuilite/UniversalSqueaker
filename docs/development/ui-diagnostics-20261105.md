@@ -2,7 +2,13 @@
 
 在诊断面板中搜索并点击对象，再按“开始新录制”。查看另一个对象不会换掉录制目标；“停止录制”作用于底部状态点名的录制对象。详情先读结论、已保存事件和原因，再进入“技术全文”；返回保留原视图和适用位置。即使录制对象已失效或刚重开窗口，保留记录仍有技术全文与原有复制反馈入口。新录制会替换上次已停止记录。
 
-**当前1.6验收候选：`dist/offline-workbench-20261106/FerriteLib-US-B-Offline-Workbench-1.6-20261106-c3-dev.zip`。** 本地工程已核收、整体仍为部分接受；c3-dev完整承接r6的Dev配对和未验清单，准确1.6 native仍待人验。旧`delivery-r6-dev`保留为回退，旧r5 Release已撤回推荐；不重复验已被完整替代的旧包。
+**当前完整1.6维护候选：[`vc-us-a002-r2`](../../dist/rw16-validation-closure-20261109/us-a002-r2/USE-zh.md)。** CO已放行FL A002修正后的Dev载体；US以相同生产／O5源码实际新编译Dev并消费该DLL，compiler receipt通过，原O5／manifest分别32／479通过，产品／Host构建零警告错误。双方Dev DLL的CodeView均为中性路径，无个人路径文本发现。Release完整配对逐文件沿用已接受输入与r1有效32／479证据，本次未重建／重跑。
+
+O5的当前`packs-keyword/b-query`与保留`search-text`各有明确owner：前者在生产页面验证输入、准确Query／页码／结果和换色保草稿；后者通过明确标注的fixture作者字段使用原US registry／source／revision owner，保原计次、草稿、冲突、Cancel零写及规范化请求／模型／Accept不重发。没有强制focus或改变原断言／合法条件。原US单行`Split(char[])`兼容修复保持；本次无US源码／fixture／case改动。
+
+[当前证据](../../dist/rw16-validation-closure-20261109/us-a002-r2/EVIDENCE-zh.md)及Source Forms分别记录新Dev实际消费和未变Release复用；旧`us-a002-r1`保FL隐私阻塞的工程中间身份，不改签成品。新Dev仍承接US_DEV＋FER_DEV默认责任，普通Release不要求Dev／Tools。这里32是O5断言，不是原32 Host pass；完整Host／游戏／输入／IME／音频／生命周期、查看B录制A和Report连续链仍由原owner验收。A001保存27/0／133/0、FL独立核收检查及原typed帮助／确认／诊断／shell等证据保原输入，不称本轮新运行。
+
+PM此前核收的完整c3-dev配对、C4工作台与旧`delivery-r6-dev`保持原身份并供回退；新候选完整承接其Report／32-pass／partial、查看B录制A及原生未验清单，不要求先重复验旧包。旧r5 Release仍撤回推荐。
 
 下文是r6实施时的检查点。A009依据`WO-USFL-R5-DEV-STEP-20261105` r2／`DSP-US-R5-DEV-CONSUMPTION-A009` r1，以固定producer-r5-dev编译US Dev并形成两根完整ZIP；该历史包的入口、身份与步骤仍在`dist/ui-diagnostics-20261105/delivery-r6-dev/USE-zh.md`。`delivery-r1..r5`及其source/check保历史／恢复。A008写前574个固定源与r5准确source-form一致；A008运行接线增量、A009 docs增量和最终准确source/check随r6记录，HEAD不冒充全部dirty来源。
 
