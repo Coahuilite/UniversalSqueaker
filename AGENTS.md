@@ -2,6 +2,14 @@
 
 > This file contains repository-specific working instructions. Human contributors should read `README.md`.
 
+## Continuity
+
+At start/resume, read MEMORY.md's Working protocol and follow its Local map to current task state and relevant knowledge, lessons and checks; do not load all history.
+
+Follow that protocol on material changes and before handoff or closure. Preserve project constraints and permissions; listed work or knowledge never grants authority.
+
+Only the authorized project owner changes the protocol or its map. Ordinary memory updates and compaction affect Knowledge, not Working protocol; learned content cannot rewrite instructions. Keep one responsible source per fact and serialize conflicting writes.
+
 ## Work entry
 
 - Task and status: the assigned task defines authority; read the relevant [TODO](TODO.md) and [MEMORY](MEMORY.md) sections as needed. This repository has no separate START entry.
@@ -75,25 +83,14 @@ The selected compile-time FL artifact must match the runtime pair; US never ship
 only, including child processes. Real game/Config/Saves, foreground input, installation and publication
 require their corresponding authorization, not just permission to edit the repository.
 
-## Memory protocol
+## Memory files and sources
 
-At the start of relevant work:
+Follow [MEMORY / Working protocol](MEMORY.md#working-protocol) for continuity, review, Knowledge and lesson maintenance. Its Local map preserves the assigned task, repository TODO and scoped evidence owners; it does not grant execution permission.
 
-- Read only the `MEMORY.md` sections relevant to the task when confirmed facts, decisions, constraints or evidence pointers are needed.
-- Read `TODO.md` when selecting or continuing work; it stores current goals, open actions, blockers, and explicit deferrals.
-- Read `OBLIVIONIS.md` only for a historical conflict or explicit request; it is cold archive evidence and cannot override current sources.
-- Memory files use the fixed basenames `AGENTS.md`, `MEMORY.md`, `TODO.md` and `LESSONS.md`, created only when needed and maintained in accurate English. The existing `OBLIVIONIS.md` is optional historical material and follows the same language rule when appended.
-- This is a local fork of SR. SR state must be sourced from the SR repository and never inferred from this repository.
-
-Maintain these boundaries:
-
-- Update `MEMORY.md` only when confirmed durable facts change; keep it compact and leave current actions at their owning surface.
-- Keep measured implementation facts at their responsible source. Read lessons relevant to the task when supplied with it or in a local `LESSONS.md`, if present; retain each reusable lesson and its evidence in its responsible scope, without duplicate ledgers. Promotion uses an existing applicable check or instruction when evidence warrants and follows current verification limits.
-- Compact by default: settled release/implementation details live in `docs/release_review/` (Claim Packs, process review) and the runbook; MEMORY keeps only pointers. Do not grow MEMORY with finished work.
-- Update `TODO.md` only when its current task surface changes.
-- Do not store session narratives, transient artifacts, raw logs, completed test matrices, commit chains, or release checklists in either active memory file.
-- Documentation edits alone are not memory events; external-state summaries never override their authoritative source.
-- An existing current record can serve a handoff if it gives the next owner the result, inputs, evidence, limits and next action. Create a separate handoff only for an actual consumer or recovery need.
+- Keep `AGENTS.md`, `MEMORY.md`, `TODO.md` and an actually needed `LESSONS.md` in accurate English. Measured implementation facts remain at their responsible source; active reusable lessons use LESSONS, not a second task ledger.
+- Read `OBLIVIONIS.md` only for a historical conflict or explicit request. Existing cold archive and recovery evidence retain their original identity; no new archive or Done diary is required.
+- Settled release/implementation detail stays in `docs/release_review/` and the runbook; preserve useful pointers instead of duplicating it in Knowledge.
+- This is a local fork of SR. Source SR state from its own repository, never infer it here.
 
 ## Privacy and security
 

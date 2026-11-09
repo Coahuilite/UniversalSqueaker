@@ -93,6 +93,8 @@ US界面 SHALL履行以下已定消费与状态规则。
 
 帮助是同一 Host 内正文下方的并列底栏，不覆盖业务、不叠窗。关闭时零占位，打开后从实际可分配正文区域取最多三分之一，排除页头、工具 Tab、页脚及本页边距；短文收缩，长文独立 Scroll，明确当前字段／对象的标题与关闭固定可见，不重复多层祖先标题。正文使用既有 16 逻辑字号；14 只用于辅助对象元信息。消费层从公开安排结果读取正文起点、页脚和帮助标题高度，以真实 ContentRect 的可用底边计算上限，不复制 FL chrome 常量。兼容 Definition 更新保留 Host、节点、业务／帮助各自滚动与草稿。
 
+显式采用非提交预算的完整窗按[PREVIEW-07](../developer-preview/spec.md#requirement-preview-07-显式采用的预算测量不提交布局)先求当前帮助预算，再交正式排列／合法scroll clamp；旧未启用路径保原使用条件。兼容scroll保留不意味着禁止内容变短后的合法钳制。
+
 标题、正文、对象上下文与量高 SHALL 消费同一当前展示状态。只解析实际译文、宽度、有效字体及度量环境，不遍历目录求最大高度。帮助节点保留对应测量宽度的文字和分段高度快照；新 presentation 先使节点失效，在下一测量边界采用，当前 pass 仍画已测文字，不能把新长文塞入旧空间。不支持环境身份的 metrics 不假定测量可复用。
 
 独立的显式 pin 消费者保原优先级、准确 context 和寿命。没有 page-state／PreparePage 的未 pin 独立消费者仍读 session 的 15-pass grace；它们不被强制采用正常页内 follow／reading-hold。session 是唯一 hover/grace 时钟，effective ref/source 不冒充新鲜命中。目录 ref、HelpItem.LabelKey／TextKey、binding 地址分别命名；不按显示标签、Value 或行号猜 ref。无选项专属帮助时保一般帮助；跨 section 显式 ref 仍可查目录；未知 ref 回原 section，无 section 保空面板。

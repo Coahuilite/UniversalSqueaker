@@ -1,6 +1,52 @@
 # MEMORY
 
-Current development policy: follow RimWorld **1.7** APIs/namespaces without a game minor-build whitelist. Normative tooling/stage boundaries: `docs/openspec/specs/developer-preview/spec.md`; implementation gaps remain in the specification's linked status page. Historical fixed-input evidence is not a support ceiling.
+## Working protocol
+
+### Local map
+
+Use the adopted Task state, Standards and verification, Lesson promotion and Review timezone entries here. Project state owns global goals, authorization and cross-change responsibilities; scoped records, such as OpenSpec changes, retain their work and evidence. Each fact has one authority at its proper scope: link details instead of maintaining copies. Current focus does not enlarge a record's scope. Preserve existing authorities, including START; use STATE.md only when a needed project-level authority is absent, through authorized adoption/migration. MEMORY / Knowledge holds cross-task knowledge; LESSONS holds active lessons. Optional todos are plans/views. Workers report through responsible owners, not new ledgers.
+
+
+| Entry | Scoped authority and owner |
+| --- | --- |
+| Task state | The assigned published task / WO owns this execution's goal, authorization and acceptance routing; its responsible owner retains project-wide and cross-change decisions. [TODO](TODO.md) owns only this repository's open needs and retained acceptance. Existing scoped change records keep their evidence; implementation maps are facts, not authorization. No local START or STATE is adopted. US B / FL0.8 maintenance; retain c3-dev and inherited r6 native responsibilities. The 0.9 stage does not replace this line. |
+| Standards and verification | [AGENTS](AGENTS.md), [specification](docs/specification.md) and [build and verification guidance](docs/build-and-debug.md), maintained by their authorized repository owners. Select checks by the actual task and permissions; existing no-new-unit-test/case/probe, runtime and external-state restrictions remain. No automatic build or full-suite gate is added. |
+| Lesson promotion | No local LESSONS is currently set. Existing measured evidence remains in Knowledge; completed-review coverage is in [TODO](TODO.md#local-review-checkpoint). If an active lesson needs continuation, the authorized repository owner creates LESSONS and transfers the checkpoint with a pointer; actionable rules go to the applicable AGENTS, specification or existing procedure. Merge equivalent rules at their existing destination. |
+| Review timezone | Asia/Hong_Kong, adopted for this local update on 2026-11-08. Read an actual clock and record completed reviews with a UTC offset; historical dates and Seen keep their original meaning. |
+
+### Resume, update and close
+
+Keep the agreed goal, scope, authorization and completion conditions distinct from findings and plans. State identifies usable artifacts/evidence, unmet conditions, dependencies, owner and next action. Separate facts from hypotheses. Use existing fields or compact prose; retain detailed plans only when order matters to safety, permission or coordination.
+
+Before consequential retries, reconcile uncertain records against actual work. An active label proves neither a live process nor permission; a worker report is not acceptance. Check only uncertainties affecting the next action. Missing permission or unresolved conflict stops the affected operation, not independent authorized work. Explicitly deferred work stays deferred.
+
+Update the responsible source on material changes, not every command. Before interruption/handoff, fill only gaps preventing safe continuation. Defects stay in task state; LESSONS does not replace repair. Blockers name affected work, resolver and resumption condition. Continue while authorized action can advance the goal; otherwise return the blocker without polling unchanged state. The host or existing goal runner supplies activation.
+
+At substantive closeout, compare results with original acceptance and relevant checks; never weaken the contract to fit implementation. Label evidence static, build, runtime, not run or unobservable, with release separate when needed. Reuse it while artifact, inputs and conditions remain applicable; changed premises reopen only affected conclusions. Distinguish implementation, delivery and acceptance. Close satisfied scope, retain outstanding acceptance at its owner, and remove completed activity under retention permissions once results/evidence are accessible. Closing or archiving a scoped record must leave project routing and other obligations reachable. No permanent Done diary or mandatory per-session handoff document.
+
+### Knowledge maintenance
+
+Route work to task state, established specifications/decisions to their existing sources, and reusable failure rules to LESSONS. Admit to Knowledge only facts whose loss could change a future decision or cause costly rediscovery and which no better source sufficiently holds. Keep conclusion, scope/exceptions and necessary evidence; omit cheaply recoverable environment facts and routine success logs.
+
+Merge or replace affected items rather than append session notes. Reassess when relevant versions, implementation, decisions or counterevidence change; age alone does not expire knowledge. Hypotheses stay with investigations. Mature knowledge moves to an existing specification or procedure, leaving a useful pointer only; a small independent fact needs no separate document.
+
+Compact affected Knowledge on update; review remaining content at phase closure or when duplication, staleness or reading cost warrants it. A size budget triggers review, not truncation. Preserve identifiers, values, units, version boundaries, user decisions/exceptions, evidence limits, unmet acceptance and recovery; route obligations to task state rather than discard them. Consult original sources when unclear. Before removing sole necessary conclusions/evidence, establish an accessible responsible source and repair references. Retain history only for concrete evidence, recovery or accountability needs, not an overflow archive. Read the result for the next task; add no compaction diary.
+
+### Review and lessons
+
+Review uncovered work before substantive delivery, handoff or waiting. At start/resume, recover interrupted reviews and uncovered earlier workdays. Across midnight, use the next natural checkpoint, not clock polling. Inspect actual changes, artifacts, existing verification, corrections and rework for avoidable failures or thin verification; reassess relevant lessons. Reuse evidence; no new work means no review or marker rewrite. Issues and comments are optional inputs.
+
+Use one owner and reviewed-through checkpoint per scope, with actual covered work/evidence and reviewed_at. Store it in LESSONS if present, otherwise existing task state; transfer it with a pointer when LESSONS is created. Include uncommitted work and relevant corrections; date or Git HEAD alone is insufficient. Start from the authorized baseline, advance only through reviewed work and expose gaps. Coverage is not acceptance or repair. Create no file solely for a marker without a need for persistent continuation.
+
+Read an actual clock at start/resume and review checkpoints. Use the declared named Review timezone, not worker machine settings; record reviewed_at at completion in ISO 8601 with UTC offset. Count its local calendar date; cross-midnight reviews count only on completion, delayed reviews are not backdated. Record timezone changes without reinterpreting old dates. If clock/timezone is unknown, retain findings and defer date-based counting.
+
+Active lessons need a usable rule, why, evidence and scope from real errors, rework, corrections or verification omissions; apply them immediately within permissions. Existing requirements need no Seen threshold. Merge equivalents. Seen counts distinct completed-review dates finding fresh supporting evidence, at most once per date; rereading one incident, duplicate reports or elapsed days do not count. At three such dates, move a valid, actionable rule into its mapped stable entry; merge existing equivalents or correct/retire invalid rules instead. If authority or destination blocks promotion, retain an owned pending action in task state; do not claim completion.
+
+Promotion connects the rule to its work/review trigger, action and necessary passing evidence in the entry's existing format, without adding testing or other permissions. Keep only useful migration pointers and needed evidence in LESSONS. Later violations attach to the existing rule: check its reach, clarity or validity, without resetting Seen or duplicating it. Lack of recurrence alone does not justify retirement. Maintain lessons within retention permissions; review and ordinary success require no new lesson or report.
+
+## Knowledge
+
+New native development follows RimWorld **1.7** APIs/namespaces without a game minor-build whitelist; this B root retains its FL0.8 / RimWorld1.6 / net472 maintenance contract and c3-dev acceptance responsibilities. Normative tooling/stage boundaries: `docs/openspec/specs/developer-preview/spec.md`; implementation gaps remain in the specification's linked status page. Historical fixed-input evidence is not a support ceiling.
 
 > Durable facts, rules and pointers only. Session narrative, finished-implementation detail, raw logs and
 > commit chains live in `OBLIVIONIS.md` (cold archive); per-incident history lives in the git log. The action
@@ -13,13 +59,13 @@ Current development policy: follow RimWorld **1.7** APIs/namespaces without a ga
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Development state (US0.6.x first-publication baseline)
+### Development state (US0.6.x first-publication baseline)
 
-The Legacy08 offline behavior provider uses the production finite source/bindings and author-document projection; the read-only diagnostics screen mark shares one author definition and painter between the thin game projection and preview. K4 caches only each evidence object's lazy technical body. Architecture and current native evidence/limits are in `docs/development/offline-workbench-20261106.md` and `diagnostics-screen-mark-20261106.md`; the offline preview does not replace game acceptance. The selected c3-dev game candidate carries the original r6 checklist.
+The Legacy08 offline behavior provider uses the production finite source/bindings and author-document projection; the read-only diagnostics screen mark shares one author definition and painter between the thin game projection and preview. K4 caches only each evidence object's lazy technical body. Architecture and current native evidence/limits are in `docs/development/offline-workbench-20261106.md` and `diagnostics-screen-mark-20261106.md`; the offline preview does not replace game acceptance. The new accurate 1.6 engineering pair and its retained r6 checklist are linked from `docs/build-and-debug.md`; PM selection and native acceptance remain separate.
 
 Current contract authority is `docs/specification.md`; source coverage, implementation gaps and evidence layers are linked there. Former full specifications are preserved in `docs/archive/specs-before-20261029/`. Documentation cutover did not repair production or change accepted payload identities. The 2026-10-29 contract repair connects protected named production diagnostics, committed VF1 tables to the existing audio publisher, and independent loaded canonical identity facts; current implementation/evidence status lives in the linked development pages.
 
-The B r6 Dev pair at `dist/ui-diagnostics-20261105/delivery-r6-dev/` was received and locally accepted. The complete c3-dev candidate superseded it for the selected 1.6 delivery; r6 remains available for recovery, and the inherited native acceptance remains open. A009 compiles A008's geometry/report wiring against formally fixed FL producer-r5-dev, with actual US_DEV Host diagnostics/independent-outline, shell/Remix and UiLogic evidence. The old r5 Release is withdrawn from recommendation and preserved unchanged. Exact dirty source/check provenance, usage and retained Report/sampler dynamic, source-list/O5/author-popup/native/1.7 gaps are in `docs/development/ui-diagnostics-20261105.md`; no native performance or dedicated 1.7-reference build is established.
+The B r6 Dev pair at `dist/ui-diagnostics-20261105/delivery-r6-dev/` was received and locally accepted, then superseded by the PM-selected complete c3-dev candidate. Both remain paired recovery inputs for the new 1.6 engineering delivery; inherited native acceptance stays open. A009's original producer-r5-dev/US_DEV Host, independent-outline, shell/Remix and UiLogic evidence retains its identity. The old r5 Release stays withdrawn and unchanged. Current delivery, dirty source/check provenance and Report/sampler dynamic, source-list/O5/author-popup/native/1.7 limits are in `docs/development/ui-diagnostics-20261105.md`; no native performance or dedicated 1.7-reference build is established.
 
 The RW17 basic-compatibility candidate adapts clip readiness to the loaded audio API while retaining the completed native-pool check and the 1.6 Loaded requirement. It consumes the cleared fixed FL Release producer at `ferritelib/dist/rw17-basic-compat-20261030/producer-release-r1/FerriteLib`, with both game versions explicitly sharing the 1.6 payload. The AudioBinding/author-log fidelity repair, C1 single-string CLR entry restoration and C2 author-field provenance boundary are recorded in `docs/development/specification/open-issues.md`; the current fixed US interface is `dist/rw16-17-pack-layout-20261101/INTERFACE-r1.md`. Ordinary stable phase remains adopted under POL-03; its original implementation and coverage boundaries are in `docs/development/specification/implementation.md`. Earlier packages retain their original evidence and known limitations. Native pack-layout, phase, sound and rendering acceptance remain separate; this is not a published release.
 
@@ -38,7 +84,7 @@ Select observes resolved accepted feedback and committed final membership, witho
 Ordinary coverage adopts the already documented exact Attack execution roots, PlayerCoreEquip plus ActiveCommand, and four successful MentalBreak sources. Core Work retains twenty WorkTypes/105 givers and78 exact Job/driver pairs (73 types), excluding three patient-rest entries; see docs/openspec/specs/game-work/spec.md. Working Pawn/current Job/driver/live Toil facts remain separate from response scope; ordinary Work defaults to AnyOccurrence. The seven-argument Dev policy still means Unselected Equip, while its explicit menu supplies PlayerCoreEquip. No name-scan fallback or unsupported source expansion is introduced. The installed DLL metadata1.6.9676.17735 maps to game1.6.4871 rev591; remote4850 is separate. Preserve the named Social Goto Core-Def gap. Native loading, real Scribe/Config, screen/audio/listening and every package contract/result human gate remain open; settings/ExposeData/atomic-file checks use Scribe/platform doubles.
 
 The incremental-pipeline consumer candidate selects fixed FerriteLib833c14f4dcfd07daaf81532a3d90701888e75c9e Release/local.incremental4; 704c4c1/local.incremental3 is retained as not-cleared history. Changed-height multi-root layouts containing remaining-height consumers conservatively use the complete transaction; idle/equal-height reuse is unchanged. A009 r2 US68b30e3/FL36fa7ad payload/receipts and older recovery pairs are unchanged. Range[0.8.0,0.9.0), Private=false and one explicitly selected carrier remain required; local pairing does not change CI's approved release coordinates. The maintainer accepted the paired incremental4 performance on2026-10-27; do not reopen it through Host timing claims. Audio/all-fifteen and remaining native visual/input acceptance stay separate. The response audit is accepted and WO-US06-RESPONSE-CONTRACT-AUDIT-20261027 r3 authorizes a single explicit opportunity contract: accepted interaction seconds versus simulation ticks, without legacy fallback or an interaction tick additional gate. Known old binding snapshots retain non-executable rejected timing data and exact source/action diagnostics; only an explicit selected-domain atomic inherit/rebind replaces that rejected binding. The single-clock implementation and existing local evidence are at the audio checkpoint; the combined UI/package follow-up and native response acceptance remain open. The consumer boundaries are in docs/fl08-consumer-migration-zh.md; bounded window-local observation limits remain in docs/openspec/specs/ui-consumption/spec.md. Direct equal-width tools, current-text bottom help and the three data palettes remain unchanged. Remote integration/publishing stays PM-owned.
-## Retained 0.5 baseline (2026-10-09)
+### Retained 0.5 baseline (2026-10-09)
 
 - **UI refactor round (2026-10-14, WO-US-UI-REFACTOR-20261014 r1; uncommitted on top of the inherited
   Remix seven paths).** The settings page has FIVE workspaces: Overview / Packs / Tuning / Presets /
@@ -205,14 +251,14 @@ The incremental-pipeline consumer candidate selects fixed FerriteLib833c14f4dcfd
   `[FerriteLibUiKitDemo][ui-geometry]` entry - never repurposed onto `ui-audit`, never per frame, never
   auto-enabled. Package identity and per-slice evidence belong to the PM delivery record, not this file.
 
-### R4-B (integrated 2026-09-30)
+#### R4-B (integrated 2026-09-30)
 
 The preset subtree composes through FL's shared `UiRowBand` with typed callbacks, and the native xenotype icon
 arrives as consumer-supplied data from the Verse-side adapter (`VoicePacksPageModel.ResolveXenotypeIcon` is the
 single resource lookup; `UI/Kernel` performs none). Native Def texture loading remains game-only. Detail:
 `docs/archive/r4b-preset-subtree-row-composition.md`.
 
-### R4-A: a typed choice carries its value, and the row index is the bridge
+#### R4-A: a typed choice carries its value, and the row index is the bridge
 
 - `UsScopeTreeWidget` commits the option's own typed value through `set-action-scope` / `set-tuning-domain`; no
   scope is bound as text and reverse-parsed, and no domain token is joined/split.
@@ -224,7 +270,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   consumer's `T`; `UsScopeTreeWidget` can name `SqueakActionScope?`). **Null-inherit stays a value**: the Auto
   entry is a real `null` and a row with no own scope commits `null`, never a default.
 
-### R3-B: layout diagnosis is an explicit per-host developer control
+#### R3-B: layout diagnosis is an explicit per-host developer control
 
 - **The geometry instrument is decoupled from logging.** `UsTextFitAudit.Open` no longer enables it; it is
   switched per host (`SetGeometryCapture` / `SetGeometryOverlay` / `RequestGeometryReport`), default OFF, wired
@@ -252,7 +298,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   CONTENT on those lines belongs to the carrier's own dump** - read the shapes from the carrier, do not restate
   them here.
 
-## Diagnostics panel, attention role
+### Diagnostics panel, attention role
 
 - **Player diagnostics** follow `docs/openspec/specs/diagnostics/spec.md` (DIAG-01/04/06/07).
   The settings diagnostic page opens the ordinary non-pausing panel; the original Debug Action remains
@@ -279,7 +325,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   unavailable/hatch treatment, and only the destructive "Forget dangling" BUTTON keeps the danger family; the
   footer save-status "Failed" keeps danger on purpose, because a save failure is not a gate failure.
 
-### R12-US: US owns its baseline; palette is colour-only; the switch is the carrier's
+#### R12-US: US owns its baseline; palette is colour-only; the switch is the carrier's
 
 - **US owns the COMPLETE DarkGold baseline.** `UsTheme.SchemeXml` declares all 23 colour tokens, including
   **`AccentGold` `#d19a38`** (unchanged - the identity did not move with ownership), and the four per-surface
@@ -300,7 +346,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   reports one issue naming the successor, so a consumer-side ledger was a second convention free to contradict
   it.
 
-## Environment facts that are easy to get wrong
+### Environment facts that are easy to get wrong
 
 - **RimWorld's minimum supported resolution is 1024x768** (maintainer ruling). 800x600 is NOT testable in game:
   every "800x600 in-game re-check" item is closed as impossible-by-platform, not deferred. The harness keeps its
@@ -319,7 +365,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   errors, nothing at `-v n`) while the identical command succeeds with `-m:1`. `KernelHostTests.csproj` therefore
   passes `-m:1` to its four nested stub builds. Harness-only; no shipped byte moves.
 
-## Evidence lessons (measured cases, not standing acceptance gates)
+### Evidence lessons (measured cases, not standing acceptance gates)
 
 - Earlier UI rounds produced misleading red and green results when the fixture, viewport, translator or
   observation channel differed from the intended input. Faithful product backouts proved specific fixes;
@@ -364,7 +410,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   reached HEAD because the check and the commit were written into the same script. Coherent verified changes
   were committed separately; invoking a check without observing its completion did not establish a green result.
 
-## Carrier and artifact discipline
+### Carrier and artifact discipline
 
 - `pack-dev` builds the US payload `-c Dev --no-incremental` and produces a **folder, no archive** (a rehearsal
   is installed by dropping it in `Mods/`). **`build-dev` builds the US payload Dev and NEVER builds the
@@ -394,7 +440,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   The workflows pin the release TAG name (`v0.7.0-rc1`) and derive the commit, digest and DLL hash at run time
   (step outputs, step summary, release body) - the same rule, not an exception to it.
 
-## Identity and enduring corrections (verified against source; do not re-derive)
+### Identity and enduring corrections (verified against source; do not re-derive)
 
 - Repo `coahuilite/UniversalSqueaker`; packageId `coahuilite.universalsqueaker`; namespace / Def prefix / log
   prefix = `UniversalSqueaker` / `US_` / `usdiag`; licence **MPL-2.0** series-wide. **Public since 2026-09-07**
@@ -453,7 +499,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   right after `SelectRemix` and driving the public `Select` alone. Equal-weight folding over the playable layers is
   the Remix contract, not an open product question.
 
-## UI engineering rules (durable)
+### UI engineering rules (durable)
 
 - **Cutover facts**: the legacy chain is deleted, `UiKitFonts` is the only `UiFont`->`GameFont` mapping, and the
   settings window and diagnostics panel draw through `UiTheme`/`UiThemeDraw` only. Whole-page fallback is the
@@ -549,7 +595,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   declared faster than review could match, and no gate covered real-resolution, Chinese-text or real-catalog
   behaviour.
 
-## Settings page: window policy, frame and manifest shape
+### Settings page: window policy, frame and manifest shape
 
 - `WindowChromeLayout.SettingsWindowWidth` owns the single window width; height is width * 3/4.
   The minimum supported 1024x768 screen gives an 800x600 window and a 760x524 page box. Help changes
@@ -635,7 +681,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   in the `UsTheme.cs` C# factory: deliberate and partial, not a carrier gap. A future "raise style granularity"
   ask must name which rung.
 
-## Cross-repo state (US <-> FL)
+### Cross-repo state (US <-> FL)
 
 - **Dispositions**: authority order is code > FL `MEMORY.md` > the team-mode disposition file. The single
   findings ledger is the FL issues file under the workspace's team-mode directory - reference it, never copy it.
@@ -662,7 +708,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   sibling payload by relative `HintPath` with `Private=false`, ships no copy, and declares the dependency in
   `About/About.xml`. The kernel-host lane reads the pin **out of `Mod.cs`** rather than repeating it.
 
-## Release state and version scope
+### Release state and version scope
 
 - **Current release: `v0.4.0-rc1` on both repositories, prerelease; `/releases/latest` 404ing is the CORRECT
   state in an rc-only window.** A bad rc is fixed by deleting the release AND the tag and re-cutting the SAME rc
@@ -711,7 +757,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   `saryaki.meowingkiiro.voices`, scope Race -> `Kiiro_Race`, 15 actions / 53 clips; audio licence CONFIRMED).
   Static checks green; in-game verification open.
 
-## Pointers (authoritative sources; read these, not this file)
+### Pointers (authoritative sources; read these, not this file)
 
 - Mod structure: `docs/mod-structure-reference-zh.md`. Release flow: `docs/release-runbook-zh.md`.
 - Scripts: `verify-local.ps1` (**16 [run] gates** - the harness-stub-coverage gate joined; `[setup]` lines are not gates; numbering is append-only and the script's own `Invoke-Check` count
@@ -730,7 +776,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - Consumer-side contract pages: `docs/archive/r12-us-theme-contract-zh.md`, `docs/archive/r4a-action-scope-typed-choice-prep.md`,
   `docs/archive/r4b-preset-subtree-row-composition.md`.
 
-## Archived history (pointer)
+### Archived history (pointer)
 
 - Earlier verbatim compactions and the latest substantive summaries live in `OBLIVIONIS.md`; exact removed
   prose remains in Git history. The archive covers the pre-distill text of MEMORY and TODO, the
