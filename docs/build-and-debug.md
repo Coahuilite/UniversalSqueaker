@@ -4,9 +4,32 @@ Select the fixed FerriteLib 0.8 package you intend to test with, then build US a
 
 The RW17 basic-compatibility candidate explicitly maps both game versions to the shared `1.6` payload. It still targets net472 and compiles against Krafs.Rimworld.Ref 1.6.4871; the 1.7 API/IL review is a separate evidence layer. The release-gate repair uses the fixed `ferritelib/dist/release-gate-20261101/producer-release-r1/FerriteLib` input with `Private=false`; its actual US compiler/runtime pairing is recorded in [the fixed interface](../dist/release-gate-20261101/INTERFACE-r1.md). The earlier `rw17-basic-compat-20261030` input remains a preserved historical candidate. Native 1.7 sound and rendering remain awaiting human verification.
 
-## Accurate 1.6 maintenance candidate
+## Published FL rc2 Release baseline
 
-The current complete local pair is [vc-us-a002-r2](../dist/rw16-validation-closure-20261109/us-a002-r2/USE-zh.md).
+The ordinary fixed input is [Coahuilite/FerriteLib v0.8.0-rc2](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc2),
+from full source commit `197ff6b3ae99bb3e957e22eaa8be70aca5858447` and CI Release run `42591902045`.
+Select the actual asset `FerriteLib-v0.8.0-rc2.zip` (asset ID `726883338`), whose server/download digest is
+`sha256:97cd4ac4d6ea1412305ae5010912992bc3102390b0aff19fb4b1c5f1c1cc96f0`.
+Its Release DLL is API0.8.0, MVID `b4844c02-5647-4225-b6c8-921c6f589fc0`, with SHA-256
+`0511bee4de1f3c77f6aa5fa3b01c27e028d97559d15fad5b56787e71be82e159`.
+
+US source `f9f1f93cf294ac568a3bbf10e0448c62d687fbd8` actually compiled against those downloaded bytes.
+The new ordinary Release DLL is MVID `9569c393-c2f6-426c-8b21-672206b96d55`; its compiler receipt and
+both original Host runs identify the same FL. Product/Host builds have zero warnings/errors;
+ordinary getters (32 assertions), manifest (479) and the original Release stager passed. Both DLLs have no CodeView
+entry or observed absolute-path strings. This is product-DLL/platform-double evidence, not native acceptance.
+
+The complete local fixed pair, original downloaded ZIP, exact Source Forms and identity are at
+`dist/fl08-prerelease-baseline-20261109/rc2-release-r1/` (`USE-zh.md`, `IDENTITY.json`). These are local
+outputs; a public checkout can obtain the same FL from the release link above and the US source from
+the full source commit. Later adoption-document/workflow commits do not relabel this binary's source.
+Pass its exact `game-release-pair/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll` as ArtifactPath;
+retain Private=false and [0.8.0,0.9.0). US is not independently released by this baseline.
+
+## Retained accurate 1.6 Dev acceptance pair
+
+The separate instrumented local pair is [vc-us-a002-r2](../dist/rw16-validation-closure-20261109/us-a002-r2/USE-zh.md).
+Keep it unchanged for Dev use and whole-pair recovery; its old local Release variant is not the published rc2 baseline above.
 Its default `game-dev-pair` actually consumes the CO-cleared FL08 A002 Dev carrier (MVID
 `bf3ca125-fb06-46a1-b3d5-52289260434e`) with a freshly compiled US Dev and the existing compiler-reference
 receipt. Both Dev DLLs now have neutral CodeView paths and no observed personal-path text. The
