@@ -58,7 +58,8 @@ public static partial class UsKernelSettingsHost
         if (index >= 0) source.ViewState.PackPage = index / 20;
     }
     // Definition updates preserve the host and every compatible node identity, including scroll/drafts.
-    internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f, bool? rosterWide = null) => UiLayoutManifest.Parse(ReadManifest()
+    internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f, bool? rosterWide = null, bool deferRoster = false) => UiLayoutManifest.Parse(ReadManifest()
+        .Replace("Id=\"b-roster-plate\" Padding=\"4\"", "Id=\"b-roster-plate\" Padding=\"4\"" + (deferRoster ? " DeferClippedDisplay=\"true\"" : ""))
         .Replace("Id=\"voice-split\" Breakpoint=\"1\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
         .Replace("Id=\"b-roster-split\" Breakpoint=\"1\"", "Id=\"b-roster-split\" Breakpoint=\"" + ((rosterWide ?? wide) ? "1" : "99999") + "\"")
         .Replace("Id=\"b-list-column\" Width=\"300\"", "Id=\"b-list-column\"" + ((rosterWide ?? wide) ? " Width=\"300\"" : ""))
@@ -68,19 +69,23 @@ public static partial class UsKernelSettingsHost
         .Replace("Id=\"tool-nav\" Cols=\"7\"", "Id=\"tool-nav\" Cols=\"" + (wide ? "7" : "3") + "\"")
         .Replace("Id=\"help-drawer\" Height=\"128\"", "Id=\"help-drawer\" Height=\"" + helpHeight.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "\""));
 
+    internal static bool UsesDeferredRoster(UiHost host) => host.Manifest.Templates.TryGetValue("b-roster-row", out UiElementSpec row)
+        && row.Children.Any(child => child.Id == "b-roster-plate" && child.TryGetBoolean("DeferClippedDisplay", out bool enabled) && enabled);
+
     /// <summary>Use the public arranged page, not copied window-chrome constants, for the optional
     /// help budget. Runs only after a content/size/text change while open; compatible definitions
     /// retain node/editor/scroll identity. The second bounded arrange accounts for scrollbar width.</summary>
     public static void PreparePage(UiHost host, UiLayoutPoint available)
     {
         if (!host.Bindings.TryGet("page-state", out VoicePacksPageState state)) return;
+        bool deferRoster = UsesDeferredRoster(host);
         bool rosterWide = WindowChromeLayout.UsesWideRoster(available.X);
         bool rosterChanged = state.RosterIsWide != rosterWide;
         state.RosterWideLayout = rosterWide;
-        if (rosterChanged) host.UpdateDefinition(PageDefinition(state.WideLayout, state.HelpHeight, rosterWide));
+        if (rosterChanged) host.UpdateDefinition(PageDefinition(state.WideLayout, state.HelpHeight, rosterWide, deferRoster));
         float listWidth = Math.Max(300, Math.Min(400, (available.X - 24) * .4f));
         if (Math.Abs(state.RosterListWidth - listWidth) > .01f) { state.RosterListWidth = listWidth; host.Invalidate(); }
-        PrepareHelpLayout(host, state, available, height => host.UpdateDefinition(PageDefinition(state.WideLayout, height, state.RosterIsWide)));
+        PrepareHelpLayout(host, state, available, height => host.UpdateDefinition(PageDefinition(state.WideLayout, height, state.RosterIsWide, deferRoster)));
     }
 
     private static void BindVoiceManagement(IUsKernelSettingsSource source, UsWriteBindings writes,

@@ -87,7 +87,8 @@ public static partial class UsKernelSettingsHost
         // PM ruling of 2026-10-07; the budget is the engine's own VisibleRows="4.5" counting on the
         // arranged rows (FL capability in the working tree - the US build slot must use the freeze
         // that carries it).
-        UiLayoutManifest manifest = PageDefinition(source.ViewState.WideLayout, rosterWide: source.ViewState.RosterIsWide);
+        UiLayoutManifest manifest = PageDefinition(source.ViewState.WideLayout, rosterWide: source.ViewState.RosterIsWide,
+            deferRoster: source is UsKernelSettingsSource);
 
         // The bottom help panel (BH1) is DECLARATIVE: the manifest's help-scroll Scroll carries
         // VisibleBind="help-open", so the element stays in the definition and the engine simply does not

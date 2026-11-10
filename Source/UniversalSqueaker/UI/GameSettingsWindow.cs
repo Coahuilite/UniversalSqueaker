@@ -248,7 +248,7 @@ public sealed class GameSettingsWindow : UiWindowHost
                 Host.Session.Interactions.End(UiInteractionEnd.Aborted);
                 if (Host.Session.OwnedHotControl is UiControlKey capture) Host.Session.ReleaseHotControl(capture);
                 source!.SetContentLayout(wide);
-                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide, source!.ViewState.HelpHeight, source.ViewState.RosterIsWide));
+                if (changed) Host.UpdateDefinition(UsKernelSettingsHost.PageDefinition(wide, source!.ViewState.HelpHeight, source.ViewState.RosterIsWide, UsKernelSettingsHost.UsesDeferredRoster(Host)));
                 else Host.Invalidate();
             }
         }
