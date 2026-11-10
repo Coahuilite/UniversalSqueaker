@@ -5,7 +5,7 @@ using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
 
-/// <summary>Window-local counters for the existing explicit-Enabled, bounded cost sample.
+/// <summary>Window-local counters for the bounded automatic or explicitly requested cost sample.
 /// The original ruler and its environment identity pass through unchanged; this adds no reuse policy.</summary>
 internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment, IUiTextFontMetrics
 {
@@ -13,6 +13,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     private readonly IUiTextMetricsEnvironment? environment;
     private readonly IUiTextFontMetrics? fonts;
     private bool active, fitEnabledAtStart;
+    private Action<Func<string>> trace = SqueakLog.LayoutTrace;
     private Totals height, width, environmentCapture, modeDraw, selectionDraw;
 
     internal UsUiCostMetrics(ITextMetrics source)
@@ -22,16 +23,17 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
         fonts = source as IUiTextFontMetrics;
     }
 
-    internal void Begin(bool fitEnabled)
+    internal void Begin(bool fitEnabled, Action<Func<string>>? output = null)
     {
         height = width = environmentCapture = modeDraw = selectionDraw = default;
         fitEnabledAtStart = fitEnabled;
+        trace = output ?? SqueakLog.LayoutTrace;
         active = true;
     }
 
     public float MeasureText(string text, UiFont font, float availableWidth)
     {
-        if (!active || !SqueakLog.ShouldEmitDev) return source.MeasureText(text, font, availableWidth);
+        if (!active) return source.MeasureText(text, font, availableWidth);
         long started = Stopwatch.GetTimestamp();
         try { return source.MeasureText(text, font, availableWidth); }
         finally { height.Add(Stopwatch.GetTimestamp() - started); }
@@ -39,7 +41,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
 
     public float MeasureWidth(string text, UiFont font)
     {
-        if (!active || !SqueakLog.ShouldEmitDev) return source.MeasureWidth(text, font);
+        if (!active) return source.MeasureWidth(text, font);
         long started = Stopwatch.GetTimestamp();
         try { return source.MeasureWidth(text, font); }
         finally { width.Add(Stopwatch.GetTimestamp() - started); }
@@ -47,7 +49,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
 
     public UiMeasureInputs? CaptureEnvironment(UiFont font)
     {
-        if (!active || !SqueakLog.ShouldEmitDev) return environment?.CaptureEnvironment(font);
+        if (!active) return environment?.CaptureEnvironment(font);
         long started = Stopwatch.GetTimestamp();
         try { return environment?.CaptureEnvironment(font); }
         finally { environmentCapture.Add(Stopwatch.GetTimestamp() - started); }
@@ -58,7 +60,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     {
         if (fonts == null && !font.Size.HasValue) return MeasureText(text, font.Alias, availableWidth);
         var capable = fonts ?? throw new NotSupportedException("Resolve the effective font before numeric measurement.");
-        if (!active || !SqueakLog.ShouldEmitDev) return capable.MeasureText(text, font, availableWidth, purpose);
+        if (!active) return capable.MeasureText(text, font, availableWidth, purpose);
         long started = Stopwatch.GetTimestamp();
         try { return capable.MeasureText(text, font, availableWidth, purpose); }
         finally { height.Add(Stopwatch.GetTimestamp() - started); }
@@ -67,7 +69,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     {
         if (fonts == null && !font.Size.HasValue) return MeasureWidth(text, font.Alias);
         var capable = fonts ?? throw new NotSupportedException("Resolve the effective font before numeric measurement.");
-        if (!active || !SqueakLog.ShouldEmitDev) return capable.MeasureWidth(text, font, purpose);
+        if (!active) return capable.MeasureWidth(text, font, purpose);
         long started = Stopwatch.GetTimestamp();
         try { return capable.MeasureWidth(text, font, purpose); }
         finally { width.Add(Stopwatch.GetTimestamp() - started); }
@@ -75,7 +77,7 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     public UiMeasureInputs? CaptureEnvironment(UiTextFont font, UiTextPurpose purpose)
     {
         if (fonts == null && !font.Size.HasValue) return CaptureEnvironment(font.Alias);
-        if (!active || !SqueakLog.ShouldEmitDev) return fonts?.CaptureEnvironment(font, purpose);
+        if (!active) return fonts?.CaptureEnvironment(font, purpose);
         long started = Stopwatch.GetTimestamp();
         try { return fonts?.CaptureEnvironment(font, purpose); }
         finally { environmentCapture.Add(Stopwatch.GetTimestamp() - started); }
@@ -85,8 +87,9 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
     {
         if (!active) return;
         active = false;
-        if (!SqueakLog.ShouldEmitDev) return; // Cleanup is independent of the current output gate.
-        SqueakLog.LayoutTrace(() => string.Format(CultureInfo.InvariantCulture,
+        var output = trace;
+        trace = SqueakLog.LayoutTrace; // A completed/closed Host must not retain its window via the callback.
+        output(() => string.Format(CultureInfo.InvariantCulture,
             "UI.cost metrics passes={0} partial={1} fit_enabled_at_start={2} "
             + "height_calls={3} height_total_ms={4:F3} height_max_ms={5:F3} "
             + "width_calls={6} width_total_ms={7:F3} width_max_ms={8:F3} "
@@ -95,18 +98,18 @@ internal sealed class UsUiCostMetrics : ITextMetrics, IUiTextMetricsEnvironment,
             height.Calls, Milliseconds(height.Ticks), Milliseconds(height.Max),
             width.Calls, Milliseconds(width.Ticks), Milliseconds(width.Max),
             environmentCapture.Calls, Milliseconds(environmentCapture.Ticks), Milliseconds(environmentCapture.Max)));
-        WriteDraw("us/mode-row", modeDraw);
-        WriteDraw("us/selection-surface", selectionDraw);
+        WriteDraw("us/mode-row", modeDraw, output);
+        WriteDraw("us/selection-surface", selectionDraw, output);
     }
 
     private static double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-    private static void WriteDraw(string kind, Totals totals) => SqueakLog.LayoutTrace(() => string.Format(
+    private static void WriteDraw(string kind, Totals totals, Action<Func<string>> output) => output(() => string.Format(
         CultureInfo.InvariantCulture, "UI.cost us_draw kind={0} calls={1} total_ms={2:F3} max_ms={3:F3}",
         kind, totals.Calls, Milliseconds(totals.Ticks), Milliseconds(totals.Max)));
 
     internal static DrawScope ObserveDraw(UiWidgetContext context, bool modeRow)
     {
-        return context.Metrics is UsUiCostMetrics metrics && metrics.active && SqueakLog.ShouldEmitDev
+        return context.Metrics is UsUiCostMetrics metrics && metrics.active
             ? new DrawScope(metrics, modeRow) : default;
     }
 

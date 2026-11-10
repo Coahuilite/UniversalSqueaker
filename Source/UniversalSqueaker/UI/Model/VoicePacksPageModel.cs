@@ -414,11 +414,17 @@ public static partial class VoicePacksPageModel
     {
         var rows = new List<ActionScopeRowView>();
         var configuration = settings.CaptureBehaviorConfiguration();
+        // This is one fresh projection, not a cache of publicly mutable settings. Partition the
+        // current domain once instead of scanning every player row twice for every action.
+        var ownRows = settings.actionTuning.Where(x => x.serviceFamily == "Pawn"
+            && x.raceDefName == (layer == 0 ? "" : race) && x.xenotypeDefName == (layer == 2 ? xeno : ""))
+            .ToLookup(x => x.actionKey, StringComparer.Ordinal);
         foreach (var action in SqueakerRuntime.Definitions.Actions)
         {
             var effective = SqueakerRuntime.Explain(configuration, action.Key, race, xeno);
             var value = effective.Read();
-            var own = settings.ReadPlayerActionOverride(action.Key, layer == 0 ? "" : race, layer == 2 ? xeno : "");
+            var actionRows = ownRows[action.Key];
+            var own = GameSettings.FoldPlayerActionOverrides(actionRows);
             string options = "";
             if (value.Phase.HasValue) options += " Eat=" + value.Phase + "/" + value.NutritionScope + "/" + value.DrugScope;
             if (SelectPolicy.HasParameters(value)) options += " Select=" + value.SelectRequirePlayerControlled + "/" + value.SelectRequireAwake + "/" + value.SelectRequireNotDowned;
@@ -426,8 +432,7 @@ public static partial class VoicePacksPageModel
                 + "\n" + string.Join("; ", value.ResponseParameters.Select(x => x.Key + "=" + x.Value))
                 + "\n" + string.Join("; ", value.ResponseEnabled.Select(x => x.Key + "=" + x.Value))
                 + "\n" + string.Join("; ", value.Participation.Select(x => x.Key + "=" + x.Value));
-            string anchor = settings.actionTuning.LastOrDefault(x => x.serviceFamily == "Pawn" && x.actionKey == action.Key
-                && x.raceDefName == (layer == 0 ? "" : race) && x.xenotypeDefName == (layer == 2 ? xeno : ""))?.sourcePresetDefName ?? "";
+            string anchor = actionRows.LastOrDefault()?.sourcePresetDefName ?? "";
             var reset = ResolveActionPreset(anchor, action.Key, layer == 0 ? "" : race, layer == 2 ? xeno : "");
             if (anchor != "") options += "\n" + "US.Tuning.ResetToPreset".Translate() + ": "
                 + (reset.Item2 ? reset.Item3 : "US.Tuning.ResetPresetUnavailable".Translate().ToString());

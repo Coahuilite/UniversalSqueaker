@@ -54,6 +54,19 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     private BehaviorConfiguration? reviewedConfiguration;
     private Kernel.AudioCatalog? reviewedAudio;
     private BehaviorConfiguration? configuration;
+    private SessionObservation? decisionObservation;
+    private double? decisionInteractionUntil;
+    private long decisionAudioSnapshot;
+    private string decisionEndReason = "";
+    private StateScheduleObservation? decisionSchedule;
+    private long? scheduleBasisConfiguration, scheduleBasisSequence;
+    private long? maintenanceTick, maintenanceConfiguration, maintenanceAudioSnapshot, reviewTick, reviewConfigurationId, reviewAudioSnapshot;
+    private double? maintenanceSeconds;
+    private string maintenanceResult = "NotMaintained";
+    private string slotAction = "", endedAction = "", endedReason = "";
+    private long? slotConfiguration, slotAudioSnapshot, endObservedTick;
+    private long observedEndRevision;
+    private double? endObservedSeconds;
     private IReadOnlyDictionary<string, EffectiveBehavior> effectiveActions => owner.EffectiveActions;
     private string resultEvidence = "";
     private string ingestionEvidence = "";
@@ -76,7 +89,9 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         + " operation=" + observedInteraction?.OperationId + " eventFact=" + observedEventFact
         + " monotonicSeconds=" + (observedInteraction?.MonotonicSeconds.ToString("R", System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable")
         + " secondsUntil=" + state.InteractionDeadline(LastOutcome.Action ?? "").ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+        + " observationScope=LatestDecisionAndCurrentSlot decisionAudioSnapshot=" + decisionAudioSnapshot
         + " active=" + owner.ActiveAction + " ended=" + owner.LastEndReason
+        + " maintenanceTick=" + maintenanceTick + " maintenance=" + maintenanceResult
         + " subject=" + owner.Subject + " nativeLabel=" + pawn.ThingID + " role=" + lastRequest?.SubjectRole
         + " family=" + lastRequest?.Family + " domain=" + lastRequest?.Domain + " child=" + lastRequest?.ChildDomain
         + " sourceDomain=" + lastRequest?.Audio.SourceDomain + " tier=" + lastRequest?.Audio.SourceTier + " pack=" + lastRequest?.Audio.PackKey
@@ -118,16 +133,44 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
     internal SqueakResponseEvidence CaptureDiagnosticEvidence()
     {
         string action = LastOutcome.Action ?? "";
+        SessionObservation? current = HasEvaluation ? Observation : null;
+        double? currentInteractionUntil = HasEvaluation && action != "" && observedInteraction.HasValue
+            ? state.InteractionDeadline(action) : null;
         var evidence = new SqueakResponseEvidence(HasEvaluation ? "Evaluated" : "NotEvaluated", ObservationSequence,
-            HasEvaluation ? Observation : (SessionObservation?)null, action,
+            current, action,
             HasEvaluation ? LastOutcome.Receipt?.Result.ToString() ?? "NotRequested" : null,
             LastOutcome.Reason, observedInteraction.HasValue,
-            HasEvaluation && action != "" && observedInteraction.HasValue ? state.InteractionDeadline(action) : null);
+            currentInteractionUntil, decisionSchedule.HasValue ? "AdoptedSchedule" : "NotScheduledByDecision",
+            "CurrentSlotAndLatestMaintenance", decisionObservation);
+        evidence.Add("observation_scope", "LatestDecision;CurrentSlot;LatestMaintenance");
         evidence.Add("subject", owner.Subject); evidence.Add("next_state_tick", state.NextStateTick);
         evidence.Add("phase_input", state.PhaseInput.HasValue ? "Ready" : "NotReady");
         evidence.Add("phase_policy", candidate.State.Phase == null ? "NotAdopted" : StatePhasePolicy.AlgorithmVersion);
         evidence.Add("phase_active", state.PhaseActive(candidate.State));
+        evidence.Add("current_active", owner.ActiveAction == "" ? "None" : owner.ActiveAction);
+        evidence.Add("slot_start_configuration", slotConfiguration); evidence.Add("slot_start_audio_snapshot", slotAudioSnapshot);
+        evidence.Add("maintenance_tick", maintenanceTick); evidence.Add("maintenance_monotonic_seconds", maintenanceSeconds);
+        evidence.Add("maintenance_result", maintenanceResult); evidence.Add("maintenance_configuration", maintenanceConfiguration);
+        evidence.Add("maintenance_audio_snapshot", maintenanceAudioSnapshot);
+        evidence.Add("review_tick", reviewTick); evidence.Add("review_configuration", reviewConfigurationId);
+        evidence.Add("review_audio_snapshot", reviewAudioSnapshot);
+        evidence.Add("end_observed_tick", endObservedTick); evidence.Add("end_observed_monotonic_seconds", endObservedSeconds);
+        evidence.Add("end_action", endedAction); evidence.Add("end_observed_reason", endedReason);
+        evidence.Add("end_timing", "ObservedAtAdapterBoundary;NotNativeCompletionTime");
+        // The adopted schedule survives configuration/policy changes until a real new schedule.
+        // SharedRaise reuses its previous W/phase basis rather than assigning the latest config.
+        if (decisionSchedule is StateScheduleObservation schedule)
+        {
+            evidence.Add("schedule_kind", schedule.Kind); evidence.Add("schedule_lower_bound_tick", schedule.LowerBound);
+            evidence.Add("schedule_next_tick", schedule.NextTick); evidence.Add("schedule_w_ticks", schedule.EffectiveWait);
+            evidence.Add("schedule_phase_window_ticks", schedule.Window); evidence.Add("schedule_phase_pattern", schedule.Pattern);
+            evidence.Add("schedule_shared_raise_window_ticks", schedule.RaisedWindow);
+            evidence.Add("schedule_basis_configuration", scheduleBasisConfiguration);
+            evidence.Add("schedule_basis_sequence", scheduleBasisSequence);
+            evidence.Add("schedule_basis", scheduleBasisSequence.HasValue ? "Decision" : "InitialPolicyOnly");
+        }
         if (!HasEvaluation) return evidence;
+        evidence.Add("decision_observation", decisionObservation.HasValue ? "Captured" : "Unavailable");
         evidence.Add("tick", lastObservation); evidence.Add("requested_action", requestedAction); evidence.Add("action", action);
         evidence.Add("reason", LastOutcome.Reason); evidence.Add("receipt", LastOutcome.Receipt?.Result.ToString() ?? "NotRequested");
         evidence.Add("receipt_reason", LastOutcome.Receipt?.Reason); evidence.Add("role", observedRole);
@@ -135,10 +178,17 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         evidence.Add("opportunity", observedInteraction.HasValue ? "AcceptedInteraction" : requestedAction == "" ? "SimulationState" : "SimulationEvent");
         evidence.Add("event_fact", observedEventFact); evidence.Add("operation", observedInteraction?.OperationId);
         evidence.Add("monotonic_seconds", observedInteraction?.MonotonicSeconds);
-        evidence.Add("interaction_until_seconds", action != "" && observedInteraction.HasValue ? state.InteractionDeadline(action) : (double?)null);
-        evidence.Add("action_until_tick", action != "" && !observedInteraction.HasValue ? state.ActionDeadline(action) : (long?)null);
-        evidence.Add("shared_until_tick", state.SharedDeadline); evidence.Add("confirmed_tick", state.ConfirmedTick);
+        evidence.Add("interaction_until_seconds", currentInteractionUntil);
+        evidence.Add("action_until_tick", action != "" && !observedInteraction.HasValue ? current?.ActionDeadline : null);
+        evidence.Add("shared_until_tick", current?.SharedDeadline); evidence.Add("confirmed_tick", current?.ConfirmedTick);
         evidence.Add("simulation_attempt_tick", state.AttemptTick); evidence.Add("configuration", configuration?.Id);
+        evidence.Add("decision_audio_snapshot", decisionAudioSnapshot); evidence.Add("decision_active", decisionObservation?.ActiveAction);
+        evidence.Add("decision_end_reason", decisionEndReason);
+        evidence.Add("decision_interaction_until_seconds", decisionInteractionUntil);
+        evidence.Add("decision_action_until_tick", action != "" && !observedInteraction.HasValue ? decisionObservation?.ActionDeadline : null);
+        evidence.Add("decision_shared_until_tick", decisionObservation?.SharedDeadline);
+        evidence.Add("decision_confirmed_tick", decisionObservation?.ConfirmedTick);
+        evidence.Add("decision_next_state_tick", decisionObservation?.NextStateTick);
         evidence.Add("active", owner.ActiveAction); evidence.Add("end_reason", owner.LastEndReason);
         evidence.Add("source_domain", lastRequest?.Audio.SourceDomain); evidence.Add("tier", lastRequest?.Audio.SourceTier);
         evidence.Add("pack", lastRequest?.Audio.PackKey); evidence.Add("entry", lastRequest?.Audio.EntryKey);
@@ -166,6 +216,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         long now = Find.TickManager.TicksGame;
         owner = new ResponseSession(SqueakerRuntime.SubjectKey(pawn), now, candidate.State, candidate.InitialSpread,
             pawn.thingIDNumber, SqueakerRuntime.PhaseInputFor(pawn), candidate.UsesNativeRhythm ? Find.TickManager.TickRateMultiplier : 1);
+        decisionSchedule = state.Schedule;
     }
 
     internal void UsePolicy(UsResponsePolicy policy)
@@ -179,7 +230,7 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
 
     private ResponseFrame Capture(BehaviorConfiguration accepted, string? eventKey, bool activeCommand = false, string? registeredAction = null,
         UsIngestionObservation.Result? result = null, string? notificationFact = null,
-        InteractionOpportunity? interaction = null)
+        InteractionOpportunity? interaction = null, bool captureEvidence = true)
     {
         var snapshot = GameRuntime.Current;
         var context = snapshot.ResolveContext(pawn, accepted);
@@ -188,9 +239,12 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
         var ingestion = result == null ? null : new IngestionResultFact(SqueakerRuntime.SubjectKey(result.Ingester), result.ItemId, result.ItemDef, result.Nutrition);
         values[EatPolicy.Result] = UsIngestionObservation.Ingested == null ? Truth.Unknown : ingestion == null ? Truth.False : Truth.True;
         bool detailed = pawn.GetComp<CompSqueaker>().WantsDetailedDiagnostics;
-        resultEvidence = !detailed || result == null ? "" : "ingester=" + result.Ingester.ThingID + ",item=" + result.ItemId
-            + ",def=" + result.ItemDef + ",nutrition=" + result.Nutrition;
-        ingestionEvidence = detailed ? UsIngestionObservation.Describe(pawn) : "";
+        if (captureEvidence)
+        {
+            resultEvidence = !detailed || result == null ? "" : "ingester=" + result.Ingester.ThingID + ",item=" + result.ItemId
+                + ",def=" + result.ItemDef + ",nutrition=" + result.Nutrition;
+            ingestionEvidence = detailed ? UsIngestionObservation.Describe(pawn) : "";
+        }
         var numbers = new Dictionary<string, double>(StringComparer.Ordinal);
         if (result != null) numbers["ingestion.nutrition"] = result.Nutrition;
         var stage = pawn.ageTracker?.CurLifeStage;
@@ -234,45 +288,113 @@ public sealed class PawnResponseAdapter : IResponseOutput, IResponseRandom
             ? "StateOpportunity:job=" + pawn.CurJob?.def?.defName + ",driver=" + pawn.jobs?.curDriver?.GetType().FullName : "Event:" + eventKey;
         configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
         var view = new RuntimeView(catalog, configuration, SqueakerRuntime.Audio);
+        decisionAudioSnapshot = SqueakerRuntime.AudioSnapshot;
         var frame = Capture(configuration, eventKey, activeCommand, registeredAction, ingestionResult, notificationFact, interaction);
         observedInteraction = interaction; observedEventFact = frame.EventFact; requestedAction = registeredAction ?? eventKey ?? "";
         observedRole = frame.SubjectRole; observedRace = frame.Domain.Target; observedChild = frame.Domain.Child;
         draws.Clear(); preparedSound = null; lastRequest = null;
+        ObserveSlot();
+        long previousSchedule = state.ScheduleRevision;
         LastOutcome = owner.Respond(view, frame, candidate, this, this);
         lastObservation = now;
         HasEvaluation = true;
         ObservationSequence++;
-        try { pawn.GetComp<CompSqueaker>().RecordKernelOutcome(LastOutcome, preparedSound, lastRequest); }
-        catch (Exception error)
+        ObserveSlot();
+        decisionObservation = null;
+        decisionInteractionUntil = null; decisionSchedule = null; decisionEndReason = "";
+        try
         {
-            if (!diagnosticFaultReported)
+            decisionObservation = owner.Observe(); decisionEndReason = owner.LastEndReason;
+            decisionInteractionUntil = LastOutcome.Action != "" && interaction.HasValue ? state.InteractionDeadline(LastOutcome.Action) : (double?)null;
+            decisionSchedule = state.Schedule;
+            if (state.ScheduleRevision != previousSchedule && state.Schedule?.Kind != StateScheduleKind.SharedRaise)
             {
-                diagnosticFaultReported = true;
-                SqueakLog.DiagnosticPublicationFailed(owner.Subject, error);
+                scheduleBasisConfiguration = configuration.Id;
+                scheduleBasisSequence = ObservationSequence;
             }
+        }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { ReportDiagnosticFault(error); }
+        try { pawn.GetComp<CompSqueaker>().RecordKernelOutcome(LastOutcome, preparedSound, lastRequest); }
+        catch (Exception error) { ReportDiagnosticFault(error); }
+    }
+    private void ReportDiagnosticFault(Exception error)
+    {
+        if (!diagnosticFaultReported)
+        {
+            diagnosticFaultReported = true;
+            SqueakLog.DiagnosticPublicationFailed(owner.Subject, error);
         }
     }
 
     public void Maintain(bool force = false)
     {
-        if (!pawn.Spawned || pawn.Destroyed || pawn.MapHeld != Find.CurrentMap
-            || !SqueakerMod.Settings.CaptureBehaviorConfiguration().SystemEnabled)
+        // Preserve the original unavailable-subject exit: it does not require settings adoption.
+        if (!pawn.Spawned || pawn.Destroyed || pawn.MapHeld != Find.CurrentMap)
         { EndSustained("SubjectOrServiceUnavailable"); return; }
         var configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
+        if (!configuration.SystemEnabled)
+        { EndSustained("SubjectOrServiceUnavailable", configuration); return; }
         // Revision numbers are publisher-local; a replacement snapshot may reuse the same number.
         var audio = SqueakerRuntime.Audio;
+        long audioSnapshot = SqueakerRuntime.AudioSnapshot;
+        bool slotChanged = ObserveSlot();
+        BeginMaintenance(configuration.Id, audioSnapshot, owner.ActiveAction == "" ? "NoOwnedSlot" : "HandleMaintainOnly");
         bool changed = !ReferenceEquals(configuration, reviewedConfiguration) || !ReferenceEquals(audio, reviewedAudio);
+        bool reviewed = false;
         if (owner.ActiveAction != "" && (force || changed || owner.ReviewDue(Find.TickManager.TicksGame)))
         {
-            owner.Review(new RuntimeView(catalog, configuration, audio), Capture(configuration, null), candidate, force || changed);
+            maintenanceResult = owner.Review(new RuntimeView(catalog, configuration, audio),
+                Capture(configuration, null, captureEvidence: false), candidate, force || changed);
             reviewedConfiguration = configuration;
             reviewedAudio = audio;
+            reviewTick = Find.TickManager.TicksGame; reviewConfigurationId = configuration.Id; reviewAudioSnapshot = audioSnapshot;
+            slotChanged |= ObserveSlot();
+            reviewed = true;
             ReportEndFault();
         }
         owner.Maintain();
+        slotChanged |= ObserveSlot();
+        if (reviewed || slotChanged) SqueakDiagnosticsOverlay.RecordMaintenance(pawn, this);
     }
     public void Stop() => EndSustained("SessionReleased");
-    private void EndSustained(string reason) { owner.Stop(reason); ReportEndFault(); }
+    private void EndSustained(string reason, BehaviorConfiguration? adopted = null)
+    {
+        bool changed = ObserveSlot();
+        string previousResult = maintenanceResult;
+        BeginMaintenance(adopted?.Id, null, reason);
+        owner.Stop(reason); changed |= ObserveSlot(); ReportEndFault();
+        if (changed || previousResult != maintenanceResult) SqueakDiagnosticsOverlay.RecordMaintenance(pawn, this);
+    }
+    private void BeginMaintenance(long? adoptedConfiguration, long? adoptedAudio, string result)
+    {
+        maintenanceTick = UnityData.IsInMainThread ? Find.TickManager?.TicksGame : null;
+        maintenanceSeconds = (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
+        maintenanceConfiguration = adoptedConfiguration; maintenanceAudioSnapshot = adoptedAudio;
+        maintenanceResult = result;
+    }
+    // Record an observed transition at the real mutation boundary, never during diagnostic reads.
+    // Native handles may already be inactive; that time is detection, not an invented native end time.
+    private bool ObserveSlot()
+    {
+        try
+        {
+            string active = owner.ActiveAction;
+            bool ownerEnded = observedEndRevision != owner.EndRevision;
+            observedEndRevision = owner.EndRevision;
+            if (active == slotAction) return false;
+            if (slotAction != "")
+            {
+                endedAction = slotAction; endObservedTick = UnityData.IsInMainThread ? Find.TickManager?.TicksGame : null;
+                endObservedSeconds = (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
+                endedReason = ownerEnded ? owner.LastEndReason : "NativeInactiveObserved";
+            }
+            slotAction = active;
+            slotConfiguration = active == "" ? (long?)null : configuration?.Id;
+            slotAudioSnapshot = active == "" ? (long?)null : decisionAudioSnapshot;
+            return true;
+        }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { ReportDiagnosticFault(error); return false; }
+    }
     private void ReportEndFault()
     {
         if (!endFaultReported && owner.LastEndReason.Contains(":EndFault:"))
@@ -447,6 +569,8 @@ public static class SqueakerRuntime
     private static DefinitionCatalog catalog = new(720, 216, fullDevCandidate: true);
     private static AudioInputBuilder audioInputs = new(catalog);
     internal static Kernel.AudioCatalog Audio { get; private set; } = Kernel.AudioCatalog.Empty;
+    // Publisher-local process identity for each replaced Audio reference; never a resource AudioId.
+    internal static long AudioSnapshot { get; private set; }
     private static UsDevelopmentPolicy? selectedPolicy;
     private static UsResponsePolicy? ordinaryPolicy;
     internal static UsResponsePolicy? CurrentPolicy => selectedPolicy?.RuntimePolicy ?? ordinaryPolicy;
@@ -689,9 +813,14 @@ public static class SqueakerRuntime
         // next maintenance/selection; no session, opportunity, deadline, W or native comp is reset.
         var candidate = new Kernel.AudioCatalog(audioInputs.Entries, SqueakKernelAdapter.BuildBuiltIn(committed));
         Audio = candidate;
+        AudioSnapshot++;
     }
 
-    internal static void RefreshAudio() => Audio = new Kernel.AudioCatalog(audioInputs.Entries, SqueakKernelAdapter.BuildBuiltIn());
+    internal static void RefreshAudio()
+    {
+        Audio = new Kernel.AudioCatalog(audioInputs.Entries, SqueakKernelAdapter.BuildBuiltIn());
+        AudioSnapshot++;
+    }
 
     internal static void ReleasePawn(Pawn pawn)
     {

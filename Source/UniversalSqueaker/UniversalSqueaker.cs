@@ -32,6 +32,7 @@ public sealed class SqueakerMod : Mod
     internal static void NotifySettingsWindowClosing(Window window) => Instance?.windows.NotifyClosing(window);
     internal static string BuildIdentity() => SettingsWindowOwner.BuildIdentity();
     internal void QueueSettingsSave() => persistence.Queue();
+    // Retained explicit maintenance entry for existing callers; window drawing no longer calls it.
     internal void TickSettingsSaveForWindow() => persistence.Tick();
     internal void FlushQueuedSettingsSave(bool force = false, bool allowFailedGenerationRetry = false) => persistence.Flush(force, allowFailedGenerationRetry);
     internal void RetrySettingsSave() => persistence.Retry();

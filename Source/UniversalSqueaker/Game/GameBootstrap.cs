@@ -71,6 +71,7 @@ internal static class GameBootstrap
             if (Settings.ConsumeAppearanceRepair()) persistence.Queue();
             persistence.Flush(true);
             Settings.ApplySettingsRuntimeSideEffects(false);
+            GameSettingsMaintenance.Start(persistence);
             SqueakAudioPoolNotificationService.EvaluateAndMaybeShow(Settings, SqueakXenotypeCatalog.Current);
             SqueakLog.StartupReady(Harmony.GetPatchedMethods().Count());
         });

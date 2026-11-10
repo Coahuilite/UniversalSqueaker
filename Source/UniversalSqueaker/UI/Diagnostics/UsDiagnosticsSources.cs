@@ -358,9 +358,11 @@ internal sealed class UsDiagnosticsDetailCache
         for (int i = saved.Count - 1; i >= 0; i--)
         {
             var e = saved[i];
+            // Legacy records already detached Observation at their settled callback, not at this read.
+            var observation = e.DecisionObservation ?? e.Observation;
             events.Add(new UsDiagEvent(e.Sequence, "#" + e.Sequence + " · " + e.Action + " · " + e.Result,
-                e.Reason + "\n" + (e.Observation.HasValue ? "observed_tick=" + e.Observation.Value.ObservedTick
-                    + "t · receipt=" + (e.Observation.Value.Receipt?.Result.ToString() ?? "Unavailable") : "observation=NotCaptured")));
+                e.Reason + "\n" + (observation.HasValue ? "observed_tick=" + observation.Value.ObservedTick
+                    + "t · receipt=" + (observation.Value.Receipt?.Result.ToString() ?? "Unavailable") : "observation=NotCaptured")));
         }
         historyRevision = currentRevision;
         return history = events;
@@ -465,10 +467,16 @@ internal static class UsDiagnosticsRowFactory
         var gates = new List<UsDiagGateLine>();
         if (s.Response.HasValue)
         {
-            var observed = s.Response.Value;
             gates.Add(new UsDiagGateLine("US.Diagnostics.Gate.ActionCooldown".Translate(), CooldownText(s, showSeconds),
                 UsDiagGateState.NA, UsDiagGateGroup.Rules, UsDiagBasis.PreviousEvaluation,
                 UsDiagnosticsProjection.Status(UsDiagGateState.NA, "!", Tr)));
+        }
+        // Existing snapshots need not supply the optional frozen extension. Observe's outcome/tick/
+        // receipt are saved decision facts; only the slot/deadlines remain current in Response.
+        var decision = s.Evidence?.DecisionObservation ?? s.Response;
+        if (decision.HasValue)
+        {
+            var observed = decision.Value;
             gates.Add(new UsDiagGateLine("US.Kernel.LastObservedDecision".Translate(),
                 observed.Action + " @" + observed.ObservedTick + " " + observed.Reason + " " + observed.Receipt?.Result,
                 UsDiagGateState.NA, UsDiagGateGroup.Audio, UsDiagBasis.PreviousEvaluation, UsDiagnosticsProjection.Status(UsDiagGateState.NA, "!", Tr)));

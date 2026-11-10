@@ -15,7 +15,7 @@ namespace UniversalSqueaker.UI;
 /// surface (<see cref="GameSettings"/> and the typed
 /// <see cref="VoicePacksPageModel"/> facade).
 /// </summary>
-public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource, IUsActivitySettingsSource
+public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource, IUsActivitySettingsSource, IUsGlobalVolumeSettingsSource
 {
     private readonly GameSettings settings;
     private readonly VerseUiImages? images;
@@ -28,14 +28,21 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     private Authoring.DefinitionCatalog? cachedDefinitions;
     private UsResponsePolicy? cachedPolicy, observedPolicy;
     private bool uiCostActive;
+    private Action<Func<string>> uiCostTrace = SqueakLog.LayoutTrace;
     private long uiViewReads, uiViewBuilds, uiViewTicks, uiViewMaxTicks, uiCreateTicks;
+    private long uiCostStarted, uiVolumeRequests, uiVolumeChanges, uiVolumeTicks, uiVolumeMaxTicks, uiExpansions;
+    private double uiLastVolumeMs, uiLastExpansionMs;
 
     // Armed only by an explicitly requested, per-window diagnostic sample. No object labels/values.
-    internal void BeginUiCostSample(long creationTicks)
+    internal void BeginUiCostSample(long creationTicks, Action<Func<string>>? output = null)
     {
         uiViewReads = uiViewBuilds = uiViewTicks = uiViewMaxTicks = 0;
         uiCostActive = true;
+        uiCostTrace = output ?? SqueakLog.LayoutTrace;
         uiCreateTicks = creationTicks;
+        uiCostStarted = Stopwatch.GetTimestamp();
+        uiVolumeRequests = uiVolumeChanges = uiVolumeTicks = uiVolumeMaxTicks = uiExpansions = 0;
+        uiLastVolumeMs = uiLastExpansionMs = -1;
     }
 
     internal void EndUiCostSample(int passes, bool partial)
@@ -43,10 +50,14 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         if (!uiCostActive) return;
         uiCostActive = false;
         double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-        SqueakLog.LayoutTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
+        uiCostTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
             "UI.cost passes={0} partial={1} create_ms={2} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
             passes, partial, uiCreateTicks < 0 ? "NotCaptured" : Milliseconds(uiCreateTicks).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), uiViewReads, uiViewBuilds,
             Milliseconds(uiViewTicks), Milliseconds(uiViewMaxTicks)));
+        uiCostTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "UI.cost operations volume_requests={0} volume_changes={1} volume_write_total_ms={2:F3} volume_write_max_ms={3:F3} last_volume_ms={4:F3} expansions={5} last_expansion_ms={6:F3}",
+            uiVolumeRequests, uiVolumeChanges, Milliseconds(uiVolumeTicks), Milliseconds(uiVolumeMaxTicks), uiLastVolumeMs, uiExpansions, uiLastExpansionMs));
+        uiCostTrace = SqueakLog.LayoutTrace;
     }
 
     public UsKernelSettingsSource(GameSettings settings, VerseUiImages? images = null)
@@ -82,8 +93,8 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public VoicePacksViewState BuildView()
     {
-        long started = uiCostActive && SqueakLog.ShouldEmitDev ? Stopwatch.GetTimestamp() : 0;
-        if (uiCostActive && SqueakLog.ShouldEmitDev) uiViewReads++;
+        long started = uiCostActive ? Stopwatch.GetTimestamp() : 0;
+        if (uiCostActive) uiViewReads++;
         try
         {
             int revision = revisionSource != null ? revisionSource() : Time.frameCount;
@@ -92,7 +103,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
             if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
                 || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions) || !ReferenceEquals(cachedPolicy, policy))
             {
-                if (uiCostActive && SqueakLog.ShouldEmitDev) uiViewBuilds++;
+                if (uiCostActive) uiViewBuilds++;
                 cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state, ImageOf);
                 cachedRevision = revision;
                 cachedConfiguration = configuration;
@@ -104,7 +115,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         }
         finally
         {
-            if (uiCostActive && SqueakLog.ShouldEmitDev)
+            if (uiCostActive)
             {
                 long ticks = Stopwatch.GetTimestamp() - started;
                 uiViewTicks += ticks;
@@ -155,9 +166,22 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         settings.CommitVoicePackMode(mode);
     }
 
+    public float EffectiveGlobalVolume => settings.globalVolumeFactor;
+
     public void SetGlobalVolume(float value)
     {
-        settings.SetGlobalVolume(value);
+        if (!uiCostActive) { settings.SetGlobalVolume(value); return; }
+        long started = Stopwatch.GetTimestamp();
+        float before = settings.globalVolumeFactor;
+        uiVolumeRequests++;
+        uiLastVolumeMs = (started - uiCostStarted) * 1000.0 / Stopwatch.Frequency;
+        try { settings.SetGlobalVolume(value); }
+        finally
+        {
+            if (!before.Equals(settings.globalVolumeFactor)) uiVolumeChanges++;
+            long ticks = Stopwatch.GetTimestamp() - started;
+            uiVolumeTicks += ticks; uiVolumeMaxTicks = Math.Max(uiVolumeMaxTicks, ticks);
+        }
     }
 
     public double Activity => settings.activity;
@@ -269,6 +293,26 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     {
         this.host = host;
         observedPolicy = SqueakerRuntime.CurrentPolicy;
+        // Also pairs the legal direct Host factory path, where no WindowStack raises HostDetached.
+        host.CreateContext(1).State("us/settings-source-borrow", () => this, value => value.DetachHost(host));
+    }
+
+    // Paired with the window's Host lifetime, not with the business settings lifetime.
+    internal void DetachHost(UiHost released)
+    {
+        if (!ReferenceEquals(host, released)) return;
+        host = null;
+        revisionSource = null;
+        uiCostActive = false;
+        uiCostTrace = SqueakLog.LayoutTrace;
+        cachedView = null;
+        cachedRevision = -1;
+        effectiveFields.Clear();
+        effectiveFieldsView = null;
+        imageRefs.Clear();
+        layoutReportPending = false;
+        requestedAfterReportPass = -1;
+        reportOutcome = LayoutReportOutcome.None;
     }
 
     // A process-only Dev choice is not a settings edit. Refresh the existing view/layout clocks
@@ -654,6 +698,25 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     // model facade onto the store (the single authority for per-race final tables).
     public void SetTuningArea(int area) => VoicePacksPageModel.SetTuningArea(state, area);
     public void SetTuningSelectedAction(string actionKey) => VoicePacksPageModel.SetTuningSelectedAction(state, actionKey);
+    internal void SetActionExpansion(string actionKey, Action invalidate)
+    {
+        if (uiCostActive)
+        {
+            uiExpansions++;
+            uiLastExpansionMs = (Stopwatch.GetTimestamp() - uiCostStarted) * 1000.0 / Stopwatch.Frequency;
+        }
+        // This command changes only the selected drawer in page state. Its visibility still needs
+        // an arrangement, but the full catalog/action projection has no selected-drawer input.
+        // Preserve only an already-current view across this one owned invalidation. Every ordinary
+        // setter/direct bump and configuration/definition/policy change keeps BuildView's old checks.
+        int before = revisionSource?.Invoke() ?? -1;
+        var prior = cachedView;
+        bool current = revisionSource != null && prior != null && cachedRevision == before;
+        SetTuningSelectedAction(actionKey);
+        invalidate();
+        if (current && ReferenceEquals(prior, cachedView) && revisionSource?.Invoke() == unchecked(before + 1))
+            cachedRevision = unchecked(before + 1);
+    }
     public void SetFallbackSelection(string? race, string? entryAction) => VoicePacksPageModel.SetFallbackSelection(state, race, entryAction);
     public void SetFallbackQueries(string? soundQuery, string? newRaceQuery) => VoicePacksPageModel.SetFallbackQueries(state, soundQuery, newRaceQuery);
     public void SetFallbackEntry(string actionKey, string? soundDefName) => VoicePacksPageModel.SetFallbackEntry(settings, state, actionKey, soundDefName);

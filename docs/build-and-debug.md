@@ -26,6 +26,67 @@ the full source commit. Later adoption-document/workflow commits do not relabel 
 Pass its exact `game-release-pair/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll` as ArtifactPath;
 retain Private=false and [0.8.0,0.9.0). US is not independently released by this baseline.
 
+## US06 Kernel maintenance candidate
+
+The separate [US06 maintenance candidate r2](../dist/us06-kernel-maintenance-20261109/a001-r2/USE-zh.md)
+contains the new B-source Release build and the unchanged published FL rc2 input above.
+`game-release-pair` is the usable pair; `support/US-source-form.zip` and `support/US-working.diff`
+identify this uncommitted implementation over `d2c02db547373a93a787a981d9a7c7b354d59f9d`.
+The assembly uses a task-local dirty informational identity, not the old release's source commit.
+`IDENTITY.json` and `EVIDENCE-zh.md` distinguish actual compiler/stager/Host evidence from pending native use.
+The retained A001 r1 candidate has a stale-current-slot diagnostic regression and is withdrawn from use;
+r2 restores the original current Response/deadline view while keeping frozen decision evidence separate.
+
+Settings maintenance now runs from the ready Mod's main-thread `Verse.Root.Update` postfix, once per
+Unity frame, including paused and no-map periods. Long events, active Scribe and destroyed roots wait
+for a safe update. Windows no longer supply periodic saves; closing/Retry/explicit Flush retain their
+original contracts. Technical diagnostics separate the latest decision, current slot and latest
+maintenance; adopted W/phase inputs are saved at scheduling, not reconstructed by readers.
+Real 1.6 Harmony scheduling, UI-free debounce, shutdown/loading transitions and capture/feedback remain
+native acceptance items. This local candidate does not install, publish, update the retained Dev pair,
+or change the separate 0.9 line.
+
+## Historical response-a001 volume candidate
+
+The isolated [responsiveness candidate](../dist/us06-ui-responsiveness-20261110/a001/USE-zh.md)
+built its then-current B source against the same fixed published FL rc2 Release. Both global-volume
+bindings now invalidate only after the production setter's adopted volume changes; an optional
+uncached readback preserves independent legacy sources without a new prerequisite. Live editing,
+clamping/tolerance, the 0.35-second save owner and the maintenance/diagnostics fixes remain unchanged.
+The [scoped analysis](development/ui-responsiveness-20261110.md) separates source paths, inherited
+native timings and missing F03/F05 measurements. The pair includes exact Source Forms and dirty
+diffs; the original maintenance a001-r2 remains a complete fallback. Native rendering/input and
+performance were not run at that original delivery; later native comparisons are in the checkpoint below.
+
+## Native-r3 performance checkpoint
+
+The [current F06–F09 engineering record](development/ui-attack-20261110.md) owns the accepted engineering /
+partial native scope, outstanding performance, next owner and local private evidence archive.
+Use the fixed [native-a001-r3 pair](../dist/usfl08-ui-attack-20261110/a001-native-r3/USE-zh.md) and its
+[IDENTITY](../dist/usfl08-ui-attack-20261110/a001-native-r3/IDENTITY.json), not pre-native `a001-r3` or
+published rc2. Source Forms and compiler receipt belong to that immutable pair. The following focused
+existing Host commands were run with its exact DLLs; they are not commands to execute during closeout.
+
+From the US repository root, set `$HostExe` to the already-built fixed-FL consumer executable carrying
+that pair and its platform doubles. The recorded local executable was under `host-native-r1` despite
+containing native-r3 DLLs; directory names do not identify the carrier. Select affected entries:
+
+```powershell
+& $HostExe '--lane=ordinary getters'
+& $HostExe '--lane=manifest'
+& $HostExe '--lane=dynamic'
+& $HostExe '--lane=SettingsWindowShellCarriesTheFailureContract'
+& $HostExe '--lane=existing diagnostics'
+```
+
+The corresponding native-r3 logs (32/479/55/13/550 assertions) and actual build recipes are in the
+[private archive index](../dist/usfl08-ui-attack-20261110/handoff-evidence-local/INDEX.md).
+Spaces in `ordinary getters` and `existing diagnostics` are significant; using the log filename's
+hyphens as lane names does not select those entries. Original source is
+`tools/UniversalSqueakerKernelHostTests/Current/Program.cs`. These are platform-double checks, not native FPS.
+The older `--lane=preservation` failure is retained in the archive: its old `set-tab=Packs` fixture fails
+before the click, in both pre-native r2/r3. Do not weaken it or call the combined lane green.
+
 ## Retained accurate 1.6 Dev acceptance pair
 
 The separate instrumented local pair is [vc-us-a002-r2](../dist/rw16-validation-closure-20261109/us-a002-r2/USE-zh.md).

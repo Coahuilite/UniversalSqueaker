@@ -133,7 +133,7 @@ public partial class GameSettings
     {
         return new BehaviorConfiguration(behaviorSourcesXml, actionTuning.Select(CapturePlayerRecord),
             !IsConfigurationUnreadable && voicePackMode != SqueakVoicePackMode.Disabled, activity, globalVolumeFactor,
-            SqueakKernelAdapter.ToSelectionMode(voicePackMode), CaptureAudioSelection(), AllowEasterEggSounds, scaleFrequencyWithTalking, ++behaviorRevision);
+            SqueakKernelAdapter.ToSelectionMode(voicePackMode), CaptureAudioSelection(), AllowEasterEggSounds, scaleFrequencyWithTalking, ++behaviorRevision, publishedBehavior);
     }
     private IEnumerable<Kernel.AudioPackSelection> CaptureAudioSelection()
     {
@@ -274,9 +274,12 @@ public partial class GameSettings
     }
 
     public BehaviorValues ReadPlayerActionOverride(string action, string race, string child)
+        => FoldPlayerActionOverrides(actionTuning.Where(x => x.serviceFamily == "Pawn" && x.actionKey == action && x.raceDefName == race && x.xenotypeDefName == child));
+
+    internal static BehaviorValues FoldPlayerActionOverrides(IEnumerable<ActionTuningRecord> rows)
     {
         var values = new BehaviorValues();
-        foreach (var row in actionTuning.Where(x => x.serviceFamily == "Pawn" && x.actionKey == action && x.raceDefName == race && x.xenotypeDefName == child))
+        foreach (var row in rows)
             values.Overlay(ProjectBehaviorPlayerValues(row));
         return values;
     }

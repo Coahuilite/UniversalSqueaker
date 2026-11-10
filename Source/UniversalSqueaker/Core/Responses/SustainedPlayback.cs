@@ -30,6 +30,7 @@ public sealed class SustainedPlayback
     private AudioCandidate? audio;
     private long nextReview;
     public string LastEndReason { get; private set; } = "";
+    internal long EndRevision { get; private set; }
     public bool Active => handle?.Active == true;
     public string ActiveKey => Active ? key : "";
     internal AudioCandidate? ActiveAudio => Active ? audio : null;
@@ -123,6 +124,7 @@ public sealed class SustainedPlayback
     }
     public bool Stop(string reason)
     {
+        EndRevision++;
         var old = handle;
         handle = null;
         key = "";

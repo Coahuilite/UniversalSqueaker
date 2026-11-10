@@ -115,6 +115,12 @@ internal sealed class UsDevPanelWindow : UiWindowHost
             ?? Translator.Translate("US.DevPanel.Sample.Unavailable"));
         bindings.BindCommand("dev-sample", () => SampleTarget()?.QueueUiCostSample(),
             () => SampleTarget()?.CanQueueUiCostSample == true);
+        bindings.BindReadOnly<bool>("dev-operation-ready", () => SampleTarget()?.CanQueueOperationSample == true);
+        bindings.BindReadOnly<bool>("dev-operation-active", () => SampleTarget()?.CanEndOperationSample == true);
+        bindings.BindCommand("dev-operation", () => SampleTarget()?.QueueOperationSample(),
+            () => SampleTarget()?.CanQueueOperationSample == true);
+        bindings.BindCommand("dev-operation-end", () => SampleTarget()?.EndOperationSample(),
+            () => SampleTarget()?.CanEndOperationSample == true);
     }
 
     /// <summary>
@@ -328,6 +334,8 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         + "    </Wrap>"
         + "    <Widget Id=\"dev-target\" Kind=\"input/dropdown\" Bind=\"dev-target\" OptionsBind=\"dev-target-options\" LabelKey=\"US.DevPanel.Target\" Height=\"30\" />"
         + "    <Widget Id=\"dev-sample\" Kind=\"input/button\" TextKey=\"US.DevPanel.Sample\" ActionBind=\"dev-sample\" VisibleBind=\"dev-sample-ready\" Width=\"Auto\" AlignX=\"Left\" Height=\"30\" />"
+        + "    <Widget Id=\"dev-operation\" Kind=\"input/button\" TextKey=\"US.DevPanel.Sample.Operation\" ActionBind=\"dev-operation\" VisibleBind=\"dev-operation-ready\" Width=\"Auto\" AlignX=\"Left\" Height=\"30\" />"
+        + "    <Widget Id=\"dev-operation-end\" Kind=\"input/button\" TextKey=\"US.DevPanel.Sample.End\" ActionBind=\"dev-operation-end\" VisibleBind=\"dev-operation-active\" Width=\"Auto\" AlignX=\"Left\" Height=\"30\" />"
         + "    <Widget Id=\"dev-sample-status\" Kind=\"text/wrapped\" Bind=\"dev-sample-status\" />"
         + "    <Row Id=\"dev-toggles\" Breakpoint=\"300\" Narrow=\"Column\" Gap=\"8\" Padding=\"0\">"
         + "      <Widget Id=\"dev-capture-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-capture-toggle\" SelectedBind=\"dev-capture\" LabelKey=\"US.DevPanel.Capture\" Width=\"Auto\" Height=\"30\" />"

@@ -7,6 +7,8 @@
 ## Requirements
 ### Requirement: PUB-01 两种合法提交语义
 普通setter SHALL校验后立即发布，并由同一保存owner按0.35真实秒合并物理写入；来源切换／完整稀疏行原子入口 SHALL先stage＋持久化成功后采用／发布。页面tab、filter、scroll、FL session不进入业务配置。
+
+启动就绪后的周期维护 SHALL由US Mod寿命的原生主线程入口驱动，不依赖设置窗绘制、地图或模拟tick推进。暂停／无地图仍按真实秒判断到期；长事件或Scribe占用期间顺延至安全更新，不并发序列化。窗口关闭仍可显式Flush，公共setter及保存owner原合法调用不要求先开窗。
 #### Scenario: 普通Select编辑只排队
 - **WHEN** GameSettings行候选回调只QueuePersistence并返回true
 - **THEN** 可立即发布但不能称磁盘Committed，不强迫同步落盘修名字

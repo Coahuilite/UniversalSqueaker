@@ -403,7 +403,22 @@ public static partial class UsKernelSettingsHost
         // widget's arithmetic: the slider atom owns the 0..1 value and the number-field atom owns the
         // 0..100 points, and both read the same business setter. The caption is a read-only string the
         // page binds instead of formatting in C#, because the manifest has no format expression.
-        writes.Value<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
+        // Compare the adopted value, not the requested float or percent. The business setter owns
+        // finite/clamp/tolerance policy; an uncached readback avoids rebuilding BuildView to find
+        // out whether it changed. Legacy sources still receive the original write and bump.
+        void SetGlobalVolume(float value)
+        {
+            if (source is not IUsGlobalVolumeSettingsSource effective)
+            {
+                source.SetGlobalVolume(value);
+                bump();
+                return;
+            }
+            float before = effective.EffectiveGlobalVolume;
+            source.SetGlobalVolume(value);
+            if (!effective.EffectiveGlobalVolume.Equals(before)) bump();
+        }
+        writes.Value<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, SetGlobalVolume);
         var activitySource = source as IUsActivitySettingsSource;
         bool invalidActivity = false;
         bindings.BindReadOnly<bool>("activity-available", () => activitySource != null);
@@ -420,7 +435,7 @@ public static partial class UsKernelSettingsHost
         writes.Value<float>(
             "global-volume-percent",
             () => source.BuildView().GlobalVolumeFactor * 100f,
-            value => { source.SetGlobalVolume(value / 100f); bump(); });
+            value => SetGlobalVolume(value / 100f));
         bindings.BindReadOnly<string>(
             "global-volume-caption",
             () => string.Format(

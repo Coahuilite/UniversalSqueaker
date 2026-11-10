@@ -59,6 +59,7 @@ public sealed class ResponseSession
 
     public string ActiveAction => sustained.ActiveKey;
     public string LastEndReason => sustained.LastEndReason;
+    internal long EndRevision => sustained.EndRevision;
     public bool ReviewDue(long tick) => sustained.ReviewDue(tick);
 
     public DecisionOutcome Respond(DecisionInput input, IResponseRandom random, IResponseOutput output)

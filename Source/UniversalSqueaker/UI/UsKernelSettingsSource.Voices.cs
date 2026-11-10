@@ -27,6 +27,14 @@ public sealed partial class UsKernelSettingsSource
         return result is IFormattable number ? number.ToString(null, CultureInfo.InvariantCulture) : result?.ToString() ?? "";
     }
 
+    internal string ReadActionFieldForView(string field, string action, string race, string child)
+    {
+        // Only the production sheet shares its current presentation snapshot. Direct readers and
+        // writes keep their original fresh-row contract, including without a Host or WindowStack.
+        object? result = FieldValue(ReadEffectiveFields(action, race, child).Own, field);
+        return result is IFormattable number ? number.ToString(null, CultureInfo.InvariantCulture) : result?.ToString() ?? "";
+    }
+
     // A field commits one complete sparse row through the existing persist-first transaction.
     // It does not rebuild effective values or erase other fields/response contributions.
     public void CommitActionField(string field, string text, string action, string race, string child)

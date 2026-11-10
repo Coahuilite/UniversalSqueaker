@@ -82,7 +82,7 @@ public static partial class UsKernelSettingsHost
         }, () => Valid() && source.CanConfirmAreaReset);
 
         var retainedRows = new List<TuningActionRow>();
-        var knownRows = new HashSet<string>(StringComparer.Ordinal);
+        var knownRows = new Dictionary<string, TuningActionRow>(StringComparer.Ordinal);
         string ContractField(string field) => field switch {
             "interval" => "simulationIntervalTicks", "interaction-seconds" => "interactionIntervalSeconds",
             "talking" => "talkingEnabled", "age" => "ageEnabled", "mood" => "moodEnabled", _ => field };
@@ -149,49 +149,57 @@ public static partial class UsKernelSettingsHost
         // Hidden entries stay in this ordered set. No nested Repeat or global-binding escape is used;
         // collapsing/reopening and exact-domain switches retain the same field node and draft.
         UsBehaviorPageView? keysView = null;
-        string keysContext = "";
+        string keysContext = "", keysDomain = "";
         IReadOnlyList<string> retainedKeys = Array.Empty<string>();
         var sortedRows = new List<TuningActionRow>();
         b.BindReadOnly<IReadOnlyList<string>>("b-action-keys", () => {
             var view = source.ReadView();
             int layer = s.TuningLayer;
             string race = Race(), child = Child();
-            string context = layer + "\n" + race + "\n" + child + "\n" + s.TuningSelectedAction;
+            string domain = layer + "\n" + race + "\n" + child;
+            string context = domain + "\n" + s.TuningSelectedAction;
             if (ReferenceEquals(keysView, view) && keysContext == context) return retainedKeys;
             RefreshActionProjection();
             bool added = false;
+            if (!ReferenceEquals(keysView, view) || keysDomain != domain)
             foreach (var action in orderedActions)
             {
                 string key = RosterKey(action.ActionKey + "\n" + layer + "\n" + race + "\n" + child);
-                if (!knownRows.Add(key)) continue;
+                if (knownRows.ContainsKey(key)) continue;
                 var row = new TuningActionRow(key, action.ActionKey, layer, race, child);
+                knownRows.Add(key, row);
                 retainedRows.Add(row);
                 added = true;
                 BindItem(row, key + "-H", "", false);
                 BindItem(row, key + "-Z", "", true);
             }
-            var keys = new List<string>();
             if (added) { sortedRows = retainedRows.OrderBy(r => ActionOrder(r.Action)).ThenBy(r => r.Action, StringComparer.Ordinal).ToList(); }
-            foreach (var row in sortedRows)
+            string expandedKey = RosterKey(s.TuningSelectedAction + "\n" + layer + "\n" + race + "\n" + child);
+            if (native != null && knownRows.TryGetValue(expandedKey, out var expanded) && Expanded(expanded))
             {
-                keys.Add(row.Key + "-H");
-                if (native != null && Expanded(row))
+                var fields = new[] { "enabled", "interaction-seconds", "interval", "volume", "pitch", "talking", "age", "mood" }
+                    .Concat(native.ContributionFields(expanded.Action, expanded.Race, expanded.Child)
+                        .OrderBy(UsTuningFieldPresentation.Order).ThenBy(f => f, StringComparer.Ordinal));
+                foreach (string field in fields)
                 {
-                    var fields = new[] { "enabled", "interaction-seconds", "interval", "volume", "pitch", "talking", "age", "mood" }
-                        .Concat(native.ContributionFields(row.Action, row.Race, row.Child)
-                            .OrderBy(UsTuningFieldPresentation.Order).ThenBy(f => f, StringComparer.Ordinal));
-                    foreach (string field in fields)
-                    {
-                        if (row.Fields.Contains(field)) continue;
-                        row.Fields.Add(field);
-                        BindItem(row, row.FieldKey(field), field, false);
-                    }
+                    if (expanded.Fields.Contains(field)) continue;
+                    expanded.Fields.Add(field); added = true;
+                    BindItem(expanded, expanded.FieldKey(field), field, false);
                 }
-                keys.AddRange(row.Fields.Select(row.FieldKey));
-                keys.Add(row.Key + "-Z");
             }
-            keysView = view; keysContext = context;
-            return retainedKeys = keys;
+            // Visibility changes still invalidate layout, but a collapse/reopen does not change
+            // the retained identity set. Only new rows/fields allocate a replacement key vector.
+            if (added)
+            {
+                var keys = new List<string>();
+                foreach (var row in sortedRows)
+                {
+                    keys.Add(row.Key + "-H"); keys.AddRange(row.Fields.Select(row.FieldKey)); keys.Add(row.Key + "-Z");
+                }
+                retainedKeys = keys;
+            }
+            keysView = view; keysContext = context; keysDomain = domain;
+            return retainedKeys;
         });
 
         void BindItem(TuningActionRow row, string key, string field, bool footer)
@@ -242,7 +250,13 @@ public static partial class UsKernelSettingsHost
             b.BindReadOnly<bool>(Address("has-scope-hint"), () => ActionRow(row) is ActionScopeRowView r && !(r.HasOwnScope && r.Scope == r.EffectiveScope));
             writes.ItemCommand("b-action-keys", key, "advanced", () => {
                 if (!Editable()) return;
-                source.SetTuningSelectedAction(s.TuningSelectedAction == action ? "" : action); bumper.Bump();
+                string selected = s.TuningSelectedAction == action ? "" : action;
+#if !US_PREVIEW_NEUTRAL
+                if (source is UsSettingsBehaviorPageSource settingsSource)
+                    settingsSource.SetActionExpansion(selected, bumper.Bump);
+                else
+#endif
+                { source.SetTuningSelectedAction(selected); bumper.Bump(); }
             }, Editable);
             void Help(string topic)
             {

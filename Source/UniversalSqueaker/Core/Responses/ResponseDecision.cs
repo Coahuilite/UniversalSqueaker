@@ -279,22 +279,40 @@ public sealed class DecisionState
     public StatePhaseInput? PhaseInput { get; private set; }
     private long raisedPhaseWindow = 1;
     private uint scheduledPhasePattern;
+    private bool scheduledWithPhase;
+    internal StateScheduleObservation? Schedule { get; private set; }
+    internal long ScheduleRevision { get; private set; }
     public bool PhaseActive(StatePolicy policy) => PhaseInput.HasValue && policy.Phase != null;
     // Binding affects future schedules only; it never rewrites a reserved wait or protection.
     public void BindPhaseInput(StatePhaseInput input) => PhaseInput = input;
     internal long Align(long lowerBound, StatePolicy policy, StateScheduleKind kind, long effectiveWait = 0, double targetSpeedFactor = 1)
     {
         if (kind == StateScheduleKind.SharedRaise)
-            return StatePhasePolicy.Align(lowerBound, scheduledPhasePattern, raisedPhaseWindow);
+        {
+            long next = StatePhasePolicy.Align(lowerBound, scheduledPhasePattern, raisedPhaseWindow);
+            Schedule = new StateScheduleObservation(kind, lowerBound, next, Schedule?.EffectiveWait,
+                raisedPhaseWindow, raisedPhaseWindow, scheduledWithPhase ? scheduledPhasePattern : (uint?)null);
+            ScheduleRevision++;
+            return next;
+        }
         if (!PhaseInput.HasValue || policy.Phase == null)
         {
             raisedPhaseWindow = 1;
+            scheduledWithPhase = false;
+            Schedule = new StateScheduleObservation(kind, lowerBound, lowerBound,
+                kind == StateScheduleKind.Success ? effectiveWait : (long?)null, 1, 1, null);
+            ScheduleRevision++;
             return lowerBound;
         }
         long window = policy.Phase.Window(kind, effectiveWait, targetSpeedFactor);
         scheduledPhasePattern = PhaseInput.Value.Pattern;
         raisedPhaseWindow = policy.Phase.RaisedWindow(kind, window, targetSpeedFactor);
-        return StatePhasePolicy.Align(lowerBound, scheduledPhasePattern, window);
+        scheduledWithPhase = true;
+        long aligned = StatePhasePolicy.Align(lowerBound, scheduledPhasePattern, window);
+        Schedule = new StateScheduleObservation(kind, lowerBound, aligned,
+            kind == StateScheduleKind.Success ? effectiveWait : (long?)null, window, raisedPhaseWindow, scheduledPhasePattern);
+        ScheduleRevision++;
+        return aligned;
     }
 
     public long ActionDeadline(string key) => deadlines.TryGetValue(key, out var value) ? value : long.MinValue;

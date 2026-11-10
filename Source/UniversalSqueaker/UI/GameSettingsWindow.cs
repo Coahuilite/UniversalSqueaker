@@ -63,6 +63,12 @@ public sealed class GameSettingsWindow : UiWindowHost
     private Vector2 uiCostSize;
     private UiNode? uiCostScroll, uiCostHelpScroll;
     private UiLayoutPoint uiCostScrollStart, uiCostHelpStart;
+    private bool uiCostExplicit;
+    private long uiCostStarted;
+    private int uiCostLines, uiCostVolumeKeys, uiCostLastVolumeKeyPass;
+    private double uiCostLastVolumeKeyMs;
+    private const int OperationSamplePassLimit = 4096;
+    private const double OperationSampleSeconds = 20;
 
     // An optional capability on the actual Host's existing root state, not another global index.
     private sealed class CostSampleTarget { internal GameSettingsWindow? Owner; }
@@ -148,6 +154,7 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     protected override UiHost CreateHost()
     {
+        uiCostExplicit = false;
         // Explicit Enabled only: Auto (including the normal Release default) never starts timing.
         bool sampleCosts = SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled;
         long started = sampleCosts ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
@@ -200,21 +207,35 @@ public sealed class GameSettingsWindow : UiWindowHost
     {
         source?.SynchronizeRuntimePolicy();
         bool requested = SqueakLog.ShouldEmitDev && SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled;
-        if (!requested) EndUiCostObservation(true, "US.DevPanel.Sample.ModeEnded");
+        if (!requested && !uiCostExplicit) EndUiCostObservation(true, "US.DevPanel.Sample.ModeEnded");
         audit?.SynchronizePolicy(SqueakLog.ShouldEmitDev);
         // Drain the previous completed pass before arming a new observation window.
         audit?.Publish();
         ObserveUiCostScene();
-        if (uiCostState == CostSampleState.Sampling && Host != null && Host.Session.Frame - uiCostFirstPass >= UiCostSamplePasses)
+        if (uiCostState == CostSampleState.Sampling && Host != null && (uiCostExplicit
+            ? Host.Session.Frame - uiCostFirstPass >= OperationSamplePassLimit || UiCostElapsedMs >= OperationSampleSeconds * 1000
+            : Host.Session.Frame - uiCostFirstPass >= UiCostSamplePasses))
             EndUiCostObservation(false);
         if (Host != null && requested != costRequested)
         {
             costRequested = requested;
-            if (requested && uiCostState != CostSampleState.Queued)
+            if (requested && !CanEndOperationSample && uiCostState != CostSampleState.Queued)
+            {
+                uiCostExplicit = false;
                 BeginUiCostObservation(Host, "enabled", -1);
+            }
         }
-        if (Host != null && requested && uiCostState == CostSampleState.Queued)
-            BeginUiCostObservation(Host, "dev-panel", -1);
+        if (Host != null && (requested || uiCostExplicit) && uiCostState == CostSampleState.Queued)
+            BeginUiCostObservation(Host, uiCostExplicit ? "operation-window" : "dev-panel", -1);
+        // Event category/target only: no draft characters or values are retained in the report.
+        // KeyDown includes invalid/clamped numeric drafts that do not publish a business change.
+        if (uiCostState == CostSampleState.Sampling && Event.current?.type == EventType.KeyDown
+            && Host?.Session.ActiveEditNode?.ElementId == "global-volume-number")
+        {
+            uiCostVolumeKeys++;
+            uiCostLastVolumeKeyPass = Host.Session.Frame;
+            uiCostLastVolumeKeyMs = UiCostElapsedMs;
+        }
         if (contentRect.size != lastContentRect.size)
         {
             bool wide = WindowChromeLayout.UsesWideLayout(contentRect.width, contentRect.height);
@@ -241,7 +262,6 @@ public sealed class GameSettingsWindow : UiWindowHost
         // display write uses, so the band re-measures to the new sentence on the next pass instead of keeping
         // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
         if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Invalidate();
-        mod.TickSettingsSaveForWindow();
         source?.SynchronizeSaveState();
         if (Host != null) UsKernelSettingsHost.PreparePage(Host, new UiLayoutPoint(contentRect.width, contentRect.height));
     }
@@ -275,13 +295,30 @@ public sealed class GameSettingsWindow : UiWindowHost
         && SqueakLog.ShouldEmitDev && SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled
         && uiCostState != CostSampleState.Queued && uiCostState != CostSampleState.Sampling;
 
+    internal bool CanQueueOperationSample => Host?.Session.IsActive == true
+        && uiCostState != CostSampleState.Queued && uiCostState != CostSampleState.Sampling;
+    internal bool CanEndOperationSample => uiCostExplicit
+        && (uiCostState == CostSampleState.Queued || uiCostState == CostSampleState.Sampling);
+    internal void QueueOperationSample()
+    {
+        if (!CanQueueOperationSample) return;
+        QueueCostSample(true);
+    }
+    internal void EndOperationSample() { if (CanEndOperationSample) EndUiCostObservation(false); }
+
     internal void QueueUiCostSample()
     {
         if (!CanQueueUiCostSample) return;
+        QueueCostSample(false);
+    }
+
+    private void QueueCostSample(bool explicitOperation)
+    {
+        uiCostExplicit = explicitOperation;
         uiCostState = CostSampleState.Queued;
         uiCostSession = Host!.Session.Identity;
         uiCostPage = source!.ViewState.Page;
-        uiCostTrigger = "dev-panel";
+        uiCostTrigger = explicitOperation ? "operation-window" : "dev-panel";
         uiCostPasses = 0;
         uiCostFirstPass = -1;
         uiCostSceneChanged = false;
@@ -294,7 +331,7 @@ public sealed class GameSettingsWindow : UiWindowHost
         get
         {
             if (uiCostState == CostSampleState.Idle)
-                return (CanQueueUiCostSample ? "US.DevPanel.Sample.Ready" : "US.DevPanel.Sample.NeedsEnabled").Translate();
+                return (CanQueueOperationSample ? "US.DevPanel.Sample.OperationReady" : "US.DevPanel.Sample.Unavailable").Translate();
             if (uiCostState == CostSampleState.Queued) return "US.DevPanel.Sample.Queued".Translate(uiCostSession);
             if (uiCostState == CostSampleState.Partial && uiCostFirstPass < 0)
                 return "US.DevPanel.Sample.Cancelled".Translate(uiCostSession).ToString()
@@ -305,6 +342,9 @@ public sealed class GameSettingsWindow : UiWindowHost
                 ? uiCostHost.Session.Frame - uiCostFirstPass : uiCostPasses;
             string display = "US.DevPanel.Sample.Status".Translate(state.Translate(), passes, UiCostSamplePasses,
                 uiCostPage, uiCostSession, uiCostFirstPass, uiCostTrigger).ToString();
+            if (uiCostExplicit) return "US.DevPanel.Sample.OperationStatus".Translate(state.Translate(), passes,
+                OperationSamplePassLimit, uiCostPage, uiCostSession).ToString()
+                + (uiCostEndReason.Length == 0 ? "" : "\n" + uiCostEndReason.Translate().ToString());
             return display + (uiCostSceneChanged ? "\n" + "US.DevPanel.Sample.SceneChanged".Translate().ToString() : "")
                 + (uiCostEndReason.Length == 0 ? "" : "\n" + uiCostEndReason.Translate().ToString())
                 + (SqueakerMod.Settings.devLoggingMode == SqueakDevLoggingMode.Enabled ? "" : "\n" + "US.DevPanel.Sample.NeedsEnabled".Translate().ToString());
@@ -313,6 +353,9 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     private void BeginUiCostObservation(UiHost host, string trigger, long creationTicks)
     {
+        uiCostStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+        uiCostLines = uiCostVolumeKeys = 0;
+        uiCostLastVolumeKeyPass = -1; uiCostLastVolumeKeyMs = -1;
         uiCostHost = host;
         uiCostSequence++;
         uiCostSession = host.Session.Identity;
@@ -334,16 +377,23 @@ public sealed class GameSettingsWindow : UiWindowHost
         uiCostHelpScroll = host.Session.GetNodeByElementId("help-scroll");
         uiCostScrollStart = host.Session.GetScrollPosition(uiCostScroll!);
         uiCostHelpStart = host.Session.GetScrollPosition(uiCostHelpScroll!);
-        audit?.BeginTimingObservation();
-        source.BeginUiCostSample(creationTicks);
-        uiCostMetrics?.Begin(UiFitAudit.Enabled);
+        Action<Func<string>>? output = uiCostExplicit ? WriteUiCostTrace : null;
+        audit?.BeginTimingObservation(output);
+        source.BeginUiCostSample(creationTicks, output);
+        uiCostMetrics?.Begin(UiFitAudit.Enabled, output);
         uiCostState = CostSampleState.Sampling;
-        SqueakLog.LayoutTrace(() => UiCostSampleIdentity() + " state=started creation=" + (creationTicks < 0 ? "NotCaptured" : "Captured")
+        WriteUiCostTrace(() => UiCostSampleIdentity() + " state=started creation=" + (creationTicks < 0 ? "NotCaptured" : "Captured")
             + " dev_panel_at_start=" + uiCostPanel + " detail_at_start=" + uiCostDetail + " fit_at_start=" + uiCostFit + " geometry_at_start=" + uiCostGeometry);
     }
 
     private string UiCostSampleIdentity() => "UI.cost sample=" + uiCostSequence + " target=settings session=" + uiCostSession
         + " page_start=" + uiCostPage + " first_pass=" + uiCostFirstPass + " trigger=" + uiCostTrigger;
+    private double UiCostElapsedMs => (System.Diagnostics.Stopwatch.GetTimestamp() - uiCostStarted) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+    private void WriteUiCostTrace(Func<string> message)
+    {
+        if (!uiCostExplicit) { SqueakLog.LayoutTrace(message); return; }
+        if (uiCostLines++ < 16) SqueakLog.SettingsCostSample(message);
+    }
 
     private void ObserveUiCostScene()
     {
@@ -369,11 +419,14 @@ public sealed class GameSettingsWindow : UiWindowHost
         uiCostPasses = uiCostHost.Session.Frame - uiCostFirstPass;
         uiCostState = partial ? CostSampleState.Partial : CostSampleState.Complete;
         uiCostEndReason = reason;
-        SqueakLog.LayoutTrace(() => UiCostSampleIdentity() + " state=" + (partial ? "partial" : "complete")
+        WriteUiCostTrace(() => UiCostSampleIdentity() + " state=" + (partial ? "partial" : "complete")
             + " last_pass=" + uiCostHost.Session.Frame + " passes=" + uiCostPasses + " scene_changed=" + uiCostSceneChanged
             + " page_end=" + source?.ViewState.Page + " revision_start=" + uiCostRevision + " revision_end=" + uiCostHost.Session.ContentRevision
             + " dev_panel_at_end=" + (Dev.UsDevPanelWindow.Active != null) + " detail_at_end=" + SqueakLog.ShouldEmitDev
-            + " fit_at_end=" + UiFitAudit.Enabled + " geometry_at_end=" + UsTextFitAudit.GetDevGeometryStatus(uiCostHost));
+            + " fit_at_end=" + UiFitAudit.Enabled + " geometry_at_end=" + UsTextFitAudit.GetDevGeometryStatus(uiCostHost)
+            + " elapsed_ms=" + UiCostElapsedMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)
+            + " volume_keydowns=" + uiCostVolumeKeys + " last_volume_key_pass=" + uiCostLastVolumeKeyPass
+            + " last_volume_key_ms=" + uiCostLastVolumeKeyMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
         // Drain both phase accumulators before disabling sampling/disposal, including early Close.
         audit?.EndTimingObservation(partial);
         source?.EndUiCostSample(uiCostPasses, partial);
@@ -384,20 +437,34 @@ public sealed class GameSettingsWindow : UiWindowHost
 
     private void ReleaseCostSampleTarget(UiHost host)
     {
-        EndUiCostObservation(true, "US.DevPanel.Sample.TargetEnded");
-        SampleTarget(host).Owner = null;
-        if (ReferenceEquals(Dev.UsDevPanelTargets.SettingsHost, host)) Dev.UsDevPanelTargets.SettingsHost = null;
-        audit?.Dispose();
-        audit = null;
+        try { EndUiCostObservation(true, "US.DevPanel.Sample.TargetEnded"); }
+        finally
+        {
+            source?.DetachHost(host);
+            source = null;
+            SampleTarget(host).Owner = null;
+            if (ReferenceEquals(Dev.UsDevPanelTargets.SettingsHost, host)) Dev.UsDevPanelTargets.SettingsHost = null;
+            try { audit?.Dispose(); }
+            finally
+            {
+                audit = null;
+                uiCostHost = null;
+                uiCostScroll = uiCostHelpScroll = null;
+                uiCostMetrics = null;
+                remixFlow?.Abort();
+                remixFlow = null;
+            }
+        }
     }
 
     public override void PreClose()
     {
-        EndUiCostObservation(true, "US.DevPanel.Sample.TargetEnded");
-        // Live writes already reached the ordinary queue; retained-only drafts are abandoned on close.
-        if (Host?.InputState.IsEditing == true) Host.TryHandleCancel();
-        // HostDetached clears the optional capability/target and audit before shell disposal,
-        // on both Close and failed passes. It receives the real released host even after Host=null.
-        base.PreClose();
+        try
+        {
+            EndUiCostObservation(true, "US.DevPanel.Sample.TargetEnded");
+            // Live writes already reached the queue; retained-only drafts are abandoned on close.
+            if (Host?.InputState.IsEditing == true) Host.TryHandleCancel();
+        }
+        finally { base.PreClose(); }
     }
 }

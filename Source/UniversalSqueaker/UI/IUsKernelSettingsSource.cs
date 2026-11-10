@@ -2,6 +2,13 @@ using System;
 
 namespace UniversalSqueaker.UI;
 
+/// <summary>Optional uncached readback of the volume actually adopted by the business setter.
+/// Sources without this capability retain the original write/invalidation contract.</summary>
+public interface IUsGlobalVolumeSettingsSource
+{
+    float EffectiveGlobalVolume { get; }
+}
+
 /// <summary>Optional system activity editor; existing embedded settings sources remain usable.</summary>
 public interface IUsActivitySettingsSource
 {

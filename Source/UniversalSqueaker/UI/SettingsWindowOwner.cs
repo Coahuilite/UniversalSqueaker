@@ -56,8 +56,6 @@ internal sealed class SettingsWindowOwner
     /// </summary>
     internal void DrawShell(Rect inRect)
     {
-        persistence.Tick();
-
         Rect body = inRect.ContractedBy(18f);
         UiTheme theme = UsTheme.Surface();
         Rect box = new Rect(body.x, body.y, body.width, Mathf.Min(96f, Mathf.Max(0f, body.height)));

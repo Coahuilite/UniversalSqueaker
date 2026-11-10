@@ -8,7 +8,33 @@
 ## Product work and outstanding acceptance
 
 Items here describe product needs and retained acceptance limits; they do not authorize immediate execution.
-Select work under the assigned task and permissions. This root remains the B / FL0.8 maintenance line; the completed independent FL0.9 stage is not a B port or B native acceptance. The completed stage and the new preacceptance documentation goal are separate; PM / the maintainer retain user acceptance.
+Select work under the assigned task and permissions. This root remains the B / FL0.8 maintenance line; the completed independent FL0.9 stage is not a B port or B native acceptance. This session is closing documentation and existing evidence only; PM / the maintainer retain outstanding user acceptance.
+
+- **Current native-r3 checkpoint:** PM accepted engineering and the identified partial RW1.6 native
+  results, not completed performance or stable60FPS. The [engineering record](docs/development/ui-attack-20261110.md)
+  owns the fixed pair/identity, remaining F08/F09 and input/restart/fixture gaps, next owner and
+  [private raw-evidence index](dist/usfl08-ui-attack-20261110/handoff-evidence-local/INDEX.md).
+  The current session is stopped for product implementation, builds/tests and game operation.
+  Next session prioritizes FL.UiKit performance and related existing checks under a fresh assignment;
+  the user has approved read-only copying of formal ModsConfig.xml and US/FL configuration files
+  into the isolated directory. This remains unexecuted and is handed to the next session with a matching
+  execution scope; no saves, arbitrary other configuration or formal-file changes are included.
+  This session performs no formal read/copy or game operation.
+  0.9 is paused for this session, not automatically resumed next session. Preserve all recovery pairs.
+- **Historical response-a001 input:** [original narrow volume fix](docs/development/ui-responsiveness-20261110.md)
+  and its published-FL-rc2 pair remain the measured old comparison and recovery input. Its original
+  static-only delivery does not supersede native-r3 or erase the subsequent native evidence.
+- **US06 Kernel maintenance (earlier independent DSP-US06-KERNEL-MAINT-A001 r1 scope):** D1 now pumps the original save owner
+  from the ready Mod's native main-thread Root.Update, independent of windows/maps/simulation advance.
+  O1/O2 separate latest decision/current slot/latest maintenance, Audio snapshot adoption and actual
+  W/phase scheduling inputs; the original settled64 ring and K1/K2 remain. The new isolated
+  [engineering candidate r2](dist/us06-kernel-maintenance-20261109/a001-r2/USE-zh.md) builds against the unchanged
+  published FL rc2 Release. CO found r1 froze the original current Response, leaving readiness stale
+  after maintenance; r1 is retained but withdrawn. R2 restores current owner slot/deadlines, separate
+  frozen DecisionObservation/history, and readiness changes in the monitor fingerprint.
+  CO/PM acceptance is pending; this does not replace the accepted Release
+  baseline or retained Dev pair. Actual1.6 no-UI scheduling/loading/exit and new capture/feedback
+  evidence remain native responsibilities, together with the earlier acceptance gaps below.
 
 - The full same-source window and isolation/lifetime contract remains an unported need for this maintenance line, under
   `docs/openspec/specs/developer-preview/spec.md`; follow current RimWorld 1.7 APIs, not a minor-build lock.
@@ -32,23 +58,48 @@ Select work under the assigned task and permissions. This root remains the B / F
 - RW17 remaining acceptance requires human observation of actual 1.6/1.7 sound, rendering, ordinary interaction and the adopted phase with the fixed pair. C2 preserves the original single-string CLR entry and author-log provenance boundary. Historical Core/audio/logging evidence remains in `docs/development/specification/open-issues.md` and the action/phase interface `dist/rw16-17-action-ux-20261031/INTERFACE-r4.md`. The pack-layout correction and its native-picture limitation are linked by `dist/rw16-17-pack-layout-20261101/INTERFACE-r1.md`; the rejected R5 pack geometry is not restored by old identity checks. Current mechanical delivery contains only FL and US and retains its separate owner; installed audio/races remain external. Earlier failure logs and packages remain unchanged.
 ## Local review checkpoint
 
-- **Owner:** US B Worker, TASK-VC-US / A002 (DSP-VC-US-A002 r1), report r2 continuation.
-- **reviewed-through:** retains the original O5 necessity/owner/assertion review, sample corrections,
-  net472 Split repair and A001 independent evidence. This continuation covers the CO-cleared FL A002
-  input, identical US product/fixture source, fresh isolated actual Dev compile/Host/stage, compiler
-  receipt, O5 32 and manifest 479, neutral CodeView paths and exact Release-file reuse. No Release
-  rebuild/rerun or unrelated check is attributed to this continuation. Current documentation and
-  matching source/archive delivery are owned by the r2 report's final closeout record.
-- **reviewed_at:** 2026-11-09T14:14:07.5635163+08:00 (**Asia/Hong_Kong**, actual clock).
-  Actual product-DLL/platform-double evidence; native game/input/IME acceptance remains separate.
-- **Lessons / Seen:** existing valid-fixture/evidence-layer/scoped-cleanup rules apply. Preserve the
-  original nonempty-catalog precondition and corrected sample, not a fallback-band success. PDB-free
-  staging alone does not remove CodeView paths: actual DLL inspection is retained with the paired
-  inputs. No new lesson file/Seen or protocol/map change is needed.
-- **Remaining owner/action:** CO consumes the completed pair and r2 report for PM selection. The
-  former FL privacy dependency is resolved; the old us-a002-r1 Dev remains an intermediate. PM and
-  maintainer retain accurate 1.6 rendering/input/IME/audio/lifetime, B-browse/A-record, hierarchy,
-  Report continuity and original32-Host-pass/partial gates. Independent 0.9 work remains outside scope.
+### Native-r3 engineering receipt and documentation closeout
+
+- **Owner / reviewed_at:** Astra, ASTRA-UI-ATTACK-20261110 / native-doc-closeout; 2026-11-10T08:58:51.2331124+08:00 (Asia/Hong_Kong).
+- **Reviewed-through:** PM-consumed native-r3 delta, fixed identities, sequence frames/events/owners,
+  existing checks and screenshots; documentation routing now selects that checkpoint. Copied only
+  selected pre-existing raw evidence, driver/replay/build sources and isolation metadata into the
+  independent private dist archive with an inventory. No code/test/frozen package changed and no
+  build/test/game run was performed for this closeout.
+- **Retrospective:** The development record merges this round's incomplete initial scenario,
+  Update-scheduled input-tail and stale-isolation-label corrections into the existing evidence/input,
+  timing and single-source rules. No extra LESSONS/Seen or Working protocol/map was introduced.
+- **Continuation:** Next owner follows the engineering record's FL performance question and contract
+  counterexamples. PM records the approved, unexecuted bounded copy for next-session handoff and retains
+  outstanding acceptance;
+  F08, rapid-operation headroom, physical IME/user-save/restart and old Packs fixture are not signed off.
+
+### Earlier Kernel maintenance review (original scope)
+
+- **Owner:** US B Worker, TASK-US06-KERNEL-MAINT / A001, fix1 report r2 (original DSP r1).
+- **reviewed-through:** original d2c02db baseline plus this uncommitted D1/OBS implementation,
+  original public/short-circuit calling conditions, K1/K2, affected existing checks, fixed rc2 actual
+  Release build/Host/stager and source/specification/help changes. The Core134, OneShot932,
+  AudioBinding67/138, SettingsMigration27/133 and manifest479 results retain their actual layers;
+  the focused diagnostics Host cases use fake sources, not native recording. R2 follows the actual
+  Evidence.Observation -> Comp snapshot.Response -> ReadyFor/ToneFor/marks/rows/detail/current
+  cooldown/monitor path, and uses separate DecisionObservation for history/previous-decision gates.
+  The old optional-Evidence caller conditions and detached settled ring remain. R1's OBS pass was
+  insufficient: the source-level regression was real and not caught by its green checks. The prior A002
+  O5/Dev review and accepted preservation facts remain at its linked evidence sheet above.
+- **reviewed_at:** 2026-11-09T21:15:44.5161184+08:00 (**Asia/Hong_Kong**, actual clock).
+- **Lessons / Seen:** existing calling-contract, evidence-layer and scoped-output rules apply.
+  Review retained the unavailable-subject exit without a new settings prerequisite, preserved
+  last-review identity independently of cache invalidation, and kept diagnostic capture failures
+  outside business settlement. Worker-thread Game replacement does not mutate the UI capture model;
+  the source form includes the packaged texture as well as code. Launcher/path mistakes remain in
+  TEMP evidence, not product failures.
+  The correction applies the existing data-meaning/consumer-preservation rule; no new test case,
+  lesson file/Seen or Working protocol/map change is needed.
+- **Remaining owner/action:** CO receives the raw Worker report and new pair for PM acceptance.
+  Native1.6 maintenance/capture and the earlier game/input/IME/audio/lifetime, B-browse/A-record,
+  hierarchy, Report continuity and original32-Host-pass/partial conditions stay with PM/maintainer.
+  Accepted Release/Dev/recovery pairs are preserved; independent 0.9 work remains outside scope.
 ## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical

@@ -16,7 +16,9 @@ internal sealed class SqueakResponseEvidence
     private string? cachedText;
     internal string Stage { get; }
     internal long Sequence { get; }
+    // Read-time owner state for existing current-slot/deadline consumers.
     internal SessionObservation? Observation { get; }
+    internal SessionObservation? DecisionObservation { get; }
     internal string Action { get; }
     internal string Result { get; }
     internal string Reason { get; }
@@ -26,22 +28,28 @@ internal sealed class SqueakResponseEvidence
     internal IReadOnlyList<KeyValuePair<string, string>> Fields => fields;
 
     internal SqueakResponseEvidence(string stage, long sequence = 0, SessionObservation? observation = null,
-        string? action = null, string? result = null, string? reason = null, bool interaction = false, double? until = null)
+        string? action = null, string? result = null, string? reason = null, bool interaction = false, double? until = null,
+        string windowDetails = "NotCaptured", string slotDetails = "NotCaptured",
+        SessionObservation? decisionObservation = null)
     {
         Stage = stage; Sequence = sequence;
-        if (observation.HasValue)
-        {
-            var saved = observation.Value;
-            Observation = new SessionObservation(ObservedToken(saved.Action), ObservedToken(saved.Reason), saved.Receipt.HasValue
-                ? new PlaybackReceipt(saved.Receipt.Value.Result, ObservedToken(saved.Receipt.Value.Reason)) : (PlaybackReceipt?)null,
-                saved.ObservedTick, saved.SharedDeadline, saved.ActionDeadline, saved.NextStateTick, saved.ConfirmedTick,
-                saved.ChecksShared, ObservedToken(saved.ActiveAction));
-        }
+        Observation = Detached(observation);
+        DecisionObservation = Detached(decisionObservation);
         Action = Bounded(action); Result = Bounded(result); Reason = Bounded(reason);
         Interaction = interaction; InteractionUntil = until;
         Add("stage", stage); Add("sequence", sequence);
-        Add("window_w_details", "NotCaptured");
-        Add("sustained_slot_details", "NotCaptured");
+        Add("window_w_details", windowDetails);
+        Add("sustained_slot_details", slotDetails);
+    }
+
+    private static SessionObservation? Detached(SessionObservation? observation)
+    {
+        if (!observation.HasValue) return null;
+        var saved = observation.Value;
+        return new SessionObservation(ObservedToken(saved.Action), ObservedToken(saved.Reason), saved.Receipt.HasValue
+            ? new PlaybackReceipt(saved.Receipt.Value.Result, ObservedToken(saved.Receipt.Value.Reason)) : (PlaybackReceipt?)null,
+            saved.ObservedTick, saved.SharedDeadline, saved.ActionDeadline, saved.NextStateTick, saved.ConfirmedTick,
+            saved.ChecksShared, ObservedToken(saved.ActiveAction));
     }
 
     internal void Add(string key, object? value)

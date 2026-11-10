@@ -190,6 +190,7 @@ public partial class CompSqueaker : ThingComp
     internal SqueakDiagnosticSnapshot GetDiagnosticSnapshot()
     {
         var evidence = SqueakerRuntime.DiagnosticEvidence(Pawn);
+        // Response keeps the read-time owner slot/deadlines; frozen history is DecisionObservation.
         return new SqueakDiagnosticSnapshot(evidence.Observation, default, lastEvaluation, lastSignificantOutcome, lastDispatched, "", evidence);
     }
 

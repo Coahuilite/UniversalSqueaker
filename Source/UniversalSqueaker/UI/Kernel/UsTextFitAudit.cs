@@ -112,11 +112,22 @@ public sealed class UsTextFitAudit : IDisposable
     private long loggedThrough;
     private bool disposed;
     private bool timingObservation;
+    private bool independentTiming;
+    private Action<Func<string>> timingTrace = SqueakLog.LayoutTrace;
     private int timingFirstPass, arrangeSamples, drawSamples;
     private double arrangeTotal, arrangeMax, drawTotal, drawMax;
 
-    internal void BeginTimingObservation()
+    internal void BeginTimingObservation(Action<Func<string>>? trace = null)
     {
+        independentTiming = trace != null;
+        timingTrace = trace ?? SqueakLog.LayoutTrace;
+        if (UsUiDiagnostics.IsAdopted(host))
+        {
+            // Adopted fit output is already published at production time. Start this timing window
+            // after the retained history, without clearing facts owned by other readers.
+            var history = subscription.Snapshot();
+            if (history.Count > 0) loggedThrough = history[history.Count - 1].Sequence;
+        }
         arrangeSamples = drawSamples = 0;
         arrangeTotal = arrangeMax = drawTotal = drawMax = 0;
         timingObservation = true;
@@ -130,7 +141,7 @@ public sealed class UsTextFitAudit : IDisposable
     internal void EndTimingObservation(bool partial)
     {
         if (!timingObservation) return;
-        if (!liveWindowPolicy || SqueakLog.ShouldEmitDev) Publish();
+        if (independentTiming || !liveWindowPolicy || SqueakLog.ShouldEmitDev) Publish();
         timingObservation = false;
         try { subscription.TimingEnabled = false; }
         catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditTimingStop", error); }
@@ -138,8 +149,10 @@ public sealed class UsTextFitAudit : IDisposable
             System.Globalization.CultureInfo.InvariantCulture,
             "UI.cost phase={0} passes={1} samples={2} total_ms={3:F3} max_ms={4:F3} partial={5}",
             phase, host.Session.Frame - timingFirstPass, samples, total, max, partial);
-        SqueakLog.LayoutTrace(() => Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
-        SqueakLog.LayoutTrace(() => Summary("draw", drawSamples, drawTotal, drawMax));
+        timingTrace(() => Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
+        timingTrace(() => Summary("draw", drawSamples, drawTotal, drawMax));
+        independentTiming = false;
+        timingTrace = SqueakLog.LayoutTrace;
     }
 
     /// <summary>
@@ -291,8 +304,8 @@ public sealed class UsTextFitAudit : IDisposable
     /// </summary>
     public void Publish()
     {
-        SynchronizeWindowPolicies();
         if (disposed || !subscription.IsActive) return;
+        if (liveWindowPolicy) SynchronizePolicy(SqueakLog.ShouldEmitDev);
 
         // The target window owns completion, including requests from its companion panel.
         // A geometry-only request must not depend on fit logging or on the panel staying open.
@@ -315,6 +328,9 @@ public sealed class UsTextFitAudit : IDisposable
             return;
         }
 
+        bool adopted = UsUiDiagnostics.IsAdopted(host);
+        if (adopted && !timingObservation) return;
+
         try
         {
             IReadOnlyList<UiDiagnosticEvent> events = subscription.Snapshot();
@@ -325,7 +341,7 @@ public sealed class UsTextFitAudit : IDisposable
                 loggedThrough = found.Sequence;
                 // Adopted FL publishes fit/style/recovery at production time. Independent legacy
                 // audit callers retain their original forwarding without an adoption prerequisite.
-                if (!UsUiDiagnostics.IsAdopted(host) && found.Kind == UiDiagnosticKind.Fit && found.Overflow.HasValue)
+                if (!adopted && found.Kind == UiDiagnosticKind.Fit && found.Overflow.HasValue)
                     ReportLegacy(found.Overflow.Value);
                 else if (timingObservation && found.Kind == UiDiagnosticKind.Timing && found.Timing.HasValue)
                 {
@@ -356,7 +372,7 @@ public sealed class UsTextFitAudit : IDisposable
     {
         if (disposed) return;
         UsUiDiagnostics.Synchronize(host);
-        if (liveWindowPolicy && !fitRequested && timingObservation)
+        if (liveWindowPolicy && !fitRequested && timingObservation && !independentTiming)
         {
             timingObservation = false;
             subscription.TimingEnabled = false;
@@ -385,36 +401,31 @@ public sealed class UsTextFitAudit : IDisposable
     public void Dispose()
     {
         if (disposed) return;
-        EndTimingObservation(true);
-        Publish();
-        disposed = true;
-
-        try { DisableGeometry(); }
-        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditGeometryStop", error); }
-#if US_DEV
-        // Capture-off preserves outline during use; terminal scope disposal stops both.
-        if (instrumentAvailable)
+        try { EndTimingObservation(true); Publish(); }
+        finally
         {
-            try { subscription.GeometryOverlay = false; }
-            catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditOutlineStop", error); }
-        }
-#endif
-        // This window's entry goes with it, so a later per-host command cannot find a closed window's scope
-        // and drive an instrument nobody is drawing.
-        for (int i = openScopes.Count - 1; i >= 0; i--)
-        {
-            if (ReferenceEquals(openScopes[i].Value, this)) openScopes.RemoveAt(i);
-        }
-
-        if (auditsFit)
-        {
-            auditsFit = false;
-            openWindows--;
-            if (openWindows <= 0)
+            disposed = true;
+            timingTrace = SqueakLog.LayoutTrace;
+            independentTiming = false;
+            // Remove the strong registry borrow even if the final observer drain fails.
+            for (int i = openScopes.Count - 1; i >= 0; i--)
+                if (ReferenceEquals(openScopes[i].Value, this)) openScopes.RemoveAt(i);
+            if (auditsFit)
             {
-                openWindows = 0;
-                UiFitAudit.Enabled = false;
+                auditsFit = false;
+                if (--openWindows <= 0) { openWindows = 0; UiFitAudit.Enabled = false; }
             }
+
+            try { DisableGeometry(); }
+            catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditGeometryStop", error); }
+#if US_DEV
+            // Capture-off preserves outline during use; terminal scope disposal stops both.
+            if (instrumentAvailable)
+            {
+                try { subscription.GeometryOverlay = false; }
+                catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditOutlineStop", error); }
+            }
+#endif
         }
     }
 

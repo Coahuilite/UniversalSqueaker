@@ -492,6 +492,7 @@ public static partial class SqueakDiagnosticsOverlay
             hash = hash * 31 + (s.Response?.ActionDeadline.GetHashCode() ?? -1);
             hash = hash * 31 + (s.Response?.SharedDeadline.GetHashCode() ?? -1);
             hash = hash * 31 + (s.Response?.ProtectedAt(Find.TickManager.TicksGame) == true ? 1 : 0);
+            hash = hash * 31 + (ReadyFor(s) ? 1 : 0);
             hash = hash * 31 + (s.Evidence?.Sequence.GetHashCode() ?? -1);
             hash = hash * 31 + (s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1);
             hash = hash * 31 + (s.LastEvaluation.HasValue ? (int)s.LastEvaluation.Value.Outcome : -1);

@@ -153,6 +153,14 @@ public static class SqueakLog
     }
     public static void LayoutTrace(string message) => LayoutTrace(() => message);
 
+    // Only the settings window's explicit, bounded cost observation calls this. It must remain
+    // usable with detail/fit off and after the ordinary trace budget was exhausted.
+    internal static void SettingsCostSample(Func<string> message)
+    {
+        try { SqueakLogSink.Emit(SqueakLogLevel.Info, Prefix + "ltrace: " + message()); }
+        catch (Exception error) when (IsOrdinary(error)) { }
+    }
+
     // Production callers choose a named result, never raw text, level or an arbitrary event ID.
     public static void DiagnosticPublicationFailed(string subject, Exception error) => Production(SqueakProductionEvent.DiagnosticPublicationFailed, new(target: subject, exception: error));
     public static void SustainedEndUncertain(string subject, string reason) => Production(SqueakProductionEvent.SustainedEndUncertain, new(target: subject, reason: reason));

@@ -14,6 +14,7 @@ public static partial class SqueakDiagnosticsOverlay
     private static Pawn? recordingPawn;
     private static readonly List<SqueakResponseEvidence> captureRecords = new();
     private static SqueakResponseEvidence? captureInitial;
+    private static SqueakResponseEvidence? captureMaintenance;
     private static long captureId, nextCaptureId, gameGeneration, captureGeneration, observed, overwritten, captureFailed;
     private static string captureSubject = "", captureDisplay = "", captureMap = "", stopReason = "", captureFailure = "", captureLogStatus = "Unavailable";
     private static long captureFieldsTruncated;
@@ -92,7 +93,7 @@ public static partial class SqueakDiagnosticsOverlay
     internal static void ClearCapture()
     {
         if (Recording) return;
-        captureRecords.Clear(); captureInitial = null; captureId = 0;
+        captureRecords.Clear(); captureInitial = captureMaintenance = null; captureId = 0;
         captureSubject = captureDisplay = captureMap = stopReason = captureFailure = copyStatus = "";
         captureFieldsTruncated = 0;
         captureLogStatus = "Unavailable";
@@ -111,6 +112,22 @@ public static partial class SqueakDiagnosticsOverlay
             if (captureRecords.Count == 64) { captureRecords.RemoveAt(0); overwritten++; }
             captureRecords.Add(evidence);
             captureFieldsTruncated += evidence.Truncated;
+            model.BumpRevision();
+        }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { CaptureFailure(error); }
+    }
+
+    // One replaceable detached maintenance snapshot, not another history ring or a fake decision.
+    // Called only after a real review/slot transition/stop, before a released adapter disappears.
+    internal static void RecordMaintenance(Pawn pawn, PawnResponseAdapter adapter)
+    {
+        // Game construction may release old adapters on a LongEvent worker. The pending
+        // Game-change path clears that capture on the UI thread; never touch its model here.
+        if (!UnityData.IsInMainThread || !IsRecording(pawn)) return;
+        try
+        {
+            captureMaintenance = adapter.CaptureDiagnosticEvidence();
+            captureFieldsTruncated += captureMaintenance.Truncated;
             model.BumpRevision();
         }
         catch (Exception error) when (SqueakLog.IsOrdinary(error)) { CaptureFailure(error); }
@@ -143,6 +160,7 @@ public static partial class SqueakDiagnosticsOverlay
         text.Append("fields_truncated_total=").Append(captureFieldsTruncated).Append(" capture_failure=").Append(captureFailure)
             .Append(" log_status=").Append(captureLogStatus).AppendLine();
         text.AppendLine("history_scope=SettledCallbacksForOneSubjectWhileRecording;NotAllGameActions");
+        if (captureMaintenance != null) text.AppendLine("\n[LatestMaintenance;NotDecisionHistory]").AppendLine(captureMaintenance.Text());
         for (int i = captureRecords.Count - 1; i >= 0; i--)
             text.Append("\n[Captured ").Append(captureRecords[i].Sequence).AppendLine("]").AppendLine(captureRecords[i].Text());
         if (captureInitial != null) text.AppendLine("\n[PreRecording]").AppendLine(captureInitial.Text());
@@ -206,6 +224,7 @@ public static partial class SqueakDiagnosticsOverlay
             Header("capture_last_success_read_realtime_seconds", captureLastRead);
             Header("capture_read_failures", captureReadFailures); Header("capture_read_failure_type", captureReadFailure);
             Header("history_scope", "SettledCallbacksForOneSubjectWhileRecording;NotAllGameActions");
+            Header("maintenance_scope", "LatestMainThreadReviewSlotTransitionOrStopWhileRecording;NotDecisionHistory");
             Header("logging_mode", SqueakLog.Mode); Header("logging_effective", SqueakLog.ShouldEmitDev);
             Header("log_status", recordingPawn?.GetComp<CompSqueaker>()?.DiagnosticLogStatus ?? captureLogStatus);
             if (displayed != null && TryGetEntry(displayed, out var cached))
@@ -228,6 +247,7 @@ public static partial class SqueakDiagnosticsOverlay
                 bool sameTarget = displayed != null && SqueakerRuntime.SubjectKey(displayed) == captureSubject;
                 Header("current_target_snapshot", sameTarget && current != null ? "CachedViewCurrent" : "NotCaptured");
                 if (sameTarget) Block("CachedViewCurrent", current);
+                Block("LatestMaintenance;NotDecisionHistory", captureMaintenance);
                 for (int i = captureRecords.Count - 1; i >= 0; i--) Block("latest " + captureRecords[i].Sequence, captureRecords[i]);
                 Block("PreRecording", captureInitial);
             }

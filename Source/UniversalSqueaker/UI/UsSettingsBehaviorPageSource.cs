@@ -30,6 +30,11 @@ internal sealed class UsSettingsBehaviorPageSource : IUsBehaviorPageSource
     public void SetTuningLayer(int layer) => source.SetTuningLayer(layer);
     public void SetTuningDomain(string race, string child) => source.SetTuningDomain(race, child);
     public void SetTuningSelectedAction(string action) => source.SetTuningSelectedAction(action);
+    internal void SetActionExpansion(string action, Action invalidate)
+    {
+        if (source is UsKernelSettingsSource production) production.SetActionExpansion(action, invalidate);
+        else { source.SetTuningSelectedAction(action); invalidate(); }
+    }
     public void SetActionScope(string action, BehaviorScope? scope) => source.SetActionScope(action, scope);
     public bool CanResetTuningArea() => source.CanResetTuningArea();
     public SqueakResetOutcome ResetActionTuningRow(string action) => source.ResetActionTuningRow(action);
@@ -47,7 +52,7 @@ internal sealed class UsSettingsBehaviorPageSource : IUsBehaviorPageSource
         private readonly UsKernelSettingsSource source;
         internal FieldsAdapter(UsKernelSettingsSource source) => this.source = source;
         public IReadOnlyList<string> ContributionFields(string action, string race, string child) => source.ContributionFields(action, race, child);
-        public string ReadActionField(string field, string action, string race, string child) => source.ReadActionField(field, action, race, child);
+        public string ReadActionField(string field, string action, string race, string child) => source.ReadActionFieldForView(field, action, race, child);
         public bool TryCommitActionField(string field, string text, string action, string race, string child) => source.TryCommitActionField(field, text, action, race, child);
         public string EffectiveField(string field, string action, string race, string child, IUiTranslation translation) => source.EffectiveField(field, action, race, child, translation);
         public string EffectiveFieldSummary(string field, string action, string race, string child, IUiTranslation translation) => source.EffectiveFieldSummary(field, action, race, child, translation);

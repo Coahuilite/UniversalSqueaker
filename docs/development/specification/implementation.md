@@ -11,7 +11,7 @@
 | 行为配置 CFG | GameSettings.BehaviorSources／ActionTuningRecord → BehaviorConfiguration.Read → 同次有效值／字段归因 | 作者层先玩家；视图和Read防外部写入 |
 | 主体族默认 CORE-05／CFG-02 | ResponseSession的Respond／Review → BehaviorContract.Defaults(action, policy, frame.Domain.Family) → 原BehaviorConfiguration.Resolve／授权／决策 | Pawn保原默认；NonPawn不注入Pawn专属默认且不运行Pawn Talking门，显式非法字段仍由原校验拒绝；旧无family公开重载保Pawn语义 |
 | 原子来源／行 PUB | SqueakerMod.TryCommit… → GameSettingsPersistence → UsAtomicConfigFile／同保存owner → ApplyToRuntime | persist-first；Committed后发布失败只修发布 |
-| 普通保存 PUB | setter → QueuePersistence → SettingsSaveOwner的Tick／Flush → base.WriteSettings | 实时0.35秒、代次、关闭一次重试；Scribe临时值finally恢复 |
+| 普通保存 PUB | setter → QueuePersistence；GameBootstrap就绪 → GameSettingsMaintenance → Root.Update postfix → GameSettingsPersistence.Tick／SettingsSaveOwner.Flush → base.WriteSettings | Mod寿命／主线程，非窗口或模拟tick；实时0.35秒、代次、关闭一次重试；Scribe临时值finally恢复 |
 | 旧绑定恢复 CFG-06 | UsKernelSettingsSource.Voices安全读 → 选定域继承／同ID重绑 → 原子owner | 159f651修复已技术关闭P1；精确旧快照／同ID重绑／另拒绝域／原生点击仍有原证据缺口 |
 | 音频输入 AUDIO | 启动AudioInputBuilder／UsAudioBindings → AudioCatalog／SqueakPoolRegistry → 已选AudioCandidate | 选包只配置过滤，不重建AudioCatalog |
 | VF1 FA | VoicePacksPageModel／同Store非UI保存／恢复／删除 → 独立文件提交 → Store.PublishCommitted → SqueakerRuntime.PublishFallbackAudio → AudioCatalog → 原ResponseSession选音 | 原子候选先构造，成功不重写；Audio最后替换，提交后采用失败保last-good；不清Session／W或重挂comp |
@@ -30,6 +30,8 @@ RESP-08的Audio身份变化现经`PublishFallbackAudio → PawnResponseAdapter.M
 复核的是原请求域、供音域／层、包、entry及AudioId的当前供给，不重新执行selector。删除／改写该最终表映射、撤回原entry／包、当前域／年龄／彩蛋／选包／模式或playability使原供给不再合法时，以`CurrentAudioAuthorizationUnavailable`走原Stop。其他域或映射变化、权重／局部调制变化、出现另一候选或更早来源层，不单独切断仍合法的原供给；局部请求参数保持，当前G继续沿自有Sample更新。这采用AUDIO-01／04的准确来源、OUT-07的同槽不重选和OUT-08的“未中选不是依据失效”；FA2仍只在后续合法机会选新音。OneShot无槽、不裁尾，owner／W／root／冷却与截止均不重置。
 
 K2的`GameSettingsPersistence.Tick`与显式`Flush`各只进入一次`RepairPublication`，随后共用不递归修发布的`FlushPhysical`。后续维护、显式Retry或关闭仍可修复pending；保存owner的requested／persisted／failed generation、关闭一次物理重试及写中较新编辑不变。物理已提交但发布失败仍可为Saved且PublicationPending；修发布不重写已成功文件。
+
+D1现由`GameBootstrap`在主线程启动完成后把原persistence交给`GameSettingsMaintenance.Start`。唯一Harmony接缝为1.6 `Verse.Root.Update` postfix；Entry／Play的base.Update使暂停和无地图仍有服务机会。仅就绪、主线程、非destroyed root、长事件／Scribe空闲时运行；同Unity frame重复回调合并一次，真实秒仍由原owner判断，不以帧号计防抖。Start同owner幂等，不订阅窗口／地图事件；scene／窗口退出不注销Mod服务，进程退出自然释放。设置主窗和备用壳不再Tick，显式WriteSettings／Retry／关闭Flush及旧内部显式维护入口保留。准确1.6.4871引用元数据确认Root.Update和protected destroyed字段；1.6.4850方法体核Entry／Play的base调用，目标编译与真实1.6现场验证分列。
 
 两条宿主线采用相同业务源码。现有Core／OneShot与AudioBinding through入口可分别核保存owner和持续配置复核；它们没有Audio单独换引用／撤回供给或同Tick发布次数的精确场景，不能冒称这些分支已有动态前失败／后成功。固定R1依赖、实际构建／运行与原生未验边界由本切片交付收据记录；旧冻结包不更新。
 
@@ -76,7 +78,13 @@ Game 构造／加载只向诊断标记 pending，由原 Root 主线程 guard 关
 
 显式 clipboard 平台输出集中于 `SqueakDiagnosticsClipboard.Write` 唯一 setter。PM／CO 在本轮 DIAG-07 采用中裁定其不是页面 renderer；边界审计仍计 `GUIUtility`，单列并核该完整单成员接缝，不加文件／目录白名单、不许 getter 或其他 GUI/input/paint。后续采用公共 clipboard 接缝或复制功能退休时回收此分类；不是旧门禁原已允许或用户逐行批准。
 
-反馈公共投影对尚未采集的完整 W／持续槽细节始终输出 `window_w_details=NotCaptured` 与 `sustained_slot_details=NotCaptured`，包括 NoOwner／NotEvaluated；已有 next_state_tick、active、end_reason 只保自己的含义。没有为此新增业务 owner 读面。
+US06维护后的技术字段以`observation_scope=LatestDecision;CurrentSlot;LatestMaintenance`分层。`SqueakResponseEvidence.Observation → CompSqueaker.GetDiagnosticSnapshot.Response`保持原读取时owner.Observe的当前槽／截止，用于ReadyFor、ToneFor、屏幕标记／行／摘要及当前冷却；交互InteractionUntil也保持当前秒截止。RowFingerprint纳入同一ReadyFor位，使维护导致的槽有／无变化即使Sequence不变也能更新collapsed monitor选择。旧无Evidence的快照caller仍可使用，不要求新增扩展。
+
+冻结决定另存`DecisionObservation`，历史事件与“最近决定”门优先消费它；旧调用未供应可选冻结扩展时，门仍可读原Response中已保存的决定Action／tick／receipt，历史行可读其record在结算回调已detached的Observation，不从当前owner回填旧record。`sequence/tick/configuration/decision_audio_snapshot/decision_active/decision_end_reason/decision_*until*/decision_confirmed_tick/decision_next_state_tick`归决定边。原未加decision_前缀的截止仍是当前值，不为冻结历史重定义。`current_active`（无槽为None）、`slot_start_*`归当前槽；`maintenance_*`为最近维护输入／结果，`review_*`才表示实际授权复核采用。AudioSnapshot是原SqueakerRuntime发布者随Audio引用替换递增的进程内编号，不是AudioId或跨进程身份。维护Capture不再改写上次决定的摄入／结果详情。两份typed观察均在证据构造时复制；新读取不回写既有ring对象。
+
+`end_observed_*`记录adapter检测到的最近槽终止，时点是观察边界；`NativeInactiveObserved`不伪造原生结束时间。Core的Stop仅增加观察用EndRevision，原detach-before-End、错误与结算不变。`schedule_*`从原Align保存实际下界、W、相位窗口／pattern及H抬期窗口；basis配置／决定序列在真正新排程时保存，SharedRaise沿旧basis。初始相位可有排程而尚无决定；未采用相位的初始spread尚无W，不能据其next_state_tick虚构一次成功排程。`phase_*`仍表示当前输入／policy可用性，不替代保留的schedule事实。
+
+有adapter时`window_w_details=AdoptedSchedule`或`NotScheduledByDecision`、`sustained_slot_details=CurrentSlotAndLatestMaintenance`；NoOwner公共投影继续两项NotCaptured。原单目标ring仍仅64个同步已结算detached结果。录制中主线程真实复核／槽变化／停止另更新同capture owner的一份`LatestMaintenance;NotDecisionHistory`，包含正常离图释放前的最终维护；不改Sequence或ring计数，不追补历史。未录制或非主线程立即返回，Game构造worker的旧adapter释放不碰UI模型，其capture仍由原pending Game-change主线程路径清除。普通无槽／未到期维护不构造该对象；Text缓存、256字符／16项／4096字符细节和64KiB反馈限制保持。固定FL rc2维护交付及运行层限制见[构建入口](../../build-and-debug.md#us06-kernel-maintenance-candidate)。
 - 现行Daily warning/error在人读句中保必要的已捕获action／target／pack／race／sound／reason／count及异常类型／清洗原因；包括SettingsOpenFailed、CatalogRefreshFailed、ResolverRebuildFailed、CompAttachFailed、PackRejected、TargetRejected、DiagnosticsMarkDrawFailed等。已有具名能力／API不可用且没有额外事实的事件保准确阶段，不编造原因。普通Daily info和详细trace不扩大；`HumanSentence`始终在安全Emit内先执行，只有机器详细suffix受有效详细模式控制。稳定ID只去控制字符，保合法packageId:DefName／斜线；自由原因和异常消息用原路径清洗。
 - fmt=3必要故障为Daily，含具名`evt`、准确`target/source/race/sound/count/reason`及已清洗异常元数据（存在才输出）。覆盖kernel诊断、Sustained End、作者声明、音频观测／绑定／volume、capability、前置依赖、行为刷新、保存／repair／candidate／format、preset、诊断UI、native entry、overlay、save status、theme、VF1音频发布和canonical采集。原始异常不被日志异常替换。
 - `ptrace`保FL原始click-routing字段及忽略pointer坐标的去重；`ltrace`保原布局／geometry／UI.cost字段与Host-pass单位，不称FPS。各session最多512行，末行标exhausted；fmt=3故障once域最多1024不同键，满额行标`once_budget=exhausted_until_reset`。游戏session释放或有效日志模式切换经`SqueakLog.ResetSession`统一重开；无每tick队列或异步bus。

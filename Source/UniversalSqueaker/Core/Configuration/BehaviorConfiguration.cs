@@ -52,7 +52,9 @@ public sealed class BehaviorConfiguration
     public bool IsPackSelected(Kernel.AudioDomain domain, string key) => selectedPacks == null
         || selectedPacks.TryGetValue(domain, out var keys) && keys.Contains(key);
     private readonly BehaviorSourceState? sources;
+    private readonly string sourcesXml;
     private readonly BehaviorPlayerOverride[] players;
+    private readonly ILookup<string, BehaviorPlayerOverride> playersByAction;
     private readonly HashSet<Kernel.AudioDomain> configuredDomains = new();
     public bool HasDomain(Kernel.AudioDomain domain) => configuredDomains.Contains(domain)
         || selectedPacks != null && selectedPacks.ContainsKey(domain);
@@ -60,9 +62,18 @@ public sealed class BehaviorConfiguration
     public BehaviorConfiguration(string sourcesXml, IEnumerable<BehaviorPlayerOverride> players, bool enabled, double activity, double systemVolume,
         Kernel.SelectionMode sourceMode = Kernel.SelectionMode.Fallback, IEnumerable<Kernel.AudioPackSelection>? selection = null,
         bool allowEggs = false, bool talkingScaling = true, long revision = 0)
+        : this(sourcesXml, players, enabled, activity, systemVolume, sourceMode, selection, allowEggs, talkingScaling, revision, null) { }
+
+    internal BehaviorConfiguration(string sourcesXml, IEnumerable<BehaviorPlayerOverride> players, bool enabled, double activity, double systemVolume,
+        Kernel.SelectionMode sourceMode, IEnumerable<Kernel.AudioPackSelection>? selection,
+        bool allowEggs, bool talkingScaling, long revision, BehaviorConfiguration? previous)
     {
         Id = revision;
-        this.players = players.Select(x => new BehaviorPlayerOverride(x.Family, x.Namespace, x.Target, x.Child, x.Action, x.Read(), x.ValidScope)).ToArray();
+        // A captured row is sealed and owns its private values; Read still returns a copy. Capture
+        // the current sequence on every publication, without copying those immutable rows again.
+        this.players = players.ToArray();
+        playersByAction = this.players.OrderBy(x => x.Layer).ToLookup(x => x.Action, StringComparer.Ordinal);
+        this.sourcesXml = sourcesXml;
         SystemEnabled = enabled; Activity = activity; SystemVolume = systemVolume;
         SourceMode = sourceMode; AllowEggs = allowEggs; TalkingScaling = talkingScaling;
         if (selection != null)
@@ -74,7 +85,10 @@ public sealed class BehaviorConfiguration
         {
             if (double.IsNaN(activity) || double.IsInfinity(activity) || activity <= 0 || double.IsNaN(systemVolume)
                 || double.IsInfinity(systemVolume) || systemVolume < 0 || systemVolume > 1) throw new ArgumentException("InvalidSystemProfile");
-            sources = BehaviorSourceState.FromXml(sourcesXml);
+            // The parsed state is private to immutable configurations and Resolve never mutates it.
+            // Exact XML reuse does not skip capturing any public settings field/player/selection.
+            sources = previous?.sources != null && string.Equals(previous.sourcesXml, sourcesXml, StringComparison.Ordinal)
+                ? previous.sources : BehaviorSourceState.FromXml(sourcesXml);
             foreach (var binding in sources.Bindings) configuredDomains.Add(binding.Domain.Identity);
             foreach (var row in this.players.Where(x => x.ValidScope && x.Target != ""))
                 configuredDomains.Add(new BehaviorDomain(row.Family, row.Namespace, row.Target, row.Child).Identity);
@@ -100,8 +114,8 @@ public sealed class BehaviorConfiguration
         {
             if (!paused)
             {
-                var layers = players.Where(x => x.Action == action && (domain != null ? x.Applies(domain)
-                    : x.Target == "" && x.Family == family && x.Namespace == targetNamespace)).OrderBy(x => x.Layer).ToArray();
+                var layers = playersByAction[action].Where(x => domain != null ? x.Applies(domain)
+                    : x.Target == "" && x.Family == family && x.Namespace == targetNamespace).ToArray();
                 if (layers.Any(x => !x.ValidScope)) throw new ArgumentException("InvalidPlayerScope");
                 if (domain != null)
                     result = sources!.Resolve(domain, action, directory, layers.Select(x => x.Read()), implementationAvailable,

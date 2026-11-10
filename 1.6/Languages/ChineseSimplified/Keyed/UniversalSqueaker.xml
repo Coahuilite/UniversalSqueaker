@@ -137,6 +137,10 @@
   <US.DevPanel.Outline>描边</US.DevPanel.Outline>
   <US.DevPanel.Report>报告</US.DevPanel.Report>
   <US.DevPanel.Sample>采样当前设置页</US.DevPanel.Sample>
+  <US.DevPanel.Sample.Operation>开始20秒操作采样</US.DevPanel.Sample.Operation>
+  <US.DevPanel.Sample.OperationReady>先定位目标控件，再开始操作采样；操作后停止输入并留出尾段。结果见日志 UI.cost。</US.DevPanel.Sample.OperationReady>
+  <US.DevPanel.Sample.End>结束并保全采样</US.DevPanel.Sample.End>
+  <US.DevPanel.Sample.OperationStatus>{0}：{1}/{2} Host pass，页 {3}，会话 {4}。20秒或达到上限后结束；可提前保全。结果见日志 UI.cost，采样不要求启用详细日志或 fit。</US.DevPanel.Sample.OperationStatus>
   <US.DevPanel.Sample.Ready>可开始一次32个Host pass采样。结果见日志UI.cost。</US.DevPanel.Sample.Ready>
   <US.DevPanel.Sample.NeedsEnabled>将日志模式设为“启用”后才可采样。</US.DevPanel.Sample.NeedsEnabled>
   <US.DevPanel.Sample.Unavailable>仅支持本面板选中的有效设置页目标，不支持对话框。</US.DevPanel.Sample.Unavailable>
@@ -373,7 +377,7 @@
   <US.Help.Timing.Interval.Text>两次叫声之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。1.0x 使用当前默认节奏，人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
   <US.Help.Timing.Multiplier.Text>一次性缩放所有动作冷却与全局间隔：0.5 减半等待（更吵），2.0 加倍。1.0 即作者设定的原始节奏。</US.Help.Timing.Multiplier.Text>
-  <US.Help.Diagnostics.Overview>回应诊断无需开发模式或详细日志。打开后正常关闭设置窗继续游戏，在诊断面板内搜索、选择要查看的对象，再开始记录、正常复现、停止并复制反馈；没有成功快照也可开始。查看 B 不改变仍在录制的 A，停止作用于当前录制对象。保最近 64 条结果，覆盖和缺失会标明。详情先给结论和真实事件，完整字段可进入技术全文滚动、选取；复制反馈仍有大小与白名单界限。仅打开窗口不会录制。FL.UiKit 几何报告另用于 UI 调试。</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.Overview>回应诊断无需开发模式或详细日志。打开后正常关闭设置窗继续游戏，在诊断面板内搜索、选择要查看的对象，再开始记录、正常复现、停止并复制反馈；没有成功快照也可开始。查看 B 不改变仍在录制的 A，停止作用于当前录制对象。保最近 64 条已结算决定，覆盖和缺失会标明。技术字段区分最近决定、当前持续槽和最近维护：Sequence 只数决定，维护可能在没有新决定时结束槽。LatestMaintenance 只保一份最近观察，不是决定历史；Audio 快照编号标采用输入，不是声音资源；结束时间是适配层观察时点，不是原生完成时间。详情和完整字段仍可滚动、选取；复制反馈仍有大小与白名单界限。仅打开窗口不会录制。FL.UiKit 几何报告另用于 UI 调试。</US.Help.Diagnostics.Overview>
   <US.Help.Diagnostics.LoggingAuto.Text>跟随构建版本：开发版详细记录，正式版保持安静。这是默认值。</US.Help.Diagnostics.LoggingAuto.Text>
   <US.Help.Diagnostics.LoggingEnabled.Text>强制开启详细日志，正式版同样生效。回应输出每对象每 60 真实秒最多尝试 64 条，自动续期；这不是声音次数限制。普通反馈记录不需要开启详细日志，仅在需要详细日志时使用。</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>强制关闭全部开发者日志，开发版同样生效。</US.Help.Diagnostics.LoggingDisabled.Text>
