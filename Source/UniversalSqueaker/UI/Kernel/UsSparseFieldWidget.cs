@@ -19,7 +19,7 @@ public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
             new UiAttributeDefinition("LabelKey"), new UiAttributeDefinition("EffectiveBind", binding: UiBindingRole.Value), new UiAttributeDefinition("OptionsBind", binding: UiBindingRole.Choices),
             new UiAttributeDefinition("LabelBind", binding: UiBindingRole.Value), new UiAttributeDefinition("HelpRefBind", binding: UiBindingRole.Value), new UiAttributeDefinition("HelpContextBind", binding: UiBindingRole.Value),
             new UiAttributeDefinition("HelpAction", binding: UiBindingRole.Command), new UiAttributeDefinition("HelpPayload", binding: UiBindingRole.Value))));
-    public void Configure(UiElementSpec value) => spec = value;
+    public void Configure(UiElementSpec value) { spec = value; layoutEnvironment = null; }
     private string Binding => spec.TryGetAttribute("Bind", out string key) ? key : spec.Id;
     private string Field => spec.TryGetAttribute("Field", out string name) ? name : "parameter";
     private string Attr(string name) => spec.TryGetAttribute(name, out string value) ? value : "";
@@ -100,29 +100,8 @@ public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
     private FieldLayout CompactLayout(UiWidgetContext ctx, float width)
     {
         var text = UsKernelDraw.Text(ctx);
-        bool inline = width >= 540;
-        var layout = new FieldLayout {
-            Label = ctx.Bindings.Get<string>(Attr("LabelBind")),
-            Effective = Attr("EffectiveBind") == "" ? "" : ctx.Bindings.Get<string>(Attr("EffectiveBind")),
-            LabelWidth = inline ? Math.Min(220, width * .32f) : width,
-            FieldWidth = Math.Min(160, width), FieldHeight = UsKernelDraw.ControlHeight(ctx, 30)
-        };
-        layout.LabelHeight = text.MeasureText(layout.Label, Math.Max(1, layout.LabelWidth));
-        layout.FieldX = inline ? layout.LabelWidth + 8 : 0;
-        layout.FieldY = inline ? 0 : layout.LabelHeight + 4;
-        bool effectiveInline = width - layout.FieldX - layout.FieldWidth - 8 >= 140;
-        layout.EffectiveX = effectiveInline ? layout.FieldX + layout.FieldWidth + 8 : 0;
-        layout.EffectiveY = effectiveInline ? layout.FieldY : layout.FieldY + layout.FieldHeight + 4;
-        layout.EffectiveWidth = Math.Max(1, width - layout.EffectiveX);
-        layout.EffectiveHeight = layout.Effective == "" ? 0 : text.MeasureText(layout.Effective, layout.EffectiveWidth);
-        layout.Height = Math.Max(layout.LabelHeight, Math.Max(layout.FieldY + layout.FieldHeight, layout.EffectiveY + layout.EffectiveHeight));
-        if (InvalidDraft(ctx))
-        {
-            layout.ErrorY = layout.Height + 4;
-            layout.ErrorHeight = text.MeasureText(ErrorText(ctx), Math.Max(1, width));
-            layout.Height = layout.ErrorY + layout.ErrorHeight;
-        }
-        return layout;
+        FieldInputs inputs = CaptureFieldInputs(ctx, width);
+        return FieldGeometry(ctx.Metrics, text, inputs);
     }
     private void DrawCompact(UiLayoutRect rect, UiWidgetContext ctx)
     {
