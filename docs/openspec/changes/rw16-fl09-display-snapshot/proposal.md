@@ -1,32 +1,30 @@
-# Proposal — RW1.6 F09 显式消费 FL0.9 保留展示准备
+# RW1.6 F09 显式消费 FL0.9 保留展示准备：采用记录
 
-状态：**候选，未采用、未实施。** 工作单 WO-FL09-RETAINED-DISPLAY-20261111／SPEC。US 消费 owner：sol-compat；FL 公共合同与实现 owner：sol-tiering；采用：PM；RW1.6 原生消费验收：Terra。
+状态：**已采用、未实施**。WO-FL09-RETAINED-DISPLAY-20261111 r2；PM 核定 US `a023fee` 的 UI-10 与 FL `bb7da49` 的显式区域合同（新增接缝 Public-unstable），并裁定下述两项澄清。US 消费 owner：sol-compat；FL 公共机制：sol-tiering；规格核定／源码放行：PM；RW1.6 原生消费验收：Terra。
 
-## Why
+## Current 与历史
 
-同一生产 F09（调音 → 行为与来源 → 征召）已证明，C-r2 暖开把完整布局 Core／Plan／Visible 方法调用从 A 的 658／239／237 降为 26／15／9，展开 Host 仍约 9.962 ms，对 A 9.970 ms 无可分辨改善，完整帧 135/135 超预算。仍每合法同步逐字段验证、准备并逐控件调度，不是再加一个 layout cache 就能解决。原生事实见本工作单引用的 NATIVE-C；过去 0.8 配对只保历史依据。端到端目标仍为 165 FPS 的整帧 6.060606 ms，准备复用成功与整帧达标分别验收。
+唯一规范正文是 [ui-consumption／UI-10](../../specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)，总入口是 [specification](../../../specification.md)。本目录保留接线设计、采用来源和任务，不持并列 current。
 
-[UI-04／09](../../specs/ui-consumption/spec.md) 仍要求真实来源、全部字段、原编辑路径与稳定身份。新方向让**显式采用的生产源**一次准备受影响数据／几何，停手后复用；必要的 native input／ID／hit 与 Repaint 提交继续由实际后端运行。增量准备不等于可以不重画 IMGUI。
+- `a023fee`：原 proposal／ADDED UI-10／design／tasks 候选，源码仍基于 `1ee2ae0`。
+- 2026-11-11 r2：PM 正式核定采用；不可变 choices 有区分 value 的独立 snapshot 只读通道，可同 key，纯准备不能回普通 getter；Repaint 仅在有效 clip 为空或全部实际绘制范围被证明／强制裁尽时延期纯 Paint，layout rect 不自动提供证明。输入／native IDs 与不确定 paint 照常。
+- 本次采用提交：UI-10 已移入 current，两项澄清、完整来源和旧合同边界并入；[原delta](specs/ui-consumption/spec.md)改为历史指针。产品源码、guard／adapter／构建和运行未动。待 PM 核对两库 current，再发实施。
 
-## What Changes
+## Why：已有优化与仍欠的工作
 
-推荐在同一真实工厂内，只为有完整来源的生产 F09 增加 opt-in 消费路径：
+同一生产 F09（调音 → 行为与来源 → 征召）已证明，C-r2 暖开把完整布局 Core／Plan／Visible 方法调用从 A 的 658／239／237 降为 26／15／9，展开 Host 仍约 9.962 ms，对 A 9.970 ms 无可分辨改善，完整帧 135/135 超预算。仍每合法同步逐字段验证、准备并逐控件调度，不是再加一个 layout cache 就能解决。原生事实见工单所引 NATIVE-C；0.8 A／C-r2 配对只保历史依据，不作新0.9对照。
 
-- US 闭合“生产数据＋本窗展示选择”来源：已发布配置／定义／policy 与必要真实可变输入观察，加 source 私有 row-result、sheet 私有状态的自动失效。不是把普通 getter 全部改成 tracked，也不要求旧业务调用者补 Notify。
-- FL 闭合独立的 editor／focus／IME／scroll／hit 与环境变化来源。US 数据凭据不能替它们宣称不变。
-- 数据／几何准备、原生操作、当前 Repaint 提交分开。未变的 21 个现场字段不逐个重新调用格式化／Effective／CompactLayout／Measure／prepared-description；21 不是字段上限，实际贡献仍完整出现。
-- 同域第一展开、滚入、错误、输入与关闭保真实回调顺序；新内容不能借保留旧画面跨帧摊账。旧同步 Draw 和普通来源保完整 fallback。
-- 在独立 RW1.6 US 消费分支解决 FL0.9.0 net472 的编译／运行 guard／适配与真实引用，不迁移另一条 net10 US 工程，不改 FL0.8 维护线。
+端到端目标仍为165 FPS的整帧6.060606 ms。新0.9需在同代开／关固定配对中，分别证明首次完整准备／暖开合、停手后的区域复用、必要原生操作与实际 Repaint；不得只报暖命中而漏首个新状态实画，准备计数减少与整帧达标分别裁定。
 
-## Capabilities
+## 已选消费边界
 
-现行 `ui-consumption` **仅新增 UI-10**，候选见 [delta](specs/ui-consumption/spec.md)。UI-01／04／05／07／09 及原场景保持，CFG／PUB／POL 不迁移权威。
-[design](design.md) 是实际来源和接线义务，不定义新的 FL 类型、方法、XML 属性或生命周期 API。公共接口只消费 sol-tiering 经 PM 采用的唯一 FL 合同；届时把真实合同引用填入采用记录。
+- 同一真实工厂、manifest、`b-actions` Repeat 与全部 canonical／贡献 fields。US 闭合生产 source／本窗 sheet 的完整变化来源；不能只看 view/Bump，真实 silent row-result、可变玩家记录／selector 与 raw XML 均覆盖，不要求旧业务 caller 补 Notify。
+- FL 独立拥有 editor／draft／focus／IME、scroll／hit 与环境变化；US 不复制其公共 API，只按实际 capability 采用显式来源映射和 participant 分界。新 capability 不可用或不能闭合的需求沿同代原路径。
+- 纯准备、必须运行的 native 操作、实际 Repaint 分开；未变的21个现场字段不重复 formatted own/effective／CompactLayout／Measure／展示准备，也不把逐字段成本移到 capture factory。21不是上限。首次展开／滚入／错误／编辑与关闭保持原合法顺序，不跨帧摊账或重放业务请求。
+- UI-01至09、CFG／PUB／POL 的原权威不变。[design](design.md)给真实来源、工厂和切线；不另定义 FL 类型、方法或 XML 属性。
 
-## Scope and adoption
+## 分支及兼容范围
 
-基底 US `1ee2ae0b9c04a6e233b7e7143f15b6cc0b4a3919`；独立分支 `feat/rw16-fl09-display-snapshot-20261111`。本候选只新增文稿，不改现行规范入口、源码、测试、项目、About 或脚本。
+仅 `feat/rw16-fl09-display-snapshot-20261111` 采用 **FL API [0.9.0,0.10.0)／RW1.6 net472**。原 `perf/tiering-20261111`、0.8维护合同／固定DLL与另一net10工程均不迁移。
 
-新源只在明确 opt-in 且来源闭合时取得新的读取／准备复用条件。原 source、direct `ReadActionField`／提交入口、未采用页面、外来 `IUsKernelSettingsSource`／preview／自定义 widget 仍用原合法条件。无能力时回到同代 FL0.9 的原完整路径；独立 0.8 分支及固定 DLL 留作恢复，不把换回 0.8 冒充 0.9 off 对照。
-
-采用门：PM 对照 UI-10 与 FL 正式候选闭合来源、native adapter 能力及失败行为，再更新唯一现行 ui-consumption。随后才实施 [tasks](tasks.md)。规格接受、工程编译、真实游戏性能和发布分别记账。
+原 source、direct `ReadActionField`／提交入口、未采用页面、外来 `IUsKernelSettingsSource`／preview／自定义 widget 保原合法调用条件。无能力时回到同代0.9完整路径，不伪造产品开关、菜单或绕 guard。此次采用尚未迁移实际 guard，不代表已经能装载0.9。后续源码、工程验证、原生性能和发布按 [tasks](tasks.md) 分别记账。

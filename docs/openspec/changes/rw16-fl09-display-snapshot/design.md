@@ -1,12 +1,12 @@
 # Design — 真实生产 F09 的来源闭包与三条执行边
 
-状态：候选；只给 US 消费接线和 FL 所需事实，不定义 FL 公共接口。工单输入为已交 SCOPE-GATE 与 NATIVE-C。代码基底为 US `1ee2ae0`，FL0.9 只读基准 `d07cdc04f9985bb6818a34f5f90ba20c345f0206`。
+状态：**采用后的消费接线设计，未实施**；唯一规范正文为 [UI-10](../../specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)。依据 WO-FL09-RETAINED-DISPLAY-20261111 r2、原 SCOPE-GATE／NATIVE-C 与 PM 核定的 FL `bb7da49`；代码基底仍为 US `1ee2ae0`，原 FL0.9 工厂只读基准为 `d07cdc0`。本设计不定义 FL 公共接口，也不等待产品提交才建立消费保证。
 
 ## 选择：一份生产数据准备，加独立 native/UI 变化边
 
 不把整页普通 getter 宣告为 pure。采用位置是 `UsKernelSettingsHost.Create` 中的具体 `UsKernelSettingsSource`／`UsSettingsBehaviorPageSource` 和 `BindBehaviorSheet`；以每 Host 的生产 F09 准备 owner 组合下面的实际来源。外来 `IUsKernelSettingsSource`／`IUsBehaviorPageSource`、未知 widget 和未采用页面不取得该资格。
 
-保留原 `Layout.Schema2.xml` 的 `b-actions-scroll → Repeat b-actions → b-action-row`、canonical／贡献 fields、原 action/domain/field 地址、注册和编辑器身份。`UsSparseFieldWidget` 在该分支接入最终采用的可选 split 消费能力；原 `IUiWidget.Draw` 的同步含义和无 opt-in 工厂仍保留。不能把整个 F09 搬成另一个自绘 widget 来规避身份、首次 materialize 或真实字段。
+保留原 `Layout.Schema2.xml` 的 `b-actions-scroll → Repeat b-actions → b-action-row`、canonical／贡献 fields、原 action/domain/field 地址、注册和编辑器身份。`UsSparseFieldWidget` 在该分支按实际 capability 接入已选定的可选 split 消费能力；原 `IUiWidget.Draw` 的同步含义和无 opt-in 工厂仍保留。不能把整个 F09 搬成另一个自绘 widget 来规避身份、首次 materialize 或真实字段。
 
 ### 1. 数据／几何准备边
 
@@ -16,17 +16,21 @@
 
 **完整来源的具体边界：** US 自有写边提供自动变化凭据；仍可由旧公开可变记录／state 直接影响原读面的输入，在合法边界作一次真实 root 观察／值比较，并保独立 immutable capture。对可变玩家记录需要覆盖所读的嵌套值与成员，不能只看 List 引用／Count。变更后才 fold／格式化；观察成本仍计入准备，不伪称零成本。这样不要求外部调用者改成 Notify，也不需逐 21 个字段执行展示 getter。完成该观察后才可把数据头作为正面资格；漏一条旧可见输入，该子域就不封闭，不能带旧 token 复用。
 
+不可变 choices 与当前 value 是两个独立的只读 snapshot 通道，可使用同一 key；选项的成员／顺序／caption／help 随来源进入对应 root／item。纯准备只取明确映射的完整 snapshot，不用普通 Get／Choices 补项。缺项／错型按定位失败处理，不能借普通 getter 隐藏错误。来源观察仍按真实父可见性、tab／Repeat 活动域进行，不在父隐藏后探读旧子 getter。
+
 ### 2. 必须运行的 native/editing/hit 边
 
 FL 原生 owner 从保留的控件描述／几何执行必要 native 操作，而不是重新跑每个 US widget 的完整 Draw 才发现无变化。操作仍取当前资格、draft／IME／focus／conflict、按键、模型读回、help、popup／capture 与 hit／scroll。确认／Live 的 readModel 仍读原当前 owner，不能把 prepared 旧字符串或 request 当作已采用值。
 
-US 数据不变不能替代这条边。FL 需要能将本地 UI 变化及时归属到对应 field／作用域：例如只有活跃 editor draft 变动时，改变该 field 的反馈／错误几何，不让 US 轮询全部 widget 的 observedEditor。这里要求的是可消费事实、寿命与失效边，不预写 API 类型／签名。
+US 数据不变不能替代这条边。FL 需要能将本地 UI 变化及时归属到对应 field／作用域：例如只有活跃 editor draft 变动时，改变该 field 的反馈／错误几何，不让 US 轮询全部 widget 的 observedEditor。本分支消费 FL 已核定的 editor／native 局部失效及 participant 能力，类型／签名与兼容等级只由 FL 维护。即时资格、业务读回、请求和未映射普通读不切入纯表示通道。
 
 ### 3. Repaint 提交边
 
 以当前成功 prepared data 和当前交互／geometry 提交应呈现内容。Verse IMGUI 可以复用准备结果，但仍须实际重画；不能默认有 GPU retained surface。数据、native operations 与 paint submission 分开计数。后端不具备减少实际提交的能力时，仍可获得前两条中合法的准备复用，不把它假装成少画。
 
-操作导致变化时立即使对应 prepared state 失效，第一合法 Repaint 前采用当前状态；若变化在提交前发生，按 FL 正式合同完成当前状态协调。重准备不得重放 native input 或业务命令。无法建立相符状态时沿诚实故障／同步回退，不提交错位可操作画面，不安排下一帧补齐新字段。
+只有有效 clip 为空，或全部实际绘制范围已被证明／强制裁尽，才延期该纯 Paint；自定义 widget 的 layout rect 不自动界定绘制范围，不能证明就照常 Paint。输入／native IDs／帮助等原操作和几何所需首次准备不随其省略；滚入首个适用 Repaint 实画当前完整内容。
+
+操作使相关准备失效；按原同轮一致／下一合法同步采用新业务表示，不能让较晚 sibling 混入半份新源。editor 当前 draft／caret／IME 仍即时显示；Repaint 前已发生的错误／UI 状态在该次同步采用，不拖到第二个 Repaint。手动 MeasureAndArrange→Draw 保同一成功版本，间隙新失效待原下一合法配对，不私插排列。重准备不重放 native input／命令；捕获／Build 失败不得改成 Unknown 或成功凭据，沿原故障／恢复，不能用不相符旧几何提供可操作命中。
 
 ## 实际变化归属：给 FL owner 的有限事实
 
@@ -57,15 +61,23 @@ US 数据不变不能替代这条边。FL 需要能将本地 UI 变化及时归�
 - 真实工厂：`SettingsWindowOwner → UI.GameSettingsWindow : UiWindowHost → CreateHost → UsKernelSettingsHost.Create`。该方法注册真实 widgets，用 `VerseUiDiagnosticLog.CreateHost` 建同一 manifest／bindings 的 Host，并 attach source／Bumper；不从 offline region 或另一个 US 工程造替代页面。
 - 此 US 项目固定 net472/x64、Krafs.Rimworld.Ref 1.6.4871、Lib.Harmony 编译引用，FL 引用 `Private=false`。显式 `FerriteLibArtifactPath` 经 Directory.Build.props 解析；原 RecordFerriteLibReference 把精确引用收据写入 US。
 - FL0.9 `d07cdc0` 项目：VersionPrefix／API 均 0.9.0，**UiKitTarget 空值是 net472／RW1.6**；Neutral 和 RimWorld17 是 net10.0，不能拿来作此载体。普通候选由 FL owner 用 Release、空 VersionSuffix、无 FerriteTestHooks 产生并固定实际 MVID／参考身份，再交 US 显式引用。
-- 该 FL 基准仍有 RimWorld16 的 `UiWindowHost.CreateHost`、`VerseUiDiagnosticLog.CreateHost`／UiHost 工厂及原版本 Require 形状。新 retained 能力具体签名／backend adapter 能力尚待 FL 合同采用；不能据旧工厂存在宣称已兼容所有新方法。
-- 当前 US `GameBootstrap` 和 `scripts/resolve-carrier.ps1` 只接受 **[0.8.0,0.9.0)**；`check-pack-readiness.ps1` 也断言旧范围。未来仅在此独立分支迁到选定的 **[0.9.0,0.10.0)** 起始消费范围，并同步源码检查、读取 guide、stage／既有 Host adapter；不在旧分支放宽成“两个都行”。这些是采用后的实现任务，此次不改。
+- 该 FL 基准仍有 RimWorld16 的 `UiWindowHost.CreateHost`、`VerseUiDiagnosticLog.CreateHost`／UiHost 工厂及原版本 Require 形状。已选定 retained 能力仍须由实际 adapter 声明并实现；消费规格现已采用，源码尚未接入，旧工厂存在不代表新路径已经可运行。
+- 当前 US `GameBootstrap` 和 `scripts/resolve-carrier.ps1` 只接受 **[0.8.0,0.9.0)**；`check-pack-readiness.ps1` 也断言旧范围。本分支已采用 **[0.9.0,0.10.0)** 起始消费范围，待源码放行才迁移实际 guard，并同步源码检查、读取 guide、stage／既有 Host adapter；不在旧分支放宽成“两个都行”。这些是已采用、未实施的任务，此次不改。
 - `About/About.xml` 实际硬依赖为 Harmony 与 `coahuilite.ferritelib`，loadAfter 同步；ModRequirement 不能表达 API 版本，真实范围由上述 code guard 拥有。LoadFolders 的 1.7→1.6 只是旧 basic candidate，不给本任务 1.7 接入／验收许可。新分支真正包装前明确其 1.6 支持／依赖描述，勿把 0.8 对和 0.9 对混装，US 始终不打包 FL。
 - 原普通 Release 入口：`dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release -p:FerriteLibArtifactPath=<fixed-FL09-net472-DLL>`；其后原 Host 工程显式引用同一 FL／US，跑实际相关 `ordinary getters`、`manifest`、`dynamic` 和 shell／editing／diagnostic 范围。现有 harness 叫 FerriteLib08.Stubs，包装 guard 仍为 0.8；先在本分支采用真实 0.9 签名／工厂映射再用，不能改名就签通过。无新单测／等价 probe。
 
-## 端到端消费验收与采用空缺
+## 已选 FL capability 与实施门
 
-PM 先对齐本 UI-10 与 sol-tiering 的正式 FL 条款；FL owner 必须给出：可验证来源的接入／失效寿命、editor/native 与环境的独立变化事实、操作后当前帧协调且不重放效果、实际 Verse 1.6 backend 的必需操作／提交能力、失败与无 opt-in fallback。US 只消费这些条款，不立第二份公共 API。
+PM 已选 FL 的 FL09-REGION-SOURCE／ENROLL／UPDATE／PARTICIPANT／LIFETIME 与 FL16-REGION-PAINT：来源映射、原 Host 区域事务、局部纯结果／调度复用、Build／Operate／Paint 分界、故障／退出及1.6实际提交。FL 唯一规范归属分别为其 binding-reactivity、structure、layout、presentation-execution、lifetime-recovery 与 adapters/rimworld16 正文；US 不复制签名、另创接口或放宽等级。两项采用澄清已进入本库 UI-10。
 
-采用后 US owner 闭合本表写边／root 观察与真实工厂；工程交付固定普通 0.9 net472 pair、MVID／编译引用和必要既有检查。新分支 guard／adapter／About 迁移未做，不能把本 SPEC 当作现已可运行的 0.9 对。
+待 PM 核对两库 current 并放行源码后，US owner 闭合本表写边／root 观察与真实工厂。guard／adapter／About、普通0.9 net472 pair、MVID／精确编译引用和必要既有检查均未实施；这不是新的规格待决，也不是此时可装载的配对。
 
-Terra 以 165 FPS 的整帧 6.060606 ms 为目标，使用同代 0.9 **on/off** 或功能等价固定基线，原真实 F09 开合与展开停手，既报 per-scope／per-field preparation 次数，也报 native 操作／paint 提交、首次实画、Host／整帧及超额分母。覆盖 silent row-result、未提交 invalid draft、Live／确认、滚动／重开、环境／语言和关闭；复用原脚本和证据，必要原生反例归原运行 owner，不新增单测框架。此前 A／C-r2 只作历史机制证据；不能以 Core 次数下降、模拟值或 144Hz 场次签实际165Hz。
+### 直接调用、切线与同代 off
+
+生产调用仍为 SettingsWindowOwner → GameSettingsWindow.CreateHost → UsKernelSettingsHost.Create → 原 manifest／bindings／b-actions。只在具体生产 source＋sheet、已闭合映射及实际后端能力处加入区域；UsSparseFieldWidget 的已选纯准备与 Paint 从原 Draw 拆出，原操作／editor／help 留在原顺序，完整 Draw／Measure／PointerRegions 继续可用。direct ReadActionField／TryCommitActionField 仍直接进入原 source；失败早退与未 Bump 由该 owner 自动观察／失效，不加旁路入口。
+
+实施验收的 off 是**同一固定0.9 FL／US、同一真实窗口／字段／业务条件**，只不登记本次区域 attachment，或按 FL 已采用退出能力安全解除并重新验证原完整路径；默认未登记并不省掉原 ordinary／sparse 调用。由获授权 owner 在真实工厂采用边控制该配对，固定方式随工程收据交付，不为它新增玩家开关或假菜单，不改版本检查。同一次采样不得混入挂接／退出过渡帧；输入／关闭等功能路径单独记过渡结果。若候选工厂尚无可控制的采用边，就先在原工厂完成该工程接线，不能宣称已有可用 off 或用另一页面／0.8 DLL 冒充。
+
+### 同代端到端验收
+
+Terra 以 165 FPS 的整帧 6.060606 ms 为目标，使用同代 0.9 **on/off** 或功能等价固定基线，原真实 F09 开合与展开停手，既报 per-scope／per-field preparation 次数，也报 native 操作／paint 提交、首次实画、Host／整帧及超额分母。覆盖 silent row-result、未提交 invalid draft、choices、Live／确认、父隐藏、滚动／重开、环境／语言和关闭；复用原脚本和证据，必要原生反例归原运行 owner，不新增单测框架。此前 A／C-r2 只作历史机制证据；r2 所引新 IMGUI 分摊来自独立60Hz现场，不与较早144Hz混为一组，也不作新0.9对照。同代对照按实际读到的节奏配对、不改显示设置；Core次数、模拟值、60／144Hz结果均不能签实际165Hz。

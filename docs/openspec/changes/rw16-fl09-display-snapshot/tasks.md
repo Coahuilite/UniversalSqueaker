@@ -1,21 +1,24 @@
-# Tasks — SPEC 候选门
+# Tasks — 规格已采用，源码门未放行
 
-状态：候选，产品实施与运行尚未开始。Scenario 是预期，不自动授权测试。
+状态：**已采用、未实施**。唯一规范为 [UI-10](../../specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)；本清单不代替 current。Scenario 是预期，不自动授权测试。
 
-## 本次 SPEC
+## 规格与采用记录
 
-- [x] 从已给工作单、SCOPE-GATE／NATIVE-C、现行 ui-consumption 与真实 1.6 工厂核对消费边；确认 0.9 net472 与旧 guard／adapter 的差别。
-- [x] clean 的 US `1ee2ae0` 分出 `feat/rw16-fl09-display-snapshot-20261111`，保旧 perf 分支与 frozen pair。
-- [x] 提交 proposal、ADDED UI-10、实际 owner／来源和三阶段 design；不改现行规范、产品／测试／构建。
+- [x] 从工单、SCOPE-GATE／NATIVE-C、原 ui-consumption 与真实1.6工厂核对消费边；确认0.9 net472与旧guard／adapter差异。
+- [x] clean US `1ee2ae0` 分出 `feat/rw16-fl09-display-snapshot-20261111`；`a023fee`提交原proposal／UI-10候选／design／tasks，旧perf分支和frozen对保留。
+- [x] r2／PM核定 UI-10＋FL `bb7da49` 的区域capability，新增接缝Public-unstable；choices独立只读通道及实际绘制范围裁剪条件完成澄清。
+- [x] UI-10并入唯一现行 ui-consumption与specification入口；本分支正式采用[0.9.0,0.10.0)／RW1.6，旧0.8分支不改；原delta改历史指针，design保来源与切线。
+- [x] 本次独立docs-only本地noreply提交；只作文本／diff审阅，不改产品、tests、配置或二进制，不运行build／harness／游戏。
 
-## 采用门（PM／FL owner）
+## PM源码门（当前停止于此）
 
-- [ ] sol-tiering 提供唯一正式 FL 来源／保留准备／editor-native／Repaint／故障／旧路径条款，明确 Verse1.6 能力；US 将其真实引用填入本候选。
-- [ ] PM 对照实际 row-result、draft 与 raw 可变输入覆盖，记录采用并将所选 UI-10 并入唯一现行 ui-consumption；不以本候选自签采用。
+- [ ] PM核对FL／US两库current及本次采用提交后，发产品实施；本次不预做源码或运行。
 
-## 采用后实施（当前不执行）
+## 放行后实施（未执行）
 
-- [ ] US owner 在本独立分支闭合 source/sheet 自动失效和必要 root 观察，接入原生产工厂与 sparse split；保旧入口／普通 fallback 和全部身份／写语义。
-- [ ] 仅本分支迁移 0.9 range、carrier resolver／readiness、普通 net472 显式引用及必要既有 harness／adapter／依赖描述；实际选 FL owner 的固定普通对，无 push／tag／维护合入。
-- [ ] 相关既有检查与真实 compiler-reference／MVID 交接；不新增单测、case 或等价 probe，不弱化旧断言换通过。
-- [ ] Terra 消费实际 0.9 on/off pair：原 F09 首开／暖开合／展开停手、输入／错误／滚动／重开／环境／关闭；分开准备／native 操作／实际呈现与帧预算。结果由 PM 分层验收。
+- [ ] US owner在同一真实工厂闭合source／sheet的自动失效和必要root观察，消费实际FL能力；纯准备不逐字段重算，不回普通getter；native／读回／Live／独立入口与完整fallback保原。
+- [ ] 仅本分支迁移实际[0.9.0,0.10.0) guard、carrier resolver／readiness、普通net472显式引用及必要原有harness／adapter／依赖描述；不绕guard，不把旧0.8分支放宽。
+- [ ] 原工厂提供真实同代on／off切线：同一固定0.9 FL／US，区域登记与原完整路径对照；保全部字段／环境／命令，不造产品开关或假菜单。未实施前不声称off已可运行。
+- [ ] 相关既有检查与普通Release固定配对、实际MVID／精确compiler-reference收据交接；不新增单测、case或等价probe，不弱化旧断言换通过。
+- [ ] Terra按实际节奏消费同代0.9固定对：首开／暖开合／展开停手，silent row-result／draft／choices、Live／确认、父隐藏、滚动／重开／环境／关闭；分别量准备、native操作、实际目标首次绘制与完整帧超额分母。A／C-r2只作历史；144Hz或60Hz不能代签实际165Hz。
+- [ ] PM分别接受工程、原生行为和整帧性能结果；未达6.060606ms或其他未验明确留在对应责任，不以采用规格代签发布。
