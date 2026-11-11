@@ -19,7 +19,7 @@
 - [x] US owner在同一真实工厂闭合source／sheet的自动失效和必要root观察，消费实际FL能力；纯准备不逐字段重算，不回普通getter；native／读回／Live／独立入口与完整fallback保原。
 - [x] 仅本分支迁移实际[0.9.0,0.10.0) guard、carrier resolver／readiness、普通net472显式引用及必要原有harness／adapter／依赖描述；不绕guard，不把旧0.8分支放宽。
 - [x] 原工厂提供真实同代on／off切线：同一固定0.9 FL／US，区域登记与原完整路径对照；保全部字段／环境／命令，不造产品开关或假菜单。私有CreateCore不登记／实际附件Dispose边已留；切换原生行为仍由Terra验。
-- [x] US `52fa8fb` 对FL owner固定API载体 `d707ddf` 普通Release/net472构建；原ordinary getters32／manifest479／dynamic55／shell13及readiness通过，原stage验证准确compiler-reference。未改测试或造probe。
+- [x] US `52fa8fb` 对FL owner固定API载体 `d707ddf` 普通Release/net472构建，原ordinary getters32／manifest479／dynamic55／shell13及readiness通过。随后 `2450e47` 修正实际page-Behavior父域先行门，新的普通Release／ordinary32／manifest479／readiness／stage再次通过，dynamic55与shell13复用未受改原路径证据；原stage验证准确compiler-reference。未改测试或造probe。
 - [ ] FL完整RETAIN普通载体到达后，重新固定最终US／FL编译配对、实际MVID与准确收据；API-only载体明确Fallback/legacy-layout，不能作为优化或native候选。相关检查只按实际变化复用／补跑。
 - [ ] Terra按实际节奏消费同代0.9固定对：首开／暖开合／展开停手，silent row-result／draft／choices、Live／确认、父隐藏、滚动／重开／环境／关闭；分别量准备、native操作、实际目标首次绘制与完整帧超额分母。A／C-r2只作历史；144Hz或60Hz不能代签实际165Hz。
 - [ ] PM分别接受工程、原生行为和整帧性能结果；未达6.060606ms或其他未验明确留在对应责任，不以采用规格代签发布。
