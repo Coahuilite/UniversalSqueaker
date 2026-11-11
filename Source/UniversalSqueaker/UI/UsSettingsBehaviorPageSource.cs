@@ -15,6 +15,7 @@ internal sealed class UsSettingsBehaviorPageSource : IUsBehaviorPageSource
         this.source = source;
         Fields = source is UsKernelSettingsSource production ? new FieldsAdapter(production) : null;
     }
+    internal UsKernelSettingsSource? Production => source as UsKernelSettingsSource;
     public VoicePacksPageState ViewState => source.ViewState;
     public IUsBehaviorFieldSource? Fields { get; }
     public UsBehaviorPageView ReadView()

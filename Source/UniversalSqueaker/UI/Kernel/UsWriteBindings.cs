@@ -77,6 +77,8 @@ public sealed class UsWriteBinding
 /// </summary>
 public sealed class UsWriteBindings
 {
+    internal bool RetainBehaviorDisplay;
+    internal UsBehaviorDisplayCapture? BehaviorDisplay;
     private readonly UiBindings bindings;
     private readonly List<UsWriteBinding> bound = new();
     private readonly HashSet<string> seen = new(StringComparer.Ordinal);

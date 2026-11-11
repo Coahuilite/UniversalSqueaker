@@ -51,8 +51,22 @@ public static partial class UsKernelSettingsHost
         var native = source.Fields;
         string T(string key) => t.Translate("US.B." + key);
         bool contextControlsOpen = false;
+        long sheetRevision = 0;
+        UsBehaviorDisplayCapture? capture = null;
+#if !US_PREVIEW_NEUTRAL
+        if (writes.RetainBehaviorDisplay && source is UsSettingsBehaviorPageSource productionSheet
+            && productionSheet.Production is UsKernelSettingsSource production)
+        {
+            capture = new UsBehaviorDisplayCapture(() => new UsBehaviorDisplayCapture.Stamp(
+                production.ObserveBehaviorDisplayInputs(), production.BehaviorRowResultRevision, sheetRevision,
+                t.TranslationRevision, s.TuningSelectedAction, s.SourceChangeDiagnostic,
+                System.Globalization.CultureInfo.CurrentCulture.Name),
+                () => b.Get<IReadOnlyList<string>>("b-action-keys"));
+            writes.BehaviorDisplay = capture;
+        }
+#endif
         b.BindReadOnly<bool>("b-context-open", () => contextControlsOpen);
-        writes.Command("b-context-toggle", () => { contextControlsOpen = !contextControlsOpen; bumper.Bump(); });
+        writes.Command("b-context-toggle", () => { contextControlsOpen = !contextControlsOpen; sheetRevision++; bumper.Bump(); });
         string Race() => s.TuningLayer == 0 ? "" : s.TuningRaceDefName;
         string Child() => s.TuningLayer == 2 ? s.TuningXenotypeDefName : "";
         bool Valid() => s.TuningLayer == 0 || source.ReadView().Roster.Any(r => r.Race == s.TuningRaceDefName
@@ -207,6 +221,32 @@ public static partial class UsKernelSettingsHost
             bool header = field == "" && !footer;
             string action = row.Action, race = row.Race, child = row.Child;
             string Address(string leaf) => UsWriteBindings.ItemKey("b-action-keys", key, leaf);
+            var display = capture?.Add(key, footer, () => header ? Current(row) : Expanded(row));
+            // Actual manifest demand domain: do not evaluate an old child just to compare it
+            // after its parent/field/timing/details branch became unreachable.
+            bool DisplayDemand(string leaf)
+            {
+                if (leaf == "visible" || leaf == "header" || leaf == "footer" || leaf == "field-visible"
+                    || leaf == "source-visible" || leaf == "details") return true;
+                if (leaf.StartsWith("field-", StringComparison.Ordinal) || leaf == "has-field-note" || leaf == "technical-key")
+                    return FieldVisible() && (leaf != "field-provenance" && leaf != "technical-key" || row.Details);
+                if (leaf == "row-result" || leaf == "has-row-result" || leaf == "preset-anchor" || leaf == "explanation")
+                    return footer && Expanded(row) && (leaf != "explanation" || row.Details);
+                if (leaf == "context" || leaf.StartsWith("source-", StringComparison.Ordinal)
+                    || leaf.StartsWith("timing-kind", StringComparison.Ordinal))
+                    return header && Expanded(row) && (leaf != "source-technical" || row.Details);
+                return header;
+            }
+            void Read<T>(string leaf, Func<T> read)
+            {
+                b.BindReadOnly<T>(Address(leaf), read);
+                display?.Value(leaf, read, () => DisplayDemand(leaf));
+            }
+            void Options<T>(string leaf, Func<IReadOnlyList<UiChoice<T>>> read)
+            {
+                b.BindChoices<T>(Address(leaf), read);
+                display?.Choices(leaf, read, () => DisplayDemand(leaf));
+            }
             bool Editable() => header && Current(row) && Valid() && SameDomain(row);
             bool FieldVisible() => field != "" && Expanded(row) &&
                 (field != "interval" || row.TimingKind == "Simulation") && (field != "interaction-seconds" || row.TimingKind == "Interaction");
@@ -222,32 +262,33 @@ public static partial class UsKernelSettingsHost
                         options.Add(new UiChoice<BehaviorScope?>(t.Translate(ActionScopeRules.ScopeLabelKey(action, scope)), scope));
                 return options;
             }
-            b.BindReadOnly<bool>(Address("visible"), () => header ? Current(row) : Expanded(row));
-            b.BindReadOnly<bool>(Address("header"), () => header);
-            b.BindReadOnly<bool>(Address("footer"), () => footer);
-            b.BindReadOnly<bool>(Address("group-first"), () => header && Current(row)
+            Read<bool>("visible", () => header ? Current(row) : Expanded(row));
+            Read<bool>("header", () => header);
+            Read<bool>("footer", () => footer);
+            Read<bool>("group-first", () => header && Current(row)
                 && groupFirst.TryGetValue(Group(action), out string? first) && first == action);
-            b.BindReadOnly<string>(Address("group"), () => Group(action) == 2 ? T("Custom") : t.Translate(Group(action) == 0
+            Read<string>("group", () => Group(action) == 2 ? T("Custom") : t.Translate(Group(action) == 0
                 ? "US.Tuning.Group.PlayerTriggered" : "US.Tuning.Group.SystemOrEvent"));
-            b.BindReadOnly<string>(Address("title"), () => ActionRow(row)?.DisplayName ?? action);
-            b.BindReadOnly<bool>(Address("expanded"), () => Expanded(row));
-            b.BindReadOnly<bool>(Address("collapsed"), () => !Expanded(row));
-            b.BindReadOnly<bool>(Address("editable"), Editable);
-            b.BindReadOnly<bool>(Address("not-editable"), () => !Editable());
-            b.BindReadOnly<string>(Address("scope-display"), () => ActionRow(row) is ActionScopeRowView r && r.HasOwnScope
+            Read<string>("title", () => ActionRow(row)?.DisplayName ?? action);
+            Read<bool>("expanded", () => Expanded(row));
+            Read<bool>("collapsed", () => !Expanded(row));
+            Read<bool>("editable", Editable);
+            Read<bool>("not-editable", () => !Editable());
+            Read<string>("scope-display", () => ActionRow(row) is ActionScopeRowView r && r.HasOwnScope
                 ? t.Translate(ActionScopeRules.ScopeLabelKey(action, r.Scope)) : t.Translate("US.Tuning.Auto"));
-            b.BindReadOnly<string>(Address("context"), () => T("CurrentAction") + ": " + (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row));
-            b.BindReadOnly<string>(Address("payload"), () => action);
-            b.BindChoices<BehaviorScope?>(Address("scope-options"), Choices);
+            Read<string>("context", () => T("CurrentAction") + ": " + (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row));
+            Read<string>("payload", () => action);
+            Options<BehaviorScope?>("scope-options", Choices);
+            display?.Value<BehaviorScope?>("scope", () => ActionRow(row) is ActionScopeRowView r && r.HasOwnScope ? r.Scope : null, () => header);
             writes.ItemValue<BehaviorScope?>("b-action-keys", key, "scope", () => ActionRow(row) is ActionScopeRowView r && r.HasOwnScope ? r.Scope : null,
                 scope => {
                     // SetActionScope reads page state: refuse a stale popup before reaching that owner.
                     if (!Editable() || !Choices().Any(choice => choice.Value == scope)) return;
                     source.SetActionScope(action, scope); bumper.Bump();
                 });
-            b.BindReadOnly<string>(Address("scope-effective"), () => ActionRow(row) is ActionScopeRowView r && !(r.HasOwnScope && r.Scope == r.EffectiveScope)
+            Read<string>("scope-effective", () => ActionRow(row) is ActionScopeRowView r && !(r.HasOwnScope && r.Scope == r.EffectiveScope)
                 ? "→ " + t.Translate(ActionScopeRules.ScopeLabelKey(action, r.EffectiveScope)) : "");
-            b.BindReadOnly<bool>(Address("has-scope-hint"), () => ActionRow(row) is ActionScopeRowView r && !(r.HasOwnScope && r.Scope == r.EffectiveScope));
+            Read<bool>("has-scope-hint", () => ActionRow(row) is ActionScopeRowView r && !(r.HasOwnScope && r.Scope == r.EffectiveScope));
             writes.ItemCommand("b-action-keys", key, "advanced", () => {
                 if (!Editable()) return;
                 string selected = s.TuningSelectedAction == action ? "" : action;
@@ -269,64 +310,67 @@ public static partial class UsKernelSettingsHost
                 if (changed) bumper.ResetHelpScroll();
                 bumper.Bump();
             }
-            b.BindReadOnly<bool>(Address("source-visible"), () => header && Expanded(row) && native != null);
+            Read<bool>("source-visible", () => header && Expanded(row) && native != null);
             IReadOnlyList<UiChoice<string>> SourceChoices() => header && Expanded(row)
                 ? native?.SourceChoices(t) ?? Array.Empty<UiChoice<string>>() : Array.Empty<UiChoice<string>>();
             // Keep the source explanation, but do not reserve an empty dropdown row for Pawn profile.
-            b.BindReadOnly<bool>(Address("source-controls-visible"), () => SourceChoices().Count != 0);
-            b.BindChoices<string>(Address("source-options"), SourceChoices);
+            Read<bool>("source-controls-visible", () => SourceChoices().Count != 0);
+            Options<string>("source-options", SourceChoices);
+            display?.Value<string>("source", () => SameDomain(row) ? native?.SelectedSource ?? "" : "", () => header && Expanded(row));
             writes.ItemValue<string>("b-action-keys", key, "source", () => SameDomain(row) ? native?.SelectedSource ?? "" : "", value => {
                 if (!header || !Expanded(row) || native == null) return;
                 native.CommitSource(value); bumper.Bump();
             });
-            b.BindReadOnly<string>(Address("source-status"), () => header && Expanded(row) ? native?.SourceStatusSummary(t) ?? "" : "");
-            b.BindReadOnly<string>(Address("source-technical"), () => header && Expanded(row) && row.Details ? native?.SourceStatus(t) ?? "" : "");
-            b.BindReadOnly<string>(Address("source-topic"), () => "us/behavior-source/selection");
+            Read<string>("source-status", () => header && Expanded(row) ? native?.SourceStatusSummary(t) ?? "" : "");
+            Read<string>("source-technical", () => header && Expanded(row) && row.Details ? native?.SourceStatus(t) ?? "" : "");
+            Read<string>("source-topic", () => "us/behavior-source/selection");
             writes.ItemAction<string>("b-action-keys", key, "explain-source", Help);
-            b.BindReadOnly<bool>(Address("timing-kind-choice"), () => !Kernel.BuiltInActionKeys.Contains(action));
-            b.BindChoices<string>(Address("timing-kind-options"), () => new[] {
+            Read<bool>("timing-kind-choice", () => !Kernel.BuiltInActionKeys.Contains(action));
+            Options<string>("timing-kind-options", () => new[] {
                 new UiChoice<string>(t.Translate("US.UI.IntervalInteraction"), "Interaction"), new UiChoice<string>(t.Translate("US.UI.IntervalSimulation"), "Simulation") });
+            display?.Value<string>("timing-kind", () => row.TimingKind, () => header && Expanded(row));
             writes.ItemValue<string>("b-action-keys", key, "timing-kind", () => row.TimingKind, value => {
-                if (header && (value == "Interaction" || value == "Simulation")) { row.TimingKind = value; bumper.Bump(); }
+                if (header && (value == "Interaction" || value == "Simulation")) { row.TimingKind = value; sheetRevision++; bumper.Bump(); }
             });
 
             // All field callbacks close over this exact action/domain, never the selected-action string.
             // Scope above remains an ordinary setter; these remain separate persist-first transactions.
-            b.BindReadOnly<bool>(Address("field-visible"), FieldVisible);
-            b.BindReadOnly<string>(Address("field-title"), () => field == "" ? "" : FieldTitle(field));
-            b.BindReadOnly<string>(Address("field-note"), () => Contribution(field) ? t.Translate(UsTuningFieldPresentation.For(field).NoteKey) : "");
-            b.BindReadOnly<bool>(Address("has-field-note"), () => Contribution(field));
-            b.BindReadOnly<string>(Address("field-group"), () => t.Translate(FieldGroup(field)));
-            b.BindReadOnly<bool>(Address("field-group-first"), () => field != "" && row.Fields.FirstOrDefault(f => FieldGroup(f) == FieldGroup(field)) == field);
+            Read<bool>("field-visible", FieldVisible);
+            Read<string>("field-title", () => field == "" ? "" : FieldTitle(field));
+            Read<string>("field-note", () => Contribution(field) ? t.Translate(UsTuningFieldPresentation.For(field).NoteKey) : "");
+            Read<bool>("has-field-note", () => Contribution(field));
+            Read<string>("field-group", () => t.Translate(FieldGroup(field)));
+            Read<bool>("field-group-first", () => field != "" && row.Fields.FirstOrDefault(f => FieldGroup(f) == FieldGroup(field)) == field);
             foreach (string kind in new[] { "interval", "interaction-seconds", "volume", "pitch", "parameter", "boolean" })
             {
                 string k = kind;
-                b.BindReadOnly<bool>(Address("field-is-" + k), () => field != "" && (k == "parameter" ? field.StartsWith("parameter:", StringComparison.Ordinal)
+                Read<bool>("field-is-" + k, () => field != "" && (k == "parameter" ? field.StartsWith("parameter:", StringComparison.Ordinal)
                     : k == "boolean" ? field is "enabled" or "talking" or "age" or "mood" || field.StartsWith("response:", StringComparison.Ordinal) || field.StartsWith("participation:", StringComparison.Ordinal) : field == k));
             }
-            b.BindChoices<string>(Address("field-options"), () => new[] {
+            Options<string>("field-options", () => new[] {
                 new UiChoice<string>(T("FieldInherit"), ""), new UiChoice<string>(t.Translate("US.UI.Yes"), "True"), new UiChoice<string>(t.Translate("US.UI.No"), "False") });
+            display?.Value<string>("field-value", () => field == "" ? "" : native?.ReadActionField(field, action, race, child) ?? "", FieldVisible);
             writes.ItemValue<string>("b-action-keys", key, "field-value", () => field == "" ? "" : native?.ReadActionField(field, action, race, child) ?? "", value => {
                 if (field == "" || native == null) return;
                 bool committed = native.TryCommitActionField(field, value, action, race, child); bumper.Bump();
                 if (!committed) throw new InvalidOperationException(native.RowResult(action, race, child));
             });
-            b.BindReadOnly<string>(Address("field-effective"), () => !FieldVisible() ? "" : native?.EffectiveFieldSummary(field, action, race, child, t) ?? "");
-            b.BindReadOnly<string>(Address("field-provenance"), () => !FieldVisible() || !row.Details ? "" : native?.EffectiveField(field, action, race, child, t) ?? "");
-            b.BindReadOnly<string>(Address("field-topic"), () => Contribution(field) ? "us/action-fields/contributions" : "us/action-fields/" + field);
-            b.BindReadOnly<string>(Address("field-help-context"), () => (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row));
+            Read<string>("field-effective", () => !FieldVisible() ? "" : native?.EffectiveFieldSummary(field, action, race, child, t) ?? "");
+            Read<string>("field-provenance", () => !FieldVisible() || !row.Details ? "" : native?.EffectiveField(field, action, race, child, t) ?? "");
+            Read<string>("field-topic", () => Contribution(field) ? "us/action-fields/contributions" : "us/action-fields/" + field);
+            Read<string>("field-help-context", () => (ActionRow(row)?.DisplayName ?? action) + " · " + Context(row));
             writes.ItemAction<string>("b-action-keys", key, "explain-field", Help);
-            b.BindReadOnly<string>(Address("technical-key"), () => field);
-            b.BindReadOnly<bool>(Address("details"), () => Expanded(row) && row.Details);
-            writes.ItemCommand("b-action-keys", key, "toggle-details", () => { row.Details = !row.Details; bumper.Bump(); }, () => footer && Expanded(row));
-            b.BindReadOnly<string>(Address("explanation"), () => footer && Expanded(row) && row.Details ? ActionRow(row)?.Explanation ?? "" : "");
-            b.BindReadOnly<string>(Address("row-result"), () => {
+            Read<string>("technical-key", () => field);
+            Read<bool>("details", () => Expanded(row) && row.Details);
+            writes.ItemCommand("b-action-keys", key, "toggle-details", () => { row.Details = !row.Details; sheetRevision++; bumper.Bump(); }, () => footer && Expanded(row));
+            Read<string>("explanation", () => footer && Expanded(row) && row.Details ? ActionRow(row)?.Explanation ?? "" : "");
+            Read<string>("row-result", () => {
                 string raw = native?.RowResult(action, race, child) ?? "";
                 var parts = raw.Split(new[] { '\n' }, 2);
                 return parts[0] == "" ? "" : t.Translate(parts[0]) + (parts.Length == 2 ? "\n" + parts[1] : "");
             });
-            b.BindReadOnly<bool>(Address("has-row-result"), () => (native?.RowResult(action, race, child) ?? "") != "");
-            b.BindReadOnly<string>(Address("preset-anchor"), () => ActionRow(row) is ActionScopeRowView r && r.HasPresetAnchor
+            Read<bool>("has-row-result", () => (native?.RowResult(action, race, child) ?? "") != "");
+            Read<string>("preset-anchor", () => ActionRow(row) is ActionScopeRowView r && r.HasPresetAnchor
                 ? T("PresetAnchor") + ": " + r.ResetPresetTarget : T("NoAnchor"));
             writes.ItemCommand("b-action-keys", key, "row-reset", () => {
                 if (footer && Expanded(row)) b.TryInvokeCommand("reset-action-row");

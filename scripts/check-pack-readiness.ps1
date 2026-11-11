@@ -10,7 +10,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
-# All callers select the fixed 0.8 carrier; never infer a stale sibling package.
+# All callers select the fixed 0.9 net472 carrier; never infer a stale sibling package.
 $FerriteLibArtifactPath = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $aboutFile = Join-Path $root 'About\About.xml'
@@ -82,7 +82,7 @@ if ($RequireReleaseMetadata) {
     Assert-Check 'release modVersion carries no -dev suffix' ($modVersion -notmatch '-dev') "($modVersion)"
 
     $bootstrap = Get-Content -LiteralPath (Join-Path $root 'Source\UniversalSqueaker\Game\GameBootstrap.cs') -Raw
-    Assert-Check 'GameBootstrap enforces the supported FL0.8 range' ($bootstrap -match 'FerriteLibVersion.Require\(new Version\(0, 8, 0\), new Version\(0, 9, 0\)')
+    Assert-Check 'GameBootstrap enforces the supported FL0.9 range' ($bootstrap -match 'FerriteLibVersion.Require\(new Version\(0, 9, 0\), new Version\(0, 10, 0\)')
 }
 
 # C. Assemblies

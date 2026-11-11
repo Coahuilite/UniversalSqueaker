@@ -7,7 +7,7 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>Sparse numeric parsing over FL's native editor, focus, IME and capture owner.</summary>
-public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout
+public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout, IUiRegionParticipant
 {
     public const string KindName = "us/sparse-field";
     private UiElementSpec spec = UiElementSpec.Empty;

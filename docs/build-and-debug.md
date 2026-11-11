@@ -1,5 +1,37 @@
 # Build and debug
 
+## This branch: RW1.6 / FL0.9 retained-display consumer
+
+The independent `feat/rw16-fl09-display-snapshot-20261111` branch consumes **FL API [0.9.0,0.10.0)**,
+net472/x64 against RimWorld1.6.4871. Select the FL owner's fixed ordinary RW1.6 Release DLL explicitly;
+do not use Neutral/net10, the other US tree, or an old0.8 DLL. The bootstrap/resolver/readiness gates
+enforce this new range only here. US still has Private=false and never builds or bundles FL.
+
+```powershell
+dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental -p:FerriteLibArtifactPath=<fixed-FL09-net472-DLL>
+```
+
+The existing RecordFerriteLibReference target records the exact resolved compiler input. Preserve
+the fixed source commit, ordinary Release configuration, both actual MVIDs and the existing receipt.
+Build the existing KernelHost consumer against the same FL and new US; select the affected
+`ordinary getters`, `manifest`, `dynamic` and `SettingsWindowShellCarriesTheFailureContract` lanes.
+They cover original/fallback callers with identified platform doubles, not the new production
+participant or native performance. No new test cases/probes are introduced.
+
+The actual factory is GameSettingsWindow → UsKernelSettingsHost.Create → b-actions. Public creation
+enrolls the concrete production source; unknown sources remain unregistered. Its private CreateCore
+retains a no-attach branch; the real source's attachment may also be safely disposed for the same-generation
+off path. No player toggle/menu/guard bypass is added. Exact native adoption timing and the off transition
+are recorded by the runtime owner before matched samples, never replaced with an old0.8 pair.
+See [UI-10](openspec/specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)
+and its [implementation tasks](openspec/changes/rw16-fl09-display-snapshot/tasks.md).
+An API-only carrier reporting Fallback/legacy-layout can establish compilation, not RETAIN performance.
+
+## Retained0.8 baseline history
+
+The following records keep their old branch/artifact identities and are not this branch's FL0.9 build input.
+
+
 Select the fixed FerriteLib 0.8 package you intend to test with, then build US against that exact DLL. US does not build or ship FerriteLib. Game use also requires the external [Harmony mod](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077) (`brrainz.harmony`); the Lib.Harmony compilation reference does not supply the game runtime. Neither `0Harmony.dll` nor `FerriteLib.UiKit.dll` is bundled with US. The current identity and migration conditions are in the [0.8 consumer guide](fl08-consumer-migration-zh.md).
 
 The RW17 basic-compatibility candidate explicitly maps both game versions to the shared `1.6` payload. It still targets net472 and compiles against Krafs.Rimworld.Ref 1.6.4871; the 1.7 API/IL review is a separate evidence layer. The release-gate repair uses the fixed `ferritelib/dist/release-gate-20261101/producer-release-r1/FerriteLib` input with `Private=false`; its actual US compiler/runtime pairing is recorded in [the fixed interface](../dist/release-gate-20261101/INTERFACE-r1.md). The earlier `rw17-basic-compat-20261030` input remains a preserved historical candidate. Native 1.7 sound and rendering remain awaiting human verification.

@@ -1,7 +1,7 @@
 # 正式UI消费、上下文与布局
 状态：现行，US0.6.x。责任：US UI消费维护者。配置／提交与默认分别由CFG／PUB／POL拥有；本页只约束它们如何被真实界面消费，不另建业务规则。
 
-UI-10 于2026-11-11按 WO-FL09-RETAINED-DISPLAY-20261111 r2 **正式采用、未实施**，仅适用于 `feat/rw16-fl09-display-snapshot-20261111` 的RW1.6／FL0.9消费。UI-01至09保持；[原change](../../changes/rw16-fl09-display-snapshot/proposal.md)为历史与接线设计，不是另一份current。产品源码门仍待PM核对两库现行规格。
+UI-10 于2026-11-11按 WO-FL09-RETAINED-DISPLAY-20261111 r2 **正式采用**，仅适用于 `feat/rw16-fl09-display-snapshot-20261111` 的RW1.6／FL0.9消费。UI-01至09保持；[原change](../../changes/rw16-fl09-display-snapshot/proposal.md)为历史与接线设计，不是另一份current。r3已核定两库独立采用提交并放行实现；工程候选／检查与待验见[任务](../../changes/rw16-fl09-display-snapshot/tasks.md)，采用不代替原生接受。
 
 ## Purpose
 从原生入口到包管理、直接工具和显式帮助，保同窗上下文、准确对象与可用输入。本文描述已定消费合同，不发起新的全局UX或工具页重做。

@@ -4,7 +4,7 @@
 
 **状态：现行。** 本入口及下列正文自2026-10-29在本地取代旧整编规格。适用US0.6.x／RimWorld1.6.4871（net472）；API及Config面向首次公开基线。规格采用不是发布或运行验收；[实现偏差与证据](development/specification/open-issues.md)可直接查到。
 
-**本分支新增采用：已采用、未实施。** WO-FL09-RETAINED-DISPLAY-20261111 r2 核定的 [UI-10](openspec/specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)已并入唯一现行正文；[change](openspec/changes/rw16-fl09-display-snapshot/proposal.md)只留采用历史、来源与实施任务。仅 `feat/rw16-fl09-display-snapshot-20261111` 采用 **FL API [0.9.0,0.10.0)／RW1.6 net472**，消费 FL 的显式区域能力（新增接缝 Public-unstable），不在 US 复制公共 API。完整来源、choices 独立快照通道、纯准备／原生操作／Repaint 与无 opt-in 回退均由 UI-10 约束。现有源码、版本 guard／adapter／包装仍是旧实现，不能据本次文档采用运行0.9；待 PM 核对两库 current 后再放行源码。
+**本分支新增采用：规格已采用，实现候选待验证。** WO-FL09-RETAINED-DISPLAY-20261111 r2 核定的 [UI-10](openspec/specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)已并入唯一现行正文；[change](openspec/changes/rw16-fl09-display-snapshot/proposal.md)只留采用历史、来源与实施任务。仅 `feat/rw16-fl09-display-snapshot-20261111` 采用 **FL API [0.9.0,0.10.0)／RW1.6 net472**，消费 FL 的显式区域能力（新增接缝 Public-unstable），不在 US 复制公共 API。完整来源、choices 独立快照通道、纯准备／原生操作／Repaint 与无 opt-in 回退均由 UI-10 约束。r3已核定FL `8f02776`／US `3e32a57`的独立采用提交并放行源码；本分支接入真实生产源／sparse participant，迁移版本guard／包装，工程和原生状态见[实施任务](openspec/changes/rw16-fl09-display-snapshot/tasks.md)。规格采用不签可用载体或性能。
 
 旧 `perf/tiering-20261111`／FL0.8 分支及 frozen 对保持原合同与身份；上述区间不扩到旧分支，也不让旧页面／普通来源新增 Notify、Prepare 或可靠 revision 前提。新0.9同代 on/off须走真实工厂、正常 guard 与同一完整页面，不能用历史0.8对、假菜单或绕过版本检查代替。
 
@@ -36,7 +36,7 @@ UI／帮助／诊断 ← 有效配置解释、当次结果和真实实例证据
 | [VF1→实际选音](openspec/specs/fallback-adoption/spec.md) | 独立文件成功后的真实消费者、准确反馈、准入重启 | VF1维护者 |
 | [原版事实与资源](openspec/specs/game-facts/spec.md) | 真实接缝、canonical域、依赖隔离与资源绑定 | 1.6适配维护者 |
 | [完整Core Work](openspec/specs/game-work/spec.md) | 20 WorkType／105 Giver／78 Job-driver精确范围 | Work适配维护者 |
-| [UI消费](openspec/specs/ui-consumption/spec.md) | 同窗／草稿、过滤、工具、帮助、布局与颜色默认；本分支UI-10显式保留准备（已采用、未实施） | UI消费者 |
+| [UI消费](openspec/specs/ui-consumption/spec.md) | 同窗／草稿、过滤、工具、帮助、布局与颜色默认；本分支UI-10显式保留准备（规格已采用，候选待验） | UI消费者 |
 | [诊断与证据](openspec/specs/diagnostics/spec.md) | mode／级别／失败隔离、结果和运行证据层 | 日志／诊断维护者 |
 | [同源开发预览](openspec/specs/developer-preview/spec.md) | 隔离样例、完整窗口、热改／agent、工具与业务诊断分工 | UI／开发辅助维护者 |
 
@@ -48,7 +48,7 @@ UI／帮助／诊断 ← 有效配置解释、当次结果和真实实例证据
 - 作者：从[0.6作者指南](us-kernel-0.6-authoring-zh.md)和[可加载示例](examples/0.6/)入手，再读本页关联能力。独立根、多级继承和NonPawn中立模型合法；完整NonPawn原生宿主仍非本版交付。
 - 修改实现：读相应能力及直接连接，再看[事实／版本映射](development/specification/facts.md)、[开放项](development/specification/open-issues.md)和[证据ID](development/specification/evidence.md)，不要从bug倒改合同。
 - 新增模块／内聚新核心／责任迁移：沿[轻量变更方法](development/specification/changes.md)给实际需要、owner／寿命、最小完整切片和采用／退出；无新平台或消费者数量门槛。
-- 构建与发布：沿[构建](build-and-debug.md)、[发布流程](release-runbook-zh.md)与[隐私门禁](push-privacy-gate.md)；[固定FL0.8消费者](fl08-consumer-migration-zh.md)保旧线身份，不作为本分支0.9接线方法。新分支的guard／精确引用迁移与同代off切线见[采用后任务](openspec/changes/rw16-fl09-display-snapshot/tasks.md)及[消费设计](openspec/changes/rw16-fl09-display-snapshot/design.md)。本次不构建／运行，不授权发布。
+- 构建与发布：沿[构建](build-and-debug.md)、[发布流程](release-runbook-zh.md)与[隐私门禁](push-privacy-gate.md)；[固定FL0.8消费者](fl08-consumer-migration-zh.md)保旧线身份，不作为本分支0.9接线方法。新分支的guard／精确引用迁移与同代off切线见[采用后任务](openspec/changes/rw16-fl09-display-snapshot/tasks.md)及[消费设计](openspec/changes/rw16-fl09-display-snapshot/design.md)。按r3运行相关既有检查和普通构建；真实游戏归原运行owner，不授权发布。
 
 ## 历史、兼容与尚未兑现的保证
 

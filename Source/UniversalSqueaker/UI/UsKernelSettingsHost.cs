@@ -72,6 +72,10 @@ public static partial class UsKernelSettingsHost
     public static UiHost Create(
         IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes,
         RemixConfirmationFlow? remixFlow = null)
+        => CreateCore(source, metrics, out writes, remixFlow, retainBehaviorDisplay: true);
+
+    private static UiHost CreateCore(IUsKernelSettingsSource source, ITextMetrics metrics,
+        out UsWriteBindings writes, RemixConfirmationFlow? remixFlow, bool retainBehaviorDisplay)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
@@ -99,7 +103,7 @@ public static partial class UsKernelSettingsHost
         // removed identity together with its scroll position (UiSession.PruneNodesExcept).
         var bumper = new SessionRevisionBumper();
         // (translation was created above the manifest parse - the D4 budget measures with it.)
-        writes = BuildBindings(source, bumper, translation, remixFlow, metrics);
+        writes = BuildBindings(source, bumper, translation, remixFlow, metrics, retainBehaviorDisplay);
         UiHost host = VerseUiDiagnosticLog.CreateHost(
             UsUiDiagnostics.Consumer, Source,
             manifest,
@@ -126,6 +130,11 @@ public static partial class UsKernelSettingsHost
             // it draws. One place here rather than in every window; a harness fake attaches its own host
             // explicitly in the lane that needs per-host separation.
             production.AttachHost(host);
+            if (writes.BehaviorDisplay is UsBehaviorDisplayCapture display)
+            {
+                production.SetBehaviorDisplayAttachment(UiRetainedRegions.Attach(host, "b-actions",
+                    display.CaptureCurrent, display.Reads));
+            }
         }
 
         return host;
@@ -307,7 +316,7 @@ public static partial class UsKernelSettingsHost
 
     private static UsWriteBindings BuildBindings(
         IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation,
-        RemixConfirmationFlow? remixFlow, ITextMetrics metrics)
+        RemixConfirmationFlow? remixFlow, ITextMetrics metrics, bool retainBehaviorDisplay)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -316,7 +325,7 @@ public static partial class UsKernelSettingsHost
         // raw surface, because they are not write keys and the revision-clock contract does not apply to
         // them. The funnel records each key it registers, which is what lets the harness enumerate the
         // write set instead of restating it (see UsWriteBindings for the measured scope).
-        var writes = new UsWriteBindings(bindings);
+        var writes = new UsWriteBindings(bindings) { RetainBehaviorDisplay = retainBehaviorDisplay };
         var entrySource = source as IUsSettingsEntrySource;
         bindings.BindReadOnly<bool>("native-entry-unavailable", () => entrySource == null);
         if (entrySource != null)

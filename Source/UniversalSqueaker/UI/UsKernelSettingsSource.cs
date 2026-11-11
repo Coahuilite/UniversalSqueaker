@@ -301,6 +301,11 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     internal void DetachHost(UiHost released)
     {
         if (!ReferenceEquals(host, released)) return;
+        behaviorDisplayAttachment?.Dispose();
+        behaviorDisplayAttachment = null;
+        displayRows = Array.Empty<ActionTuningRecord>();
+        displayDefinitions = displayPolicy = displayCatalog = displayRoster = displayDirectory = null;
+        displayConfiguration = -1;
         host = null;
         revisionSource = null;
         uiCostActive = false;
@@ -664,7 +669,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
         VoicePacksPageModel.GetTuningWriteDomain(state, out string race, out string child);
         var result = settings.ResetActionTuningRow(actionKey, race, child);
-        rowResults[RowIdentity(actionKey, race, child)] = "US.B.Restore." + result;
+        SetRowResult(actionKey, race, child, "US.B.Restore." + result);
         return result;
     }
 

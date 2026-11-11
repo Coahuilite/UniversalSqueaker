@@ -17,7 +17,7 @@ internal static class GameBootstrap
         // API range US was compiled against meets the API range that actually loaded. It reports and keeps
         // going: throwing from a Mod constructor buries the diagnosis behind the game's generic
         // "mod failed to load" and takes the Harmony patches down with it.
-        PrerequisiteVerified = FerriteLibVersion.Require(new Version(0, 8, 0), new Version(0, 9, 0), SqueakerMod.PackageId, out string prerequisiteReport);
+        PrerequisiteVerified = FerriteLibVersion.Require(new Version(0, 9, 0), new Version(0, 10, 0), SqueakerMod.PackageId, out string prerequisiteReport);
         if (!PrerequisiteVerified)
         {
             SqueakLog.PrerequisiteUnverified(prerequisiteReport);

@@ -1,6 +1,6 @@
 # RW1.6 F09 显式消费 FL0.9 保留展示准备：采用记录
 
-状态：**已采用、未实施**。WO-FL09-RETAINED-DISPLAY-20261111 r2；PM 核定 US `a023fee` 的 UI-10 与 FL `bb7da49` 的显式区域合同（新增接缝 Public-unstable），并裁定下述两项澄清。US 消费 owner：sol-compat；FL 公共机制：sol-tiering；规格核定／源码放行：PM；RW1.6 原生消费验收：Terra。
+状态：**已采用；r3实现候选待验证**。WO-FL09-RETAINED-DISPLAY-20261111 r2；PM 核定 US `a023fee` 的 UI-10 与 FL `bb7da49` 的显式区域合同（新增接缝 Public-unstable），并裁定下述两项澄清。US 消费 owner：sol-compat；FL 公共机制：sol-tiering；规格核定／源码放行：PM；RW1.6 原生消费验收：Terra。
 
 ## Current 与历史
 
@@ -9,6 +9,8 @@
 - `a023fee`：原 proposal／ADDED UI-10／design／tasks 候选，源码仍基于 `1ee2ae0`。
 - 2026-11-11 r2：PM 正式核定采用；不可变 choices 有区分 value 的独立 snapshot 只读通道，可同 key，纯准备不能回普通 getter；Repaint 仅在有效 clip 为空或全部实际绘制范围被证明／强制裁尽时延期纯 Paint，layout rect 不自动提供证明。输入／native IDs 与不确定 paint 照常。
 - 本次采用提交：UI-10 已移入 current，两项澄清、完整来源和旧合同边界并入；[原delta](specs/ui-consumption/spec.md)改为历史指针。产品源码、guard／adapter／构建和运行未动。待 PM 核对两库 current，再发实施。
+
+r3核实FL `8f02776`／US `3e32a57`均先于源码独立采用，现已放行实施；产品变更从上述规格提交之后另行提交，详见[tasks](tasks.md)。
 
 ## Why：已有优化与仍欠的工作
 
@@ -27,4 +29,4 @@
 
 仅 `feat/rw16-fl09-display-snapshot-20261111` 采用 **FL API [0.9.0,0.10.0)／RW1.6 net472**。原 `perf/tiering-20261111`、0.8维护合同／固定DLL与另一net10工程均不迁移。
 
-原 source、direct `ReadActionField`／提交入口、未采用页面、外来 `IUsKernelSettingsSource`／preview／自定义 widget 保原合法调用条件。无能力时回到同代0.9完整路径，不伪造产品开关、菜单或绕 guard。此次采用尚未迁移实际 guard，不代表已经能装载0.9。后续源码、工程验证、原生性能和发布按 [tasks](tasks.md) 分别记账。
+原 source、direct `ReadActionField`／提交入口、未采用页面、外来 `IUsKernelSettingsSource`／preview／自定义 widget 保原合法调用条件。无能力时回到同代0.9完整路径，不伪造产品开关、菜单或绕 guard。r3实现候选已迁移本分支实际guard／resolver／readiness；可运行性仍由准确载体的工程／原生证据分别建立。后续源码、工程验证、原生性能和发布按 [tasks](tasks.md) 分别记账。

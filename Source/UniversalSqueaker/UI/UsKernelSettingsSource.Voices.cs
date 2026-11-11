@@ -45,7 +45,7 @@ public sealed partial class UsKernelSettingsSource
         var value = settings.ReadPlayerActionOverride(action, race, child);
         if (!UsBehaviorFieldValues.TryWrite(value, field, text, out bool invalid))
         {
-            if (invalid) { RowDiagnostic = "US.UI.RowInvalid"; rowResults[RowIdentity(action, race, child)] = RowDiagnostic; }
+            if (invalid) { RowDiagnostic = "US.UI.RowInvalid"; SetRowResult(action, race, child, RowDiagnostic); }
             return false;
         }
         bool committed = SqueakerMod.Instance.TryCommitBehaviorOverride("Pawn", "", race, child,
@@ -54,7 +54,7 @@ public sealed partial class UsKernelSettingsSource
             ? "US.UI.SourcePublishFailed" : "US.UI.SourceCommitted" : "US.UI.SourceRejected";
         RowDiagnostic += "\n" + action + " · " + (race == "" ? "Pawn profile" : race + (child == "" ? "" : "/" + child));
         if (diagnostic != "") RowDiagnostic += "; " + diagnostic;
-        rowResults[RowIdentity(action, race, child)] = RowDiagnostic;
+        SetRowResult(action, race, child, RowDiagnostic);
         cachedView = null;
         return committed;
     }

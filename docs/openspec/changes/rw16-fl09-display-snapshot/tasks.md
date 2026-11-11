@@ -1,6 +1,6 @@
-# Tasks — 规格已采用，源码门未放行
+# Tasks — r3实施与分层验收
 
-状态：**已采用、未实施**。唯一规范为 [UI-10](../../specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)；本清单不代替 current。Scenario 是预期，不自动授权测试。
+状态：**规格已采用；实施候选待验证**。唯一规范为 [UI-10](../../specs/ui-consumption/spec.md#requirement-ui-10-生产-f09-显式保留准备原生操作保持实时)；本清单不代替 current。Scenario 是预期，不自动授权测试。
 
 ## 规格与采用记录
 
@@ -10,15 +10,15 @@
 - [x] UI-10并入唯一现行 ui-consumption与specification入口；本分支正式采用[0.9.0,0.10.0)／RW1.6，旧0.8分支不改；原delta改历史指针，design保来源与切线。
 - [x] 本次独立docs-only本地noreply提交；只作文本／diff审阅，不改产品、tests、配置或二进制，不运行build／harness／游戏。
 
-## PM源码门（当前停止于此）
+## PM源码门（已通过）
 
-- [ ] PM核对FL／US两库current及本次采用提交后，发产品实施；本次不预做源码或运行。
+- [x] r3核定FL `8f02776`／US `3e32a57`独立采用提交，放行原owner在既定范围实施。
 
-## 放行后实施（未执行）
+## 实施与交付
 
-- [ ] US owner在同一真实工厂闭合source／sheet的自动失效和必要root观察，消费实际FL能力；纯准备不逐字段重算，不回普通getter；native／读回／Live／独立入口与完整fallback保原。
-- [ ] 仅本分支迁移实际[0.9.0,0.10.0) guard、carrier resolver／readiness、普通net472显式引用及必要原有harness／adapter／依赖描述；不绕guard，不把旧0.8分支放宽。
-- [ ] 原工厂提供真实同代on／off切线：同一固定0.9 FL／US，区域登记与原完整路径对照；保全部字段／环境／命令，不造产品开关或假菜单。未实施前不声称off已可运行。
+- [x] US owner在同一真实工厂闭合source／sheet的自动失效和必要root观察，消费实际FL能力；纯准备不逐字段重算，不回普通getter；native／读回／Live／独立入口与完整fallback保原。
+- [x] 仅本分支迁移实际[0.9.0,0.10.0) guard、carrier resolver／readiness、普通net472显式引用及必要原有harness／adapter／依赖描述；不绕guard，不把旧0.8分支放宽。
+- [x] 原工厂提供真实同代on／off切线：同一固定0.9 FL／US，区域登记与原完整路径对照；保全部字段／环境／命令，不造产品开关或假菜单。私有CreateCore不登记／实际附件Dispose边已留；切换原生行为仍由Terra验。
 - [ ] 相关既有检查与普通Release固定配对、实际MVID／精确compiler-reference收据交接；不新增单测、case或等价probe，不弱化旧断言换通过。
 - [ ] Terra按实际节奏消费同代0.9固定对：首开／暖开合／展开停手，silent row-result／draft／choices、Live／确认、父隐藏、滚动／重开／环境／关闭；分别量准备、native操作、实际目标首次绘制与完整帧超额分母。A／C-r2只作历史；144Hz或60Hz不能代签实际165Hz。
 - [ ] PM分别接受工程、原生行为和整帧性能结果；未达6.060606ms或其他未验明确留在对应责任，不以采用规格代签发布。
