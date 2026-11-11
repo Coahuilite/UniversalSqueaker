@@ -11,6 +11,12 @@ A003 synchronizes `UnityEngineImGuiStub/ImGuiStubs.cs`, `VerseStub/VerseStubs.cs
 contracts (focus/control-name/text outlet and tooltip); no FL runtime implementation is copied.
 The remaining snapshot stays at the source above.
 
+The event-tiering consumer input adds the two existing native label-style properties
+`GUIStyle.alignment` and `GUIStyle.wordWrap`, matching
+`Coahuilite/FerriteLib@5d4ae92f31b5e3f6253a98224fdd59511599092b:tools/FerriteLib.UiKit.Tests/Stubs/UnityEngineImGuiStub/ImGuiStubs.cs`.
+The selected FL0.8 execution owner uses them for display isolation. This updates the modeled runtime
+surface, not consumer assertions or native-game evidence; the consumer-specific DrawTexture overload remains.
+
 The CI/rc preparation adds only `GUI.DrawTexture(Rect,Texture)` as the native convenience overload,
 forwarding stretch/alpha=true to the existing four-argument recording/failure outlet. It is a
 consumer-owned extension, not a new producer snapshot. The gate15 exact native-menu/world/window
