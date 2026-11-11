@@ -50,6 +50,16 @@ XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / W
 
 ## 页面更新，保存与业务身份保留
 
+设置页 `UI/Layout.Schema2.xml` 显式声明 `TieredEvents="true"`，须选择包含
+`fl08-tiering-compat` 的 FL0.8 载荷。Schema 仍为 2，API 范围仍为 [0.8.0,0.9.0)。
+分层只改变展示执行：周期首个 pass、Repaint 和已宣告变化后的下一个 pass 同步布局／上下文／命中几何；
+内置展示 wrapper 的普通展示读取在 Repaint 执行。控件调用、Live 请求、资格、原生编辑／IME、
+Cancel、帮助和命中层仍逐 pass 执行；普通 getter 静默变化在下一同步点采用，Repaint 读取当前值。
+保存仍由原 owner 按 0.35 秒 debounce 处理。自定义 widget 不参与 T3 省略，翻译调用次数不作保证。
+需要依赖旧的逐 pass 展示调用时，将根属性改为 `false` 或省略；包含该属性的 manifest 不能搭配尚未支持它的旧载荷。
+Overlay／DiagnosticsMark 不是设置页，RemixConfirm 是独立确认流程，三者本次保留原执行方式。
+`DeferClippedDisplay` 保持显式 Overlay 策略，不因启用分层而默认开启。
+
 三个嵌入 Manifest 和一份命名角色 Palettes.xml 数据、准确音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持；当前 UIUX 将五工作区重组为语音管理首页与二级工具。三套配色通过一个同源 Dropdown 选择，使用 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
 
 搜索和原即时数值控件保持显式 Live。合格 primary release 请求一次，确认取消零写；已有草稿在隐藏／恢复和外部模型冲突时仍由原 editor 持有。普通 Select／Eat／scope／response 立即发布，并由单一保存 owner 按 0.35 秒 realtime debounce 写盘；真正原子 TryCommit 仍 persist-first，Committed 后的发布修复不重复写文件。详见[公开合同](specification.md)。
