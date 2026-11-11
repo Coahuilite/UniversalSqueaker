@@ -22,10 +22,13 @@ public sealed partial class UsSparseFieldWidget
         // Production opts in only the compact behavior fields. Independent/legacy widgets still
         // have their complete Draw/Measure/PointerRegions path without an attachment.
         if (Attr("LabelBind") == "") throw new NotSupportedException("Region display requires a compact sparse field.");
-        string effective = Attr("EffectiveBind") == "" ? "" : inputs.Get<string>(Attr("EffectiveBind"));
+        // Repeat Configure has already expanded binding attributes to @item/... addresses.
+        // Build receives the production item packet, whose keys are the original short fields;
+        // ordinary full-address reads remain exclusively on the Operate path below.
+        string effective = Attr("EffectiveBind") == "" ? "" : inputs.Get<string>("field-effective");
         bool invalid = InvalidDraft(ctx); // Existing editor only; Build never creates or drives it.
         string error = invalid ? ErrorText(ctx) : "";
-        var values = new FieldInputs(inputs.Get<string>(Attr("LabelBind")), effective, error,
+        var values = new FieldInputs(inputs.Get<string>("field-title"), effective, error,
             ctx.ViewWidth, UsKernelDraw.ControlHeight(ctx, 30), invalid);
         return new CompactDisplay(FieldGeometry(ctx.Metrics, UsKernelDraw.Text(ctx), values), error);
     }
