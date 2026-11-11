@@ -24,6 +24,7 @@ internal sealed class UsBehaviorDisplayCapture
     }
 
     private readonly Func<Stamp> observe;
+    private readonly Func<bool> active;
     private readonly Func<IReadOnlyList<string>> keys;
     private readonly Dictionary<string, Item> items = new(StringComparer.Ordinal);
     private Stamp accepted;
@@ -81,8 +82,8 @@ internal sealed class UsBehaviorDisplayCapture
         .ItemChoices<BehaviorScope?>("b-action-keys", "scope-options", UiRegionUse.Layout | UiRegionUse.Display)
         .ItemChoices<string>("b-action-keys", "source-options", UiRegionUse.Layout | UiRegionUse.Display)
         .ItemChoices<string>("b-action-keys", "timing-kind-options", UiRegionUse.Layout | UiRegionUse.Display);
-    internal UsBehaviorDisplayCapture(Func<Stamp> observe, Func<IReadOnlyList<string>> keys)
-    { this.observe = observe; this.keys = keys; }
+    internal UsBehaviorDisplayCapture(Func<Stamp> observe, Func<IReadOnlyList<string>> keys, Func<bool> active)
+    { this.observe = observe; this.keys = keys; this.active = active; }
 
     internal Item Add(string key, bool footer, Func<bool> visible)
     {
@@ -91,8 +92,11 @@ internal sealed class UsBehaviorDisplayCapture
         return item;
     }
 
-    internal UiRegionSnapshot CaptureCurrent()
+    internal UiRegionSnapshot? CaptureCurrent()
     {
+        // The actual enclosing page gate owns this domain. Registration may precede materialization;
+        // do not enter the hidden page's business/item getters merely to certify an old packet.
+        if (!active()) return null;
         Stamp current = observe(); // Every legal boundary; no leaf reads/factory on this return path.
         if (snapshot != null && current.Equals(accepted)) return snapshot;
         var ordered = keys();

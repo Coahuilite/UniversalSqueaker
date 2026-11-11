@@ -61,7 +61,7 @@ public static partial class UsKernelSettingsHost
                 production.ObserveBehaviorDisplayInputs(), production.BehaviorRowResultRevision, sheetRevision,
                 t.TranslationRevision, s.TuningSelectedAction, s.SourceChangeDiagnostic,
                 System.Globalization.CultureInfo.CurrentCulture.Name),
-                () => b.Get<IReadOnlyList<string>>("b-action-keys"));
+                () => b.Get<IReadOnlyList<string>>("b-action-keys"), () => s.Page == "Behavior");
             writes.BehaviorDisplay = capture;
         }
 #endif
