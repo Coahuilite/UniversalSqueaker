@@ -48,9 +48,9 @@ public sealed partial class UsSparseFieldWidget
         else
         {
             bool wasInvalid = InvalidDraft(ctx);
-            ctx.Controls.Edit(field, ctx, Binding, ctx.Bindings.Get<string>(Binding), x => x, Parse, false, false,
+            ctx.Controls.Edit(field, ctx, Binding, ctx.Bindings.Get<string>(Binding), FormatText, Parse, false, false,
                 value => ctx.Bindings.Set(Binding, value), () => ctx.Bindings.Get<string>(Binding));
-            observedEditor = ctx.Controls.Editor<string>(ctx, Binding, x => x, Parse);
+            observedEditor = ctx.Controls.Editor<string>(ctx, Binding, FormatText, Parse);
             if (wasInvalid != InvalidDraft(ctx)) ctx.Invalidate();
             if (observedEditor.Modified || !observedEditor.Valid)
                 UiThemeDraw.Solid(ctx.Drawing, new UiLayoutRect(field.X, field.YMax - 2, field.Width, 2),

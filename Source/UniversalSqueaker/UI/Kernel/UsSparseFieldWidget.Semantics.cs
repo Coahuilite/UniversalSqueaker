@@ -44,8 +44,8 @@ public sealed partial class UsSparseFieldWidget : IUiDescriptiveWidget, IUiSeman
                 && action.Operation != UiToolOperation.CommitEdit && action.Operation != UiToolOperation.CancelEdit)) return false;
             // Exactly the ordinary Edit's string codec, non-Live policy and typed binding route.
             bool handled = ctx.Controls.EditSemantic<string>(ctx, Binding, action.Operation, value.Text,
-                text => text, Parse, false, candidate => ctx.Bindings.Set(Binding, candidate), () => ctx.Bindings.Get<string>(Binding));
-            if (handled) observedEditor = ctx.Controls.Editor<string>(ctx, Binding, text => text, Parse);
+                FormatText, Parse, false, candidate => ctx.Bindings.Set(Binding, candidate), () => ctx.Bindings.Get<string>(Binding));
+            if (handled) observedEditor = ctx.Controls.Editor<string>(ctx, Binding, FormatText, Parse);
             return handled;
         }
         if (action.Operation != UiToolOperation.Select || action.Part != "option" || Attr("OptionsBind") == ""

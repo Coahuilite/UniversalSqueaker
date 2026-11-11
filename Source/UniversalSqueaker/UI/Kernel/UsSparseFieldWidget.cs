@@ -12,6 +12,9 @@ public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout, I
     public const string KindName = "us/sparse-field";
     private UiElementSpec spec = UiElementSpec.Empty;
     private UiEditSession<string>? observedEditor;
+    // Edit and direct Editor configure the same string codec. Separate identity lambdas
+    // have different method identities and would invalidate the retained region each pass.
+    private static readonly Func<string, string> FormatText = text => text;
     public string Kind => KindName;
     public static void Register() => UiWidgetRegistry.Define(new UiWidgetDefinition(UsKernelWidgetRegistrar.Scope,
         KindName, () => new UsSparseFieldWidget(), new UiAttributeSchema(new UiAttributeDefinition("Id"),
@@ -77,9 +80,9 @@ public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout, I
             UsKernelDraw.StyledDropdown(fieldRect, binding, ctx, ctx.Bindings.Get<string>(binding), choices, value => ctx.Bindings.Set(binding, value));
             return;
         }
-        ctx.Controls.Edit(fieldRect, ctx, binding, ctx.Bindings.Get<string>(binding), x => x, Parse, false, false,
+        ctx.Controls.Edit(fieldRect, ctx, binding, ctx.Bindings.Get<string>(binding), FormatText, Parse, false, false,
             value => ctx.Bindings.Set(binding, value), () => ctx.Bindings.Get<string>(binding));
-        var editor = ctx.Controls.Editor<string>(ctx, binding, x => x, Parse);
+        var editor = ctx.Controls.Editor<string>(ctx, binding, FormatText, Parse);
         observedEditor = editor;
         // Feedback is drawn through the normal theme, never a second text control.
         if (editor.Modified || !editor.Valid)
@@ -116,9 +119,9 @@ public sealed partial class UsSparseFieldWidget : IUiWidget, IUiPointerLayout, I
         else
         {
             bool wasInvalid = InvalidDraft(ctx);
-            ctx.Controls.Edit(field, ctx, Binding, ctx.Bindings.Get<string>(Binding), x => x, Parse, false, false,
+            ctx.Controls.Edit(field, ctx, Binding, ctx.Bindings.Get<string>(Binding), FormatText, Parse, false, false,
                 value => ctx.Bindings.Set(Binding, value), () => ctx.Bindings.Get<string>(Binding));
-            observedEditor = ctx.Controls.Editor<string>(ctx, Binding, x => x, Parse);
+            observedEditor = ctx.Controls.Editor<string>(ctx, Binding, FormatText, Parse);
             if (wasInvalid != InvalidDraft(ctx)) ctx.Invalidate();
             if (observedEditor.Modified || !observedEditor.Valid)
                 UiThemeDraw.Solid(ctx.Drawing, new UiLayoutRect(field.X, field.YMax - 2, field.Width, 2), ctx.Theme[observedEditor.Valid ? UiPaletteRole.Accent : UiPaletteRole.DangerBorder]);
