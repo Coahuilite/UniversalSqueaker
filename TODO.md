@@ -8,7 +8,7 @@
 ## Product work and outstanding acceptance
 
 Items here describe product needs and retained acceptance limits; they do not authorize immediate execution.
-Select work under the assigned task and permissions. This root remains the B / FL0.8 maintenance line; the completed independent FL0.9 stage is not a B port or B native acceptance. This session is closing documentation and existing evidence only; PM / the maintainer retain outstanding user acceptance.
+Select work under the assigned task and permissions. The current0.6.x line adopts FL0.9 with separate native1.6/net472 and1.7/net10 build/payload routes; see [current build evidence](docs/build-and-debug.md). The complete Host preservation fixture still targets a retired PackCards control and remains red; keep its failure visible. Native1.7 game/audio/performance acceptance and formal publication remain outstanding. The older B/FL0.8 checkpoint below retains its historical artifacts and acceptance scope.
 
 - **Current native-r3 checkpoint:** PM accepted engineering and the identified partial RW1.6 native
   results, not completed performance or stable60FPS. The [engineering record](docs/development/ui-attack-20261110.md)

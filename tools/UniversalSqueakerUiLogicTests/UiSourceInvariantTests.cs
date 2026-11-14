@@ -153,8 +153,9 @@ internal static class UiSourceInvariantTests
         // write keys. The count is pinned so a new tool button is a deliberate act.
         int devPanelExempt = CountWriteRegistrations(File.ReadAllText(devPanelExemption));
         // WO r8 adds only dev-sample; target/capture/outline/page/report remain the same nine.
-        Assert(devPanelExempt == 10,
-            "UI/Dev/UsDevPanelWindow.cs is expected to carry 10 write registrations (its own host and"
+        // The accepted operation sampler adds exactly dev-operation / dev-operation-end to the same owner.
+        Assert(devPanelExempt == 12,
+            "UI/Dev/UsDevPanelWindow.cs is expected to carry 12 write registrations (its own host and"
             + " clock, exempt from the settings-page funnel), got " + devPanelExempt
             + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
 
@@ -759,10 +760,14 @@ internal static class UiSourceInvariantTests
                 throw new InvalidOperationException("Unrecognized manifest help-topic producer: " + binding);
             string behavior = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.Behavior.cs"));
             var topic = System.Text.RegularExpressions.Regex.Match(behavior,
-                @"b\.BindReadOnly<string>\(Address\(""field-topic""\), \(\) => Contribution\(field\) \? ""(?<contribution>[^""]+)"" : ""(?<prefix>[^""]+)"" \+ field\);");
+                @"Read<string>\(""field-topic"", \(\) => Contribution\(field\) \? ""(?<contribution>[^""]+)"" : ""(?<prefix>[^""]+)"" \+ field\);");
             var fields = System.Text.RegularExpressions.Regex.Match(behavior,
                 @"var fields = new\[\] \{(?<items>[^}]+)\}\s*\.Concat\(native\.ContributionFields\(");
-            if (!topic.Success || !fields.Success)
+            // The adopted region consumer routes the same ordinary read through Read<T>.
+            // Keep proving the binding owner, not just accepting an arbitrary call of that name.
+            bool ordinaryRead = System.Text.RegularExpressions.Regex.IsMatch(behavior,
+                @"void Read<T>\(string leaf, Func<T> read\)\s*\{\s*b\.BindReadOnly<T>\(Address\(leaf\), read\);");
+            if (!topic.Success || !fields.Success || !ordinaryRead)
                 throw new InvalidOperationException("The bound field-topic/retained field-set producer changed; re-point this guard deliberately.");
             foreach (System.Text.RegularExpressions.Match field in System.Text.RegularExpressions.Regex.Matches(
                          fields.Groups["items"].Value, "\"([^\"]+)\""))

@@ -42,6 +42,37 @@ published-carrier/version/digest/source pairing gates. A development build does 
 satisfy formal publication. Branch push runs CI/privacy, cache and log-artifact steps; only `v*` tags
 trigger the separate Release workflow. Never add a tag/Release to obtain a development compiler input.
 
+### Current local engineering evidence (2026-11-14)
+
+Ordinary Release product source `e2951228bb3d599eee79e64774c7a3773d16d773` compiled both targets
+against FL source `5d12091c8a0a74059b050cdc434e4360b8974543`. Both product builds and the original
+Host build had zero warnings/errors. Native1.7 used the PM-identified original1.7.5000 rev1275
+references, not the current1.6 installation or platform doubles.
+
+| Actual pair | US MVID | FL MVID |
+| --- | --- | --- |
+| RW1.6 / net472 | `6dff2948-fa21-401a-86a0-53d41bdbbaaa` | `4627453c-7da5-4800-b431-dcd2fa2887df` |
+| RW1.7 / net10 | `36971a09-10ec-4f3f-9ed0-258ddfa81450` | `bfff0d2c-f296-4151-97c0-846386885c94` |
+
+The local `dist/pub14-dual-target/UniversalSqueaker` is the combined US stage; its two actual DLLs
+route through distinct1.6/1.7 LoadFolders. Both compiler-reference receipts were checked by the
+ordinary stager. The original one-carrier stage still supports only1.6. The existing dual Dev caller,
+artifact-selection acceptance/refusal/retention check, and UI-logic suite passed. Existing consumer
+ordinary32, manifest479, dynamic55, shell13 and old-v4 thirteen assertions passed; the latter reaches
+the actual Output/Presets scroll containers that replaced the failed old `content-scroll` fixture.
+
+Two existing source-invariant pins were repaired to follow already-adopted production: field-topic
+now goes through `Read<T>` (which still registers `BindReadOnly`), and the developer panel's exact
+count is12 including `dev-operation`/`dev-operation-end` from `9c36401`. The original help bidirectional
+coverage, binding-owner proof, case set and strict count remain; no test cases were added.
+
+**The complete Host suite remains red** at the retained preservation case's old
+`pack-card-row-expand#us.sang` input, absent from the accepted current page. The same failure was
+observed with r5 before this target change and with the new fixed FL. It is not skipped or converted
+to a pass: `verify-local.ps1` and development CI keep their complete entry and fail there. The scoped
+build/consumer/staging evidence above is not a green full-CI or release conclusion. Native1.6/1.7
+rendering, audio and performance acceptance still require their actual runtime owner; no game ran.
+
 ### Preserved r5 RW1.6 engineering route
 
 The independent `feat/rw16-fl09-display-snapshot-20261111` branch consumes **FL API [0.9.0,0.10.0)**,

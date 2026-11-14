@@ -15,9 +15,6 @@ param(
     [string]$FerriteLibArtifactPath,
     # Optional isolated build input. Existing channel callers retain their original default.
     [string]$PayloadDllPath,
-    # Opt into the complete dual-target package. Omission keeps the original1.6-only caller.
-    [string]$FerriteLib17ArtifactPath,
-    [string]$RimWorld17PayloadDllPath,
     # The release channel publishes to strangers: its payload must not carry a dev suffix, its base
     # version must equal the label on the box, and it must have linked a Release carrier. The dev
     # rehearsal skips this - by definition it is an unnamed build.
@@ -29,7 +26,10 @@ param(
     # Archive file name without extension. The release asset name is a reconciliation target (exactly
     # `UniversalSqueaker-<tag>.zip`), so the caller that knows the tag says the name. The default keeps
     # the historical label form.
-    [string]$ArchiveName
+    [string]$ArchiveName,
+    # Opt into the complete dual-target package. Omission keeps the original1.6-only caller.
+    [string]$FerriteLib17ArtifactPath,
+    [string]$RimWorld17PayloadDllPath
 )
 
 Set-StrictMode -Version Latest

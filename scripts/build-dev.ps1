@@ -1,9 +1,9 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
     [string]$FerriteLibArtifactPath,
+    [string]$OutputRoot,
     [string]$FerriteLib17ArtifactPath,
-    [string]$RimWorld17Dir,
-    [string]$OutputRoot
+    [string]$RimWorld17Dir
 )
 
 Set-StrictMode -Version Latest

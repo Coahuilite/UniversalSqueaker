@@ -5,11 +5,11 @@ param(
     # CONTENTS of the stage dir, so unzipping into Mods/ scattered a loose LoadFolders.xml. The engine can
     # still write a correctly shaped archive when someone asks for one; nothing on this path asks.
     [string]$FerriteLibArtifactPath,
-    [string]$FerriteLib17ArtifactPath,
-    [string]$RimWorld17Dir,
     [switch]$Zip,
     # Optional fixed delivery; omitted preserves the existing dist/dev and build slots.
-    [string]$OutputRoot
+    [string]$OutputRoot,
+    [string]$FerriteLib17ArtifactPath,
+    [string]$RimWorld17Dir
 )
 
 Set-StrictMode -Version Latest
