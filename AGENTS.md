@@ -39,8 +39,8 @@ RW1.7/net10 compiler inputs and payload routes. Scope adoption is not proof that
 implemented or accepted: use the current status in [the build guide](docs/build-and-debug.md) and
 [the adopted integration change](docs/openspec/changes/us06-fl09-dual-target/proposal.md).
 The r5 branch preserves its exact RW1.6 candidate and native evidence; do not transfer those claims
-to RW1.7. Keep old0.8 branches, payloads and existing caller contracts intact. US never builds or
-bundles FL. Never substitute a1.6 assembly for a1.7/native payload or import another occupied tree's
+to RW1.7. Keep old0.8 branches, payloads and existing caller contracts intact. Local consumers never rebuild or bundle FL. Development CI may build ordinary Release from an
+explicit immutable public FL0.9 source commit; formal releases retain their published-carrier pairing gates. Never substitute a1.6 assembly for a1.7/native payload or import another occupied tree's
 uncommitted work. Dependency selection, local engineering, native acceptance and publication remain
 separate authorities.
 
