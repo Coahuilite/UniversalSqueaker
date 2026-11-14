@@ -7,6 +7,6 @@
 - [x] 普通Release双版、实际compiler ref／双身份、原consumer32／479／55／shell13／old-v4十三及UI-logic通过；记录见现行build guide。
 - [x] 开发CI固定FL公开完整commit、普通Release来源、原完整US入口／载体收据；正式Release门槛不改。不外发专有1.7依赖。
 
-完整Host仍在已登记的旧PackCards preservation场景失败；保留失败及原完整CI入口，不删lane或弱化语义断言。不能把本次双目标工程通过称为整套CI绿色或1.7原生验收。
+完整Host仍在已登记的旧PackCards preservation场景失败；本地完整CI rehearsal另停在gate2的临时目录创建权限拒绝（gate1通过，后续未到达）。两项分别记录，保留原完整CI入口，不删lane或弱化语义断言。不能把本次双目标工程通过称为整套CI绿色或1.7原生验收。
 
 推送门：公开FL pin实际可达、实际index及完整可达历史隐私门禁通过后，以正常fast-forward推进0.6.x；实际远端tip由Git ref唯一记录，私有执行履历交原scratch。无tag／Release／部署。

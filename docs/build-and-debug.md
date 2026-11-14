@@ -69,7 +69,7 @@ coverage, binding-owner proof, case set and strict count remain; no test cases w
 **The complete Host suite remains red** at the retained preservation case's old
 `pack-card-row-expand#us.sang` input, absent from the accepted current page. The same failure was
 observed with r5 before this target change and with the new fixed FL. It is not skipped or converted
-to a pass: `verify-local.ps1` and development CI keep their complete entry and fail there. The scoped
+to a pass: `verify-local.ps1` and development CI keep their complete entry. A local rehearsal of that complete entry passed gate1, then stopped at gate2 because the existing ConfigCopy executable was denied creation of its isolated temporary directory (UnauthorizedAccessException); gates3 onward were not reached in that run. The direct Host result above is separate from that environment failure. The scoped
 build/consumer/staging evidence above is not a green full-CI or release conclusion. Native1.6/1.7
 rendering, audio and performance acceptance still require their actual runtime owner; no game ran.
 
