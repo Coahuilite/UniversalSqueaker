@@ -12,9 +12,9 @@ namespace UniversalSqueaker.UI;
 /// Layout can promise a rect but cannot promise that a translated string fits it, and no build-time
 /// harness can know: real glyph advances only exist inside the game's font engine. This turns that
 /// unknown into evidence. While the window is open and detailed logging is effective, every label its
-/// host draws is measured against the rect it was given, and each distinct failure is written as one
-/// <c>usdiag evt=ui.text.overflow</c> record carrying the element path, the failing axis, the font and
-/// the need/have pixel pair.
+/// host draws is measured against the rect it was given. Adopted Hosts publish native fit findings
+/// through FL's domain output; their subscription retains the original facts. Independently constructed
+/// legacy callers keep US forwarding without having to adopt a new logger.
 ///
 /// The overflowing text itself is deliberately not logged: labels embed third-party pack and Def names,
 /// and the element path already identifies the exact code site.
@@ -33,11 +33,9 @@ namespace UniversalSqueaker.UI;
 /// <c>UsAuditRoutingLaneTests</c> rather than described here.
 /// </para>
 /// <para>
-/// <b>The channel is buffered, so the consumer drains it.</b> The legacy sink was push-based; a
-/// subscription is a bounded ring, so this scope writes out the events it has not written yet once per
-/// pass (and once more when the window closes). The ring's own dedup table is what keeps a repeating
-/// finding to one line, exactly as the process-wide dedup set did, and the per-pass drain is what keeps a
-/// frame's findings from being pushed out of the default 32-event ring before they are read.
+/// <b>Memory and native output have separate owners.</b> This scope reads the bounded subscription
+/// for its existing explicit timing aggregate and legacy forwarding, without clearing adopted facts
+/// or reprinting FL fit/style/recovery output. Geometry remains an explicit US tool.
 /// </para>
 /// <para>
 /// <b>Policy stays with the window.</b> Whether to audit at all is the caller's dev-logging decision; this
@@ -114,11 +112,24 @@ public sealed class UsTextFitAudit : IDisposable
     private long loggedThrough;
     private bool disposed;
     private bool timingObservation;
+    private bool independentTiming;
+    private Action<Func<string>> timingTrace = SqueakLog.LayoutTrace;
     private int timingFirstPass, arrangeSamples, drawSamples;
     private double arrangeTotal, arrangeMax, drawTotal, drawMax;
 
-    internal void BeginTimingObservation()
+    internal void BeginTimingObservation(Action<Func<string>>? trace = null)
     {
+        independentTiming = trace != null;
+        timingTrace = trace ?? SqueakLog.LayoutTrace;
+        if (UsUiDiagnostics.IsAdopted(host))
+        {
+            // Adopted fit output is already published at production time. Start this timing window
+            // after the retained history, without clearing facts owned by other readers.
+            var history = subscription.Snapshot();
+            if (history.Count > 0) loggedThrough = history[history.Count - 1].Sequence;
+        }
+        arrangeSamples = drawSamples = 0;
+        arrangeTotal = arrangeMax = drawTotal = drawMax = 0;
         timingObservation = true;
         timingFirstPass = host.Session.Frame;
         // One existing phase event per completed invocation, buffered here rather than logged.
@@ -130,7 +141,7 @@ public sealed class UsTextFitAudit : IDisposable
     internal void EndTimingObservation(bool partial)
     {
         if (!timingObservation) return;
-        Publish();
+        if (independentTiming || !liveWindowPolicy || SqueakLog.ShouldEmitDev) Publish();
         timingObservation = false;
         try { subscription.TimingEnabled = false; }
         catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditTimingStop", error); }
@@ -138,8 +149,10 @@ public sealed class UsTextFitAudit : IDisposable
             System.Globalization.CultureInfo.InvariantCulture,
             "UI.cost phase={0} passes={1} samples={2} total_ms={3:F3} max_ms={4:F3} partial={5}",
             phase, host.Session.Frame - timingFirstPass, samples, total, max, partial);
-        SqueakLog.LayoutTrace(() => Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
-        SqueakLog.LayoutTrace(() => Summary("draw", drawSamples, drawTotal, drawMax));
+        timingTrace(() => Summary("arrange", arrangeSamples, arrangeTotal, arrangeMax));
+        timingTrace(() => Summary("draw", drawSamples, drawTotal, drawMax));
+        independentTiming = false;
+        timingTrace = SqueakLog.LayoutTrace;
     }
 
     /// <summary>
@@ -147,6 +160,21 @@ public sealed class UsTextFitAudit : IDisposable
     /// fix 4). It gates the process-wide detection switch and the ring drain, NOT the geometry commands.
     /// </summary>
     private bool auditsFit;
+    private bool liveWindowPolicy;
+
+    internal static UsTextFitAudit OpenForWindow(UiHost host)
+    {
+        var scope = Open(host, SqueakLog.ShouldEmitDev);
+        scope.liveWindowPolicy = true;
+        scope.SynchronizePolicy(SqueakLog.ShouldEmitDev);
+        return scope;
+    }
+
+    internal static void SynchronizeWindowPolicies()
+    {
+        foreach (var pair in openScopes)
+            if (pair.Value.liveWindowPolicy) pair.Value.SynchronizePolicy(SqueakLog.ShouldEmitDev);
+    }
 
     /// <summary>The host this scope audits. Held so a per-host command can find this scope and no other.</summary>
     private readonly UiHost host;
@@ -268,23 +296,40 @@ public sealed class UsTextFitAudit : IDisposable
     }
 
     /// <summary>
-    /// Writes out the findings this host published since the last call. Called once per pass (the ring is
-    /// bounded, so a window that only drained at close could lose findings) and once more on dispose.
+    /// Reads new subscription facts for US's aggregate or legacy output once per pass and on dispose.
     /// <para>
-    /// <b>No geometry here (R3-B fix 6).</b> The explicit report is the geometry emission path now: a
-    /// business press must not spend a whole dump on a developer instrument merely because capture is on. The
-    /// fit/recovery half is untouched.
+    /// Geometry is consumed only for an explicit pending report. Capture alone, including an ordinary
+    /// business press while capture is on, never spends a dump. The fit/recovery half is unchanged.
     /// </para>
     /// </summary>
     public void Publish()
     {
         if (disposed || !subscription.IsActive) return;
+        if (liveWindowPolicy) SynchronizePolicy(SqueakLog.ShouldEmitDev);
+
+        // The target window owns completion, including requests from its companion panel.
+        // A geometry-only request must not depend on fit logging or on the panel staying open.
+        if (reportPending)
+        {
+            try { ConsumeGeometryReport(CurrentCapturePass()); }
+            catch (Exception error) when (SqueakLog.IsOrdinary(error))
+            {
+                reportPending = false;
+#if US_DEV
+                reportRequestPass = -1;
+#endif
+                SqueakLog.DiagnosticsUiFailed("GeometryReport", error);
+            }
+        }
 
         if (!auditsFit && !timingObservation)
         {
             // A geometry-only scope does not audit text, and must not consume the ring another window reads.
             return;
         }
+
+        bool adopted = UsUiDiagnostics.IsAdopted(host);
+        if (adopted && !timingObservation) return;
 
         try
         {
@@ -294,10 +339,10 @@ public sealed class UsTextFitAudit : IDisposable
                 UiDiagnosticEvent found = events[i];
                 if (found.Sequence <= loggedThrough) continue;
                 loggedThrough = found.Sequence;
-                if (found.Kind == UiDiagnosticKind.Fit && found.Overflow.HasValue)
-                {
-                    Report(found.Overflow.Value);
-                }
+                // Adopted FL publishes fit/style/recovery at production time. Independent legacy
+                // audit callers retain their original forwarding without an adoption prerequisite.
+                if (!adopted && found.Kind == UiDiagnosticKind.Fit && found.Overflow.HasValue)
+                    ReportLegacy(found.Overflow.Value);
                 else if (timingObservation && found.Kind == UiDiagnosticKind.Timing && found.Timing.HasValue)
                 {
                     UiDiagnosticTiming timing = found.Timing.Value;
@@ -322,6 +367,29 @@ public sealed class UsTextFitAudit : IDisposable
         }
     }
 
+    /// <summary>Live request for this US window only. This counter does not arbitrate third-party owners.</summary>
+    public void SynchronizePolicy(bool fitRequested)
+    {
+        if (disposed) return;
+        UsUiDiagnostics.Synchronize(host);
+        if (liveWindowPolicy && !fitRequested && timingObservation && !independentTiming)
+        {
+            timingObservation = false;
+            subscription.TimingEnabled = false;
+        }
+        if (auditsFit == fitRequested) return;
+        auditsFit = fitRequested;
+        if (fitRequested)
+        {
+            if (openWindows++ == 0) UiFitAudit.Enabled = true;
+        }
+        else if (--openWindows <= 0)
+        {
+            openWindows = 0;
+            UiFitAudit.Enabled = false;
+        }
+    }
+
     /// <summary>
     /// Final drain, then releases this window's hold on the process-wide detection switch.
     /// <para>
@@ -333,28 +401,31 @@ public sealed class UsTextFitAudit : IDisposable
     public void Dispose()
     {
         if (disposed) return;
-        EndTimingObservation(true);
-        Publish();
-        disposed = true;
-
-        try { DisableGeometry(); }
-        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditGeometryStop", error); }
-        // This window's entry goes with it, so a later per-host command cannot find a closed window's scope
-        // and drive an instrument nobody is drawing.
-        for (int i = openScopes.Count - 1; i >= 0; i--)
+        try { EndTimingObservation(true); Publish(); }
+        finally
         {
-            if (ReferenceEquals(openScopes[i].Value, this)) openScopes.RemoveAt(i);
-        }
-
-        if (auditsFit)
-        {
-            auditsFit = false;
-            openWindows--;
-            if (openWindows <= 0)
+            disposed = true;
+            timingTrace = SqueakLog.LayoutTrace;
+            independentTiming = false;
+            // Remove the strong registry borrow even if the final observer drain fails.
+            for (int i = openScopes.Count - 1; i >= 0; i--)
+                if (ReferenceEquals(openScopes[i].Value, this)) openScopes.RemoveAt(i);
+            if (auditsFit)
             {
-                openWindows = 0;
-                UiFitAudit.Enabled = false;
+                auditsFit = false;
+                if (--openWindows <= 0) { openWindows = 0; UiFitAudit.Enabled = false; }
             }
+
+            try { DisableGeometry(); }
+            catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditGeometryStop", error); }
+#if US_DEV
+            // Capture-off preserves outline during use; terminal scope disposal stops both.
+            if (instrumentAvailable)
+            {
+                try { subscription.GeometryOverlay = false; }
+                catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("AuditOutlineStop", error); }
+            }
+#endif
         }
     }
 
@@ -640,10 +711,10 @@ public sealed class UsTextFitAudit : IDisposable
     /// <summary>The scope auditing <paramref name="host"/>, or null. Host identity, not a window type.</summary>
     private static UsTextFitAudit? FindScope(UiHost? host)
     {
-        if (host == null) return null;
+        if (host == null || !host.Session.IsActive) return null;
         for (int i = 0; i < openScopes.Count; i++)
         {
-            if (ReferenceEquals(openScopes[i].Key, host)) return openScopes[i].Value;
+            if (ReferenceEquals(openScopes[i].Key, host) && !openScopes[i].Value.disposed) return openScopes[i].Value;
         }
 
         return null;
@@ -681,10 +752,11 @@ public sealed class UsTextFitAudit : IDisposable
         instrumentProbed = true;
         try
         {
-            // The carrier's own refusal is the probe: the getter answers false on a release payload, so only
-            // the SETTER's documented throw distinguishes "off" from "cannot".
-            subscription.GeometryEnabled = true;
-            subscription.GeometryEnabled = false;
+            // The fixed 0.8 setter refuses every write on Release. Reassign the existing outline
+            // value on Dev: no capture allocation, clearing, or change to either requested switch.
+            // Enabling then disabling GeometryEnabled would destroy an existing capture.
+            bool outline = subscription.GeometryOverlay;
+            subscription.GeometryOverlay = outline;
             instrumentAvailable = true;
         }
         catch (InvalidOperationException ex)
@@ -759,23 +831,15 @@ public sealed class UsTextFitAudit : IDisposable
         }
     }
 
-    private static void Report(UiOverflowReport report)
+    private static void ReportLegacy(UiOverflowReport report)
     {
-        SqueakLog.LabelOverflow(
-            report.ElementPath,
-            report.Axis == UiOverflowAxis.Width ? "width" : "height",
-            FontName(report.Font),
-            report.Needed,
-            report.Available);
-    }
-
-    private static string FontName(UiFont font)
-    {
-        return font switch
-        {
-            UiFont.Tiny => "tiny",
-            UiFont.Medium => "medium",
-            _ => "small"
-        };
+        SqueakLog.LabelOverflow(report.ElementPath, report.Axis == UiOverflowAxis.Width ? "width" : "height",
+            report.Font == UiFont.Tiny ? "tiny" : report.Font == UiFont.Medium ? "medium" : "small", report.Needed, report.Available);
+        UiColour? ink = UiTextFonts.ColourOf(report);
+        if (UiTextFonts.FontOf(report).Size.HasValue || ink.HasValue)
+            SqueakLog.LayoutTrace(() => "UI.text.actual element=" + report.ElementPath
+                + " font=" + UiTextFonts.FontOf(report) + " colour=" + (ink.HasValue
+                    ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},{1},{2},{3}",
+                        ink.Value.Red, ink.Value.Green, ink.Value.Blue, ink.Value.Alpha) : "unknown"));
     }
 }

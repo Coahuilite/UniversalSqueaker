@@ -2,7 +2,7 @@
 
 让准确主体在真实事实与合法机会成立时，从允许的声音供给选音，经局部调制和自有原生输出回应；保存、采用、派发和听见分别有自己的含义。
 
-**状态：现行。** 本入口及下列正文自2026-10-29在本地取代旧整编规格。适用US0.6.x／RimWorld1.6.4871（net472）；API及Config面向首次公开基线。规格采用不是发布或运行验收；[实现偏差与证据](development/specification/open-issues.md)可直接查到。
+**状态：现行。** 本入口及下列正文自2026-10-29在本地取代旧整编规格。适用US0.6.x／RW1.6（net472）及RW1.7（net10），按下列双目标范围分别构建与验证；API及Config面向首次公开基线。规格采用不是发布或运行验收；[实现偏差与证据](development/specification/open-issues.md)可直接查到。
 
 ## 当前开发线与双目标（2026-11-14采用）
 
@@ -38,8 +38,9 @@ UI／帮助／诊断 ← 有效配置解释、当次结果和真实实例证据
 | [VF1→实际选音](openspec/specs/fallback-adoption/spec.md) | 独立文件成功后的真实消费者、准确反馈、准入重启 | VF1维护者 |
 | [原版事实与资源](openspec/specs/game-facts/spec.md) | 真实接缝、canonical域、依赖隔离与资源绑定 | 1.6适配维护者 |
 | [完整Core Work](openspec/specs/game-work/spec.md) | 20 WorkType／105 Giver／78 Job-driver精确范围 | Work适配维护者 |
-| [UI消费](openspec/specs/ui-consumption/spec.md) | 同窗／草稿、过滤、工具、帮助、布局与颜色默认 | UI消费者 |
+| [UI消费](openspec/specs/ui-consumption/spec.md) | 同窗／草稿、过滤、工具、帮助、布局与颜色默认；UI-10显式保留准备（双目标范围已采用，工程／原生分别验证） | UI消费者 |
 | [诊断与证据](openspec/specs/diagnostics/spec.md) | mode／级别／失败隔离、结果和运行证据层 | 日志／诊断维护者 |
+| [同源开发预览](openspec/specs/developer-preview/spec.md) | 隔离样例、完整窗口、热改／agent、工具与业务诊断分工 | UI／开发辅助维护者 |
 
 不按类数或审计行数拆spec，不要求新增运行时连接类。具体符号与当前生产者→入口→消费者在[实现映射](development/specification/implementation.md)，逐条来源、合并和后续替代在[覆盖表](development/specification/coverage.md)。两者不另定义行为。
 
@@ -49,7 +50,7 @@ UI／帮助／诊断 ← 有效配置解释、当次结果和真实实例证据
 - 作者：从[0.6作者指南](us-kernel-0.6-authoring-zh.md)和[可加载示例](examples/0.6/)入手，再读本页关联能力。独立根、多级继承和NonPawn中立模型合法；完整NonPawn原生宿主仍非本版交付。
 - 修改实现：读相应能力及直接连接，再看[事实／版本映射](development/specification/facts.md)、[开放项](development/specification/open-issues.md)和[证据ID](development/specification/evidence.md)，不要从bug倒改合同。
 - 新增模块／内聚新核心／责任迁移：沿[轻量变更方法](development/specification/changes.md)给实际需要、owner／寿命、最小完整切片和采用／退出；无新平台或消费者数量门槛。
-- 构建与发布：仍用[构建](build-and-debug.md)、[固定FL消费者](fl08-consumer-migration-zh.md)、[发布流程](release-runbook-zh.md)与[隐私门禁](push-privacy-gate.md)。本规格没有运行或发布权限。
+- 构建与发布：沿[构建](build-and-debug.md)、[发布流程](release-runbook-zh.md)与[隐私门禁](push-privacy-gate.md)；[固定FL0.8消费者](fl08-consumer-migration-zh.md)保旧线身份，不作为本分支0.9接线方法。0.9的guard／精确引用迁移与同代off切线见[采用后任务](openspec/changes/rw16-fl09-display-snapshot/tasks.md)及[消费设计](openspec/changes/rw16-fl09-display-snapshot/design.md)。按r3运行相关既有检查和普通构建；真实游戏归原运行owner，不授权发布。
 
 ## 历史、兼容与尚未兑现的保证
 

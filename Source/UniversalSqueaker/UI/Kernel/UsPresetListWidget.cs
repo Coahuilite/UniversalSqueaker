@@ -36,7 +36,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private const float XenotypeIndentNarrow = 12f;
     private const float LeftPadding = 10f;
     private const float ImportButtonWidth = 76f;
-    private const float ImportButtonHeight = 20f;
+    private const float ImportButtonHeight = 28f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
 
@@ -77,7 +77,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         IReadOnlyList<BaselinePresetView> presets = ctx.Bindings.TryGet("baseline-presets", out IReadOnlyList<BaselinePresetView> p)
             ? p
             : Array.Empty<BaselinePresetView>();
-        if (presets.Count == 0) return TopPadding + 48f + BottomPadding;
+        if (presets.Count == 0) return TopPadding + EmptyHeight(ctx, BodyWidth(ctx)) + BottomPadding;
 
         float width = BodyWidth(ctx);
         float bodyHeight = TopPadding + BaselineNoteHeight(ctx, width) + RowGap;
@@ -87,7 +87,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             if (!preset.Expanded) continue;
             if (!string.IsNullOrEmpty(preset.Description))
             {
-                bodyHeight += ctx.Metrics.MeasureText(preset.Description, UiFont.Tiny, Math.Max(1f, width - 16f)) + 6f + RowGap;
+                bodyHeight += UsKernelDraw.Text(ctx, UiFont.Tiny).MeasureText(preset.Description, DescriptionWidth(width)) + 6f + RowGap;
             }
 
             foreach (BaselineRaceView race in preset.Races)
@@ -130,13 +130,9 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             : Array.Empty<BaselinePresetView>();
         if (presets.Count == 0)
         {
-            UsKernelDraw.Label(ctx.Drawing,
-                new UiLayoutRect(rect.X, rect.Y + TopPadding, rect.Width, 48f),
-                Tr(ctx, EmptyTextKey),
-                ctx.Theme,
-                ctx.Theme[UiPaletteRole.SecondaryForeground],
-                UiFont.Small,
-                UiTextAnchor.MiddleCenter);
+            UsKernelDraw.StyledLabel(ctx,
+                new UiLayoutRect(rect.X, rect.Y + TopPadding, rect.Width, EmptyHeight(ctx, rect.Width)),
+                Tr(ctx, EmptyTextKey), UiFont.Small, UiTextAnchor.MiddleCenter, emphasis: UiEmphasis.Muted);
             return;
         }
 
@@ -145,8 +141,9 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         float y = rect.Y + TopPadding;
 
         float noteHeight = BaselineNoteHeight(ctx, innerWidth);
-        UsKernelDraw.Label(ctx.Drawing, new UiLayoutRect(x + LeftPadding, y, Math.Max(1f, innerWidth - LeftPadding * 2f), noteHeight),
-            Tr(ctx, BaselineNoteKey), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, UiTextAnchor.UpperLeft);
+        UsKernelDraw.StyledLabel(ctx,
+            new UiLayoutRect(x + LeftPadding, y, Math.Max(1f, innerWidth - LeftPadding * 2f), noteHeight),
+            Tr(ctx, BaselineNoteKey), UiFont.Tiny, UiTextAnchor.UpperLeft, emphasis: UiEmphasis.Muted);
         y += noteHeight + RowGap;
 
         foreach (BaselinePresetView preset in presets)
@@ -159,14 +156,10 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             if (!string.IsNullOrEmpty(preset.Description))
             {
-                float descHeight = ctx.Metrics.MeasureText(preset.Description, UiFont.Tiny, Math.Max(1f, innerWidth - 16f)) + 6f;
-                UsKernelDraw.Label(ctx.Drawing,
-                    new UiLayoutRect(x + LeftPadding, y + 2f, Math.Max(1f, innerWidth - LeftPadding - 8f), descHeight - 4f),
-                    preset.Description,
-                    ctx.Theme,
-                    ctx.Theme[UiPaletteRole.SecondaryForeground],
-                    UiFont.Tiny,
-                    UiTextAnchor.UpperLeft);
+                float descHeight = UsKernelDraw.Text(ctx, UiFont.Tiny).MeasureText(preset.Description, DescriptionWidth(innerWidth)) + 6f;
+                UsKernelDraw.StyledLabel(ctx,
+                    new UiLayoutRect(x + LeftPadding, y + 2f, DescriptionWidth(innerWidth), descHeight - 4f),
+                    preset.Description, UiFont.Tiny, UiTextAnchor.UpperLeft, emphasis: UiEmphasis.Muted);
                 y += descHeight + RowGap;
             }
 
@@ -196,25 +189,18 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(ctx.Drawing, rect, ctx.Theme, hovered, preset.Expanded ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
-        UiLayoutRect importRect = new(rect.XMax - ImportButtonWidth - 8f, rect.Y + (rect.Height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
+        float importHeight = UsKernelDraw.ControlHeight(ctx, ImportButtonHeight);
+        UiLayoutRect importRect = new(rect.XMax - ImportButtonWidth - 8f, rect.Y + (rect.Height - importHeight) / 2f, ImportButtonWidth, importHeight);
         UsKernelDraw.HelpHover(importRect, ctx, "us/preset-list/import");
 
-        UsKernelDraw.Label(ctx.Drawing,
+        UsKernelDraw.StyledLabel(ctx,
             new UiLayoutRect(rect.X + LeftPadding, rect.Y + HeaderTopPadding, Math.Max(1f, importRect.X - rect.X - LeftPadding - 8f), titleBand),
-            HeaderTitle(preset),
-            ctx.Theme,
-            ctx.Theme[UiPaletteRole.Foreground],
-            UiFont.Small,
-            UiTextAnchor.MiddleLeft);
-        UsKernelDraw.Label(ctx.Drawing,
+            HeaderTitle(preset), UiFont.Small, UiTextAnchor.MiddleLeft);
+        UsKernelDraw.StyledLabel(ctx,
             new UiLayoutRect(rect.X + LeftPadding + 4f, rect.Y + HeaderTopPadding + titleBand + HeaderInnerGap, Math.Max(1f, importRect.X - rect.X - LeftPadding - 16f), summaryBand),
-            SummaryText(ctx, preset),
-            ctx.Theme,
-            ctx.Theme[UiPaletteRole.SecondaryForeground],
-            UiFont.Tiny,
-            UiTextAnchor.MiddleLeft);
+            SummaryText(ctx, preset), UiFont.Tiny, UiTextAnchor.MiddleLeft, emphasis: UiEmphasis.Muted);
 
-        if (UsKernelDraw.SelectionButton(importRect, ctx, Tr(ctx, ImportKey), ctx.Theme, selected: true, font: UiFont.Tiny, controlId: "import-baseline", itemKey: preset.DefName))
+        if (UsKernelDraw.StyledButton(importRect, ctx, Tr(ctx, ImportKey), selected: true, controlId: "import-baseline", itemKey: preset.DefName))
         {
             ctx.Bindings.Invoke("import-baseline", preset.DefName);
         }
@@ -341,8 +327,12 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     private static float BaselineNoteHeight(UiWidgetContext ctx, float width)
     {
-        return ctx.Metrics.MeasureText(Tr(ctx, BaselineNoteKey), UiFont.Tiny, Math.Max(1f, width - LeftPadding * 2f));
+        return UsKernelDraw.Text(ctx, UiFont.Tiny).MeasureText(Tr(ctx, BaselineNoteKey), Math.Max(1f, width - LeftPadding * 2f));
     }
+
+    private static float DescriptionWidth(float width) => Math.Max(1, width - LeftPadding - 8);
+    private static float EmptyHeight(UiWidgetContext ctx, float width)
+        => Math.Max(48, UsKernelDraw.Text(ctx).MeasureText(Tr(ctx, EmptyTextKey), width));
 
     /// <summary>
     /// The two header bands and the row height, from the same widths the header draws into. The title is
@@ -358,18 +348,19 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         string title = HeaderTitle(preset);
         string summary = SummaryText(ctx, preset);
         float titleBand = Math.Max(
-            HeaderTitleMinHeight, ctx.Metrics.MeasureText(title, UiFont.Small, titleWidth));
+            HeaderTitleMinHeight, UsKernelDraw.Text(ctx, UiFont.Small).MeasureText(title, titleWidth));
         float summaryBand = Math.Max(
-            SelectionSummaryHeight, ctx.Metrics.MeasureText(summary, UiFont.Tiny, summaryWidth));
+            SelectionSummaryHeight, UsKernelDraw.Text(ctx, UiFont.Tiny).MeasureText(summary, summaryWidth));
         float total = Math.Max(
             PresetHeaderHeight,
-            HeaderTopPadding + titleBand + HeaderInnerGap + summaryBand + HeaderBottomPadding);
+            Math.Max(HeaderTopPadding + titleBand + HeaderInnerGap + summaryBand + HeaderBottomPadding,
+                UsKernelDraw.ControlHeight(ctx, ImportButtonHeight) + HeaderTopPadding + HeaderBottomPadding));
         return (titleBand, summaryBand, total);
     }
 
     private static float MeasuredRowHeight(string text, float width, UiWidgetContext ctx, float fallback)
     {
-        float measured = ctx.Metrics.MeasureText(text, UiFont.Tiny, width);
+        float measured = UsKernelDraw.Text(ctx, UiFont.Small).MeasureText(text, width);
         return Math.Max(fallback, measured + 8f);
     }
 

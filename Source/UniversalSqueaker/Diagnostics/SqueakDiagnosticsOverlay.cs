@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 /// <summary>
 /// Diagnostics session driver (round-9 contract). One live session feeds three observation roles
 /// into <see cref="SqueakDiagnosticsSessionModel{TKey}"/>: a viewport sweep (every squeaker-carrying
-/// pawn on screen, stable thingID order, no headcount gate), the live selection (the main window's
+/// pawn on screen, stable thingID order, no headcount gate), panel browsing (the main window's
 /// detail column), and the lock set (detachable per-pawn detail windows, tracked even off-screen).
 /// Per-pawn snapshots are low-frequency, side-effect-free reads; the model's revision is the only
 /// clock the UiKit pages rebuild on. Closing the main window ends the session and cascades every
@@ -23,7 +23,7 @@ public static partial class SqueakDiagnosticsOverlay
     /// <summary>Cap on one search result page source; a colony never legitimately shows this many name matches.</summary>
     internal const int SearchResultsCap = 64;
 
-    internal const string Mark = "●";
+    internal const string Mark = UI.UsDiagnosticsMarkPresentation.Glyph;
 
     /// <summary>
     /// Diagnostics mark colors: green = ready, the attention role = a diagnostic blocking condition,
@@ -32,9 +32,9 @@ public static partial class SqueakDiagnosticsOverlay
     /// deliberately NOT <c>UiTheme.Warning</c>, which the carrier resolves onto Danger (a failed gate is
     /// not a destructive action).
     /// </summary>
-    internal static readonly Color ReadyColor = new(.25f, .82f, .38f);
-    internal static readonly Color BlockedColor = VerseUiExecution.Colour(UsAttention.Brush);
-    internal static readonly Color PendingColor = new(.35f, .66f, .95f);
+    internal static readonly Color ReadyColor = VerseUiExecution.Colour(UI.UsDiagnosticsMarkPresentation.Ready);
+    internal static readonly Color BlockedColor = VerseUiExecution.Colour(UI.UsDiagnosticsMarkPresentation.Blocked);
+    internal static readonly Color PendingColor = VerseUiExecution.Colour(UI.UsDiagnosticsMarkPresentation.Pending);
 
     /// <summary>One cached structured snapshot per tracked pawn. Read-only for the pages; the driver mutates only during refresh.</summary>
     internal sealed class CachedPawn
@@ -57,6 +57,9 @@ public static partial class SqueakDiagnosticsOverlay
     private static readonly List<Pawn> sweepScratch = new();
     private static readonly List<Pawn> lockedScratch = new();
     private static readonly List<Pawn> dropScratch = new();
+    // References live only within one synchronous RefreshIfDue wave; capacity is reused like the
+    // other scratch collections. This is not a cross-frame snapshot cache or a new cadence.
+    private static readonly HashSet<CachedPawn> refreshedThisWave = new();
     private static readonly Dictionary<Pawn, SqueakDiagnosticsDetailWindow> detailWindows = new();
 
     private static SqueakDiagnosticsPanel? mainPanel;
@@ -65,6 +68,7 @@ public static partial class SqueakDiagnosticsOverlay
     internal static SqueakDiagnosticsPanel? ActivePanelOrNull => mainPanel;
 
     private static Map? cachedMap;
+    private static UI.UsDiagnosticsMarkScreen? markScreen;
     private static bool sessionActive;
     private static float nextSweepRealtime;
     private static float nextDetailRealtime;
@@ -108,7 +112,7 @@ public static partial class SqueakDiagnosticsOverlay
         }
     }
 
-    /// <summary>The entry the main window's detail column shows (live selection), or null.</summary>
+    /// <summary>The panel-owned browsing entry, independent of vanilla selection and capture.</summary>
     internal static CachedPawn? SelectedEntry
     {
         get
@@ -116,6 +120,18 @@ public static partial class SqueakDiagnosticsOverlay
             if (!model.HasSelected) return null;
             return entriesByPawn.TryGetValue(model.Selected!, out CachedPawn? entry) ? entry : null;
         }
+    }
+
+    // The panel owns browsing. Vanilla selection is neither an observation role nor a write side effect.
+    internal static Pawn? BrowsingPawn => model.HasSelected ? model.Selected : null;
+
+    internal static bool Browse(Pawn pawn)
+    {
+        if (!sessionActive || !IsTrackableNow(pawn)) return false;
+        model.SetSelected(pawn);
+        EnsureEntry(pawn); // A failed/not-yet-read snapshot must not prevent Start.
+        PruneDroppedEntries();
+        return true;
     }
 
     /// <summary>The single readiness rule shared by the mark color, the header badge, and the summary row.</summary>
@@ -228,6 +244,10 @@ public static partial class SqueakDiagnosticsOverlay
             // Diagnostics must fail closed: a modded pawn/snapshot exception never breaks the game frame.
             SqueakLog.DiagnosticsUiFailed("Refresh", ex);
         }
+        finally
+        {
+            refreshedThisWave.Clear();
+        }
     }
 
     /// <summary>
@@ -290,7 +310,7 @@ public static partial class SqueakDiagnosticsOverlay
             && (label.IndexOf(trimmedQuery, StringComparison.OrdinalIgnoreCase) >= 0
                 || defName.IndexOf(trimmedQuery, StringComparison.OrdinalIgnoreCase) >= 0);
 
-    /// <summary>Read-side mark lookup used by CompSqueaker.PostDraw (public draw path).</summary>
+    /// <summary>Cached read-side lookup used only by the legal AfterMainTabs screen draw path.</summary>
     internal static bool TryGetMark(Pawn pawn, out string mark, out Color color)
     {
         if (sessionActive && entriesByPawn.TryGetValue(pawn, out CachedPawn? entry))
@@ -305,9 +325,12 @@ public static partial class SqueakDiagnosticsOverlay
         return false;
     }
 
+    internal static bool DrawCachedMark(Pawn pawn, string glyph, Color colour)
+        => glyph.Length != 0 && (markScreen ??= new UI.UsDiagnosticsMarkScreen()).TryDraw(pawn, glyph, colour);
+
     private static void RefreshDetailRoles(float now)
     {
-        Pawn? selection = Find.Selector.SingleSelectedThing as Pawn;
+        Pawn? selection = BrowsingPawn;
         if (selection != null && IsTrackableNow(selection))
         {
             model.SetSelected(selection);
@@ -317,6 +340,10 @@ public static partial class SqueakDiagnosticsOverlay
         {
             model.SetSelected(null);
         }
+
+        // Recording is independent of browsing and of the viewport/locked-window roles.
+        if (recordingPawn != null && !ReferenceEquals(recordingPawn, selection) && !model.IsLocked(recordingPawn))
+            UpdateSnapshot(EnsureEntry(recordingPawn));
 
         lockedScratch.Clear();
         lockedScratch.AddRange(model.Locked);
@@ -392,6 +419,13 @@ public static partial class SqueakDiagnosticsOverlay
 
     private static void UpdateSnapshot(CachedPawn entry)
     {
+        if (!refreshedThisWave.Add(entry))
+        {
+            // Role/membership notifications retain their original revision cadence. The saved
+            // result (including a read failure) belongs to the one actual attempt in this wave.
+            model.BumpRevision();
+            return;
+        }
         try
         {
             entry.Snapshot = entry.Comp.GetDiagnosticSnapshot();
@@ -458,6 +492,7 @@ public static partial class SqueakDiagnosticsOverlay
             hash = hash * 31 + (s.Response?.ActionDeadline.GetHashCode() ?? -1);
             hash = hash * 31 + (s.Response?.SharedDeadline.GetHashCode() ?? -1);
             hash = hash * 31 + (s.Response?.ProtectedAt(Find.TickManager.TicksGame) == true ? 1 : 0);
+            hash = hash * 31 + (ReadyFor(s) ? 1 : 0);
             hash = hash * 31 + (s.Evidence?.Sequence.GetHashCode() ?? -1);
             hash = hash * 31 + (s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1);
             hash = hash * 31 + (s.LastEvaluation.HasValue ? (int)s.LastEvaluation.Value.Outcome : -1);
@@ -471,7 +506,7 @@ public static partial class SqueakDiagnosticsOverlay
         dropScratch.Clear();
         foreach (KeyValuePair<Pawn, CachedPawn> pair in entriesByPawn)
         {
-            if (!model.IsTracked(pair.Key))
+            if (!model.IsTracked(pair.Key) && !IsRecording(pair.Key))
             {
                 dropScratch.Add(pair.Key);
             }
@@ -510,6 +545,9 @@ public static partial class SqueakDiagnosticsOverlay
         mainPanel = null;
 
         sessionActive = false;
+        var releasedMarks = markScreen; markScreen = null;
+        try { releasedMarks?.Dispose(); }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { SqueakLog.DiagnosticsUiFailed("MarkClose", error); }
         cachedMap = null;
         nextSweepRealtime = 0f;
         nextDetailRealtime = 0f;

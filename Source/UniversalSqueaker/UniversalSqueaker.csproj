@@ -57,7 +57,7 @@
   <!-- Include the actual compiler reference in the assembly identity. A changed hash changes this
        generated source, so an incremental build cannot retain a receipt for a different carrier. -->
   <Target Name="RequireFerriteLibSelection" BeforeTargets="ResolveReferences">
-    <Error Condition="'$(FerriteLibArtifactPath)' == ''" Text="Select a fixed FerriteLib 0.8 package with -p:FerriteLibArtifactPath; no implicit carrier is used." />
+    <Error Condition="'$(FerriteLibArtifactPath)' == ''" Text="Select a fixed FerriteLib 0.9 net472 package with -p:FerriteLibArtifactPath; no implicit carrier is used." />
   </Target>
   <Target Name="RecordFerriteLibReference" BeforeTargets="CoreCompile" DependsOnTargets="ResolveReferences">
     <PropertyGroup>
@@ -86,11 +86,12 @@
 
   <ItemGroup>
     <!-- Schema=2 is the only shipped page vocabulary: settings page, camera-indicator overlay and the
-         SA1.3 Remix confirmation dialog. All three are read through Assembly.GetManifestResourceStream
+         SA1.3 Remix confirmation dialog, and diagnostics screen mark. All four are read through Assembly.GetManifestResourceStream
          by their kernel-side owner (the two settings hosts, then the per-window RemixConfirmationFlow). -->
     <EmbeddedResource Include="UI\Layout.Schema2.xml" />
     <None Remove="UI\Layout.Schema2.xml" />
     <EmbeddedResource Include="UI\Layout.Overlay.Schema2.xml" />
+    <EmbeddedResource Include="UI\Layout.DiagnosticsMark.Schema2.xml" />
     <None Remove="UI\Layout.Overlay.Schema2.xml" />
     <EmbeddedResource Include="UI\Layout.RemixConfirm.Schema2.xml" />
     <None Remove="UI\Layout.RemixConfirm.Schema2.xml" />

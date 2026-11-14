@@ -43,7 +43,7 @@ public sealed class UsModeRowWidget : IUiWidget
 
     public float Measure(UiWidgetContext ctx)
     {
-        return Height + Padding * 2f;
+        return UiTextFonts.RowHeight(ctx, minimum: Height) + Padding * 2f;
     }
 
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
@@ -57,9 +57,9 @@ public sealed class UsModeRowWidget : IUiWidget
         float x = rect.X + Padding;
         for (int i = 0; i < Options.Length; i++)
         {
-            UiLayoutRect optionRect = new(x, rect.Y + Padding, width, Height);
+            UiLayoutRect optionRect = new(x, rect.Y + Padding, width, UiTextFonts.RowHeight(ctx, minimum: Height));
             UsKernelDraw.HelpHover(optionRect, ctx, Options[i].HelpRef);
-            if (UsKernelDraw.SelectionButton(optionRect, ctx, ctx.Translation.Translate(Options[i].LabelKey), ctx.Theme, Options[i].Mode == current, controlId: binding, itemKey: Options[i].Mode))
+            if (UsKernelDraw.StyledButton(optionRect, ctx, ctx.Translation.Translate(Options[i].LabelKey), Options[i].Mode == current, controlId: binding, itemKey: Options[i].Mode))
             {
                 ctx.Bindings.Set(binding, Options[i].Mode);
             }

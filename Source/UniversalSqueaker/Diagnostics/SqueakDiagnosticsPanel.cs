@@ -10,7 +10,7 @@ namespace UniversalSqueaker;
 /// <summary>
 /// The main diagnostics window (round-9 contract): the library shell (<see cref="UiWindowHost"/>)
 /// around one kernel page in master-detail shape - left list column (search + 8-row pages),
-/// right detail column following the live selection, plus the detach-to-lock and collapsed-bar
+/// right detail column following panel browsing, plus the detach-to-lock and collapsed-bar
 /// states. Closing it ends the whole diagnostics session (the overlay cascades every detail
 /// window closed). The file draws ZERO raw backend calls: chrome is the shell's, content is the
 /// widget family's, hover/keys are the session's - so it leaves the gate 14 whitelist with this
@@ -31,6 +31,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     private bool lastEmpty;
     private bool opened;
     private int lastDataRevision = -1;
+    private int minimumRevision = -1, minimumContentRevision = -1;
+    private float minimumWidth, minimumListHeight, appliedMinimum;
 
     public SqueakDiagnosticsPanel()
     {
@@ -55,6 +57,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         onlyOneOfTypeAllowed = true;
         focusWhenOpened = false;
         onlyDrawInDevMode = false;
+        // Pure tool resources end on failure as well as Close; capture/business lifetime is unchanged.
+        HostDetached += _ => { audit?.Dispose(); audit = null; };
     }
 
     // 620 -> 680 (lead-authorised, dev-only): the detail column needs 320 for its 40/60 value split
@@ -73,7 +77,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     internal const float EmptyStateWidth = 600f;
 
     /// <summary>Content height while nothing is selected: the search row, the list header and the empty note.</summary>
-    internal const float EmptyStateContentHeight = 240f;
+    internal const float EmptyStateContentHeight = NarrowSelectedContentHeight;
 
     /// <summary>The wide master/detail content width, used once a row is selected.</summary>
     internal const float ExpandedContentWidth = 680f;
@@ -130,7 +134,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         //
         // `SqueakLog.ShouldEmitDev` remains the FIT-AUDIT policy (unchanged); it no longer decides whether a
         // scope exists, because the layout-diagnosis commands need one in every mode.
-        audit = UniversalSqueaker.UI.UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        audit = UniversalSqueaker.UI.UsTextFitAudit.OpenForWindow(host);
         // DT1 (user ruling): the diagnostics panel is NOT a settings-dev-panel target - its outline is
         // switched only by its own Debug Action, which reads LiveHostForDebug below.
         return host;
@@ -145,6 +149,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     protected override void BeforeDraw(Rect contentRect)
     {
         // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
+        audit?.SynchronizePolicy(SqueakLog.ShouldEmitDev);
         audit?.Publish();
         if (Host != null && lastDataRevision != SqueakDiagnosticsOverlay.Revision)
         {
@@ -177,7 +182,15 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 
         bool collapsed = source.Collapsed;
         bool empty = !collapsed && source.Detail == null;
-        if (collapsed == lastCollapsed && empty == lastEmpty)
+        bool listTask = !collapsed && !source.RawOpen && (empty || source.Narrow && source.NavigationView == UsDiagNavView.List);
+        float wantedWidth = Math.Min(EmptyStateWidth, Math.Max(320, Verse.UI.screenWidth - 40)) - SidePadding * 2;
+        if (listTask && Host != null && (minimumRevision != source.Revision || minimumContentRevision != Host.Session.ContentRevision || minimumWidth != wantedWidth))
+        {
+            minimumRevision = source.Revision; minimumContentRevision = Host.Session.ContentRevision; minimumWidth = wantedWidth;
+            minimumListHeight = UsDiagnosticsHost.MinimumListContentHeight(source, Host, wantedWidth);
+        }
+        float minimum = listTask ? minimumListHeight : 0;
+        if (collapsed == lastCollapsed && empty == lastEmpty && Math.Abs(appliedMinimum - minimum) < .5f)
         {
             return;
         }
@@ -191,8 +204,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         // existing master/detail. Recorded scaled inputs: 1024x768@1.0 -> 768 < 900 -> narrow;
         // 1920x1080@1.0 -> 1080 >= 900 -> wide; 1920x1080@1.25 -> 864 < 900 -> narrow (the
         // honest consequence of the same rule at high scale, listed for the human check).
-        // Heights: collapsed 76+44=120, empty 76+240=316, narrow selected 76+380=456,
-        // wide selected 76+560=636; the final clamp keeps the whole window - not a 24px grab
+        // Empty/list now starts at the existing compact selected budget and can grow to its
+        // measured search/three-row/pager/footer minimum. The final clamp keeps the whole window - not a 24px grab
         // strip - inside the screen. The first collapse and a collapse-after-expand run through
         // THIS rule, so both land on the same geometry (DX1.1's symmetry clause).
         float screenCapW = Math.Max(320f, Verse.UI.screenWidth - 40f);
@@ -211,7 +224,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         else if (empty)
         {
             width = Math.Min(EmptyStateWidth, screenCapW);
-            contentHeight = EmptyStateContentHeight;
+            // No selected detail is still a list task, not an empty 240px notice.
+            contentHeight = NarrowSelectedContentHeight;
         }
         else if (fitsWide)
         {
@@ -225,6 +239,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         }
 
         float height = Math.Min(ChromeHeight + contentHeight, maxOuterH);
+        height = Math.Min(Math.Max(height, ChromeHeight + minimum), maxOuterH);
         // DX1.2 (PM review 2026-10-07): a STATE change must keep the WHOLE window inside the scaled
         // screen, so the position is corrected against the FINAL outer size, not only against the
         // 24px grab strip. A centred 1024x768 first open (bar y=324, h=120) that expands to 600x456
@@ -233,7 +248,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         // moves that do not change the size.
         float x = windowRect.x;
         float y = windowRect.y;
-        if (collapsed != lastCollapsed || empty != lastEmpty)
+        if (collapsed != lastCollapsed || empty != lastEmpty || Math.Abs(appliedMinimum - minimum) >= .5f)
         {
             x = Mathf.Clamp(x, 0f, Mathf.Max(0f, Verse.UI.screenWidth - width));
             y = Mathf.Clamp(y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - height));
@@ -242,6 +257,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         windowRect = new Rect(x, y, width, height);
         lastCollapsed = collapsed;
         lastEmpty = empty;
+        appliedMinimum = minimum;
     }
 
     public override void WindowOnGUI()

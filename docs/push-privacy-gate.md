@@ -31,10 +31,15 @@ waive current-tree scanning. A newly produced blob is not covered by the
 accepted inventory. The 2026-10-08 maintainer decision preserves the existing
 history and continues development; history rewrite remains a separate choice.
 
-Image pixels and compressed/opaque binary content are not fully covered by
-metadata scanning. Inspect tracked images before pushing. Historical binary
-metadata is not covered by the historical text vector. Findings do not authorize
-history rewriting; resolve genuine leaks and classify false positives explicitly.
+Image pixels, including visible screenshot content, do not require manual privacy
+review (maintainer decision 2026-11-07). Filename/path, credential, message/identity,
+applicable reachable-history, binary-metadata and game-resource/payload gates remain
+unchanged. Rendering, layout, export and interaction quality checks still apply.
+
+Compressed/opaque binary content is not fully covered by metadata scanning.
+Historical binary metadata is not covered by the historical text vector. Findings
+do not authorize history rewriting; resolve genuine leaks and classify false
+positives explicitly.
 
 Scope for this change: privacy automation only. No product payload, release,
 tag or settings data is produced or changed by the scanner or hook installer.

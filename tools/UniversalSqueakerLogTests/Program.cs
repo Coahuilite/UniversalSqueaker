@@ -9,7 +9,7 @@ internal static class Program
 {
     private const string Build = "dev";
     private const string BuildId = "0.0.0+char";
-    private const string Prefix = "[UniversalSqueaker] ";
+    private const string Prefix = "[UniversalSqueaker.Kernel] ";
 #if US_DEV
     private static bool AutoEnablesDevLogging => true;
 #else

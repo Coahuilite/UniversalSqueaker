@@ -10,7 +10,7 @@ namespace UniversalSqueaker.UI.Dev;
 
 /// <summary>
 /// DT1 (2026-10-07 user ruling): the small draggable developer panel for the US SETTINGS workspace.
-/// Its scope is exactly the settings page and its Remix confirmation dialog - the in-game
+/// Its targets are the settings page and its current confirmation dialog (including Remix) - the in-game
 /// diagnostics panel is served solely by its own Debug Action, never from here. The panel exists so
 /// capture, outline and the geometry report are reachable from every settings page without
 /// scrolling back to the Overview diagnostics band, and each command names its REAL target.
@@ -49,6 +49,9 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     private readonly DevPanelSource source = new();
     private string statusKey = "US.DevPanel.Status.Idle";
     private string statusArg = "";
+    private UiHost? reportingTarget;
+    private int reportingAfterPass = -1;
+    private string reportingLabel = "";
 
     private UsDevPanelWindow()
     {
@@ -74,6 +77,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         closeOnClickedOutside = false;
         focusWhenOpened = false;
         onlyDrawInDevMode = true;
+        HostDetached += _ => reportingTarget = null;
         // draggable / one-instance / normal-size arrive through UiWindowOptions at the catalog door.
 
         bindings.BindChoices<string>("dev-target-options", () => source.Targets);
@@ -106,6 +110,17 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         bindings.BindCommand("dev-page-advanced", () => Page("Advanced"));
         bindings.BindCommand("dev-page-presets", () => Page("Presets"));
         bindings.BindCommand("dev-report", Report);
+        bindings.BindReadOnly<bool>("dev-sample-ready", () => SampleTarget()?.CanQueueUiCostSample == true);
+        bindings.BindReadOnly<string>("dev-sample-status", () => SampleTarget()?.UiCostSampleStatus
+            ?? Translator.Translate("US.DevPanel.Sample.Unavailable"));
+        bindings.BindCommand("dev-sample", () => SampleTarget()?.QueueUiCostSample(),
+            () => SampleTarget()?.CanQueueUiCostSample == true);
+        bindings.BindReadOnly<bool>("dev-operation-ready", () => SampleTarget()?.CanQueueOperationSample == true);
+        bindings.BindReadOnly<bool>("dev-operation-active", () => SampleTarget()?.CanEndOperationSample == true);
+        bindings.BindCommand("dev-operation", () => SampleTarget()?.QueueOperationSample(),
+            () => SampleTarget()?.CanQueueOperationSample == true);
+        bindings.BindCommand("dev-operation-end", () => SampleTarget()?.EndOperationSample(),
+            () => SampleTarget()?.CanEndOperationSample == true);
     }
 
     /// <summary>
@@ -155,14 +170,14 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     protected override UiHost CreateHost()
     {
         UiLayoutManifest manifest = UiLayoutManifest.Parse(PageXml);
-        var host = new UiHost(
-            Consumer,
+        var host = VerseUiDiagnosticLog.CreateHost(
+            UsUiDiagnostics.Consumer, Consumer,
             manifest,
             bindings,
             PanelTheme,
             VerseFerriteTextMetrics.Instance,
-            new UsKernelTranslation());
-        host.Session.Controls.Trace = SqueakLog.PopupTrace;
+            new UsKernelTranslation(), options: UsUiDiagnostics.Options());
+        UsUiDiagnostics.Adopt(host);
         return host;
     }
 
@@ -193,6 +208,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     /// closed elsewhere reads honestly without a poll loop.</summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        if (Host != null) UsUiDiagnostics.Synchronize(Host);
         Requery();
     }
 
@@ -223,8 +239,12 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     private void Requery()
     {
         source.RefreshStates();
+        RefreshReportStatus();
         Host?.Invalidate();
     }
+
+    private GameSettingsWindow? SampleTarget() => source.TargetKey == "settings"
+        ? GameSettingsWindow.CostSampleOwner(source.ResolveTarget()) : null;
 
     private void Page(string tab)
     {
@@ -241,10 +261,11 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         statusArg = tab;
     }
 
-    /// <summary>The success line names the whole identity chain the report was written for:
-    /// target, current settings page, host, session and pass (DT1 pass condition 2).</summary>
+    /// <summary>The status names the requested target/page, source and session; completion adds the
+    /// actual captured pass. The page label is explicitly request-time, not a later page guess.</summary>
     private void Report()
     {
+        reportingTarget = null;
         UiHost? target = source.ResolveTarget();
         if (target == null)
         {
@@ -253,19 +274,45 @@ internal sealed class UsDevPanelWindow : UiWindowHost
             return;
         }
 
+        int afterPass = UsTextFitAudit.FindOpenScope(target)?.LastGeometryReportPass ?? -1;
         bool requested = UsTextFitAudit.RequestGeometryReport(target);
         int pass = requested ? UsTextFitAudit.PublishGeometryReport(target) : -1;
         statusKey = requested
             ? (pass >= 0 ? "US.DevPanel.Status.ReportWritten" : "US.DevPanel.Status.ReportWaiting")
             : "US.DevPanel.Status.ReportUnavailable";
-        statusArg = pass >= 0
-            ? source.TargetLabel + " page=" + source.CurrentPage()
-              + " host=" + Consumer + " session=" + target.Session.Identity + " pass=" + pass
-            : source.TargetLabel;
+        statusArg = source.TargetLabel + " request_page=" + source.CurrentPage(target)
+            + " source=" + Consumer + " session=" + target.Session.Identity + (pass >= 0 ? " pass=" + pass : "");
+        if (requested && pass < 0)
+        {
+            reportingTarget = target;
+            reportingAfterPass = afterPass;
+            reportingLabel = statusArg;
+        }
+    }
+
+    private void RefreshReportStatus()
+    {
+        var target = reportingTarget;
+        if (target == null) return;
+        var scope = UsTextFitAudit.FindOpenScope(target);
+        if (scope != null && scope.LastGeometryReportPass > reportingAfterPass)
+        {
+            // Read the target owner's actual receipt. A later selector change cannot retarget it.
+            statusKey = "US.DevPanel.Status.ReportWritten";
+            statusArg = reportingLabel + " pass=" + scope.LastGeometryReportPass;
+            reportingTarget = null;
+        }
+        else if (scope == null || !scope.IsGeometryReportPending)
+        {
+            statusKey = "US.DevPanel.Status.ReportUnavailable";
+            statusArg = reportingLabel;
+            reportingTarget = null;
+        }
     }
 
     public override void PostClose()
     {
+        reportingTarget = null;
         base.PostClose();
         if (ReferenceEquals(Active, this)) Active = null;
     }
@@ -276,24 +323,29 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     /// switch (a 36px box would ellipsize the word the control is named by).</summary>
     private const string PageXml =
         "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
-        + "  <Column Id=\"dev-root\" Gap=\"6\" Padding=\"10\">"
-        + "    <Row Id=\"dev-pages\" Gap=\"4\" Padding=\"0\">"
-        + "      <Widget Id=\"dev-page-overview\" Kind=\"input/button\" TextKey=\"US.Nav.Overview.Label\" ActionBind=\"dev-page-overview\" Emphasis=\"Muted\" Height=\"26\" />"
-        + "      <Widget Id=\"dev-page-packs\" Kind=\"input/button\" TextKey=\"US.Nav.Packs.Label\" ActionBind=\"dev-page-packs\" Emphasis=\"Muted\" Height=\"26\" />"
-        + "      <Widget Id=\"dev-page-tuning\" Kind=\"input/button\" TextKey=\"US.Nav.Tuning.Label\" ActionBind=\"dev-page-tuning\" Emphasis=\"Muted\" Height=\"26\" />"
-        + "      <Widget Id=\"dev-page-advanced\" Kind=\"input/button\" TextKey=\"US.Nav.Advanced.Label\" ActionBind=\"dev-page-advanced\" Emphasis=\"Muted\" Height=\"26\" />"
-        + "      <Widget Id=\"dev-page-presets\" Kind=\"input/button\" TextKey=\"US.Nav.Presets.Label\" ActionBind=\"dev-page-presets\" Emphasis=\"Muted\" Height=\"26\" />"
-        + "    </Row>"
-        + "    <Widget Id=\"dev-target\" Kind=\"input/dropdown\" Bind=\"dev-target\" OptionsBind=\"dev-target-options\" LabelKey=\"US.DevPanel.Target\" Height=\"26\" />"
-        + "    <Row Id=\"dev-toggles\" Gap=\"8\" Padding=\"0\">"
+        + "  <Styles Schema=\"1\"><Scheme Name=\"us-dev-body\"><Metric Token=\"Font\" Value=\"Small\" /><Metric Token=\"FontSize\" Value=\"16\" /></Scheme></Styles>"
+        + "  <Scroll Id=\"dev-root\" Fill=\"true\" Scheme=\"us-dev-body\" Gap=\"6\" Padding=\"10\">"
+        + "    <Wrap Id=\"dev-pages\" Cols=\"3\" Gap=\"4\" Padding=\"0\">"
+        + "      <Widget Id=\"dev-page-overview\" Kind=\"input/button\" TextKey=\"US.Nav.Overview.Label\" ActionBind=\"dev-page-overview\" Emphasis=\"Muted\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-page-packs\" Kind=\"input/button\" TextKey=\"US.Nav.Packs.Label\" ActionBind=\"dev-page-packs\" Emphasis=\"Muted\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-page-tuning\" Kind=\"input/button\" TextKey=\"US.Nav.Tuning.Label\" ActionBind=\"dev-page-tuning\" Emphasis=\"Muted\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-page-advanced\" Kind=\"input/button\" TextKey=\"US.Nav.Advanced.Label\" ActionBind=\"dev-page-advanced\" Emphasis=\"Muted\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-page-presets\" Kind=\"input/button\" TextKey=\"US.Nav.Presets.Label\" ActionBind=\"dev-page-presets\" Emphasis=\"Muted\" Height=\"30\" />"
+        + "    </Wrap>"
+        + "    <Widget Id=\"dev-target\" Kind=\"input/dropdown\" Bind=\"dev-target\" OptionsBind=\"dev-target-options\" LabelKey=\"US.DevPanel.Target\" Height=\"30\" />"
+        + "    <Widget Id=\"dev-sample\" Kind=\"input/button\" TextKey=\"US.DevPanel.Sample\" ActionBind=\"dev-sample\" VisibleBind=\"dev-sample-ready\" Width=\"Auto\" AlignX=\"Left\" Height=\"30\" />"
+        + "    <Widget Id=\"dev-operation\" Kind=\"input/button\" TextKey=\"US.DevPanel.Sample.Operation\" ActionBind=\"dev-operation\" VisibleBind=\"dev-operation-ready\" Width=\"Auto\" AlignX=\"Left\" Height=\"30\" />"
+        + "    <Widget Id=\"dev-operation-end\" Kind=\"input/button\" TextKey=\"US.DevPanel.Sample.End\" ActionBind=\"dev-operation-end\" VisibleBind=\"dev-operation-active\" Width=\"Auto\" AlignX=\"Left\" Height=\"30\" />"
+        + "    <Widget Id=\"dev-sample-status\" Kind=\"text/wrapped\" Bind=\"dev-sample-status\" />"
+        + "    <Row Id=\"dev-toggles\" Breakpoint=\"300\" Narrow=\"Column\" Gap=\"8\" Padding=\"0\">"
         + "      <Widget Id=\"dev-capture-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-capture-toggle\" SelectedBind=\"dev-capture\" LabelKey=\"US.DevPanel.Capture\" Width=\"Auto\" Height=\"30\" />"
         + "      <Widget Id=\"dev-outline-check\" Kind=\"input/checkbox\" Appearance=\"switch\" Bind=\"dev-outline-toggle\" SelectedBind=\"dev-outline\" LabelKey=\"US.DevPanel.Outline\" Width=\"Auto\" Height=\"30\" />"
         + "    </Row>"
-        + "    <Row Id=\"dev-report-row\" Gap=\"8\" Padding=\"0\">"
-        + "      <Widget Id=\"dev-report\" Kind=\"input/button\" TextKey=\"US.DevPanel.Report\" ActionBind=\"dev-report\" Width=\"120\" Height=\"26\" />"
-        + "      <Widget Id=\"dev-status\" Kind=\"text/wrapped\" Bind=\"dev-status\" Emphasis=\"Muted\" Width=\"220\" />"
-        + "    </Row>"
+        + "    <Column Id=\"dev-report-row\" Gap=\"4\" Padding=\"0\">"
+        + "      <Widget Id=\"dev-report\" Kind=\"input/button\" TextKey=\"US.DevPanel.Report\" ActionBind=\"dev-report\" Width=\"120\" Height=\"30\" />"
+        + "      <Widget Id=\"dev-status\" Kind=\"text/wrapped\" Bind=\"dev-status\" Emphasis=\"Muted\" />"
         + "  </Column>"
+        + "  </Scroll>"
         + "</UiPage>";
 
     /// <summary>Panel-local view model: the two settings-scope targets, their live availability and
@@ -310,28 +362,36 @@ internal sealed class UsDevPanelWindow : UiWindowHost
             new UiChoice<string>(Translator.Translate("US.DevPanel.Target.Dialog"), "dialog"),
         };
 
-        public string TargetLabel => TargetKey == "dialog"
-            ? Translator.Translate("US.DevPanel.Target.Dialog")
-            : Translator.Translate("US.DevPanel.Target.Settings");
+        public string TargetLabel => TargetKey switch
+        {
+            "dialog" => Translator.Translate("US.DevPanel.Target.Dialog"),
+            "settings" => Translator.Translate("US.DevPanel.Target.Settings"),
+            _ => "?",
+        };
 
         public bool CaptureOn { get; private set; }
         public bool OutlineOn { get; private set; }
 
-        public UiHost? ResolveTarget() => TargetKey == "dialog"
-            ? UsDevPanelTargets.DialogHost
-            : UsDevPanelTargets.SettingsHost;
-
-        public string CurrentPage()
+        public UiHost? ResolveTarget()
         {
-            UiHost? settings = UsDevPanelTargets.SettingsHost;
-            if (settings != null
-                && settings.Bindings.TryGet(UiBindings.ActiveTabBind, out string tab)
+            UiHost? target = TargetKey switch { "settings" => UsDevPanelTargets.SettingsHost,
+                "dialog" => UsDevPanelTargets.DialogHost, _ => null };
+            return target?.Session.IsActive == true ? target : null;
+        }
+
+        public string CurrentPage(UiHost? target = null)
+        {
+            target ??= ResolveTarget();
+            if (target == null) return "?";
+            if (target.Bindings.TryGet("page-state", out VoicePacksPageState state)) return state.Page;
+            if (target.Bindings.TryGet("confirm-step1", out bool _)) return "Remix";
+            if (target.Bindings.TryGet(UiBindings.ActiveTabBind, out string tab)
                 && tab != null && tab.Length > 0)
             {
                 return tab;
             }
 
-            return TargetKey == "dialog" ? "Remix" : "?";
+            return "Dialog";
         }
 
         public void RefreshStates()
@@ -345,22 +405,24 @@ internal sealed class UsDevPanelWindow : UiWindowHost
 
         public void SetCapture(bool on)
         {
-            UsTextFitAudit.SetGeometryCapture(ResolveTarget(), on);
+            var target = ResolveTarget();
+            if (UsTextFitAudit.SetGeometryCapture(target, on)) target?.Invalidate();
             RefreshStates();
         }
 
         public void SetOverlay(bool on)
         {
-            UsTextFitAudit.SetGeometryOverlay(ResolveTarget(), on);
+            var target = ResolveTarget();
+            if (UsTextFitAudit.SetGeometryOverlay(target, on)) target?.Invalidate();
             RefreshStates();
         }
     }
 }
 
 /// <summary>
-/// The live developer-panel targets: the settings page and its Remix dialog only. Registration is
-/// open/close symmetric at each owner's seams (settings window CreateHost/PreClose, the Remix
-/// flow's attach/detach); these are dev-tooling references, not business state, and they never
+/// The live developer-panel targets: settings and its current confirmation (including Remix).
+/// Registration is open/close symmetric at each owner's HostAttached/HostDetached seams;
+/// these are dev-tooling references, not business state, and they never
 /// outlive the window that set them. The panel itself and the in-game diagnostics panel never
 /// register here.
 /// </summary>

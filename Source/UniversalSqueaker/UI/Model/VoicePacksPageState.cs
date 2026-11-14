@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
 
@@ -18,10 +19,24 @@ public sealed class VoicePacksPageState
     public readonly List<string> PageHistory = new();
     public string PinnedHelpRef = "";
     public string PinnedHelpContext = "";
-    public bool BrowseDefinitions;
+    // Normal page help follows real anchors, then holds its last readable presentation.
+    internal string FollowHelpRef = "", FollowHelpContext = "", FollowHelpLabel = "", HelpScope = "";
+    public bool BrowseDefinitions = true;
+    public string LastTuningPage = "Behavior", LastSystemPage = "Appearance";
+    public readonly UsBrowseListState RosterBrowse = new(), RosterPackBrowse = new();
+    public string RosterCoverage = "any", RosterPackCoverage = "any", HighlightedTarget = "";
+    public readonly HashSet<string> RosterExpanded = new(StringComparer.Ordinal);
+    public readonly HashSet<string> RosterRetained = new(StringComparer.Ordinal), RosterPackRetained = new(StringComparer.Ordinal);
+    public string RosterRetentionIdentity = "", RosterPackRetentionIdentity = "";
+    public string PackSheetQuery = "";
+    public int PackSheetPage;
+    internal float RosterListWidth = 300;
     public bool FiltersOpen;
     public bool RestoreAllOpen;
     public bool WideLayout;
+    // Null until a real content box is supplied; standalone hosts retain their original layout input.
+    internal bool? RosterWideLayout = null;
+    internal bool RosterIsWide => RosterWideLayout ?? WideLayout;
     public bool DetailOpen;
     public bool PackArrivalFromDirectory;
     public string SelectedPackKey = "";
@@ -31,6 +46,7 @@ public sealed class VoicePacksPageState
     public int OrphanSelectionCount;
     public string MissingSelections = "";
     public string SourceChangeDiagnostic = "";
+    public string PresetResult = "";
     public string EnabledFilterIdentity = "";
     public readonly HashSet<string> EnabledFilterRows = new(StringComparer.Ordinal);
     internal IReadOnlyList<PackCardView> AllPackCards = Array.Empty<PackCardView>();
@@ -65,6 +81,7 @@ public sealed class VoicePacksPageState
     public UsBrowseListView DirectoryList = UsBrowseListView.Empty, TableList = UsBrowseListView.Empty,
         CandidateList = UsBrowseListView.Empty, SoundList = UsBrowseListView.Empty;
     public string PendingFallbackRace = "";
+    public bool FallbackCreating, FallbackDetailOpen;
     internal object? SoundDefinitions;
     internal IReadOnlyList<UsBrowseItem> CoreSounds = Array.Empty<UsBrowseItem>();
     public UsBoardBrowsePolicy.BoardGroup BoardGroup { get => DirectoryBrowse.Group; set => DirectoryBrowse.Group = value; }
@@ -95,6 +112,9 @@ public sealed class VoicePacksPageState
     internal long HelpLayoutRevision = -1;
     internal string HelpLayoutText = "";
     internal object? HelpSmallEnvironment, HelpTinyEnvironment;
+    internal UiTextFont? HelpLabelFont, HelpBodyFont;
+    internal UiTextFont? HelpLabelRequested, HelpBodyRequested;
+    internal UiTextPurpose HelpTextPurpose;
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
@@ -123,14 +143,21 @@ public sealed class VoicePacksPageState
     public void Reset()
     {
         Page = "Voices"; LastToolPage = "Behavior"; PinnedHelpRef = ""; PinnedHelpContext = "";
+        FollowHelpRef = FollowHelpContext = FollowHelpLabel = HelpScope = "";
         HelpHeight = 128f; HelpViewWidth = HelpViewHeight = 0; HelpLayoutRevision = -1; HelpLayoutText = "";
+        HelpLabelFont = HelpBodyFont = HelpLabelRequested = HelpBodyRequested = null;
+        HelpSmallEnvironment = HelpTinyEnvironment = null;
         PageHistory.Clear();
-        BrowseDefinitions = false; FiltersOpen = false; RestoreAllOpen = false;
+        BrowseDefinitions = true; FiltersOpen = false; RestoreAllOpen = false;
+        LastTuningPage = "Behavior"; LastSystemPage = "Appearance"; HighlightedTarget = "";
+        RosterBrowse.Clear(); RosterPackBrowse.Clear(); RosterCoverage = RosterPackCoverage = "any";
+        RosterExpanded.Clear(); RosterRetained.Clear(); RosterPackRetained.Clear();
+        RosterRetentionIdentity = RosterPackRetentionIdentity = ""; PackSheetQuery = ""; PackSheetPage = 0;
         DetailOpen = false; PackArrivalFromDirectory = false; SelectedPackKey = ""; PackPage = 0;
         PackTotal = 0; PackSelected = 0; OrphanSelectionCount = 0; MissingSelections = "";
         AllPackCards = Array.Empty<PackCardView>(); PackGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
         PackRaceBrowse.Clear(); PackXenoBrowse.Clear(); PackAuthorBrowse.Clear();
-        SourceChangeDiagnostic = ""; EnabledFilterIdentity = ""; EnabledFilterRows.Clear();
+        SourceChangeDiagnostic = ""; PresetResult = ""; EnabledFilterIdentity = ""; EnabledFilterRows.Clear();
         SelectedScope = SqueakVoicePackScope.Race;
         SelectedRaceDefName = "";
         SelectedTargetName = "";
@@ -162,7 +189,7 @@ public sealed class VoicePacksPageState
         DirectoryBrowse.Clear(); TableBrowse.Clear(); CandidateBrowse.Clear(); SoundBrowse.Clear();
         TableBrowse.Group = UsBoardBrowsePolicy.BoardGroup.All;
         DirectoryList = TableList = CandidateList = SoundList = UsBrowseListView.Empty;
-        PendingFallbackRace = ""; SoundDefinitions = null; CoreSounds = Array.Empty<UsBrowseItem>();
+        PendingFallbackRace = ""; FallbackCreating = FallbackDetailOpen = false; SoundDefinitions = null; CoreSounds = Array.Empty<UsBrowseItem>();
         FallbackStatusArg = "";
         DomainSelectionCanceled = false;
         FallbackTableCanceled = false;

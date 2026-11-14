@@ -40,8 +40,8 @@ public abstract class UsSectionWidgetBase : IUiWidget
             spec.Id,
             Kind,
             ctx.ElementPath,
-            TitleHidden ? Math.Max(0f, FallbackHeight(ctx)) : CardHeight(FallbackHeight(ctx)),
-            () => TitleHidden ? Math.Max(0f, MeasureBody(ctx)) : CardHeight(MeasureBody(ctx)));
+            TitleHidden ? Math.Max(0f, FallbackHeight(ctx)) : UsCardLayout.MeasureBody(FallbackHeight(ctx), titleHidden: false),
+            () => TitleHidden ? Math.Max(0f, MeasureBody(ctx)) : CardHeight(ctx, MeasureBody(ctx)));
     }
 
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
@@ -57,8 +57,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
             ctx.ElementPath,
             rect,
             () => DrawBody(rect, ctx),
-            fallback => DrawCard(fallback, ctx, body =>
-                UsKernelDraw.Label(ctx.Drawing, body, FallbackNote(ctx), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny)));
+            fallback => DrawFallback(fallback, ctx));
     }
 
     /// <summary>
@@ -152,9 +151,12 @@ public abstract class UsSectionWidgetBase : IUiWidget
     }
 
     /// <summary>Includes the same card chrome that DrawCard consumes.</summary>
-    private static float CardHeight(float bodyHeight)
+    private float HeaderHeight(UiWidgetContext ctx) => Math.Max(UsCardLayout.HeaderHeight,
+        UsKernelDraw.Text(ctx).MeasureText(SectionTitle(ctx), BodyWidth(ctx)) + 4);
+
+    private float CardHeight(UiWidgetContext ctx, float bodyHeight)
     {
-        return UsCardLayout.MeasureBody(bodyHeight, titleHidden: false);
+        return UsCardLayout.Padding * 2 + HeaderHeight(ctx) + UsCardLayout.HeaderGap + Math.Max(0, bodyHeight);
     }
 
     /// <summary>
@@ -168,9 +170,34 @@ public abstract class UsSectionWidgetBase : IUiWidget
 
     /// <summary>Draws the card frame around a body draw callback (title + help border).</summary>
     protected void DrawCard(UiLayoutRect rect, UiWidgetContext ctx, Action<UiLayoutRect> drawBody)
+        => DrawCard(rect, ctx, drawBody, recovering: false);
+
+    // The guard invokes recovery directly from its catch. Neither chrome nor text may ask the
+    // failed ruler again (including through font resolution or fit auditing). Keep the original
+    // fixed chrome and preset drawing port here; normal cards retain paired numeric text.
+    private void DrawFallback(UiLayoutRect rect, UiWidgetContext ctx)
+        => DrawCard(rect, ctx, body => ctx.Drawing.Text(body, FallbackNote(ctx), UiFont.Tiny,
+            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, UiEmphasis.Muted, writable: !ctx.IsDisabled).Text,
+            UiTextAnchor.MiddleLeft, true), recovering: true);
+
+    private void DrawCard(UiLayoutRect rect, UiWidgetContext ctx, Action<UiLayoutRect> drawBody, bool recovering)
     {
         UsKernelDraw.DrawHelpFocusBorder(ctx.Drawing, rect, ctx.Theme, IsHelpSelected(ctx));
-        UiLayoutRect bodyRect = UsKernelDraw.DrawCard(ctx.Drawing, rect, SectionTitle(ctx), ctx.Theme);
+        if (TitleHidden) { drawBody(rect); return; }
+        float header = recovering ? UsCardLayout.HeaderHeight : HeaderHeight(ctx);
+        UiThemeDraw.Panel(ctx.Drawing, rect, ctx.Theme);
+        UiLayoutRect titleRect = new(rect.X + UsCardLayout.Padding, rect.Y + 2,
+            Math.Max(1, rect.Width - UsCardLayout.Padding * 2), header - 4);
+        if (recovering)
+            ctx.Drawing.Text(titleRect, SectionTitle(ctx), UiFont.Small,
+                ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, writable: !ctx.IsDisabled).Text,
+                UiTextAnchor.MiddleLeft, true);
+        else
+            UsKernelDraw.StyledLabel(ctx, titleRect, SectionTitle(ctx));
+        UiThemeDraw.Solid(ctx.Drawing, new UiLayoutRect(rect.X + UsCardLayout.Padding, rect.Y + header - 2,
+            Math.Max(1, rect.Width - UsCardLayout.Padding * 2), 1), ctx.Theme[UiPaletteRole.Divider]);
+        UiLayoutRect bodyRect = new(rect.X + UsCardLayout.Padding, rect.Y + header + UsCardLayout.HeaderGap,
+            Math.Max(1, rect.Width - UsCardLayout.Padding * 2), Math.Max(1, rect.Height - header - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2));
         drawBody(bodyRect);
     }
 }

@@ -30,9 +30,8 @@ public static partial class UsKernelSettingsHost
         foreach (string value in Enum.GetNames(type)) options.Add(new UiChoice<string>(("US.Eat." + value).Translate(), value));
         return options;
     }
-    private const int HelpHoverGracePasses = 15;
-    private const string Source = "coahuilite.universalsqueaker";
-    private const string ManifestResourceName = "UniversalSqueaker.UI.Layout.Schema2.xml";
+
+
 
     /// <summary>Production entry point: the Host measures text with the real Verse text engine.</summary>
     public static UiHost Create(IUsKernelSettingsSource source)
@@ -48,7 +47,7 @@ public static partial class UsKernelSettingsHost
     /// </summary>
     public static UiHost Create(IUsKernelSettingsSource source, RemixConfirmationFlow? remixFlow)
     {
-        return Create(source, VerseFerriteTextMetrics.Instance, out _, remixFlow);
+        return Create(source, new VerseTextMetrics(VerseFerriteTextMetrics.Instance), out _, remixFlow);
     }
 
     /// <summary>
@@ -73,6 +72,10 @@ public static partial class UsKernelSettingsHost
     public static UiHost Create(
         IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes,
         RemixConfirmationFlow? remixFlow = null)
+        => CreateCore(source, metrics, out writes, remixFlow, retainBehaviorDisplay: true);
+
+    private static UiHost CreateCore(IUsKernelSettingsSource source, ITextMetrics metrics,
+        out UsWriteBindings writes, RemixConfirmationFlow? remixFlow, bool retainBehaviorDisplay)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
@@ -88,7 +91,8 @@ public static partial class UsKernelSettingsHost
         // PM ruling of 2026-10-07; the budget is the engine's own VisibleRows="4.5" counting on the
         // arranged rows (FL capability in the working tree - the US build slot must use the freeze
         // that carries it).
-        UiLayoutManifest manifest = PageDefinition(source.ViewState.WideLayout);
+        UiLayoutManifest manifest = PageDefinition(source.ViewState.WideLayout, rosterWide: source.ViewState.RosterIsWide,
+            deferRoster: source is UsKernelSettingsSource);
 
         // The bottom help panel (BH1) is DECLARATIVE: the manifest's help-scroll Scroll carries
         // VisibleBind="help-open", so the element stays in the definition and the engine simply does not
@@ -99,25 +103,23 @@ public static partial class UsKernelSettingsHost
         // removed identity together with its scroll position (UiSession.PruneNodesExcept).
         var bumper = new SessionRevisionBumper();
         // (translation was created above the manifest parse - the D4 budget measures with it.)
-        writes = BuildBindings(source, bumper, translation, remixFlow, metrics);
-        UiHost host = new(
-            Source,
+        writes = BuildBindings(source, bumper, translation, remixFlow, metrics, retainBehaviorDisplay);
+        UiHost host = VerseUiDiagnosticLog.CreateHost(
+            UsUiDiagnostics.Consumer, Source,
             manifest,
             writes.Bindings,
             UsTheme.Surface(),
             metrics,
-            translation);
-        host.Session.Controls.Trace = SqueakLog.PopupTrace;
+            translation, options: UsUiDiagnostics.Options());
+        UsUiDiagnostics.Adopt(host);
         bumper.Attach(host);
         // No first-frame reconciliation is needed any more: the manifest's VisibleBind is resolved
         // through the "help-open" binding on every arrange, so the RETRACTED default in the page state
         // is what the very first frame already follows.
-        // D10 (maintainer ruling 2026-09-06): a finished hover claim keeps explaining the panel for
-        // this many IMGUI passes, which is what stops the overview from flashing while the pointer
-        // crosses the gap between two adjacent controls. The library owns the rule and ships no
-        // default on purpose - the consumer that needed the grace picks its length. Counted in passes,
-        // not seconds: the settings window opens with forcePause, where game time is frozen.
-        host.Session.HelpGracePasses = HelpHoverGracePasses;
+        // This page now owns reading-hold, not timed hover expiry. With no Session grace, a
+        // completed-pass HelpRef is a real claim (including standard FL controls/popup options),
+        // never a restored old-object claim. Independent help widgets retain their caller's grace.
+        host.Session.HelpGracePasses = 0;
         // The view cache must expire on the same clock as the layout cache, or a write landing in a
         // frame's popup pass arranges against the previous view while the next frame draws a fresh
         // view into the stale snapshot - the 2026-09-04 filter misalignment.
@@ -128,22 +130,15 @@ public static partial class UsKernelSettingsHost
             // it draws. One place here rather than in every window; a harness fake attaches its own host
             // explicitly in the lane that needs per-host separation.
             production.AttachHost(host);
+            if (writes.BehaviorDisplay is UsBehaviorDisplayCapture display)
+            {
+                production.SetBehaviorDisplayAttachment(UiRetainedRegions.Attach(host, "b-actions",
+                    display.CaptureCurrent, display.Reads));
+            }
         }
 
         return host;
     }
-    /// <summary>US-RESET1 review1: end this host's open edit ONLY when the caller's predicate says
-    /// the edit belongs to the fields a restore just WROTE. The review-1 boundary: an unrelated
-    /// open edit (a volume field while a diagnostics-area restore answers NoChange) must survive
-    /// untouched, and NoChange/Rejected must never clear anything - so the command runs the restore
-    /// FIRST, and reaches this only on Applied with a target-matching predicate. The mechanism is
-    /// exactly ONE rung of the cancel ladder, entered only while an edit is open: with a live field
-    /// edit the ladder answers the EDIT itself (a popup or a held capture cannot coexist with it -
-    /// the funnel's own outside-click press ends the edit before either can open), so this never
-    /// reaches a business CancelBind, never loops the ladder, and never touches another window's
-    /// native capture. The marked discard applies at the field's own next draw - before any later
-    /// Enter or focus-out - so a stale draft cannot overwrite the restored value, while the
-    /// existing outside-click commit contract for ordinary edits stays untouched.</summary>
     /// <summary>
     /// UIR-006 (WO-US-UI-REFACTOR-20261014): the live palette switch, the one colour-only seam the
     /// settings page exposes. The write goes through the settings funnel (validated, persisted, one
@@ -171,105 +166,13 @@ public static partial class UsKernelSettingsHost
         return true;
     }
 
-    public static void EndAffectedEdit(UiHost? host, Func<string, bool> editIsAffected)
-    {
-        if (host == null) return;
-        FerriteLib.UiKit.Kernel.UiNode? edit = host.Session.ActiveEditNode;
-        if (edit != null && editIsAffected(edit.ElementId)) host.TryHandleCancel();
-    }
 
-    /// <summary>
-    /// Delayed session revision bump for the Host binding boundary. Bindings are built before the
-    /// Host (and its session) exists, so the bumper starts detached and attaches once the Host is
-    /// created; invocation only ever happens during Draw, after attachment.
-    /// </summary>
-    private sealed class SessionRevisionBumper
-    {
-        private UiHost? host;
-        public string CurrentHelpRef => host?.Session.CurrentHelpRef ?? "";
 
-        public void Attach(UiHost value)
-        {
-            host = value;
-        }
 
-        /// <summary>
-        /// Advances the clock the engine's snapshot cache is keyed on, so the next arrange re-reads the
-        /// page's declared visibility. This is REQUIRED for the declarative drawer: the cache compares
-        /// <c>cachedContentRevision == ctx.Session.ContentRevision</c> and returns the previous snapshot
-        /// when every term matches, so without a bump a closed drawer keeps its old geometry and the
-        /// "no reserved column" assertions fail on the very next measure.
-        /// </summary>
-        public void Bump()
-        {
-            host?.Session.ClosePopup();
-            host?.Invalidate();
-        }
 
-        /// <summary>
-        /// Resets the session-owned scroll positions for the two page scroll containers. Used on
-        /// workspace switches so the centre content and the bottom help panel start at their top; other
-        /// layout-affecting writes only bump the revision and keep the user's scroll place.
-        /// </summary>
-        public void ResetScroll()
-        {
-            if (host == null) return;
 
-            // FL 0.4.0 keys scroll positions by node identity, not by the string a page declares:
-            // SetScrollPosition takes a UiNode and ScrollPositions is keyed by node (the string
-            // overload is gone with the batch-C node work, bd4d1b5). GetNodeByElementId is the
-            // carrier's own bridge from the one string this page owns to that identity.
-            //
-            // A null lookup means the element has not been arranged in this session yet, so there is
-            // no scroll state to reset. Skipping is equivalent to the old write, not a silent
-            // behaviour change: UiSession.GetScrollPosition answers UiLayoutPoint.Zero for a node that
-            // holds nothing, so "no entry" and "entry = zero" are indistinguishable to every reader,
-            // and these two calls never wrote anything but zero.
-            UiNode? contentNode = host.Session.GetNodeByElementId(ContentScrollId);
-            if (contentNode != null)
-            {
-                host.SetScrollPosition(ContentScrollId, UiLayoutPoint.Zero);
-            }
 
-            UiNode? helpNode = host.Session.GetNodeByElementId(HelpPanelScrollId);
-            if (helpNode != null)
-            {
-                host.SetScrollPosition(HelpPanelScrollId, UiLayoutPoint.Zero);
-            }
-        }
 
-        public void SetScrollTarget(string elementId)
-        {
-            host?.Session.SetScrollTarget(elementId);
-        }
-
-        public void ResetHelpScroll()
-        {
-            if (host?.Session.GetNodeByElementId(HelpPanelScrollId) != null)
-                host.SetScrollPosition(HelpPanelScrollId, UiLayoutPoint.Zero);
-        }
-
-        /// <summary>
-        /// CORRECTIONS-R1 topic 2: the navigation arrival's scroll arming, in one place. Reset the
-        /// page scrolls first (the arrival must not inherit the PREVIOUS workspace's offset - the
-        /// same behavior a plain set-tab gives), CLEAR any pending target request left by an
-        /// earlier open (a stale request could be consumed by the wrong arrange later), then arm
-        /// the new destination: an FL-materialized "pack-card-row#<key>" identity or a static
-        /// section id. An empty destination arms nothing and leaves the cleared state. No manual
-        /// offsets, no copied scroll policy - the engine resolves declared ids its own way
-        /// (UiSession.SetScrollTarget); parallel scroll containers are the engine's own
-        /// content-local containment decision, observed by the real-host lane below.
-        /// </summary>
-        public void ArmScrollTarget(string destination)
-        {
-            ResetScroll();
-            host?.Session.ClearScrollTarget();
-            if (!string.IsNullOrEmpty(destination)) host?.Session.SetScrollTarget(destination);
-        }
-    }
-
-    private const string ContentScrollId = "content-scroll";
-    private const string HelpPanelScrollId = "help-scroll";
 
     // S4-3, the timing card. The interval atom is a float slider (input/slider validates float), and the
     // window it declares in the manifest is 1..600 ticks - the same window the retired us/timing widget
@@ -413,7 +316,7 @@ public static partial class UsKernelSettingsHost
 
     private static UsWriteBindings BuildBindings(
         IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation,
-        RemixConfirmationFlow? remixFlow, ITextMetrics metrics)
+        RemixConfirmationFlow? remixFlow, ITextMetrics metrics, bool retainBehaviorDisplay)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -422,7 +325,7 @@ public static partial class UsKernelSettingsHost
         // raw surface, because they are not write keys and the revision-clock contract does not apply to
         // them. The funnel records each key it registers, which is what lets the harness enumerate the
         // write set instead of restating it (see UsWriteBindings for the measured scope).
-        var writes = new UsWriteBindings(bindings);
+        var writes = new UsWriteBindings(bindings) { RetainBehaviorDisplay = retainBehaviorDisplay };
         var entrySource = source as IUsSettingsEntrySource;
         bindings.BindReadOnly<bool>("native-entry-unavailable", () => entrySource == null);
         if (entrySource != null)
@@ -468,7 +371,7 @@ public static partial class UsKernelSettingsHost
             bump();
         });
         bindings.BindReadOnly<string>("banner-text", () => source.BuildView().BannerText);
-        bindings.BindReadOnly<string>("build-identity", () => source.BuildIdentity);
+        bindings.BindReadOnly<string>("build-identity", () => source.BuildIdentity + " · " + translation.Translate("US.B.Variant"));
         bindings.BindReadOnly<string>("save-status", () => source.SaveStatus);
         bindings.BindReadOnly<bool>("save-status-visible", () => source.SaveStatusVisible);
         bindings.BindReadOnly<bool>("is-dirty", () => source.IsDirty);
@@ -510,7 +413,22 @@ public static partial class UsKernelSettingsHost
         // widget's arithmetic: the slider atom owns the 0..1 value and the number-field atom owns the
         // 0..100 points, and both read the same business setter. The caption is a read-only string the
         // page binds instead of formatting in C#, because the manifest has no format expression.
-        writes.Value<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
+        // Compare the adopted value, not the requested float or percent. The business setter owns
+        // finite/clamp/tolerance policy; an uncached readback avoids rebuilding BuildView to find
+        // out whether it changed. Legacy sources still receive the original write and bump.
+        void SetGlobalVolume(float value)
+        {
+            if (source is not IUsGlobalVolumeSettingsSource effective)
+            {
+                source.SetGlobalVolume(value);
+                bump();
+                return;
+            }
+            float before = effective.EffectiveGlobalVolume;
+            source.SetGlobalVolume(value);
+            if (!effective.EffectiveGlobalVolume.Equals(before)) bump();
+        }
+        writes.Value<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, SetGlobalVolume);
         var activitySource = source as IUsActivitySettingsSource;
         bool invalidActivity = false;
         bindings.BindReadOnly<bool>("activity-available", () => activitySource != null);
@@ -527,7 +445,7 @@ public static partial class UsKernelSettingsHost
         writes.Value<float>(
             "global-volume-percent",
             () => source.BuildView().GlobalVolumeFactor * 100f,
-            value => { source.SetGlobalVolume(value / 100f); bump(); });
+            value => SetGlobalVolume(value / 100f));
         bindings.BindReadOnly<string>(
             "global-volume-caption",
             () => string.Format(
@@ -586,9 +504,11 @@ public static partial class UsKernelSettingsHost
         writes.Value<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetTalkingScaling(value); bump(); });
         writes.Value<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
 
-        writes.Value<string>("eat-phase", () => source.BuildView().EatPhase.ToString(), value => { source.SetEatParameter("phase", value); bump(); });
-        writes.Value<string>("eat-nutrition", () => source.BuildView().EatNutritionScope.ToString(), value => { source.SetEatParameter("nutritionScope", value); bump(); });
-        writes.Value<string>("eat-drug", () => source.BuildView().EatDrugScope.ToString(), value => { source.SetEatParameter("drugScope", value); bump(); });
+        string OwnEat(string field, string fallback) => source is UsKernelSettingsSource native ? native.ReadActionField(field, CoreActions.Eat,
+            state.TuningLayer == 0 ? "" : state.TuningRaceDefName, state.TuningLayer == 2 ? state.TuningXenotypeDefName : "") : fallback;
+        writes.Value<string>("eat-phase", () => OwnEat("phase", source.BuildView().EatPhase.ToString()), value => { source.SetEatParameter("phase", value); bump(); });
+        writes.Value<string>("eat-nutrition", () => OwnEat("nutritionScope", source.BuildView().EatNutritionScope.ToString()), value => { source.SetEatParameter("nutritionScope", value); bump(); });
+        writes.Value<string>("eat-drug", () => OwnEat("drugScope", source.BuildView().EatDrugScope.ToString()), value => { source.SetEatParameter("drugScope", value); bump(); });
         bindings.BindChoices<string>("eat-phase-options", () => EatOptions(typeof(EatPhase)));
         bindings.BindChoices<string>("eat-nutrition-options", () => EatOptions(typeof(EatNutritionScope)));
         bindings.BindChoices<string>("eat-drug-options", () => EatOptions(typeof(EatDrugScope)));
@@ -954,14 +874,8 @@ public static partial class UsKernelSettingsHost
         writes.Command(
             "reset-normal-diagnostics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Diagnostics) == SqueakResetOutcome.Applied) bump(); });
-        writes.Command(
-            "reset-action-row",
-            () => { if (source.ResetActionTuningRow(state.TuningSelectedAction) == SqueakResetOutcome.Applied) bump(); },
-            () => state.TuningSelectedAction.Length > 0 && source.CanResetTuningArea());
-        writes.Command(
-            "reset-action-area",
-            () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) bump(); },
-            () => source.CanResetTuningArea());
+        // Action row/area commands are registered by BindBehaviorSheet, alongside the exact
+        // retained field identities needed to end only the drafts their Applied result affects.
         // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board and the teaching toggle.
         // The intro is a page-state bool like help-open, with the two complementary VisibleBinds the
         // manifest's collapse/reopen buttons read. The board is READ-ONLY projection; its two exits
@@ -1525,17 +1439,6 @@ public static partial class UsKernelSettingsHost
         return value;
     }
 
-    private static string ReadManifest()
-    {
-        Stream? stream = typeof(UsKernelSettingsHost).Assembly.GetManifestResourceStream(ManifestResourceName);
-        if (stream == null)
-        {
-            throw new InvalidOperationException(
-                $"Embedded Schema=2 layout resource '{ManifestResourceName}' was not found.");
-        }
 
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
 
 }

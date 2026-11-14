@@ -1,6 +1,24 @@
 # 现行保证与开放实现偏差
 本页是[规格](../../specification.md)的实现与证据状态；技术修复、原生运行与玩家听感分别记录。
 
+## US06 Kernel维护（2026-11-09）
+
+D1已在本B维护线接通：启动就绪的单一保存owner由`Verse.Root.Update`主线程postfix独立维护，不再由设置窗绘制驱动；暂停／无地图仍用原0.35真实秒，长事件／Scribe占用等到安全更新。显式关闭Flush／Retry、物理失败代次、写中编辑与PublicationPending分离保持，K1精确原供给复核／K2每次维护一次发布修复不变。
+
+O1／O2现分开保存最近决定、当前槽、最近维护／实际复核采用身份及终止观察时点，原Align保当次W／phase窗口／pattern，Audio引用有发布者内进程编号。原64条决定ring不回填；同录制owner另保一份可替换的最近维护快照，不制造决定序列。具体字段和原公共用途见[实现映射](implementation.md#玩家诊断的真实采用链)。
+
+固定已发布FL rc2的新隔离Release与源码、既有受影响检查在[维护交付入口](../../build-and-debug.md#us06-kernel-maintenance-candidate)。1.6.4871引用API／字段、1.6.4850真实Root方法体、构建和平台double证据分别使用；真实1.6无UI自动防抖、暂停／无地图／场景交接、Harmony挂接、新维护快照／复制和完整退出仍需现场核验。没有新增case／probe，不据此关闭既有听感、输入／IME、B浏览A录制或Report／32-pass接受条件。
+
+CO核出A001 r1把冻结决定传入原当前Response，导致持续槽维护结束而无新决定时ReadyFor／标记仍活跃；该候选保留但撤回推荐。r2恢复原owner.Observe当前槽／截止，独立DecisionObservation供历史；当前槽有／无改变也进入原行内容fingerprint。原D1／Core／保存证据按未变输入复用，修订只重编／检查受影响生产诊断与对应交付；具体新证据由r2交付持有。
+
+## 2026-11-06 规格对账与当前维护候选
+
+已补录三组导航、真实780／440与900区域断点、紧凑动作行、同源开发预览和Core性能边界；UI-07纠正旧文档漂移，不改生产政策。0.8工作台、真实Core样例、文档热改、K4正文缓存与US屏幕标记已实现，范围分别见[工作台](../offline-workbench-20261106.md)与[屏幕控件](../diagnostics-screen-mark-20261106.md)。完整同源游戏窗口／虚拟舞台未移植到本B／FL0.8维护线；独立FL0.9线已有US r6／FL v3经Tools r13实际消费与PM技术核收，用户接受仍待，不算本线运行证据；新1.7开发跟随当前接口，不锁小构建号，不能据此删改1.6维护条件。
+
+PM已接受c3-dev完整接替r6当前候选；原r6留回退，UI／查看B录制A／展开收起采样、Report连续／原位32-pass及准确1.6输入投影／生命周期未验项转入新候选。下文r6阶段“待核收”等措辞保其历史时点，不是当前包推荐。此次仅文档修订，未新增运行证据。K5 Root.Update／Pawn扫描架构改造仍缺热点依据，未采用。
+
+**2026-11-05 B Dev本地交付：** A009已用正式固定producer-r5-dev编译US Dev，形成`delivery-r6-dev`两根完整成品，待CO／PM核收；旧r5 Release已撤回推荐但不覆盖。实际Dev诊断575（含per-Host／独立outline分支）、shell13／Remix11、UiLogic及准确source/check见[实施检查点](../ui-diagnostics-20261105.md)。A008目标／报告／释放修复已编译，Report连续pending／新原位32-pass组合仍无动态覆盖；作者旧popup无同合同映射、来源列表直接查选／长来源、O5及native／独立1.7缺口保留。更早未变证据只按原输入层复用，以下旧候选不重标新Dev。
+
 ## F01 日志出口与失败隔离
 **实现：** 2026-10-29已恢复DIAG-02／03。原36个出口沿具名`SqueakLog`事件／取证入口进入受保护格式化与唯一`SqueakLogSink.Emit`；原生Log不再位于业务／UI。当前`kernel.response`使用明确fmt=3，不双发旧裸response／OneShot文本。未改义的fmt=1／2 API仍保原字段，VF1必要store failure按现行DIAG-02更正为Daily warning。r4收取纠正其及其他现行Daily故障在Auto／Disabled下缺必要上下文的遗漏：安全HumanSentence保已捕获身份／阶段、异常类型与清洗原因，不依赖详细suffix；VF1六出口具名stage并参与once键。
 
@@ -10,7 +28,7 @@
 
 ## D06 玩家诊断状态、录制与反馈
 
-**实现：** 已采用 DIAG-04／06／07，并恢复 DIAG-01 初态与只读边。native adapter 在原结算边保存 HasEvaluation／序号；typed 投影不查询 null 动作字典、不重采健康／随机或维护生产 population。原窗口新增普通入口、单目标最近 64 条 ring、可见覆盖／捕获／读取失败、停止／清空及有界反馈复制；回应日志按 60 真实秒续期，其他日志／成本预算不变。未采到的 root、游戏版本等如实标记；W 完整资料与持续槽细节显式为 `window_w_details=NotCaptured`／`sustained_slot_details=NotCaptured`，已有 next_state_tick、active／end_reason 不冒充这些细节，不增加业务读面。
+**实现：** 已采用 DIAG-04／06／07，并恢复 DIAG-01 初态与只读边。native adapter 在原结算边保存 HasEvaluation／序号；typed 投影不查询 null 动作字典、不重采健康／随机或维护生产 population。原窗口提供普通入口、单目标最近 64 条 ring、可见覆盖／捕获／读取失败、停止／清空及有界反馈复制；回应日志按 60 真实秒续期，其他日志／成本预算不变。未采到的 root、游戏版本等如实标记。US06维护已补原排程采用量和最近持续维护事实，取代本段原先统一的W／槽NotCaptured说明；NoOwner仍NotCaptured，未排程不虚构W。原2026-10-29运行证据保原输入，不由本次字段扩充改签。
 
 **证据：** 独立诊断候选消费既有 FL producer-release-r1；Dev／Release 引用编译、现有 UiLogic、LogTests 两配置、AudioBinding 既有 through／Select 入口、当前 Release Host 的既有 diagnostics／双语 workspace 均按实际层记录在 `dist/diagnostics-tool-20261029/REPORT-B.md`。Host 的 native Comp／录制／clipboard 并非这些 fake-source 用例的自动覆盖。错误地用 Dev Host 要求 Release FL 提供 Dev geometry 的尝试保留为环境不匹配，不放宽断言。
 

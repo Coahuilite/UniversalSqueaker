@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<UiPage Schema="2" Source="coahuilite.universalsqueaker">
+<UiPage Schema="2" Source="coahuilite.universalsqueaker" TieredEvents="true">
   <Styles Schema="1" Density="regular">
     <Density Name="regular">
       <Metric Token="RowHeight" Value="24" />
@@ -7,379 +7,544 @@
     <Density Name="dense">
       <Metric Token="RowHeight" Value="20" />
     </Density>
-    <Scheme Name="us-preset-rows">
+    <Scheme Name="us-tuning-title">
+      <Metric Token="Font" Value="Medium" />
+      <Metric Token="FontSize" Value="22" />
+    </Scheme>
+    <Scheme Name="us-tuning-body">
+      <Metric Token="Font" Value="Small" />
+      <Metric Token="FontSize" Value="16" />
+    </Scheme>
+    <Scheme Name="us-tuning-meta">
       <Metric Token="Font" Value="Tiny" />
+      <Metric Token="FontSize" Value="14" />
+    </Scheme>
+    <Scheme Name="us-preset-rows">
+      <Metric Token="Font" Value="Small" />
+      <Metric Token="FontSize" Value="16" />
+    </Scheme>
+    <Scheme Name="us-roster-title">
+      <Metric Token="Font" Value="Medium" />
+      <Metric Token="FontSize" Value="22" />
+    </Scheme>
+    <Scheme Name="us-roster-body">
+      <Metric Token="Font" Value="Small" />
+      <Metric Token="FontSize" Value="16" />
+    </Scheme>
+    <Scheme Name="us-roster-meta">
+      <Metric Token="Font" Value="Tiny" />
+      <Metric Token="FontSize" Value="14" />
+    </Scheme>
+    <Scheme Name="us-text-title">
+      <Metric Token="Font" Value="Medium" />
+      <Metric Token="FontSize" Value="22" />
+    </Scheme>
+    <Scheme Name="us-text-body">
+      <Metric Token="Font" Value="Small" />
+      <Metric Token="FontSize" Value="16" />
+      <Metric Token="RowHeight" Value="30" />
+    </Scheme>
+    <Scheme Name="us-text-meta">
+      <Metric Token="Font" Value="Tiny" />
+      <Metric Token="FontSize" Value="14" />
     </Scheme>
   </Styles>
-  <Column Id="page-root" Gap="6" Padding="12" CancelBind="page-cancel">
-    <Row Id="header-band" Gap="8" Padding="0">
-      <Widget Id="home-return" Kind="input/button" TextKey="US.UI.BackToVoices" ActionBind="go-home" VisibleBind="page-tools-area" Width="172" Height="28" />
-      <Widget Id="page-title" Kind="text/wrapped" Bind="voice-page-title" />
-      <Widget Id="tools-link" Kind="input/button" TextKey="US.UI.Tools" ActionBind="go-page" PayloadBind="go-Tools-payload" VisibleBind="page-Voices" Width="160" Height="28" />
-      <Widget Id="topic-link" Kind="input/button" TextKey="US.UI.Help" ActionBind="open-topic" HelpRef="us/page-title/help-drawer" Width="110" Height="28" />
+  <Column Id="page-root" Scheme="us-text-body" Gap="6" Padding="12" CancelBind="page-cancel">
+    <Row Id="header-band" Gap="6" Padding="0">
+      <Widget Id="nav-Voices" Kind="input/button" TextKey="US.B.Voices" ActionBind="go-home" SelectedBind="b-voices" Width="114" Height="30" />
+      <Widget Id="tools-link" Kind="input/button" TextKey="US.B.Tuning" ActionBind="b-tuning" SelectedBind="b-tuning" Width="114" Height="30" />
+      <Widget Id="system-link" Kind="input/button" TextKey="US.B.System" ActionBind="b-system" SelectedBind="b-system" Width="114" Height="30" />
+      <Widget Id="page-title" Kind="text/wrapped" Scheme="us-text-title" Bind="voice-page-title" HelpRef="us/page-title/help-drawer" />
+      <Widget Id="topic-link" Kind="input/button" TextKey="US.UI.Help" ActionBind="open-topic" VisibleBind="help-closed" Width="Auto" Height="30" />
+      <Widget Id="topic-link-close" Kind="input/button" TextKey="US.UI.CloseHelp" ActionBind="open-topic" VisibleBind="help-open" Width="Auto" Height="30" />
     </Row>
-    <Wrap Id="tool-nav" Cols="7" Gap="4" Padding="0" VisibleBind="page-tools-area">
-      <Widget Id="nav-Behavior" Kind="input/button" TextKey="US.UI.Nav.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" SelectedBind="tool-is-Behavior" Height="30" />
-      <Widget Id="nav-Presets" Kind="input/button" TextKey="US.UI.Nav.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" SelectedBind="tool-is-Presets" Height="30" />
-      <Widget Id="nav-Output" Kind="input/button" TextKey="US.UI.Nav.Output" ActionBind="go-page" PayloadBind="go-Output-payload" SelectedBind="tool-is-Output" Height="30" />
-      <Widget Id="nav-Fallback" Kind="input/button" TextKey="US.UI.Nav.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" SelectedBind="tool-is-Fallback" Height="30" />
-      <Widget Id="nav-Appearance" Kind="input/button" TextKey="US.UI.Nav.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" SelectedBind="tool-is-Appearance" Height="30" />
-      <Widget Id="nav-Diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" SelectedBind="tool-is-Diagnostics" Height="30" />
-      <Widget Id="nav-Restore" Kind="input/button" TextKey="US.UI.Nav.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" SelectedBind="tool-is-Restore" Height="30" />
-    </Wrap>
-    <Column Id="business-body" Fill="true" Padding="0" Gap="0">
-    <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices">
-      <Widget Id="voice-summary" Kind="text/wrapped" Bind="voice-summary" />
-      <Row Id="playback-status" Gap="8" Padding="0" VisibleBind="kernel-needs-policy">
-        <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" Tone="Warning" Emphasis="Normal" VisibleBind="kernel-needs-policy" HelpRef="us/timing/policy" />
-        <Widget Id="playback-status-details" Kind="input/button" TextKey="US.UI.StatusDetails" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" Width="100" Height="28" />
-      </Row>
-      <Row Id="home-output" Gap="12" Padding="0">
-        <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" />
-        <Column Id="home-volume" Width="240" Padding="0" Gap="2">
-          <Row Id="global-volume-top" Gap="6" Padding="0">
-            <Widget Id="global-volume-caption" Kind="text/wrapped" TextKey="US.Section.OutputLevel" />
-            <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="22" Live="true" HelpRef="us/global-volume/number" />
-          </Row>
-          <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpRef="us/global-volume/slider" />
-        </Column>
-      </Row>
-      <Row Id="voice-browse-tabs" Gap="6" Padding="0">
-        <Widget Id="browse-packs" Kind="input/button" TextKey="US.UI.Packs" ActionBind="browse-packs" SelectedBind="voice-packs" Width="190" Height="28" />
-        <Widget Id="browse-definitions" Kind="input/button" TextKey="US.UI.Definitions" ActionBind="browse-definitions" SelectedBind="voice-definitions" Width="190" Height="28" />
-        <Widget Id="voice-filter-toggle" Kind="input/button" TextKey="US.UI.Filters" ActionBind="voice-filters" SelectedBind="voice-filters-open" Width="84" Height="28" />
-      </Row>
-      <Row Id="voice-search" Gap="6" Padding="0">
-        <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-packs" HelpRef="us/filter-bar/keyword" />
-        <Widget Id="home-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Height="28" Live="true" VisibleBind="voice-definitions" HelpRef="us/race-board/search" />
-      </Row>
-      <Widget Id="voice-directory-back" Kind="input/button" TextKey="US.UI.Definitions" ActionBind="voice-back" VisibleBind="voice-directory-return" Width="190" Height="28" />
-      <Column Id="home-pack-filters" Gap="4" Padding="0" VisibleBind="voice-packs">
-        <Scroll Id="voice-filter-body" Height="240" Gap="4" Padding="0" VisibleBind="voice-filters-open">
-          <Widget Id="packs-range" Kind="input/dropdown" Bind="pack-range" OptionsBind="pack-range-options" Height="28" />
-          <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
-        </Scroll>
-        <Row Id="voice-filter-summary-row" Padding="0" Gap="8">
-          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" HelpRef="us/filter-bar/summary" />
-          <Widget Id="voice-filter-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="clear-pack-filters" PayloadBind="voice-empty" Width="70" Height="24" />
-        </Row>
-        <Row Id="voice-stable-note" Gap="8" Padding="0" VisibleBind="voice-stable-filter">
-          <Widget Id="voice-stable-text" Kind="text/wrapped" TextKey="US.UI.StableFilter" Emphasis="Muted" />
-          <Widget Id="voice-refresh" Kind="input/button" TextKey="US.UI.Refresh" ActionBind="voice-refresh" Width="86" Height="24" />
-        </Row>
-      </Column>
-      <Row Id="voice-split" Breakpoint="1" Narrow="Column" Fill="true" Gap="16" Padding="0" VisibleBind="voice-packs">
-        <Scroll Id="voice-list-scroll" Fill="true" Gap="4" Padding="0" VisibleBind="voice-list-visible" CancelBind="voice-detail-cancel">
-          <Repeat Id="packs-card-rows" Items="pack-card-keys" Template="pack-card-row" Gap="4" Padding="0" />
-          <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleBind="pack-results-empty" />
-          <Widget Id="packs-none" Kind="state/empty" TextKey="US.Packs.Results.None" VisibleBind="pack-no-packs" />
-          <Widget Id="voice-query-status" Kind="text/wrapped" Bind="voice-query-status" />
-        </Scroll>
-        <Scroll Id="voice-detail-scroll" Width="440" Fill="true" Gap="8" Padding="0" VisibleBind="voice-detail-visible" CancelBind="voice-detail-cancel">
-          <Widget Id="voice-detail-back" Kind="input/button" TextKey="US.UI.BackToList" ActionBind="voice-back" VisibleBind="voice-compact-back" Height="28" Width="160" />
-          <Widget Id="voice-detail-title" Kind="text/wrapped" Bind="voice-detail-title" />
-          <Widget Id="voice-detail-meta" Kind="text/wrapped" Bind="voice-detail-meta" Emphasis="Muted" VisibleBind="voice-has-viewed-pack" />
-          <Widget Id="voice-editing-target" Kind="text/wrapped" Bind="voice-editing-target" VisibleBind="voice-has-edit-domain" />
-          <Repeat Id="pack-detail-rows" Items="pack-card-keys" Template="pack-detail-row" Gap="4" Padding="0" />
-          <Widget Id="voice-semantics" Kind="text/wrapped" TextKey="US.UI.SelectionNote" Emphasis="Muted" VisibleBind="voice-has-viewed-pack" />
-          <Widget Id="voice-domain-scope" Kind="text/wrapped" Bind="checklist-scope" VisibleBind="checklist-has-domain" />
-          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" VisibleBind="checklist-has-domain" />
-          <Widget Id="voice-to-behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="voice-behavior" Height="28" VisibleBind="voice-has-edit-domain" />
-          <Widget Id="voice-to-fallback" Kind="input/button" TextKey="US.UI.Fallback" ActionBind="voice-fallback" Height="28" VisibleBind="voice-can-fallback" />
-        </Scroll>
-      </Row>
-      <Scroll Id="definition-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="voice-definitions">
-        <Widget Id="definition-filters" Kind="us/directory-filters" TitleHidden="true" />
-        <Widget Id="race-board-cards" Kind="us/race-board" TitleHidden="true" />
-      </Scroll>
-      <Row Id="voice-pager" Padding="0" Gap="8" VisibleBind="voice-pager">
-        <Widget Id="voice-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="voice-prev" Width="90" Height="24" />
-        <Widget Id="voice-page-count" Kind="text/wrapped" Bind="voice-page-count" />
-        <Widget Id="voice-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="voice-next" Width="90" Height="24" />
-      </Row>
+    <Column Id="tool-nav" Gap="8" Padding="0" VisibleBind="page-tools-area">
+      <Widget Id="tool-nav-divider" Kind="chrome/rule" Thickness="1" Height="1" />
+      <Wrap Id="tuning-nav" Cols="4" MaxWidth="660" AlignX="Left" Gap="4" Padding="0" VisibleBind="b-tuning">
+        <Widget Id="nav-Behavior" Kind="input/button" TextKey="US.UI.Nav.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" SelectedBind="tool-is-Behavior" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Output" Kind="input/button" TextKey="US.UI.Nav.Output" ActionBind="go-page" PayloadBind="go-Output-payload" SelectedBind="tool-is-Output" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Fallback" Kind="input/button" TextKey="US.UI.Nav.Fallback" ActionBind="go-page" PayloadBind="go-Fallback-payload" SelectedBind="tool-is-Fallback" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Presets" Kind="input/button" TextKey="US.UI.Nav.Presets" ActionBind="go-page" PayloadBind="go-Presets-payload" SelectedBind="tool-is-Presets" Height="30" Emphasis="Muted" />
+      </Wrap>
+      <Wrap Id="system-nav" Cols="3" MaxWidth="500" AlignX="Left" Gap="4" Padding="0" VisibleBind="b-system">
+        <Widget Id="nav-Appearance" Kind="input/button" TextKey="US.UI.Nav.Appearance" ActionBind="go-page" PayloadBind="go-Appearance-payload" SelectedBind="tool-is-Appearance" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" SelectedBind="tool-is-Diagnostics" Height="30" Emphasis="Muted" />
+        <Widget Id="nav-Restore" Kind="input/button" TextKey="US.UI.Nav.Restore" ActionBind="go-page" PayloadBind="go-Restore-payload" SelectedBind="tool-is-Restore" Height="30" Emphasis="Muted" />
+      </Wrap>
     </Column>
-    <Scroll Id="page-Behavior-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Behavior">
-      <Column Id="tuning-context" Gap="0" Padding="0" CancelBind="cancel-tuning-context">
-        <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpRef="us/scope-tree" CancelBind="cancel-tuning-target" />
-      </Column>
-      <Section Id="source-selection" Padding="12" Gap="6">
-      <Widget Id="source-help" Kind="text/wrapped" TextKey="US.UI.SourceNote" />
-      <Widget Id="source-explain" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-topic" PayloadBind="explain:us/behavior-source/selection" HelpRef="us/behavior-source/selection" Width="90" Height="28" />
-        <Widget Id="behavior-source" Kind="input/dropdown" Bind="behavior-source" OptionsBind="behavior-source-options" Height="30" />
-        <Widget Id="source-status" Kind="text/wrapped" Bind="behavior-source-status" />
-      </Section>
-      <Section Id="sparse-action-fields" Padding="12" Gap="6" VisibleBind="action-fields-visible">
-        <Widget Id="sparse-target" Kind="text/wrapped" Bind="action-fields-target" />
-        <Widget Id="sparse-note" Kind="text/wrapped" TextKey="US.UI.SparseNote" />
-        <Repeat Id="sparse-action-rows" Items="action-edit-keys" Template="sparse-action-row" Gap="0" Padding="0" />
-        <Widget Id="action-row-diagnostic" Kind="text/wrapped" Bind="action-row-diagnostic" />
-      </Section>
-    </Scroll>
-    <Scroll Id="page-Presets-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Presets">
-      <Widget Id="preset-boundary" Kind="text/wrapped" TextKey="US.UI.PresetNote" />
-      <Widget Id="preset-explain" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-topic" PayloadBind="explain:us/preset-list" Width="90" Height="28" />
-      <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpRef="us/preset-list" Scheme="us-preset-rows" />
-    </Scroll>
-    <Scroll Id="page-Output-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Output">
-      <Column Id="output-context" Gap="6" Padding="0">
-        <Widget Id="output-context-label" Kind="text/wrapped" Bind="edit-domain-context" />
-        <Widget Id="output-context-link" Kind="input/button" TextKey="US.UI.OutputContext" ActionBind="go-page" PayloadBind="go-Behavior-payload" Height="28" />
-      </Column>
-      <Section Id="basic-tuning" Padding="12" Gap="8">
-        <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpRef="us/basic-tuning" />
-        <Column Id="global-activity-editor" Gap="4" Padding="0" VisibleBind="activity-available">
-          <Row Id="global-activity-row" Gap="8" Padding="0">
-            <Widget Id="global-activity-label" Kind="text/wrapped" TextKey="US.Activity.Title" />
-            <Widget Id="global-activity" Kind="input/text-field" Bind="global-activity" Width="160" Height="28" HelpRef="us/basic-tuning/activity" />
+    <Column Id="business-body" Fill="true" Padding="0" Gap="0">
+      <Column Id="voice-home" Fill="true" Gap="6" Padding="0" VisibleBind="page-Voices" Scheme="us-roster-body">
+        <Column Id="b-control-band" Gap="2" Padding="0" VisibleBind="b-control">
+          <Row Id="home-output" MaxWidth="660" AlignX="Left" Breakpoint="680" Narrow="Column" Gap="12" Padding="0">
+            <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" />
+            <Column Id="home-volume" Width="200" Gap="2" Padding="0">
+              <Row Id="global-volume-top" Gap="6" Padding="0">
+                <Widget Id="global-volume-caption" Kind="text/wrapped" TextKey="US.Section.OutputLevel" HelpRef="us/global-volume/slider" />
+                <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="30" Live="true" HelpRef="us/global-volume/number" />
+              </Row>
+              <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="24" HelpRef="us/global-volume/slider" />
+            </Column>
           </Row>
-          <Widget Id="global-activity-note" Kind="text/wrapped" TextKey="US.Activity.Note" Emphasis="Muted" />
-          <Widget Id="global-activity-invalid" Kind="text/wrapped" TextKey="US.Activity.Invalid" Tone="Warning" VisibleBind="activity-invalid" />
-          <Widget Id="global-activity-explain" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/activity" Width="90" Height="28" />
+          <Widget Id="voice-summary" Kind="text/wrapped" Bind="b-summary" Emphasis="Muted" />
         </Column>
-        <Wrap Id="output-explain-actions" Padding="0" Gap="6">
-          <Widget Id="select-explain" Kind="input/button" TextKey="US.UI.ExplainSelect" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/select" Width="150" Height="28" />
-          <Widget Id="eat-phase-explain" Kind="input/button" TextKey="US.UI.ExplainEatPhase" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/eat-phase" Width="160" Height="28" />
-          <Widget Id="eat-nutrition-explain" Kind="input/button" TextKey="US.UI.ExplainEatNutrition" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/eat-nutrition" Width="170" Height="28" />
-          <Widget Id="eat-drug-explain" Kind="input/button" TextKey="US.UI.ExplainEatDrug" ActionBind="explain-topic" PayloadBind="explain:us/basic-tuning/eat-drug" Width="160" Height="28" />
+        <Row Id="b-roster-split" Breakpoint="1" Narrow="Column" Fill="true" Gap="12" Padding="0">
+          <Column Id="b-list-column" Width="300" Fill="true" Gap="4" Padding="0" VisibleBind="b-list">
+            <Row Id="voice-browse-tabs" Gap="4" Padding="0">
+              <Widget Id="browse-definitions" Kind="input/button" HelpRef="us/roster/targets" TextKey="US.B.Targets" ActionBind="browse-definitions" SelectedBind="voice-definitions" Height="30" />
+              <Widget Id="browse-packs" Kind="input/button" HelpRef="us/roster/packs" TextKey="US.UI.Packs" ActionBind="browse-packs" SelectedBind="voice-packs" Height="30" />
+              <Widget Id="voice-filter-toggle" Kind="input/button" TextKey="US.UI.Filters" ActionBind="voice-filters" SelectedBind="voice-filters-open" Width="70" Height="30" HelpRef="us/roster/search" />
+            </Row>
+            <Widget Id="packs-keyword" Kind="input/text-field" HelpRef="us/filter-bar/keyword" Bind="b-query" PlaceholderKey="US.B.Search" Height="30" Live="true" />
+            <Scroll Id="b-filter-scroll" Height="164" Gap="4" Padding="0" VisibleBind="voice-filters-open">
+              <Widget Id="b-range" Kind="input/dropdown" Bind="b-range" OptionsBind="b-ranges" Height="30" />
+              <Widget Id="b-coverage" Kind="input/dropdown" Bind="b-coverage" OptionsBind="b-coverages" Height="30" />
+              <Widget Id="b-source-query" Kind="input/text-field" Bind="b-source-query" PlaceholderKey="US.B.SearchSources" Height="30" Live="true" />
+              <Widget Id="b-source-clear" Kind="input/button" TextKey="US.B.AllSources" ActionBind="b-source-clear" Height="30" />
+              <Repeat Id="b-source-rows" Items="b-source-keys" Template="b-source-row" Gap="2" Padding="0" />
+              <Row Id="b-source-pages" Gap="4" Padding="0" VisibleBind="b-source-has-pages">
+                <Widget Id="b-source-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="b-source-prev" Width="90" Height="30" />
+                <Widget Id="b-source-page" Kind="text/wrapped" Bind="b-source-count" />
+                <Widget Id="b-source-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="b-source-next" Width="90" Height="30" />
+              </Row>
+            </Scroll>
+            <Row Id="b-result-summary" Gap="4" Padding="0">
+              <Widget Id="b-count" Kind="text/wrapped" Bind="b-count" Emphasis="Muted" HelpRef="us/filter-bar/summary" />
+              <Widget Id="b-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="b-clear" Width="64" Height="30" VisibleBind="b-filtered" />
+            </Row>
+            <Row Id="b-retained-row" Gap="4" Padding="0" VisibleBind="b-retained">
+              <Widget Id="b-kept-note" Kind="text/wrapped" TextKey="US.B.Kept" VisibleBind="b-has-kept" Scheme="us-roster-meta" />
+              <Widget Id="b-refresh" Kind="input/button" TextKey="US.UI.Refresh" ActionBind="b-refresh" Width="80" Height="30" />
+            </Row>
+            <Scroll Id="voice-list-scroll" Fill="true" Gap="2" Padding="0">
+              <Repeat Id="b-roster-rows" Items="b-roster-keys" Template="b-roster-row" Gap="2" Padding="0" VisibleBind="voice-definitions" />
+              <Repeat Id="b-pack-rows" Items="b-pack-keys" Template="b-pack-row" Gap="4" Padding="0" VisibleBind="voice-packs" />
+              <Widget Id="b-empty" Kind="text/wrapped" TextKey="US.B.NoResults" VisibleBind="b-no-results" />
+              <Widget Id="b-packs-empty" Kind="text/wrapped" TextKey="US.Packs.Results.None" VisibleBind="b-packs-empty" />
+            </Scroll>
+            <Row Id="b-pages" Gap="4" Padding="0" VisibleBind="b-has-pages">
+              <Widget Id="b-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="b-prev" Height="30" />
+              <Widget Id="b-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="b-next" Height="30" />
+            </Row>
+          </Column>
+          <Scroll Id="voice-detail-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="b-sheet" CancelBind="voice-detail-cancel">
+            <Widget Id="voice-detail-back" Kind="input/button" TextKey="US.UI.BackToList" ActionBind="voice-back" VisibleBind="voice-compact-back" Width="160" MaxWidth="160" AlignX="Left" Height="30" />
+            <Widget Id="b-no-sheet" Kind="text/wrapped" TextKey="US.B.ChooseTarget" VisibleBind="b-no-sheet" />
+            <Column Id="b-target-sheet" MaxWidth="660" Gap="6" Padding="0" VisibleBind="b-target-sheet">
+              <Widget Id="b-target-title" Kind="text/wrapped" Bind="b-target-title" Scheme="us-roster-title" />
+              <Widget Id="b-target-status" Kind="text/wrapped" Bind="b-target-status" VisibleBind="b-target-has-status" />
+              <Widget Id="b-target-layer" Kind="text/wrapped" Bind="b-target-layer" />
+              <Widget Id="b-behavior" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="b-behavior" VisibleBind="b-can-behavior" Width="Auto" Height="30" />
+              <Widget Id="b-forget" Kind="input/button" TextKey="US.B.Forget" ActionBind="b-forget" Width="Auto" Height="30" VisibleBind="b-target-orphans" />
+              <Repeat Id="b-target-packs" Items="b-target-pack-keys" Template="b-target-pack-row" Gap="6" Padding="0" />
+              <Widget Id="b-no-pack" Kind="text/wrapped" TextKey="US.B.NoPackHelp" VisibleBind="b-target-no-packs" />
+              <Widget Id="b-supply-route" Kind="text/wrapped" Bind="b-supply-route" VisibleBind="b-has-supply" Scheme="us-roster-meta" Emphasis="Muted" />
+              <Widget Id="b-supply-exact-counts" Kind="text/wrapped" Bind="b-supply-exact-counts" VisibleBind="b-supply-exact" />
+              <Widget Id="b-supply-race-counts" Kind="text/wrapped" Bind="b-supply-race-counts" VisibleBind="b-has-supply" />
+              <Widget Id="b-supply-fallback-counts" Kind="text/wrapped" Bind="b-supply-fallback-counts" VisibleBind="b-has-supply" />
+              <Widget Id="b-supply-table-counts" Kind="text/wrapped" Bind="b-supply-table-counts" VisibleBind="b-has-supply" />
+              <Widget Id="b-table" Kind="input/button" TextKey="US.B.OpenCreateTable" ActionBind="b-table" VisibleBind="b-can-table" Width="Auto" Height="30" />
+            </Column>
+            <Column Id="b-pack-sheet" MaxWidth="660" Gap="6" Padding="0" VisibleBind="b-pack-sheet">
+              <Widget Id="b-pack-title" Kind="text/wrapped" Bind="b-pack-title" Scheme="us-roster-title" />
+              <Widget Id="b-pack-meta" Kind="text/wrapped" Bind="b-pack-meta" Scheme="us-roster-meta" Emphasis="Muted" />
+              <Widget Id="b-pack-sheet-query" Kind="input/text-field" Bind="b-pack-sheet-query" PlaceholderKey="US.B.SearchTargets" Height="30" Live="true" />
+              <Repeat Id="b-pack-targets" Items="b-pack-target-keys" Template="b-pack-target-row" Gap="6" Padding="0" />
+              <Row Id="b-sheet-pages" Gap="4" Padding="0" VisibleBind="b-sheet-has-pages">
+                <Widget Id="b-sheet-prev" Kind="input/button" TextKey="US.UI.Previous" ActionBind="b-sheet-prev" Width="90" Height="30" />
+                <Widget Id="b-sheet-count" Kind="text/wrapped" Bind="b-sheet-count" />
+                <Widget Id="b-sheet-next" Kind="input/button" TextKey="US.UI.Next" ActionBind="b-sheet-next" Width="90" Height="30" />
+              </Row>
+            </Column>
+            <Row Id="b-detail-actions" Gap="6" Padding="0" MaxWidth="660" VisibleBind="b-detail-actions">
+              <Widget Id="b-details-toggle" Kind="input/button" TextKey="US.B.TechnicalDetails" ActionBind="b-details-toggle" SelectedBind="b-details-open" Width="180" Height="30" />
+              <Widget Id="b-diagnostics" Kind="input/button" TextKey="US.UI.Nav.Diagnostics" ActionBind="go-page" PayloadBind="go-Diagnostics-payload" VisibleBind="b-target-sheet" Width="120" Height="30" />
+            </Row>
+            <Widget Id="b-path" Kind="text/wrapped" Bind="b-path" MaxWidth="660" VisibleBind="b-target-details" Scheme="us-roster-meta" Emphasis="Muted" />
+          </Scroll>
+        </Row>
+      </Column>
+      <Column Id="page-Behavior-scroll" MaxWidth="660" Fill="true" Gap="6" Padding="0" VisibleBind="page-Behavior" CancelBind="cancel-tuning-context">
+        <Widget Id="edit-domain-context" Kind="text/wrapped" Bind="edit-domain-context" />
+        <Widget Id="b-context-toggle" Kind="input/button" TextKey="US.B.LayerControls" ActionBind="b-context-toggle" SelectedBind="b-context-open" Width="180" AlignX="Left" Height="30" />
+        <Wrap Id="b-layer-ladder" Cols="3" Gap="4" Padding="0" VisibleBind="b-context-open">
+          <Widget Id="b-layer-0" Kind="input/button" TextKey="US.UI.PawnProfile" ActionBind="b-layer-0" SelectedBind="b-layer-is-0" Height="30" />
+          <Widget Id="b-layer-1" Kind="input/button" TextKey="US.Tuning.Layer.Race" ActionBind="b-layer-1" SelectedBind="b-layer-is-1" Height="30" />
+          <Widget Id="b-layer-2" Kind="input/button" TextKey="US.Tuning.Layer.Xenotype" ActionBind="b-layer-2" SelectedBind="b-layer-is-2" Height="30" />
         </Wrap>
-        <Column Id="basic-tuning-body" Gap="6" Padding="0">
-          <Row Id="basic-egg-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Column Id="basic-egg-text" Gap="1" Padding="0">
-              <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpRef="us/basic-tuning/egg" />
-              <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleBind="easter-egg-on" />
-              <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleBind="easter-egg-off" />
-            </Column>
-            <Column Id="basic-egg-check-slot" Width="36" Padding="0" AlignY="Middle">
-              <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedBind="allow-eggs" Width="36" Height="30" HelpRef="us/basic-tuning/egg" AlignX="Left" />
-            </Column>
-          </Row>
-          <Row Id="basic-talking-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpRef="us/basic-tuning/scale-talking" />
-            <Column Id="basic-talking-check-slot" Width="36" Padding="0" AlignY="Middle">
-              <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedBind="scale-talking" Width="36" Height="30" HelpRef="us/basic-tuning/scale-talking" AlignX="Left" />
-            </Column>
-          </Row>
-          <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPhase" HelpRef="us/basic-tuning/eat-phase" />
-            <Widget Id="basic-eat-choice" Kind="input/dropdown" Bind="eat-phase" OptionsBind="eat-phase-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-phase" />
-          </Row>
-          <Row Id="basic-eat-nutrition-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-eat-nutrition-label" Kind="text/wrapped" TextKey="US.Tuning.EatNutrition" HelpRef="us/basic-tuning/eat-nutrition" />
-            <Widget Id="basic-eat-nutrition-choice" Kind="input/dropdown" Bind="eat-nutrition" OptionsBind="eat-nutrition-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-nutrition" />
-          </Row>
-          <Row Id="basic-eat-drug-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-eat-drug-label" Kind="text/wrapped" TextKey="US.Tuning.EatDrug" HelpRef="us/basic-tuning/eat-drug" />
-            <Widget Id="basic-eat-drug-choice" Kind="input/dropdown" Bind="eat-drug" OptionsBind="eat-drug-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-drug" />
-          </Row>
-          <Row Id="basic-select-player-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-select-player-label" Kind="text/wrapped" TextKey="US.Select.PlayerControlled" HelpRef="us/basic-tuning/select" />
-            <Widget Id="basic-select-player-choice" Kind="input/dropdown" Bind="select-player-controlled" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
-          </Row>
-          <Row Id="basic-select-awake-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-select-awake-label" Kind="text/wrapped" TextKey="US.Select.Awake" HelpRef="us/basic-tuning/select" />
-            <Widget Id="basic-select-awake-choice" Kind="input/dropdown" Bind="select-awake" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
-          </Row>
-          <Row Id="basic-select-not-downed-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="basic-select-not-downed-label" Kind="text/wrapped" TextKey="US.Select.NotDowned" HelpRef="us/basic-tuning/select" />
-            <Widget Id="basic-select-not-downed-choice" Kind="input/dropdown" Bind="select-not-downed" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
-          </Row>
-          <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpRef="us/reset-area/button" />
-        </Column>
-      </Section>
-      <Section Id="attenuation-editor" Padding="12" Gap="6">
-        <Widget Id="attenuation-header" Kind="us/section-header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpRef="us/attenuation-editor" />
-        <Widget Id="distance-explain" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-topic" PayloadBind="explain:us/attenuation-editor" Width="90" Height="28" />
-        <Column Id="attenuation-body" Gap="4" Padding="0">
-          <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpRef="us/attenuation-editor/chart" />
-          <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point" Editable="true" EditablePoints="1,2" Height="64" HelpRef="us/attenuation-editor/chart" />
-          <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpRef="us/attenuation-editor/status" />
-          <Row Id="attenuation-presets" Gap="4" Padding="0">
-            <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedBind="distance-preset-conservative" ActionBind="set-distance-preset" PayloadBind="distance-preset-conservative-value" HelpRef="us/attenuation-editor/presets" />
-            <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedBind="distance-preset-balanced" ActionBind="set-distance-preset" PayloadBind="distance-preset-balanced-value" HelpRef="us/attenuation-editor/presets" />
-            <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedBind="distance-preset-strong" ActionBind="set-distance-preset" PayloadBind="distance-preset-strong-value" HelpRef="us/attenuation-editor/presets" />
-          </Row>
-          <Row Id="attenuation-restores" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="attenuation-reset-defaults" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="24" HelpRef="us/reset-area/button" />
-            <Widget Id="attenuation-reset-area" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Distance.Confirm" EffectKey="reset-normal-distance" Height="24" HelpRef="us/reset-area/button" />
-          </Row>
-        </Column>
-      </Section>
-    </Scroll>
-    <Scroll Id="page-Fallback-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Fallback">
-      <Section Id="packs-fallback" Padding="12" Gap="6" CancelBind="cancel-fallback-table">
-        <Widget Id="packs-fallback-header" Kind="us/section-header" TitleKey="US.Section.FallbackTable" Height="26" HelpRef="us/fallback-editor" />
-        <Widget Id="fallback-explain" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-topic" PayloadBind="explain:us/fallback-editor" Width="90" Height="28" />
-        <Widget Id="fallback-editor" Kind="us/fallback-editor" TitleHidden="true" />
-      </Section>
-    </Scroll>
-    <Scroll Id="page-Appearance-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Appearance">
-      <Section Id="theme-picker" Padding="12" Gap="6">
-        <Widget Id="theme-picker-header" Kind="us/section-header" TitleKey="US.Section.Theme" Height="26" HelpRef="us/theme-picker" />
-        <Widget Id="theme-picker-note" Kind="text/wrapped" TextKey="US.Theme.Note" Emphasis="Muted" HelpRef="us/theme-picker" />
-        <Widget Id="theme-picker-choice" Kind="input/dropdown" Bind="ui-swatch" OptionsBind="ui-swatch-options" Height="30" HelpRef="us/theme-picker/switch" />
-        <Widget Id="theme-picker-status" Kind="text/wrapped" Bind="ui-swatch-status" HelpRef="us/theme-picker" />
-        <Widget Id="theme-picker-note-author" Kind="text/wrapped" Bind="ui-swatch-author-note" Emphasis="Muted" />
-      </Section>
-      <Section Id="camera-indicator" Padding="12" Gap="8">
-        <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpRef="us/camera-indicator" />
-        <Row Id="camera-indicator-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-          <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpRef="us/camera-indicator/toggle" />
-          <Column Id="camera-indicator-check-slot" Width="36" Padding="0" AlignY="Middle">
-            <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedBind="camera-indicator" Width="36" Height="30" HelpRef="us/camera-indicator/toggle" AlignX="Left" />
-          </Column>
+        <Widget Id="b-area-reset" Kind="input/button" TextKey="US.Reset.Area" ActionBind="b-area-reset" Height="30" Width="180" VisibleBind="b-context-open" />
+        <Widget Id="b-action-invalid" Kind="text/wrapped" TextKey="US.B.InvalidTarget" VisibleBind="b-action-invalid" />
+        <Scroll Id="b-actions-scroll" Fill="true" Gap="0" Padding="0" CancelBind="cancel-tuning-target" Scheme="us-tuning-body">
+          <Repeat Id="b-actions" Items="b-action-keys" Template="b-action-row" Gap="0" Padding="0" />
+        </Scroll>
+      </Column>
+      <Scroll Id="page-Presets-scroll" MaxWidth="660" Fill="true" Gap="8" Padding="0" VisibleBind="page-Presets">
+        <Widget Id="preset-boundary" Kind="text/wrapped" TextKey="US.UI.PresetNote" />
+        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpRef="us/preset-list" Scheme="us-preset-rows" />
+        <Widget Id="b-preset-result" Kind="text/wrapped" Bind="b-preset-result" />
+      </Scroll>
+      <Scroll Id="page-Output-scroll" MaxWidth="660" Fill="true" Gap="8" Padding="0" VisibleBind="page-Output">
+        <Row Id="output-volume-row" Gap="8" Padding="0">
+          <Widget Id="output-volume-title" Kind="text/wrapped" TextKey="US.Section.OutputLevel" HelpRef="us/global-volume/slider" />
+          <Widget Id="output-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="30" HelpRef="us/global-volume/slider" />
         </Row>
-      </Section>
-      <Section Id="entry-preferences" Padding="12" Gap="8">
-        <Widget Id="entries-caption" Kind="text/wrapped" TextKey="US.UI.EntryNote" />
-        <Widget Id="main-menu-entry" Kind="input/checkbox" Bind="main-menu-entry" SelectedBind="main-menu-entry" LabelKey="US.UI.MainMenuEntry" Appearance="switch" Height="30" />
-        <Widget Id="options-entry" Kind="input/checkbox" Bind="options-entry" SelectedBind="options-entry" LabelKey="US.UI.OptionsEntry" Appearance="switch" Height="30" />
-      </Section>
-    </Scroll>
-    <Scroll Id="page-Diagnostics-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Diagnostics">
-      <Widget Id="missing-selections-title" Kind="text/wrapped" TextKey="US.UI.MissingSelections" VisibleBind="voice-has-missing" />
-      <Widget Id="missing-selections" Kind="text/wrapped" Bind="voice-missing-selections" VisibleBind="voice-has-missing" />
-      <Widget Id="dependency-status" Kind="text/wrapped" Bind="dependency-status" />
-      <Widget Id="kernel-status-raw" Kind="text/wrapped" Bind="kernel-status-raw" />
-      <Widget Id="transaction-diagnostics" Kind="text/wrapped" Bind="transaction-diagnostics" />
-      <Section Id="diagnostics" Padding="12" Gap="8">
-        <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpRef="us/diagnostics" />
-        <Widget Id="response-diagnostics-open" Kind="input/button" TextKey="US.Diagnostics.Capture.Open" ActionBind="open-response-diagnostics" Height="30" />
+        <Column Id="output-context" Gap="6" Padding="0">
+          <Widget Id="output-context-label" Kind="text/wrapped" Bind="edit-domain-context" />
+          <Widget Id="output-context-link" Kind="input/button" TextKey="US.UI.OutputContext" ActionBind="go-page" PayloadBind="go-Behavior-payload" Height="30" Width="Auto" AlignX="Left" />
+          <Wrap Id="output-b-layer-ladder" Cols="3" Gap="4" Padding="0">
+            <Widget Id="output-b-layer-0" Kind="input/button" TextKey="US.UI.PawnProfile" ActionBind="b-layer-0" SelectedBind="b-layer-is-0" Height="30" />
+            <Widget Id="output-b-layer-1" Kind="input/button" TextKey="US.Tuning.Layer.Race" ActionBind="b-layer-1" SelectedBind="b-layer-is-1" Height="30" />
+            <Widget Id="output-b-layer-2" Kind="input/button" TextKey="US.Tuning.Layer.Xenotype" ActionBind="b-layer-2" SelectedBind="b-layer-is-2" Height="30" />
+          </Wrap>
+        </Column>
+        <Section Id="basic-tuning" Padding="12" Gap="8">
+          <Widget Id="basic-tuning-header" Kind="us/section-header" Scheme="us-text-body" TitleKey="US.Section.PlaybackBehaviour" HelpRef="us/basic-tuning" />
+          <Column Id="global-activity-editor" Gap="4" Padding="0" VisibleBind="activity-available">
+            <Row Id="global-activity-row" Gap="8" Padding="0">
+              <Widget Id="global-activity-label" Kind="text/wrapped" TextKey="US.Activity.Title" HelpRef="us/basic-tuning/activity" />
+              <Widget Id="global-activity" Kind="us/sparse-field" Bind="global-activity" Width="160" Height="30" HelpRef="us/basic-tuning/activity" Field="activity" />
+            </Row>
+            <Widget Id="global-activity-note" Kind="text/wrapped" TextKey="US.Activity.Note" Emphasis="Muted" />
+            <Widget Id="global-activity-invalid" Kind="text/wrapped" TextKey="US.Activity.Invalid" Tone="Warning" VisibleBind="activity-invalid" />
+          </Column>
+          <Column Id="basic-tuning-body" Gap="6" Padding="0">
+            <Row Id="basic-egg-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Column Id="basic-egg-text" Gap="1" Padding="0">
+                <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpRef="us/basic-tuning/egg" />
+                <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleBind="easter-egg-on" />
+                <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleBind="easter-egg-off" />
+              </Column>
+              <Column Id="basic-egg-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedBind="allow-eggs" Width="36" Height="30" HelpRef="us/basic-tuning/egg" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-talking-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpRef="us/basic-tuning/scale-talking" />
+              <Column Id="basic-talking-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedBind="scale-talking" Width="36" Height="30" HelpRef="us/basic-tuning/scale-talking" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPhase" HelpRef="us/basic-tuning/eat-phase" />
+              <Widget Id="basic-eat-choice" Kind="input/dropdown" Bind="eat-phase" OptionsBind="eat-phase-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-phase" />
+            </Row>
+            <Widget Id="b-effective-eat-phase" Kind="text/wrapped" Bind="b-effective-eat-phase" Emphasis="Muted" />
+            <Row Id="basic-eat-nutrition-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-nutrition-label" Kind="text/wrapped" TextKey="US.Tuning.EatNutrition" HelpRef="us/basic-tuning/eat-nutrition" />
+              <Widget Id="basic-eat-nutrition-choice" Kind="input/dropdown" Bind="eat-nutrition" OptionsBind="eat-nutrition-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-nutrition" />
+            </Row>
+            <Widget Id="b-effective-eat-nutrition" Kind="text/wrapped" Bind="b-effective-eat-nutrition" Emphasis="Muted" />
+            <Row Id="basic-eat-drug-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-drug-label" Kind="text/wrapped" TextKey="US.Tuning.EatDrug" HelpRef="us/basic-tuning/eat-drug" />
+              <Widget Id="basic-eat-drug-choice" Kind="input/dropdown" Bind="eat-drug" OptionsBind="eat-drug-options" Width="190" Height="30" HelpRef="us/basic-tuning/eat-drug" />
+            </Row>
+            <Widget Id="b-effective-eat-drug" Kind="text/wrapped" Bind="b-effective-eat-drug" Emphasis="Muted" />
+            <Row Id="basic-select-player-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-select-player-label" Kind="text/wrapped" TextKey="US.Select.PlayerControlled" HelpRef="us/basic-tuning/select" />
+              <Widget Id="basic-select-player-choice" Kind="input/dropdown" Bind="select-player-controlled" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
+            </Row>
+            <Widget Id="b-effective-select-player" Kind="text/wrapped" Bind="b-effective-select-player" Emphasis="Muted" />
+            <Row Id="basic-select-awake-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-select-awake-label" Kind="text/wrapped" TextKey="US.Select.Awake" HelpRef="us/basic-tuning/select" />
+              <Widget Id="basic-select-awake-choice" Kind="input/dropdown" Bind="select-awake" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
+            </Row>
+            <Widget Id="b-effective-select-awake" Kind="text/wrapped" Bind="b-effective-select-awake" Emphasis="Muted" />
+            <Row Id="basic-select-not-downed-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-select-not-downed-label" Kind="text/wrapped" TextKey="US.Select.NotDowned" HelpRef="us/basic-tuning/select" />
+              <Widget Id="basic-select-not-downed-choice" Kind="input/dropdown" Bind="select-not-downed" OptionsBind="select-qualification-options" Width="190" Height="30" HelpRef="us/basic-tuning/select" />
+            </Row>
+            <Widget Id="b-effective-select-not-downed" Kind="text/wrapped" Bind="b-effective-select-not-downed" Emphasis="Muted" />
+            <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" AlignX="Left" HelpRef="us/reset-area/button" />
+          </Column>
+        </Section>
+        <Section Id="attenuation-editor" Padding="12" Gap="6">
+          <Widget Id="attenuation-header" Kind="us/section-header" Scheme="us-text-body" TitleKey="US.Section.DistanceAttenuation" HelpRef="us/attenuation-editor" />
+          <Column Id="attenuation-body" Gap="4" Padding="0">
+            <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpRef="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point" Editable="true" EditablePoints="1,2" Height="64" HelpRef="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpRef="us/attenuation-editor/status" />
+            <Row Id="attenuation-presets" Gap="4" Padding="0">
+              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedBind="distance-preset-conservative" ActionBind="set-distance-preset" PayloadBind="distance-preset-conservative-value" HelpRef="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedBind="distance-preset-balanced" ActionBind="set-distance-preset" PayloadBind="distance-preset-balanced-value" HelpRef="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedBind="distance-preset-strong" ActionBind="set-distance-preset" PayloadBind="distance-preset-strong-value" HelpRef="us/attenuation-editor/presets" />
+            </Row>
+            <Row Id="attenuation-restores" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="attenuation-reset-defaults" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="24" HelpRef="us/reset-area/button" />
+              <Widget Id="attenuation-reset-area" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Distance.Confirm" EffectKey="reset-normal-distance" HelpRef="us/reset-area/button" />
+            </Row>
+          </Column>
+        </Section>
+      </Scroll>
+      <Column Id="page-Fallback-scroll" Fill="true" Gap="6" Padding="0" VisibleBind="page-Fallback" CancelBind="b-final-cancel">
+        <Row Id="b-final-split" Breakpoint="1" Narrow="Column" Fill="true" Gap="12" Padding="0">
+          <Column Id="b-final-list" Width="300" Fill="true" Gap="4" Padding="0" VisibleBind="b-final-list-visible">
+            <Row Id="b-final-lenses" Gap="4" Padding="0">
+              <Widget Id="b-existing" Kind="input/button" TextKey="US.B.ExistingTables" ActionBind="b-final-existing" SelectedBind="b-final-existing" Height="30" />
+              <Widget Id="b-new" Kind="input/button" TextKey="US.B.NewTable" ActionBind="b-final-new" SelectedBind="b-final-creating" Height="30" />
+            </Row>
+            <Column Id="b-final-table-body" Fill="True" Gap="4" Padding="0" VisibleBind="b-final-existing">
+              <Scroll Id="b-final-table-controls-scroll" Height="180" Gap="0" Padding="0">
+                <Widget Id="b-final-table-controls" Kind="us/list-browser" List="table" />
+              </Scroll>
+              <Scroll Id="b-final-table-scroll" Fill="true" Gap="2" Padding="0">
+                <Repeat Id="b-final-table-rows" Items="b-final-table-keys" Template="b-source-row" Gap="2" Padding="0" />
+              </Scroll>
+            </Column>
+            <Column Id="b-final-candidate-body" Fill="True" Gap="4" Padding="0" VisibleBind="b-final-creating">
+              <Scroll Id="b-final-candidate-controls-scroll" Height="180" Gap="0" Padding="0">
+                <Widget Id="b-final-candidate-controls" Kind="us/list-browser" List="candidate" />
+              </Scroll>
+              <Scroll Id="b-final-candidate-scroll" Fill="true" Gap="2" Padding="0">
+                <Repeat Id="b-final-candidate-rows" Items="b-final-candidate-keys" Template="b-source-row" Gap="2" Padding="0" />
+              </Scroll>
+            </Column>
+          </Column>
+          <Scroll Id="b-final-sheet" MaxWidth="660" Fill="true" Gap="6" Padding="0" VisibleBind="b-final-sheet-visible">
+            <Widget Id="b-final-back" Kind="input/button" TextKey="US.UI.BackToList" ActionBind="b-final-back" VisibleBind="b-final-back-visible" Height="30" />
+            <Widget Id="b-final-title" Kind="text/wrapped" Bind="b-final-title" Scheme="us-text-title" />
+            <Widget Id="b-final-status" Kind="text/wrapped" Bind="b-final-status" />
+            <Widget Id="b-final-create-note" Kind="text/wrapped" TextKey="US.B.CreateExplicit" VisibleBind="b-final-creating" />
+            <Widget Id="b-final-create" Kind="input/button" TextKey="US.VF1.Create" ActionBind="b-final-create" VisibleBind="b-final-can-create" Height="30" />
+            <Column Id="b-final-table-sheet" Gap="6" Padding="0" VisibleBind="b-final-has-table">
+              <Repeat Id="b-final-entries" Items="b-final-entry-keys" Template="b-source-row" Gap="2" Padding="0" />
+              <Column Id="b-final-sound-body" Gap="4" Padding="0" VisibleBind="b-final-has-entry">
+                <Widget Id="b-final-entry-title" Kind="text/wrapped" Bind="b-final-entry" />
+                <Wrap Id="b-final-entry-actions" Cols="1" Gap="4" Padding="0">
+                  <Widget Id="b-final-silence" Kind="input/button" TextKey="US.VF1.Unset" ActionBind="b-final-silence" Height="30" />
+                  <Widget Id="b-final-inherit" Kind="input/button" TextKey="US.VF1.RestoreInherit" ActionBind="b-final-inherit" Height="30" />
+                  <Widget Id="b-final-close-sound" Kind="input/button" TextKey="US.B.ClosePicker" ActionBind="b-final-close-sound" Height="30" />
+                </Wrap>
+                <Column Id="b-final-sound-browser" Fill="False" Gap="4" Padding="0" VisibleBind="b-final-has-entry">
+                  <Widget Id="b-final-sound-controls" Kind="us/list-browser" List="sound" />
+                  <Repeat Id="b-final-sound-rows" Items="b-final-sound-keys" Template="b-source-row" Gap="2" Padding="0" />
+                </Column>
+              </Column>
+              <Wrap Id="b-final-table-actions" Cols="1" Gap="4" Padding="0">
+                <Widget Id="b-final-restore" Kind="input/button" TextKey="US.VF1.RestoreDefault" ActionBind="b-final-restore" Height="30" />
+                <Widget Id="b-final-delete" Kind="input/button" TextKey="US.VF1.Delete" ActionBind="b-final-delete" Height="30" />
+              </Wrap>
+            </Column>
+          </Scroll>
+        </Row>
+      </Column>
+      <Scroll Id="page-Appearance-scroll" MaxWidth="660" Fill="true" Gap="8" Padding="0" VisibleBind="page-Appearance">
+        <Section Id="theme-picker" Padding="12" Gap="6">
+          <Widget Id="theme-picker-header" Kind="us/section-header" Scheme="us-text-body" TitleKey="US.Section.Theme" HelpRef="us/theme-picker" />
+          <Widget Id="theme-picker-note" Kind="text/wrapped" TextKey="US.Theme.Note" Emphasis="Muted" HelpRef="us/theme-picker" />
+          <Widget Id="theme-picker-choice" MaxWidth="320" Kind="input/dropdown" Bind="ui-swatch" OptionsBind="ui-swatch-options" Height="30" HelpRef="us/theme-picker/switch" Width="Auto" AlignX="Left" />
+          <Widget Id="theme-picker-status" Kind="text/wrapped" Bind="ui-swatch-status" HelpRef="us/theme-picker" />
+          <Widget Id="theme-picker-note-author" Kind="text/wrapped" Bind="ui-swatch-author-note" Emphasis="Muted" />
+        </Section>
+        <Section Id="camera-indicator" Padding="12" Gap="8">
+          <Widget Id="camera-indicator-header" Kind="us/section-header" Scheme="us-text-body" TitleKey="US.Section.InWorldIndicator" HelpRef="us/camera-indicator" />
+          <Row Id="camera-indicator-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpRef="us/camera-indicator/toggle" />
+            <Column Id="camera-indicator-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedBind="camera-indicator" Width="36" Height="30" HelpRef="us/camera-indicator/toggle" AlignX="Left" />
+            </Column>
+          </Row>
+        </Section>
+        <Section Id="entry-preferences" Padding="12" Gap="8">
+          <Widget Id="entries-caption" Kind="text/wrapped" TextKey="US.UI.EntryNote" />
+          <Widget Id="main-menu-entry" Kind="input/checkbox" Bind="main-menu-entry" SelectedBind="main-menu-entry" LabelKey="US.UI.MainMenuEntry" Appearance="switch" Height="30" />
+          <Widget Id="options-entry" Kind="input/checkbox" Bind="options-entry" SelectedBind="options-entry" LabelKey="US.UI.OptionsEntry" Appearance="switch" Height="30" />
+        </Section>
+      </Scroll>
+      <Scroll Id="page-Diagnostics-scroll" MaxWidth="660" Fill="true" Gap="8" Padding="0" VisibleBind="page-Diagnostics">
+        <Widget Id="missing-selections-title" Kind="text/wrapped" TextKey="US.UI.MissingSelections" VisibleBind="voice-has-missing" />
+        <Repeat Id="b-missing-rows" Items="b-missing-keys" Template="b-missing-row" Gap="4" Padding="0" VisibleBind="voice-has-missing" />
+        <Widget Id="b-publication-note" Kind="text/wrapped" TextKey="US.B.PublicationPending" VisibleBind="b-publication-pending" />
+        <Widget Id="diagnostics-header" Kind="us/section-header" Scheme="us-text-body" TitleKey="US.Section.Diagnostics" HelpRef="us/diagnostics" />
+        <Widget Id="response-diagnostics-open" Kind="input/button" TextKey="US.Diagnostics.Capture.Open" ActionBind="open-response-diagnostics" Height="30" Width="Auto" AlignX="Left" />
         <Widget Id="response-diagnostics-entry-status" Kind="text/wrapped" Bind="response-diagnostics-entry-status" />
-        <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpRef="us/diagnostics" />
-        <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
-          <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedBind="dev-logging-auto" ActionBind="set-dev-logging" PayloadBind="dev-logging-auto-value" HelpRef="us/diagnostics/logging-auto" />
-          <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedBind="dev-logging-enabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-enabled-value" HelpRef="us/diagnostics/logging-enabled" />
-          <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedBind="dev-logging-disabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-disabled-value" HelpRef="us/diagnostics/logging-disabled" />
-        </Row>
-        <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-          <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpRef="us/diagnostics/localize-debug" />
-          <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
-            <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedBind="localize-debug-menu" Width="36" Height="30" HelpRef="us/diagnostics/localize-debug" AlignX="Left" />
+        <Widget Id="b-diagnostic-details-toggle" Kind="input/button" TextKey="US.B.TechnicalDetails" ActionBind="b-diagnostic-details-toggle" SelectedBind="b-diagnostic-details-open" Width="200" MaxWidth="200" AlignX="Left" Height="30" />
+        <Widget Id="dependency-status" Kind="text/wrapped" Bind="dependency-status" VisibleBind="b-diagnostic-details-open" Scheme="us-text-meta" Emphasis="Muted" />
+        <Widget Id="kernel-status-raw" Kind="text/wrapped" Bind="kernel-status-raw" VisibleBind="b-diagnostic-details-open" Scheme="us-text-meta" Emphasis="Muted" />
+        <Widget Id="transaction-diagnostics" Kind="text/wrapped" Bind="transaction-diagnostics" VisibleBind="b-transaction-visible" Scheme="us-text-meta" Emphasis="Muted" />
+        <Widget Id="b-dev-toggle" Kind="input/button" TextKey="US.B.DeveloperTools" ActionBind="b-dev-toggle" SelectedBind="b-dev-open" Width="Auto" AlignX="Left" Height="30" />
+        <Column Id="b-dev-tools" Gap="6" Padding="0" VisibleBind="b-dev-open">
+          <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpRef="us/diagnostics" />
+          <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
+            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedBind="dev-logging-auto" ActionBind="set-dev-logging" PayloadBind="dev-logging-auto-value" HelpRef="us/diagnostics/logging-auto" />
+            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedBind="dev-logging-enabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-enabled-value" HelpRef="us/diagnostics/logging-enabled" />
+            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedBind="dev-logging-disabled" ActionBind="set-dev-logging" PayloadBind="dev-logging-disabled-value" HelpRef="us/diagnostics/logging-disabled" />
+          </Row>
+          <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpRef="us/diagnostics/localize-debug" />
+            <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedBind="localize-debug-menu" Width="36" Height="30" HelpRef="us/diagnostics/localize-debug" AlignX="Left" />
+            </Column>
+          </Row>
+          <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" AlignX="Left" HelpRef="us/reset-area/button" />
+          <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
+          <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpRef="us/diagnostics/layout-diagnosis" />
+          <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
+            <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
+              <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedBind="layout-capture" Width="36" Height="30" HelpRef="us/diagnostics/layout-capture" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
+              <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedBind="layout-outline" Width="36" Height="30" HelpRef="us/diagnostics/layout-outline" AlignX="Left" />
+              </Column>
+            </Row>
+            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="Auto" Height="30" AlignX="Left" HelpRef="us/diagnostics/layout-report" />
+            <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpRef="us/diagnostics/layout-report" />
+            <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
+              <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedBind="dev-panel-open" Width="Auto" Height="30" HelpRef="us/diagnostics/layout-diagnosis" />
+            </Row>
           </Column>
-        </Row>
-        <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" Height="24" AlignX="Left" HelpRef="us/reset-area/button" />
-        <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
-        <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpRef="us/diagnostics/layout-diagnosis" />
-        <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
-          <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
-            <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
-              <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedBind="layout-capture" Width="36" Height="30" HelpRef="us/diagnostics/layout-capture" AlignX="Left" />
-            </Column>
-          </Row>
-          <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
-            <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
-              <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedBind="layout-outline" Width="36" Height="30" HelpRef="us/diagnostics/layout-outline" AlignX="Left" />
-            </Column>
-          </Row>
-          <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpRef="us/diagnostics/layout-report" />
-          <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpRef="us/diagnostics/layout-report" />
-          <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
-            <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedBind="dev-panel-open" Width="172" Height="24" HelpRef="us/diagnostics/layout-diagnosis" />
-          </Row>
         </Column>
-      </Section>
-    </Scroll>
-    <Scroll Id="page-Restore-scroll" Fill="true" Gap="8" Padding="0" VisibleBind="page-Restore">
-      <Widget Id="restore-note" Kind="text/wrapped" TextKey="US.UI.RestoreNote" />
-      <Widget Id="restore-current-scope" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" Height="30" />
-      <Widget Id="restore-output" Kind="us/reset-entry" TextKey="US.Section.PlaybackBehaviour" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Height="30" />
-      <Widget Id="toggle-restore-all" Kind="input/button" TextKey="US.UI.RestoreAllExpand" ActionBind="toggle-restore-all" Height="30" />
-      <Section Id="restore-center" VisibleBind="restore-all-open" Padding="12" Gap="8">
-        <Widget Id="restore-center-header" Kind="us/section-header" TitleKey="US.Section.RestoreDefaults" Height="26" HelpRef="us/reset-center" />
-        <Widget Id="restore-center-caption" Kind="text/wrapped" TextKey="US.Reset.RestoreAll.Caption" Emphasis="Muted" HelpRef="us/reset-center" />
-        <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" Height="24" AlignX="Left" HelpRef="us/reset-center/restore-all" />
-      </Section>
-    </Scroll>
+      </Scroll>
+      <Scroll Id="page-Restore-scroll" MaxWidth="660" Fill="true" Gap="8" Padding="0" VisibleBind="page-Restore">
+        <Widget Id="restore-note" Kind="text/wrapped" TextKey="US.UI.RestoreNote" />
+        <Widget Id="restore-current-scope" Kind="input/button" TextKey="US.UI.Behavior" ActionBind="go-page" PayloadBind="go-Behavior-payload" Height="30" Width="Auto" AlignX="Left" />
+        <Widget Id="restore-output" Kind="us/reset-entry" TextKey="US.Section.PlaybackBehaviour" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Height="30" Width="Auto" AlignX="Left" />
+        <Widget Id="restore-distance" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="30" Width="Auto" AlignX="Left" />
+        <Widget Id="restore-diagnostics" Kind="us/reset-entry" TextKey="US.UI.Nav.Diagnostics" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Height="30" Width="Auto" AlignX="Left" />
+        <Widget Id="toggle-restore-all" Kind="input/button" TextKey="US.UI.RestoreAllExpand" ActionBind="toggle-restore-all" Height="30" Width="Auto" AlignX="Left" />
+        <Section Id="restore-center" VisibleBind="restore-all-open" Padding="12" Gap="8">
+          <Widget Id="restore-center-header" Kind="us/section-header" Scheme="us-text-body" TitleKey="US.Section.RestoreDefaults" HelpRef="us/reset-center" />
+          <Widget Id="restore-center-caption" Kind="text/wrapped" TextKey="US.Reset.RestoreAll.Caption" Emphasis="Muted" HelpRef="us/reset-center" />
+          <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" AlignX="Left" HelpRef="us/reset-center/restore-all" />
+        </Section>
+      </Scroll>
     </Column>
     <Column Id="help-drawer" Height="128" Padding="0" Gap="4" VisibleBind="help-open" CancelBind="cancel-help">
       <Row Id="help-header" Padding="0" Gap="8">
-        <Widget Id="help-title" Kind="text/wrapped" Bind="help-title" />
-        <Widget Id="help-close" Kind="input/button" TextKey="US.UI.CloseHelp" ActionBind="cancel-help" Width="96" Height="28" />
+        <Widget Id="help-title" Kind="text/wrapped" Scheme="us-text-body" Bind="help-title" />
+        <Widget Id="help-close" Kind="input/button" TextKey="US.UI.CloseHelp" ActionBind="cancel-help" Width="96" Height="30" />
       </Row>
       <Scroll Id="help-scroll" Fill="true" Padding="0" Gap="4">
-        <Widget Id="help-object-context" Kind="text/wrapped" Bind="pinned-help-context" Emphasis="Muted" />
-        <Widget Id="help-panel" Kind="us/help-panel" TitleHidden="true" />
+        <Widget Id="help-object-context" Kind="text/wrapped" Scheme="us-text-meta" Bind="help-display-context" Emphasis="Muted" />
+        <Widget Id="help-panel" Kind="us/help-panel" TitleHidden="true" MaxWidth="660" AlignX="Left" />
       </Scroll>
     </Column>
+    <Widget Id="b-publication-footer" Kind="text/wrapped" TextKey="US.B.PublicationPendingShort" VisibleBind="b-publication-pending" />
     <Row Id="footer-band" Padding="0" Gap="8">
-      <Widget Id="footer" Kind="us/footer" />
-      <Widget Id="save-retry" Kind="input/button" TextKey="US.UI.Retry" ActionBind="retry-save" VisibleBind="save-failed" Width="110" Height="28" />
+      <Widget Id="footer" Kind="us/footer" Scheme="us-text-meta" />
+      <Widget Id="save-retry" Kind="input/button" TextKey="US.UI.Retry" ActionBind="retry-save" VisibleBind="save-failed" Width="110" Height="30" />
     </Row>
   </Column>
   <Templates>
-    <Overlay Id="pack-card-row" Padding="0" VisibleBind="list-item-visible">
-      <Widget Id="pack-card-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
-      <Row Id="pack-card-row-header" Gap="4" Padding="0" VisibleBind="is-header">
-        <Column Id="pack-card-row-header-gutter" Width="6" Gap="0" Padding="0" />
-        <Column Id="pack-card-row-header-text" WidthBind="content-width" Gap="2" Padding="0">
-          <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/card" />
-            <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" VisibleBind="has-meta" Emphasis="Muted" HelpRef="us/pack-cards/card" />
-        </Column>
-        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedBind="expanded" ActionBind="toggle-pack-card" PayloadBind="payload" Width="116" Height="26" AlignY="Middle" Emphasis="Muted" HelpRef="us/pack-cards/expand" />
-      </Row>
-      <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleBind="in-list">
-        <Column Id="pack-card-row-domain-gutter" Width="18" Gap="0" Padding="0" />
-        <Overlay Id="pack-card-row-domain-area" WidthBind="content-width" Padding="0">
-          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadBind="payload" HelpRef="us/pack-cards/row" />
-          <Row Id="pack-card-row-domain-content" Gap="0" Padding="0">
-            <Column Id="pack-card-row-domain-inner-gutter" Width="6" Gap="0" Padding="0" />
-            <Widget Id="pack-card-row-domain-text" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/row" />
-          </Row>
-        </Overlay>
-        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" AlignY="Middle" HelpRef="us/pack-cards/enable" />
-      </Row>
+    <Overlay Id="b-source-row" Padding="4">
+      <Widget Id="b-source-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
+      <Widget Id="b-source-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="choose" PayloadBind="payload" />
+      <Widget Id="b-source-text" Kind="text/wrapped" Bind="title" />
     </Overlay>
-    <Column Id="pack-detail-row" Gap="4" Padding="0" VisibleBind="in-detail">
-      <Widget Id="pack-detail-target" Kind="text/wrapped" Bind="title" />
-      <Widget Id="pack-detail-select" Kind="input/button" TextKey="US.UI.ChooseDomain" ActionBind="select-domain" PayloadBind="payload" SelectedBind="selected" Height="26" />
-      <Widget Id="pack-detail-enabled" Kind="input/checkbox" Bind="enabled" SelectedBind="enabled" Appearance="switch" LabelKey="US.UI.SelectedForDomain" Height="30" HelpRef="us/pack-cards/enable" />
+    <Column Id="b-roster-row" Gap="2" Padding="0">
+      <Widget Id="b-roster-tier" Kind="text/wrapped" Bind="tier" VisibleBind="tier-first" Scheme="us-roster-meta" Emphasis="Muted" />
+      <Overlay Id="b-roster-plate" Padding="4">
+        <Widget Id="b-roster-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
+        <Row Id="b-roster-line" Gap="4" Padding="0">
+          <Column Id="b-roster-lead" Width="36" Gap="0" Padding="0">
+            <Widget Id="b-roster-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" VisibleBind="has-switch" />
+            <Widget Id="b-roster-badge" Kind="text/wrapped" Bind="badge" VisibleBind="no-switch" />
+          </Column>
+          <Column Id="b-roster-text" Gap="1" Padding="0">
+            <Overlay Id="b-roster-hit-area" Padding="0">
+              <Widget Id="b-roster-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="choose" PayloadBind="payload" />
+              <Column Id="b-roster-words" Gap="1" Padding="0">
+                <Widget Id="b-roster-name" Kind="text/wrapped" Bind="title" />
+                <Widget Id="b-roster-meta" Kind="text/wrapped" Bind="meta" Scheme="us-roster-meta" Emphasis="Muted" />
+              </Column>
+            </Overlay>
+            <Widget Id="b-roster-fold" Kind="input/button" TextKey="US.B.XenoFold" ActionBind="fold" PayloadBind="payload" VisibleBind="has-children" Height="30" />
+          </Column>
+        </Row>
+      </Overlay>
     </Column>
-    <Column Id="sparse-action-row" VisibleBind="current-row" Gap="6" Padding="0">
-      <Widget Id="sparse-timing-kind" Kind="input/dropdown" VisibleBind="timing-kind-choice" Bind="timing-kind" OptionsBind="timing-kind-options" Width="300" Height="28" />
-      <Widget Id="sparse-timing-effective" Kind="text/wrapped" Bind="timing-effective" />
-      <Row Id="sparse-enabled-row" Gap="12" Padding="0">
-        <Widget Id="sparse-enabled-label" Kind="text/wrapped" TextKey="US.UI.Field.enabled" />
-        <Widget Id="sparse-enabled" Kind="input/dropdown" Bind="action-field-enabled" OptionsBind="sparse-bool-options" Width="220" Height="28" />
-        <Widget Id="explain-enabled" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-enabled" PayloadBind="explain-enabled-topic" HelpRef="us/action-fields/enabled" Width="80" Height="28" />
+    <Overlay Id="b-pack-row" Padding="4">
+      <Widget Id="b-pack-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
+      <Column Id="b-pack-content" Gap="2" Padding="0">
+        <Widget Id="b-pack-name" Kind="text/wrapped" Bind="title" HelpRef="us/pack-cards/card" />
+        <Row Id="b-pack-content-line" Gap="6" Padding="0">
+          <Widget Id="b-pack-contents" Kind="input/button" TextKey="US.Packs.Card.Contents" ActionBind="view" PayloadBind="payload" Width="100" Height="30" HelpRef="us/pack-cards/expand" />
+          <Widget Id="b-pack-row-meta" Kind="text/wrapped" Bind="meta" Scheme="us-roster-meta" Emphasis="Muted" />
+        </Row>
+        <Row Id="b-pack-single" Gap="6" Padding="0" VisibleBind="has-single">
+          <Widget Id="b-pack-single-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" HelpRef="us/pack-cards/enable" />
+          <Widget Id="b-pack-single-title" Kind="text/wrapped" Bind="single-title" />
+        </Row>
+      </Column>
+    </Overlay>
+    <Column Id="b-target-pack-row" Gap="2" Padding="0">
+      <Row Id="b-target-pack-top" Gap="6" Padding="0">
+        <Widget Id="b-target-pack-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" VisibleBind="editable" />
+        <Widget Id="b-target-pack-name" Kind="text/wrapped" Bind="title" />
+        <Widget Id="b-target-pack-view" Kind="input/button" TextKey="US.B.ViewPack" ActionBind="view" PayloadBind="payload" Width="124" Height="30" />
       </Row>
-      <Row Id="sparse-interaction-seconds-row" VisibleBind="interaction-row" Gap="12" Padding="0">
-        <Widget Id="sparse-interaction-seconds-label" Kind="text/wrapped" TextKey="US.UI.Field.interaction-seconds" />
-        <Widget Id="sparse-interaction-seconds" Kind="input/text-field" Bind="action-field-interaction-seconds" PlaceholderKey="US.UI.InheritBlank" Width="220" Height="28" />
-        <Widget Id="explain-interaction-seconds" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-interaction-seconds" PayloadBind="explain-interaction-seconds-topic" HelpRef="us/action-fields/interaction-seconds" Width="80" Height="28" />
-      </Row>
-      <Row Id="sparse-interval-row" VisibleBind="simulation-row" Gap="12" Padding="0">
-        <Widget Id="sparse-interval-label" Kind="text/wrapped" TextKey="US.UI.Field.interval" />
-        <Widget Id="sparse-interval" Kind="input/text-field" Bind="action-field-interval" PlaceholderKey="US.UI.InheritBlank" Width="220" Height="28" />
-        <Widget Id="explain-interval" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-interval" PayloadBind="explain-interval-topic" HelpRef="us/action-fields/interval" Width="80" Height="28" />
-      </Row>
-      <Row Id="sparse-volume-row" Gap="12" Padding="0">
-        <Widget Id="sparse-volume-label" Kind="text/wrapped" TextKey="US.UI.Field.volume" />
-        <Widget Id="sparse-volume" Kind="input/text-field" Bind="action-field-volume" PlaceholderKey="US.UI.InheritBlank" Width="220" Height="28" />
-        <Widget Id="explain-volume" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-volume" PayloadBind="explain-volume-topic" HelpRef="us/action-fields/volume" Width="80" Height="28" />
-      </Row>
-      <Row Id="sparse-pitch-row" Gap="12" Padding="0">
-        <Widget Id="sparse-pitch-label" Kind="text/wrapped" TextKey="US.UI.Field.pitch" />
-        <Widget Id="sparse-pitch" Kind="input/text-field" Bind="action-field-pitch" PlaceholderKey="US.UI.InheritBlank" Width="220" Height="28" />
-        <Widget Id="explain-pitch" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-pitch" PayloadBind="explain-pitch-topic" HelpRef="us/action-fields/pitch" Width="80" Height="28" />
-      </Row>
-      <Row Id="sparse-talking-row" Gap="12" Padding="0">
-        <Widget Id="sparse-talking-label" Kind="text/wrapped" TextKey="US.UI.Field.talking" />
-        <Widget Id="sparse-talking" Kind="input/dropdown" Bind="action-field-talking" OptionsBind="sparse-bool-options" Width="220" Height="28" />
-        <Widget Id="explain-talking" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-talking" PayloadBind="explain-talking-topic" HelpRef="us/action-fields/talking" Width="80" Height="28" />
-      </Row>
-      <Row Id="sparse-age-row" Gap="12" Padding="0">
-        <Widget Id="sparse-age-label" Kind="text/wrapped" TextKey="US.UI.Field.age" />
-        <Widget Id="sparse-age" Kind="input/dropdown" Bind="action-field-age" OptionsBind="sparse-bool-options" Width="220" Height="28" />
-        <Widget Id="explain-age" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-age" PayloadBind="explain-age-topic" HelpRef="us/action-fields/age" Width="80" Height="28" />
-      </Row>
-      <Row Id="sparse-mood-row" Gap="12" Padding="0">
-        <Widget Id="sparse-mood-label" Kind="text/wrapped" TextKey="US.UI.Field.mood" />
-        <Widget Id="sparse-mood" Kind="input/dropdown" Bind="action-field-mood" OptionsBind="sparse-bool-options" Width="220" Height="28" />
-        <Widget Id="explain-mood" Kind="input/button" TextKey="US.UI.Explain" ActionBind="explain-mood" PayloadBind="explain-mood-topic" HelpRef="us/action-fields/mood" Width="80" Height="28" />
-      </Row>
+      <Widget Id="b-target-pack-meta" Kind="text/wrapped" Bind="meta" Scheme="us-roster-meta" Emphasis="Muted" />
     </Column>
+    <Column Id="b-pack-target-row" Gap="2" Padding="0">
+      <Row Id="b-pack-target-top" Gap="6" Padding="0">
+        <Widget Id="b-pack-target-switch" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedBind="enabled" Width="36" Height="30" VisibleBind="editable" HelpRef="us/pack-cards/enable" />
+        <Widget Id="b-pack-target-name" Kind="text/wrapped" Bind="title" />
+      </Row>
+      <Widget Id="b-pack-target-status" Kind="text/wrapped" Bind="status" VisibleBind="has-status" Scheme="us-roster-meta" Emphasis="Muted" />
+      <Widget Id="b-pack-target-edit" Kind="input/button" TextKey="US.B.EditTarget" ActionBind="choose" PayloadBind="payload" VisibleBind="editable" Width="Auto" Height="30" HelpRef="us/pack-cards/row" />
+    </Column>
+    <!-- A single Repeat retains action headers, field rows and restores as compatible hidden nodes. -->
+    <Column Id="b-action-row" Gap="0" Padding="0" VisibleBind="visible" Scheme="us-tuning-body">
+      <Column Id="b-action-summary" Gap="6" Padding="0" VisibleBind="header">
+        <Widget Id="b-action-group" Kind="text/wrapped" Bind="group" VisibleBind="group-first" />
+        <Row Id="b-action-line" Gap="6" Padding="0" Breakpoint="620" Narrow="Column">
+          <!-- §2.1 / §3.6: name, value group, trailing disclosure; keep the control group from
+               sharing half the row with one short name. Body16 and stable Repeat paths remain. -->
+          <Widget Id="b-action-name" Kind="text/wrapped" Bind="title" Width="120" MaxWidth="160" />
+          <Row Id="b-action-controls" MaxWidth="660" Gap="8" Padding="0" Breakpoint="360" Narrow="Column">
+            <Widget Id="b-action-scope" Kind="input/dropdown" Bind="scope" OptionsBind="scope-options" Width="220" MaxWidth="260" Height="30" VisibleBind="editable" HelpRef="us/scope-tree/action-scope" />
+            <Widget Id="b-action-scope-unavailable" Kind="text/wrapped" Bind="scope-display" VisibleBind="not-editable" Width="220" HelpRef="us/scope-tree/action-scope" />
+            <Widget Id="b-action-effective" Kind="text/wrapped" Bind="scope-effective" VisibleBind="has-scope-hint" Emphasis="Muted" />
+            <Widget Id="b-action-advanced" Kind="input/button" TextKey="US.B.Advanced" ActionBind="advanced" VisibleBind="collapsed" Width="100" Height="30" HelpRef="us/scope-tree/response-details" />
+            <Widget Id="b-action-collapse" Kind="input/button" TextKey="US.B.CollapseAdvanced" ActionBind="advanced" VisibleBind="expanded" Width="100" Height="30" HelpRef="us/scope-tree/response-details" />
+          </Row>
+        </Row>
+        <Widget Id="b-action-rule" Kind="chrome/rule" Height="8" />
+      </Column>
+      <Column Id="source-selection" Gap="6" Padding="8" VisibleBind="source-visible">
+        <Widget Id="b-action-context" Kind="text/wrapped" Bind="context" />
+        <Widget Id="sparse-note" Kind="text/wrapped" TextKey="US.UI.SparseNote" Emphasis="Muted" />
+        <Widget Id="b-source-title" Kind="text/wrapped" TextKey="US.UI.Help.Source.Title" HelpRef="us/behavior-source/selection" />
+        <Row Id="b-source-controls" Gap="6" Padding="0" VisibleBind="source-controls-visible">
+          <Widget Id="behavior-source" Kind="input/dropdown" Bind="source" OptionsBind="source-options" Width="300" MaxWidth="400" Height="30" HelpRef="us/behavior-source/selection" />
+        </Row>
+        <Widget Id="source-status" Kind="text/wrapped" Bind="source-status" HelpRef="us/behavior-source/selection" />
+        <Widget Id="source-technical" Kind="text/wrapped" Bind="source-technical" VisibleBind="details" Scheme="us-tuning-meta" />
+        <Widget Id="sparse-timing-kind" Kind="input/dropdown" VisibleBind="timing-kind-choice" Bind="timing-kind" OptionsBind="timing-kind-options" Width="300" Height="30" />
+      </Column>
+      <Column Id="sparse-field-row" Gap="4" Padding="4" VisibleBind="field-visible">
+        <Column Id="sparse-field-group-band" Gap="4" Padding="0" VisibleBind="field-group-first"><Widget Id="sparse-field-group-gap" Kind="chrome/rule" Height="8" /><Widget Id="sparse-field-group" Kind="text/wrapped" Bind="field-group" /></Column>
+        <Widget Id="sparse-field-note" Kind="text/wrapped" Bind="field-note" VisibleBind="has-field-note" Emphasis="Muted" />
+        <Widget Id="sparse-boolean" Kind="us/sparse-field" LabelBind="field-title" HelpRefBind="field-topic" HelpContextBind="field-help-context" Bind="field-value" Field="enabled" EffectiveBind="field-effective" OptionsBind="field-options" VisibleBind="field-is-boolean" />
+        <Widget Id="sparse-interval" Kind="us/sparse-field" LabelBind="field-title" HelpRefBind="field-topic" HelpContextBind="field-help-context" Bind="field-value" Field="interval" EffectiveBind="field-effective" VisibleBind="field-is-interval" />
+        <Widget Id="sparse-interaction-seconds" Kind="us/sparse-field" LabelBind="field-title" HelpRefBind="field-topic" HelpContextBind="field-help-context" Bind="field-value" Field="interaction-seconds" EffectiveBind="field-effective" VisibleBind="field-is-interaction-seconds" />
+        <Widget Id="sparse-volume" Kind="us/sparse-field" LabelBind="field-title" HelpRefBind="field-topic" HelpContextBind="field-help-context" Bind="field-value" Field="volume" EffectiveBind="field-effective" VisibleBind="field-is-volume" />
+        <Widget Id="sparse-pitch" Kind="us/sparse-field" LabelBind="field-title" HelpRefBind="field-topic" HelpContextBind="field-help-context" Bind="field-value" Field="pitch" EffectiveBind="field-effective" VisibleBind="field-is-pitch" />
+        <Widget Id="contribution-number" Kind="us/sparse-field" LabelBind="field-title" HelpRefBind="field-topic" HelpContextBind="field-help-context" Bind="field-value" Field="parameter" EffectiveBind="field-effective" VisibleBind="field-is-parameter" />
+        <Widget Id="field-provenance" Kind="text/wrapped" Bind="field-provenance" VisibleBind="details" Scheme="us-tuning-meta" />
+        <Widget Id="contribution-key" Kind="text/wrapped" Bind="technical-key" VisibleBind="details" Scheme="us-tuning-meta" Emphasis="Muted" />
+      </Column>
+      <Column Id="b-action-restores" Gap="6" Padding="8" VisibleBind="footer">
+        <Widget Id="b-row-result" Kind="text/wrapped" Bind="row-result" VisibleBind="has-row-result" />
+        <Widget Id="b-preset-anchor" Kind="text/wrapped" Bind="preset-anchor" />
+        <Row Id="b-row-restores" Gap="6" Padding="0" Breakpoint="520" Narrow="Column">
+          <Widget Id="b-row-reset" Kind="input/button" TextKey="US.B.RestoreRow" ActionBind="row-reset" Width="180" Height="30" />
+          <Widget Id="b-preset-reset" Kind="input/button" TextKey="US.Tuning.ResetToPreset" ActionBind="preset-reset" Width="180" Height="30" />
+        </Row>
+        <Row Id="b-action-secondary" Gap="6" Padding="0" Breakpoint="520" Narrow="Column">
+          <Widget Id="b-rules-output" Kind="input/button" TextKey="US.B.RulesOutput" ActionBind="rules-output" Width="200" Height="30" HelpRef="us/timing/policy" />
+          <Widget Id="b-action-details" Kind="input/button" TextKey="US.B.TechnicalDetails" ActionBind="toggle-details" Width="160" Height="30" HelpRef="us/action-fields/contributions" />
+        </Row>
+        <Widget Id="b-action-explanation" Kind="text/wrapped" Bind="explanation" VisibleBind="details" Scheme="us-tuning-meta" Emphasis="Muted" />
+      </Column>
+    </Column>
+    <Row Id="b-missing-row" Gap="6" Padding="0">
+      <Widget Id="b-missing-name" Kind="text/wrapped" Bind="title" />
+      <Widget Id="b-missing-forget" Kind="input/button" TextKey="US.B.Forget" ActionBind="forget" PayloadBind="payload" Width="142" Height="30" />
+    </Row>
   </Templates>
 </UiPage>

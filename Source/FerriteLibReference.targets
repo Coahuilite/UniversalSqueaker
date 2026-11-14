@@ -1,0 +1,30 @@
+<Project>
+  <Target Name="RequireFerriteLibSelection" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(FerriteLibArtifactPath)' == ''" Text="Select a fixed FerriteLib package with -p:FerriteLibArtifactPath; no implicit carrier is used." />
+  </Target>
+  <Target Name="RecordFerriteLibReference" BeforeTargets="CoreCompile" DependsOnTargets="ResolveReferences">
+    <PropertyGroup>
+      <_SelectedFerriteLibPath>$([System.IO.Path]::GetFullPath('$(FerriteLibArtifactFullPath)'))</_SelectedFerriteLibPath>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(FerriteLibArtifactFullPath)')" Text="Selected FerriteLib artifact is missing: $(FerriteLibArtifactFullPath)" />
+    <ItemGroup>
+      <_FerriteLibReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'FerriteLib.UiKit'" />
+    </ItemGroup>
+    <Error Condition="'@(_FerriteLibReference->Count())' != '1'" Text="Expected exactly one resolved FerriteLib compiler reference." />
+    <Error Condition="'@(_FerriteLibReference->'%(FullPath)')' != '$(_SelectedFerriteLibPath)'" Text="Resolved FerriteLib reference differs from the selected artifact." />
+    <GetFileHash Files="@(_FerriteLibReference)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_FerriteLibHash" />
+    </GetFileHash>
+    <ItemGroup>
+      <_FerriteLibIdentity Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>FerriteLib.SHA256</_Parameter1>
+        <_Parameter2>%(_FerriteLibHash.FileHash)</_Parameter2>
+      </_FerriteLibIdentity>
+    </ItemGroup>
+    <WriteCodeFragment AssemblyAttributes="@(_FerriteLibIdentity)" Language="C#" OutputFile="$(IntermediateOutputPath)FerriteLibIdentity.g.cs">
+      <Output TaskParameter="OutputFile" ItemName="Compile" />
+      <Output TaskParameter="OutputFile" ItemName="FileWrites" />
+    </WriteCodeFragment>
+  </Target>
+
+</Project>

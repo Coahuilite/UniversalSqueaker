@@ -71,11 +71,11 @@ internal static class UsKernelContractInvariantTests
                 && retry.GetAttribute("ActionBind") == "retry-save" && retry.GetAttribute("VisibleBind") == "save-failed",
             "footer action is the existing save-owner Retry, visible only on real failure");
         Assert(home!.GetAttribute("Gap") == "6", "home retains compact six-unit vertical gaps");
-        var browse = home.SelectSingleNode("Row[@Id='voice-browse-tabs']") as XmlElement;
-        var split = home.SelectSingleNode("Row[@Id='voice-split']") as XmlElement;
+        var split = home.SelectSingleNode("Row[@Id='b-roster-split']") as XmlElement;
+        var browse = split?.SelectSingleNode("Column[@Id='b-list-column']/Row[@Id='voice-browse-tabs']") as XmlElement;
         bool navigation = browse != null && !browse.HasAttribute("Width")
             && document.SelectSingleNode("//*[@Id='nav-column']") == null;
-        bool listScroll = split?.SelectSingleNode("Scroll[@Id='voice-list-scroll'][@Fill='true']") != null;
+        bool listScroll = split?.SelectSingleNode("Column[@Id='b-list-column']/Scroll[@Id='voice-list-scroll'][@Fill='true']") != null;
         bool detailScroll = split?.SelectSingleNode("Scroll[@Id='voice-detail-scroll'][@Fill='true']") != null;
         Assert(navigation && listScroll && detailScroll && home.SelectSingleNode(".//*[@Id='help-panel']") == null,
             "home has compact browse navigation and flexible list/detail scrolls, never a permanent help column");

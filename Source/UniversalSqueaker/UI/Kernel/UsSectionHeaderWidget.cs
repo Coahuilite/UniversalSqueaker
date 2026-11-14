@@ -103,7 +103,8 @@ public sealed class UsSectionHeaderWidget : IUiWidget
 
     public float Measure(UiWidgetContext ctx)
     {
-        return ReadHeight(ctx);
+        float width = Math.Max(1, ctx.ViewWidth - MarkerWidth(ctx) - MarkerGap);
+        return Math.Max(ReadHeight(ctx), UsKernelDraw.Text(ctx).MeasureText(ResolveTitle(ctx), width) + 4);
     }
 
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
@@ -123,11 +124,9 @@ public sealed class UsSectionHeaderWidget : IUiWidget
         float markerWidth = MarkerWidth(ctx);
         if (markerWidth > 0f)
         {
-            UsKernelDraw.Label(
+            UsKernelDraw.StyledLabel(ctx,
                 new UiLayoutRect(left, rect.Y, markerWidth, rect.Height),
                 Marker,
-                ctx,
-                theme[UiPaletteRole.Foreground],
                 UiFont.Small,
                 UiTextAnchor.MiddleLeft,
                 singleLine: true);
@@ -135,11 +134,9 @@ public sealed class UsSectionHeaderWidget : IUiWidget
         }
 
         float textWidth = Math.Max(1f, rect.XMax - left);
-        UsKernelDraw.Label(
+        UsKernelDraw.StyledLabel(ctx,
             new UiLayoutRect(left, rect.Y, textWidth, rect.Height),
             title,
-            ctx,
-            theme[UiPaletteRole.Foreground],
             UiFont.Small,
             UiTextAnchor.MiddleLeft);
     }
@@ -155,8 +152,8 @@ public sealed class UsSectionHeaderWidget : IUiWidget
     /// <summary>The measured width of the marker band, or 0 when this font cannot draw it.</summary>
     private static float MarkerWidth(UiWidgetContext ctx)
     {
-        if (!UsDiagGlyphs.Supports(Marker, ctx.Metrics, UiFont.Small)) return 0f;
-        return Math.Max(1f, ctx.Metrics.MeasureWidth(Marker, UiFont.Small));
+        float width = UsKernelDraw.Text(ctx).MeasureWidth(Marker);
+        return width > 0 ? Math.Max(1, width) : 0;
     }
 
     private string ResolveTitle(UiWidgetContext ctx)

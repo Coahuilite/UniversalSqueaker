@@ -53,8 +53,12 @@ public static class UsSwatches
         }
         catch (Exception error)
         {
+#if US_PREVIEW_NEUTRAL
+            throw new InvalidOperationException("Invalid author preview palettes.", error);
+#else
             table = new[] { new UsSwatch() };
             SqueakLog.ThemeFallback("Palettes.xml:CarrierDefaults", error);
+#endif
         }
     }
     public static IReadOnlyList<UsSwatch> All => table;

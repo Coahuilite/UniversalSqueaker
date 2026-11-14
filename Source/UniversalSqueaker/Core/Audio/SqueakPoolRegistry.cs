@@ -111,6 +111,54 @@ public sealed class SqueakPoolRegistry
 
     public DomainPool? PoolFor(AudioDomain domain) => poolsByDomain.TryGetValue(domain, out DomainPool? pool) ? pool : null;
 
+    // Continuing an owned sound checks its exact supply identity. Another eligible candidate or
+    // a newly populated earlier tier is not a reason to reselect/cut it (OUT-07/08).
+    internal bool Authorizes(Responses.AudioCandidate active, SelectionContext ctx, SelectionMode mode,
+        ISoundGate? gate, Func<AudioDomain, string, bool>? selectedPacks)
+    {
+        if (mode != SelectionMode.Off && mode != SelectionMode.Fallback && mode != SelectionMode.Remix) return false;
+        var domain = ctx.Domain;
+        if (active.Action != ctx.ActionKey || active.Family != (domain.IsNonPawn ? Responses.SubjectFamily.NonPawn : Responses.SubjectFamily.PawnRace)
+            || active.Domain != (domain.IsNonPawn ? domain.ObjectTarget : domain.Race.DefName)
+            || active.TargetNamespace != (domain.IsNonPawn ? domain.ObjectNamespace : "")
+            || active.ChildDomain != (domain.Xenotype?.DefName ?? "")) return false;
+
+        bool Tier(ChainTier tier) => !active.SourceTier.HasValue || active.SourceTier == tier;
+        if (!domain.IsNonPawn && Tier(ChainTier.BuiltInFallback) && active.SourceDomain == domain.Parent
+            && active.PackKey == "" && active.EntryKey == "final/" + domain.Parent + "/" + ctx.ActionKey
+            && builtIn.TryGetSoundKey(domain.Race, ctx.ActionKey, out string? final) && final == active.AudioId)
+            return gate?.Playable(active.AudioId, ctx) ?? true;
+        if (mode == SelectionMode.Off) return false;
+
+        var source = active.SourceDomain;
+        var regularTier = domain.IsNonPawn ? ChainTier.ObjectPack
+            : source == domain && domain.Xenotype.HasValue ? ChainTier.XenotypePack : ChainTier.RacePack;
+        bool regular = Tier(regularTier) && (source == domain.Parent || domain.Xenotype.HasValue && source == domain);
+        bool fallback = Tier(ChainTier.PackFallback) && source == domain;
+        var pool = PoolFor(source);
+        if (pool == null) return false;
+        foreach (var pack in pool.Entries)
+        {
+            if (pack.PackKey != (active.PackKey.Length == 0 ? active.EntryKey : active.PackKey)
+                || selectedPacks != null && !selectedPacks(pack.Domain, pack.PackKey)) continue;
+            if (fallback && active.EntryKey == pack.PackKey + "/fallback/" + ctx.ActionKey
+                && pack.PackFallback != null && pack.PackFallback.TryGetValue(ctx.ActionKey, out string? sound)
+                && sound == active.AudioId) return gate?.Playable(active.AudioId, ctx) ?? true;
+            if (!regular || !pack.TryGetAction(ctx.ActionKey, out var variants)) continue;
+            var candidates = SelectVariantCandidates(variants, ctx);
+            if (candidates == null) continue;
+            foreach (var set in candidates)
+            {
+                if (set.IsEgg && !ctx.AllowEggs) continue;
+                string key = set.Entry?.EntryKey ?? pack.PackKey + "/" + ctx.ActionKey + "/variant/" + VariantIndex(variants, set);
+                if (key != active.EntryKey) continue;
+                foreach (string id in set.SoundKeys)
+                    if (id == active.AudioId) return gate?.Playable(id, ctx) ?? true;
+            }
+        }
+        return false;
+    }
+
     private static ChainResult SelectRemixThree(ChainResult x, ChainResult r, ChainResult vanilla, IRollSource rolls)
     {
         ChainResult tier0 = x, tier1 = r, tier2 = vanilla;

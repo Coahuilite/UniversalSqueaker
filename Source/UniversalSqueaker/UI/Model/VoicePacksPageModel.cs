@@ -17,7 +17,7 @@ namespace UniversalSqueaker.UI;
 /// <see cref="GameSettings.CommitVoicePackMode"/>), so resolver rebuild and
 /// QueuePersistence semantics stay where they were.
 /// </summary>
-public static class VoicePacksPageModel
+public static partial class VoicePacksPageModel
 {
     /// <summary>
     /// UIR-007 / CORRECTIONS-R1 topic 1: the board-facts seam. The thin Verse adapter collects the
@@ -152,7 +152,7 @@ public static class VoicePacksPageModel
             tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
             state.FallbackStatusKey,
             raceBoard, select.SelectRequirePlayerControlled, select.SelectRequireAwake, select.SelectRequireNotDowned)
-        { AllPackCards = state.AllPackCards };
+        { AllPackCards = state.AllPackCards, Roster = BuildRoster(settings, catalog, state, xenotypes) };
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -298,14 +298,18 @@ public static class VoicePacksPageModel
         state.ActiveTab = SectionGroup(sectionKey);
     }
 
-    /// <summary>Typed scope write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。
-    /// 非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。</summary>
+
+
+
+    /// <summary>Typed scope write to the active layer's exact domain. Incomplete Race/Xeno targets
+    /// remain refused rather than falling back to the Pawn profile.</summary>
     private static void ApplyActionTuningScope(GameSettings settings, VoicePacksPageState state, string actionKey, BehaviorScope? scope)
     {
         if (string.IsNullOrEmpty(actionKey)) return;
         if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
         if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
-        settings.SetActionTuningScope(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, scope);
+        GetTuningWriteDomain(state, out string race, out string child);
+        settings.SetActionTuningScope(actionKey, race, child, scope);
     }
 
 
@@ -381,10 +385,7 @@ public static class VoicePacksPageModel
                 if (string.IsNullOrEmpty(raceDefName)) continue;
                 options.Add(new TuningDomainOptionView(raceDefName, ResolveRaceLabel(raceDefName)));
             }
-            if (string.IsNullOrEmpty(currentRace) || !options.Any(o => string.Equals(o.RaceDefName, currentRace, StringComparison.Ordinal)))
-            {
-                currentRace = options.Count > 0 ? options[0].RaceDefName : "";
-            }
+            // Browsing is not choosing an editing domain. Directory-only races remain valid targets.
             currentXeno = "";
         }
         else if (layer == 2)
@@ -396,12 +397,7 @@ public static class VoicePacksPageModel
                     ResolveXenotypeLabel(catalog, key.TargetDefName) + " (" + key.TargetDefName + ")",
                     key.TargetDefName));
             }
-            if (string.IsNullOrEmpty(currentRace) || string.IsNullOrEmpty(currentXeno)
-                || !options.Any(o => string.Equals(o.RaceDefName, currentRace, StringComparison.Ordinal) && string.Equals(o.TargetDefName, currentXeno, StringComparison.Ordinal)))
-            {
-                currentRace = options.Count > 0 ? options[0].RaceDefName : "";
-                currentXeno = options.Count > 0 ? options[0].TargetDefName : "";
-            }
+            // Retain the exact requested pair; the native editor gates unavailable identities.
         }
         else
         {
@@ -418,11 +414,17 @@ public static class VoicePacksPageModel
     {
         var rows = new List<ActionScopeRowView>();
         var configuration = settings.CaptureBehaviorConfiguration();
+        // This is one fresh projection, not a cache of publicly mutable settings. Partition the
+        // current domain once instead of scanning every player row twice for every action.
+        var ownRows = settings.actionTuning.Where(x => x.serviceFamily == "Pawn"
+            && x.raceDefName == (layer == 0 ? "" : race) && x.xenotypeDefName == (layer == 2 ? xeno : ""))
+            .ToLookup(x => x.actionKey, StringComparer.Ordinal);
         foreach (var action in SqueakerRuntime.Definitions.Actions)
         {
             var effective = SqueakerRuntime.Explain(configuration, action.Key, race, xeno);
             var value = effective.Read();
-            var own = settings.ReadPlayerActionOverride(action.Key, layer == 0 ? "" : race, layer == 2 ? xeno : "");
+            var actionRows = ownRows[action.Key];
+            var own = GameSettings.FoldPlayerActionOverrides(actionRows);
             string options = "";
             if (value.Phase.HasValue) options += " Eat=" + value.Phase + "/" + value.NutritionScope + "/" + value.DrugScope;
             if (SelectPolicy.HasParameters(value)) options += " Select=" + value.SelectRequirePlayerControlled + "/" + value.SelectRequireAwake + "/" + value.SelectRequireNotDowned;
@@ -430,8 +432,7 @@ public static class VoicePacksPageModel
                 + "\n" + string.Join("; ", value.ResponseParameters.Select(x => x.Key + "=" + x.Value))
                 + "\n" + string.Join("; ", value.ResponseEnabled.Select(x => x.Key + "=" + x.Value))
                 + "\n" + string.Join("; ", value.Participation.Select(x => x.Key + "=" + x.Value));
-            string anchor = settings.actionTuning.LastOrDefault(x => x.serviceFamily == "Pawn" && x.actionKey == action.Key
-                && x.raceDefName == (layer == 0 ? "" : race) && x.xenotypeDefName == (layer == 2 ? xeno : ""))?.sourcePresetDefName ?? "";
+            string anchor = actionRows.LastOrDefault()?.sourcePresetDefName ?? "";
             var reset = ResolveActionPreset(anchor, action.Key, layer == 0 ? "" : race, layer == 2 ? xeno : "");
             if (anchor != "") options += "\n" + "US.Tuning.ResetToPreset".Translate() + ": "
                 + (reset.Item2 ? reset.Item3 : "US.Tuning.ResetPresetUnavailable".Translate().ToString());
@@ -598,14 +599,16 @@ public static class VoicePacksPageModel
     {
         if (string.IsNullOrEmpty(presetDefName)) return;
         UsBehaviorPresetDef? preset = SqueakGameDefs.BaselineByName(presetDefName);
-        if (preset == null) return;
+        if (preset == null) { state.PresetResult = "US.Preset.Invalid".Translate(); return; }
         BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
         BehaviorPresetImporter.Selection importSelection = new();
         foreach (string race in selection.SelectedRaceDefNames) importSelection.RaceDefNames.Add(race);
         foreach (string key in selection.SelectedXenotypeDomainKeys) importSelection.XenotypeDomainKeys.Add(key);
-        try { settings.ImportBaselinePreset(preset, importSelection); }
+        try { var result = settings.ImportBaselinePreset(preset, importSelection);
+            state.PresetResult = result.ActionsImported > 0 ? string.Format("US.B.Imported".Translate(), result.ActionsImported, result.FieldsImported) : "US.B.ImportNoChange".Translate(); }
         catch (ArgumentException error)
         {
+            state.PresetResult = "US.Preset.Invalid".Translate();
             SqueakLog.PresetImportRejected(preset.defName, error);
             Messages.Message("US.Preset.Invalid".Translate(), MessageTypeDefOf.RejectInput, false);
         }
@@ -1274,22 +1277,9 @@ public static class VoicePacksPageModel
         };
     }
 
-    public static void SetTuningLayer(VoicePacksPageState state, int layer)
-    {
-        if (state == null) return;
-        if (layer >= 0 && layer <= 2) { state.TuningLayer = layer; state.TuningContextActive = true; }
-    }
 
-    public static void SetTuningDomain(VoicePacksPageState state, string raceDefName, string targetDefName)
-    {
-        if (state == null) return;
-        if (!string.IsNullOrEmpty(raceDefName))
-        {
-            state.TuningRaceDefName = raceDefName;
-            state.TuningXenotypeDefName = targetDefName ?? "";
-            state.TuningContextActive = true;
-        }
-    }
+
+
 
     public static void SelectDomain(VoicePacksPageState state, SqueakVoicePackScope scope, string raceDefName, string targetDefName)
     {
@@ -1349,21 +1339,32 @@ public static class VoicePacksPageModel
     /// <summary>VF1定稿 A4: action reset-to-preset facade, the mood side's shape: the current-layer
     /// identity's last-wins anchor names the preset; no anchor or no resolvable entry = no-op.</summary>
     public static void ResetActionTuningToPreset(GameSettings settings, VoicePacksPageState state, string actionKey)
+        => TryResetActionTuningToPreset(settings, state, actionKey, out _);
+
+    /// <summary>Result-bearing UI path for scoped draft cleanup. The existing settings owner still
+    /// decides whether the reset executes; present template fields identify only its affected editors.</summary>
+    internal static bool TryResetActionTuningToPreset(GameSettings settings, VoicePacksPageState state, string actionKey,
+        out IReadOnlyCollection<string> affectedFields)
     {
-        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        affectedFields = Array.Empty<string>();
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return false;
         state.TuningContextActive = true;
+        GetTuningWriteDomain(state, out string race, out string child);
         string anchor = "";
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || !string.Equals(record.actionKey, actionKey, StringComparison.Ordinal)) continue;
             if (record.serviceFamily != "Pawn" || record.IsValidLayer(out int recordLayer) == false || recordLayer != state.TuningLayer) continue;
-            if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", state.TuningRaceDefName ?? "", StringComparison.Ordinal)) continue;
-            if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", state.TuningXenotypeDefName ?? "", StringComparison.Ordinal)) continue;
+            if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", race, StringComparison.Ordinal)) continue;
+            if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", child, StringComparison.Ordinal)) continue;
             if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;
         }
-        if (anchor.Length == 0) return;
+        if (anchor.Length == 0) return false;
         UsBehaviorPresetDef? preset = SqueakGameDefs.BaselineByName(anchor);
-        settings.ResetActionTuningToPreset(actionKey, state.TuningRaceDefName ?? "", state.TuningXenotypeDefName ?? "", preset);
+        GameSettings.TryFindActionBaseline(preset, actionKey, race, child, out var template);
+        bool applied = settings.ResetActionTuningToPreset(actionKey, race, child, preset);
+        if (applied && template != null) affectedFields = template.PresentKeys().ToArray();
+        return applied;
     }
 
 
@@ -1598,12 +1599,7 @@ public static class VoicePacksPageModel
         state.TuningContextActive = true;
     }
 
-    public static void SetTuningSelectedAction(VoicePacksPageState state, string actionKey)
-    {
-        if (state == null) return;
-        state.TuningSelectedAction = actionKey ?? "";
-        state.TuningContextActive = true;
-    }
+
 
     /// <summary>VF1 entry write (r5): the starting point is the player's REAL field-presence delta
     /// read from the copy - not a diff against the resolved table, which would silently drop other
@@ -1834,28 +1830,8 @@ public static class VoicePacksPageModel
         }
     }
 
-    /// <summary>The CONTEXT return layer above the row steps, declared on the container that wraps the
-    /// composite (PM observation 1, per §4.1 "当前层域/区域 → 设置主层"): the branch's activity is its own
-    /// business state, so even the untouched default Global/Actions page answers one press before the
-    /// settings main layer may close. The exit reposes the branch to its initial defaults - it changes NO
-    /// settings, selects no domain (the Global layer has none to auto-pick, the BuildTuningDomains
-    /// layer-0 branch), and any later tuning write re-arms the context.</summary>
-    public static bool CanCancelTuningContext(VoicePacksPageState state)
-        => state != null && state.TuningContextActive;
 
-    public static void CancelTuningContext(VoicePacksPageState state)
-    {
-        if (state == null) return;
-        state.TuningContextActive = false;
-        state.TuningLayer = 0;
-        state.TuningRaceDefName = "";
-        state.TuningXenotypeDefName = "";
-        state.TuningArea = 0;
-        state.TuningSelectedAction = "";
-        // UIR-004: the fallback selection state is NOT reposed here any more - the editor lives on the
-        // Packs page and owns its state through its own return layer. Clearing it from a tuning-context
-        // return would be one page silently rewriting another page's browse state.
-    }
+
 
     // -----------------------------------------------------------------------------------------
     // UIR-002/003 (WO-US-UI-REFACTOR-20261014 + CORRECTIONS-R1): the board's two exits, now pure.

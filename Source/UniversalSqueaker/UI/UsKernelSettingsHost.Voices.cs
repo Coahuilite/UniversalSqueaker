@@ -8,15 +8,9 @@ namespace UniversalSqueaker.UI;
 
 public static partial class UsKernelSettingsHost
 {
+    internal static void NavigateBehaviorOutput(VoicePacksPageState state) => NavigatePage(state, "Output");
     private static readonly string[] ToolPages = { "Behavior", "Presets", "Output", "Fallback", "Appearance", "Diagnostics", "Restore" };
     private static bool IsToolPage(string page) => Array.IndexOf(ToolPages, page) >= 0;
-    private static string PageHelpRef(VoicePacksPageState state) => state.Page switch
-    {
-        "Voices" => state.BrowseDefinitions ? "us/race-board" : "us/pack-cards",
-        "Behavior" => "us/scope-tree", "Presets" => "us/preset-list", "Output" => "us/basic-tuning",
-        "Fallback" => "us/fallback-editor", "Appearance" => "us/theme-picker",
-        "Diagnostics" => "us/diagnostics", "Restore" => "us/reset-center", _ => "us/page-title"
-    };
     private static string LegacyPage(string tab) => tab switch { "Tuning" => "Behavior", "Presets" => "Presets", "Advanced" => "Diagnostics", _ => "Voices" };
     private static void SetPage(VoicePacksPageState state, string page)
     {
@@ -24,9 +18,12 @@ public static partial class UsKernelSettingsHost
         {
             state.HelpPanelOpen = false;
             state.PinnedHelpRef = ""; state.PinnedHelpContext = "";
+            state.FollowHelpRef = ""; state.FollowHelpContext = ""; state.FollowHelpLabel = ""; state.HelpScope = "";
         }
         state.Page = page;
         if (IsToolPage(page)) state.LastToolPage = page;
+        if (TuningPage(page)) state.LastTuningPage = page;
+        else if (IsToolPage(page)) state.LastSystemPage = page;
         state.ActiveTab = page == "Behavior" ? "Tuning" : page == "Presets" ? "Presets" :
             page == "Appearance" || page == "Diagnostics" || page == "Restore" ? "Advanced" : "Packs";
         state.ActiveSectionKey = page switch { "Behavior" => "scope-tree", "Output" => "basic-tuning",
@@ -61,51 +58,34 @@ public static partial class UsKernelSettingsHost
         if (index >= 0) source.ViewState.PackPage = index / 20;
     }
     // Definition updates preserve the host and every compatible node identity, including scroll/drafts.
-    internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f) => UiLayoutManifest.Parse(ReadManifest()
+    internal static UiLayoutManifest PageDefinition(bool wide, float helpHeight = 128f, bool? rosterWide = null, bool deferRoster = false) => UiLayoutManifest.Parse(ReadManifest()
+        .Replace("Id=\"b-roster-plate\" Padding=\"4\"", "Id=\"b-roster-plate\" Padding=\"4\"" + (deferRoster ? " DeferClippedDisplay=\"true\"" : ""))
         .Replace("Id=\"voice-split\" Breakpoint=\"1\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-roster-split\" Breakpoint=\"1\"", "Id=\"b-roster-split\" Breakpoint=\"" + ((rosterWide ?? wide) ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-list-column\" Width=\"300\"", "Id=\"b-list-column\"" + ((rosterWide ?? wide) ? " Width=\"300\"" : ""))
+        .Replace("Id=\"b-final-split\" Breakpoint=\"1\"", "Id=\"b-final-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
+        .Replace("Id=\"b-final-list\" Width=\"300\"", "Id=\"b-final-list\"" + (wide ? " WidthBind=\"b-list-width\"" : ""))
         .Replace("Id=\"voice-detail-scroll\" Width=\"440\"", "Id=\"voice-detail-scroll\"" + (wide ? " Width=\"440\"" : ""))
         .Replace("Id=\"tool-nav\" Cols=\"7\"", "Id=\"tool-nav\" Cols=\"" + (wide ? "7" : "3") + "\"")
         .Replace("Id=\"help-drawer\" Height=\"128\"", "Id=\"help-drawer\" Height=\"" + helpHeight.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "\""));
+
+    internal static bool UsesDeferredRoster(UiHost host) => host.Manifest.Templates.TryGetValue("b-roster-row", out UiElementSpec row)
+        && row.Children.Any(child => child.Id == "b-roster-plate" && child.TryGetBoolean("DeferClippedDisplay", out bool enabled) && enabled);
 
     /// <summary>Use the public arranged page, not copied window-chrome constants, for the optional
     /// help budget. Runs only after a content/size/text change while open; compatible definitions
     /// retain node/editor/scroll identity. The second bounded arrange accounts for scrollbar width.</summary>
     public static void PreparePage(UiHost host, UiLayoutPoint available)
     {
-        if (!host.Bindings.TryGet("page-state", out VoicePacksPageState state) || !state.HelpPanelOpen) return;
-        var ctx = host.CreateContext(available.X);
-        string topic = state.PinnedHelpRef.Length > 0 ? state.PinnedHelpRef : host.Session.CurrentHelpRef ?? "";
-        UsHelpCatalog.TryGetSection(host.Bindings.TryGet("help-section-ref", out string section) ? section : "", out var fallback);
-        var display = UsHelpPanelLogic.Resolve(fallback, topic, key => UsKernelDraw.Keyed(ctx, key));
-        string text = display.TitleText + "\n" + display.LabelText + "\n" + display.BodyText + "\n" + state.PinnedHelpContext;
-        var environment = ctx.Metrics as IUiTextMetricsEnvironment;
-        var small = environment?.CaptureEnvironment(UiFont.Small);
-        var tiny = environment?.CaptureEnvironment(UiFont.Tiny);
-        if (state.HelpLayoutRevision == host.Session.ContentRevision && state.HelpViewWidth == available.X
-            && state.HelpViewHeight == available.Y && state.HelpLayoutText == text && small != null && tiny != null
-            && small.Equals(state.HelpSmallEnvironment) && tiny.Equals(state.HelpTinyEnvironment)) return;
-        // Current text/environment may change without a business write (language or hover grace).
-        if (state.HelpLayoutText != text || !Equals(small, state.HelpSmallEnvironment)
-            || !Equals(tiny, state.HelpTinyEnvironment)) host.Invalidate();
-        for (int pass = 0; pass < 2; pass++)
-        {
-            var layout = host.MeasureAndArrange(available);
-            if (!layout.RectById.TryGetValue("business-body", out var body)
-                || !layout.RectById.TryGetValue("footer-band", out var footer)
-                || !layout.RectById.TryGetValue("help-header", out var header)
-                || !layout.ScrollContents.TryGetValue("help-scroll", out var content)) break;
-            // Use the real available bottom and measured footer height: an initial oversized
-            // placeholder may itself push footer.Y down. Padding/gaps belong to our manifest,
-            // not to copied window chrome. The resulting cap is independent of that placeholder.
-            float budget = Math.Max(0f, (available.Y - 12f - footer.Height - 6f - body.Y) / 3f);
-            float height = Math.Min(budget, header.Height + 4f + content.Height);
-            if (Math.Abs(state.HelpHeight - height) < .01f) break;
-            state.HelpHeight = height;
-            host.UpdateDefinition(PageDefinition(state.WideLayout, height));
-        }
-        state.HelpViewWidth = available.X; state.HelpViewHeight = available.Y;
-        state.HelpLayoutText = text; state.HelpLayoutRevision = host.Session.ContentRevision;
-        state.HelpSmallEnvironment = small; state.HelpTinyEnvironment = tiny;
+        if (!host.Bindings.TryGet("page-state", out VoicePacksPageState state)) return;
+        bool deferRoster = UsesDeferredRoster(host);
+        bool rosterWide = WindowChromeLayout.UsesWideRoster(available.X);
+        bool rosterChanged = state.RosterIsWide != rosterWide;
+        state.RosterWideLayout = rosterWide;
+        if (rosterChanged) host.UpdateDefinition(PageDefinition(state.WideLayout, state.HelpHeight, rosterWide, deferRoster));
+        float listWidth = Math.Max(300, Math.Min(400, (available.X - 24) * .4f));
+        if (Math.Abs(state.RosterListWidth - listWidth) > .01f) { state.RosterListWidth = listWidth; host.Invalidate(); }
+        PrepareHelpLayout(host, state, available, height => host.UpdateDefinition(PageDefinition(state.WideLayout, height, state.RosterIsWide, deferRoster)));
     }
 
     private static void BindVoiceManagement(IUsKernelSettingsSource source, UsWriteBindings writes,
@@ -118,21 +98,18 @@ public static partial class UsKernelSettingsHost
         string T(string key) => t.Translate("US.UI." + key);
         void Go(string page)
         {
-            if (page == "Fallback" && s.FallbackSelectedRace == "" && !s.FallbackTableCanceled)
-            {
-                var tables = source.BuildView().FallbackRaces;
-                if (tables.Count > 0) VoicePacksPageModel.SetFallbackSelection(s, tables[0].DefName, "");
-            }
             NavigatePage(s, page);
             bumper.Bump();
         }
-        string EditContext() => s.TuningLayer == 0 ? T("PawnProfile") : s.TuningRaceDefName +
-            (s.TuningLayer == 2 ? "/" + s.TuningXenotypeDefName : "");
+        string EditContext() => TuningContextLabel(source, t, s.TuningLayer,
+            s.TuningLayer == 0 ? "" : s.TuningRaceDefName, s.TuningLayer == 2 ? s.TuningXenotypeDefName : "");
         void OpenHelp(string topic, string context)
         {
-            bool changed = s.PinnedHelpRef != topic || s.PinnedHelpContext != context;
-            s.PinnedHelpRef = topic;
-            s.PinnedHelpContext = context;
+            bool changed = DisplayHelpRef(s) != topic || DisplayHelpContext(s) != context;
+            s.PinnedHelpRef = ""; s.PinnedHelpContext = "";
+            s.FollowHelpRef = topic; s.FollowHelpContext = context;
+            s.FollowHelpLabel = "";
+            s.HelpScope = HelpScope(source);
             s.HelpPanelOpen = true;
             if (changed) bumper.ResetHelpScroll();
             bumper.Bump();
@@ -170,17 +147,22 @@ public static partial class UsKernelSettingsHost
             () => !s.HelpPanelOpen && (s.DetailOpen || s.PackArrivalFromDirectory));
         writes.Command("page-cancel", () => {
             if (s.HelpPanelOpen) s.HelpPanelOpen = false;
-            else if (s.Page == "Voices") ReturnVoiceList();
+            else if (s.Page == "Voices" && !s.RosterIsWide && s.DetailOpen) ReturnVoiceList();
+            else if (s.Page == "Voices") {
+                if (s.BrowseDefinitions) { s.HighlightedTarget = ""; source.CancelDomainSelection(); }
+                else s.SelectedPackKey = "";
+            }
             else ReturnToPreviousPage(s);
             bumper.Bump();
-        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
+        }, () => s.HelpPanelOpen || s.Page != "Voices" || (!s.RosterIsWide && s.DetailOpen)
+            || (s.BrowseDefinitions ? s.HighlightedTarget != "" : s.SelectedPackKey != "") || s.PackArrivalFromDirectory);
         b.BindReadOnly<bool>("voice-packs", () => !s.BrowseDefinitions);
         b.BindReadOnly<bool>("voice-definitions", () => s.BrowseDefinitions);
-        writes.Command("browse-packs", () => { s.BrowseDefinitions = false; bumper.Bump(); });
-        writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; bumper.Bump(); });
-        b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.WideLayout || !s.DetailOpen));
-        b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.WideLayout || s.DetailOpen));
-        b.BindReadOnly<bool>("voice-compact-back", () => (!s.WideLayout && s.DetailOpen) || s.PackArrivalFromDirectory);
+        writes.Command("browse-packs", () => { s.BrowseDefinitions = false; s.DetailOpen = false; bumper.Bump(); });
+        writes.Command("browse-definitions", () => { s.BrowseDefinitions = true; s.DetailOpen = false; bumper.Bump(); });
+        b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.RosterIsWide || !s.DetailOpen));
+        b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.RosterIsWide || s.DetailOpen));
+        b.BindReadOnly<bool>("voice-compact-back", () => (!s.RosterIsWide && s.DetailOpen) || s.PackArrivalFromDirectory);
         b.BindReadOnly<bool>("voice-directory-return", () => s.PackArrivalFromDirectory && !s.BrowseDefinitions && !s.DetailOpen);
         PackCardView? ViewedPack()
         {
@@ -262,7 +244,9 @@ public static partial class UsKernelSettingsHost
             Go("Behavior");
         }, () => EditingDomain().HasValue);
         writes.Command("open-topic", () => {
-            OpenHelp(PageHelpRef(s), T(s.Page));
+            if (s.HelpPanelOpen) { s.HelpPanelOpen = false; bumper.Bump(); return; }
+            if (s.HelpScope != HelpScope(source) || s.FollowHelpRef == "") OpenHelp(PageHelpRef(s), HelpPageContext(source, t));
+            else { s.HelpPanelOpen = true; bumper.Bump(); }
         });
         writes.Action<string>("explain-topic", topic => OpenHelp(topic,
             topic.StartsWith("us/basic-tuning/", StringComparison.Ordinal) || topic.StartsWith("us/behavior-source/", StringComparison.Ordinal)
@@ -273,10 +257,18 @@ public static partial class UsKernelSettingsHost
             b.BindReadOnly<string>("explain:" + topic, () => topic);
         b.BindReadOnly<string>("pinned-help-ref", () => s.PinnedHelpRef);
         b.BindReadOnly<string>("pinned-help-context", () => s.PinnedHelpContext);
+        b.BindReadOnly<string>("help-display-ref", () => DisplayHelpRef(s));
+        b.BindReadOnly<string>("help-display-context", () => DisplayHelpContext(s));
+        b.BindReadOnly<string>("help-scope", () => HelpScope(source));
+        b.BindReadOnly<string>("help-page-context", () => HelpPageContext(source, t));
+        b.BindReadOnly<string>("help-toggle-label", () => s.HelpPanelOpen ? t.Translate("US.UI.CloseHelp") : t.Translate("US.UI.Help"));
+        b.BindReadOnly<bool>("help-closed", () => !s.HelpPanelOpen);
         b.BindReadOnly<string>("help-title", () => {
+            if (s.PinnedHelpRef.Length == 0 && s.FollowHelpLabel.Length > 0) return s.FollowHelpLabel;
             UsHelpCatalog.TryGetSection(source.SectionHelpRef(s.ActiveSectionKey), out var section);
-            var display = UsHelpPanelLogic.Resolve(section, s.PinnedHelpRef, t.Translate);
-            return UsHelpCatalog.TryFindItem(s.PinnedHelpRef, out _, out _) ? display.LabelText : display.TitleText;
+            string topic = DisplayHelpRef(s);
+            var display = UsHelpPanelLogic.Resolve(section, topic, t.Translate);
+            return UsHelpCatalog.TryFindItem(topic, out _, out _) ? display.LabelText : display.TitleText;
         });
         b.BindReadOnly<string>("voice-missing-selections", () => { source.BuildView(); return s.MissingSelections; });
         b.BindReadOnly<bool>("voice-has-missing", () => { source.BuildView(); return s.OrphanSelectionCount > 0; });
@@ -292,45 +284,6 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<bool>("action-fields-visible", () => production != null && s.TuningSelectedAction != "" && source.CanResetTuningArea());
         b.BindReadOnly<string>("action-fields-target", () => T("Editing") + ": " + s.TuningSelectedAction + " · " + EditContext());
         b.BindReadOnly<string>("edit-domain-context", () => { source.BuildView(); return T("EditContext") + ": " + EditContext(); });
-        // Retained editors belong to the exact action/domain, not mutable navigation state.
-        // Previously visited rows remain hidden compatible nodes, so switching context cannot
-        // publish an old draft into a different row or silently discard it.
-        var editKeys = new List<string>();
-        string CurrentEditKey() => s.TuningSelectedAction + "|" + (s.TuningLayer == 0 ? "" : s.TuningRaceDefName) + "|" + (s.TuningLayer == 2 ? s.TuningXenotypeDefName : "");
-        b.BindReadOnly<IReadOnlyList<string>>("action-edit-keys", () => {
-            source.BuildView();
-            if (production == null || s.TuningSelectedAction == "" || !source.CanResetTuningArea()) return editKeys;
-            string key = CurrentEditKey();
-            if (editKeys.Contains(key)) return editKeys;
-            string action = s.TuningSelectedAction;
-            string race = s.TuningLayer == 0 ? "" : s.TuningRaceDefName;
-            string child = s.TuningLayer == 2 ? s.TuningXenotypeDefName : "";
-            editKeys.Add(key);
-            string Address(string leaf) => UsWriteBindings.ItemKey("action-edit-keys", key, leaf);
-            b.BindReadOnly<bool>(Address("current-row"), () => CurrentEditKey() == key);
-            string timingKind = UsResponsePolicy.IsOfficialInteraction(action) ? "Interaction" : "Simulation";
-            b.BindReadOnly<bool>(Address("timing-kind-choice"), () => !Kernel.BuiltInActionKeys.Contains(action));
-            b.BindChoices<string>(Address("timing-kind-options"), () => new[] {
-                new UiChoice<string>(T("IntervalInteraction"), "Interaction"), new UiChoice<string>(T("IntervalSimulation"), "Simulation") });
-            writes.ItemValue<string>("action-edit-keys", key, "timing-kind", () => timingKind, value => {
-                if (value == "Interaction" || value == "Simulation") { timingKind = value; bumper.Bump(); }
-            });
-            b.BindReadOnly<bool>(Address("interaction-row"), () => timingKind == "Interaction");
-            b.BindReadOnly<bool>(Address("simulation-row"), () => timingKind == "Simulation");
-            b.BindReadOnly<string>(Address("timing-effective"), () => production.EffectiveInterval(action, race, child, timingKind == "Interaction", t));
-            b.BindChoices<string>(Address("sparse-bool-options"), () => new[] { new UiChoice<string>(T("SourceInherit"), ""), new UiChoice<string>(T("Yes"), "True"), new UiChoice<string>(T("No"), "False") });
-            foreach (string field in new[] { "enabled", "interaction-seconds", "interval", "volume", "pitch", "talking", "age", "mood" })
-            {
-                string f = field;
-                writes.ItemValue<string>("action-edit-keys", key, "action-field-" + f,
-                    () => production.ReadActionField(f, action, race, child),
-                    v => { production.CommitActionField(f, v, action, race, child); bumper.Bump(); });
-                b.BindReadOnly<string>(Address("explain-" + f + "-topic"), () => "us/action-fields/" + f);
-                writes.ItemAction<string>("action-edit-keys", key, "explain-" + f,
-                    topic => OpenHelp(topic, action + " · " + (race == "" ? T("PawnProfile") : race + (child == "" ? "" : "/" + child))));
-            }
-            return editKeys;
-        });
         b.BindReadOnly<string>("action-row-diagnostic", () => {
             string[] parts = (production?.RowDiagnostic ?? "").Split(new[] { '\n' }, 2);
             return parts[0] == "" ? "" : t.Translate(parts[0]);
@@ -339,5 +292,8 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<string>("kernel-status-raw", () => SqueakerRuntime.PolicyStatus);
         string carrier = typeof(UiHost).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
         b.BindReadOnly<string>("dependency-status", () => source.BuildIdentity + "\nFerriteLib " + carrier + "\n" + T("ObservationBoundary"));
+        BindRoster(source, writes, bumper, t);
+        BindBehaviorSheet(source, writes, bumper, t);
+        BindFinalSheet(source, writes, bumper, t);
     }
 }

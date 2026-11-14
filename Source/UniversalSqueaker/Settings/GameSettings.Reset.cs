@@ -1,8 +1,6 @@
 using System;
 using Verse;
 namespace UniversalSqueaker;
-public enum SqueakResetOutcome { NoChange, Applied, Rejected }
-public enum SqueakNormalResetArea { Distance, Basics, Diagnostics }
 /// <summary>Exact player-owned resets. Author definitions and separate final-fallback files are never reset here.</summary>
 public partial class GameSettings
 {

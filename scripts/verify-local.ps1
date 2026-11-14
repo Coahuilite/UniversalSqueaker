@@ -243,9 +243,11 @@ Invoke-Check 'LICENSE present and un-truncated MPL-2.0' `
         # The carrier ships the same licence text; a fork between the two copies is a real defect.
         $carrierLicense = Join-Path $carrierSource 'LICENSE'
         if (Test-Path -LiteralPath $carrierLicense -PathType Leaf) {
-            $ours = (Get-FileHash -LiteralPath $licensePath -Algorithm SHA256).Hash
-            $theirs = (Get-FileHash -LiteralPath $carrierLicense -Algorithm SHA256).Hash
-            if ($ours -ne $theirs) { throw "US and FerriteLib LICENSE files differ; the series licence must be one text." }
+            $ours = [IO.File]::ReadAllBytes($licensePath)
+            $theirs = [IO.File]::ReadAllBytes($carrierLicense)
+            if (-not [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($ours, $theirs)) {
+                throw "US and FerriteLib LICENSE files differ; the series licence must be one text."
+            }
         }
     }
 

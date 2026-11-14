@@ -34,7 +34,7 @@ public static class UsSwatchIds
                 {
                     string role = Required(color, "Role");
                     string? from = (string?)color.Attribute("From");
-                    string hex = from == null ? Required(color, "Value") : roles.TryGetValue(from, out string found)
+                    string hex = from == null ? Required(color, "Value") : roles.TryGetValue(from, out string? found)
                         ? found : throw new InvalidOperationException(id + ": unresolved alias " + from);
                     if (hex.Length != 7 || hex[0] != '#' || hex.Skip(1).Any(c => !Uri.IsHexDigit(c)))
                         throw new InvalidOperationException(id + ": invalid colour " + role);

@@ -22,6 +22,11 @@ public sealed class AudioCatalog
     private readonly HashSet<AudioDomain> domains;
     public bool HasDomain(AudioDomain domain) => domains.Contains(domain);
 
+    // Review the original supply, never run selection or sample replacement audio.
+    internal bool Authorizes(AudioCandidate active, SelectionContext context, SelectionMode mode,
+        ISoundGate? gate, Func<AudioDomain, string, bool>? selectedPacks)
+        => selector.Authorizes(active, context, mode, gate, selectedPacks);
+
     public AudioCatalog(IEnumerable<AudioCandidate> entries, BuiltInFallbackTable? fallback = null,
         IEnumerable<VoicePackEntry>? nativePacks = null)
     {

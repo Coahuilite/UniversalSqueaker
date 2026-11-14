@@ -59,6 +59,7 @@ public sealed class ResponseSession
 
     public string ActiveAction => sustained.ActiveKey;
     public string LastEndReason => sustained.LastEndReason;
+    internal long EndRevision => sustained.EndRevision;
     public bool ReviewDue(long tick) => sustained.ReviewDue(tick);
 
     public DecisionOutcome Respond(DecisionInput input, IResponseRandom random, IResponseOutput output)
@@ -144,6 +145,14 @@ public sealed class ResponseSession
         var effective = view.Configuration.Resolve(frame.Domain, action.Key, BehaviorContract.Defaults(action, selectedPolicy, frame.Domain.Family),
             view.Definitions.BehaviorSources, frame.AvailableFacts.Contains, action.Condition.RequiredFacts());
         var behavior = effective.Read();
+        var active = sustained.ActiveAudio;
+        if (active != null && !view.Audio.Authorizes(active,
+            new Kernel.SelectionContext(frame.Domain.Identity, action.Key, frame.Age, true, view.Configuration.AllowEggs),
+            view.Configuration.SourceMode, frame.SoundGate, view.Configuration.IsPackSelected))
+        {
+            Stop("CurrentAudioAuthorizationUnavailable");
+            return LastEndReason;
+        }
         return Review(frame.Tick, frame.Facts, BehaviorContract.EffectiveCondition(action, behavior),
             frame.Eligible && BehaviorContract.Authorized(view.Configuration, effective, behavior, frame)
             && BehaviorContract.InvalidParameters(action, behavior) == "" && (!action.RequiresVocal || frame.HasVocalOrgans), force);

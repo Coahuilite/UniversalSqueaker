@@ -7,6 +7,7 @@ namespace UniversalSqueaker.UI;
 /// <summary>Read-only projection of the VoicePack settings page. Built from settings + catalog each frame.</summary>
 public sealed class VoicePacksViewState
 {
+    public IReadOnlyList<UsRosterTarget> Roster { get; internal set; } = Array.Empty<UsRosterTarget>();
     public SqueakVoicePackMode Mode { get; }
     public bool AllowEasterEggs { get; }
     public SqueakDistancePreset DistancePreset { get; }

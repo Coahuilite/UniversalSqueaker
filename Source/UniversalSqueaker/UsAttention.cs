@@ -1,6 +1,6 @@
 using System;
 using FerriteLib.UiKit.Kernel;
-using UnityEngine;
+
 
 namespace UniversalSqueaker;
 
@@ -70,7 +70,7 @@ public static class UsAttention
         if (rect.Width <= 0f || rect.Height <= 0f) return;
         UiThemeDraw.Surface(drawing, rect, theme, Brush, Brush);
         UiThemeDraw.Label(drawing,
-            new UiLayoutRect(rect.X + 4f, rect.Y, Mathf.Max(1f, rect.Width - 8f), rect.Height),
+            new UiLayoutRect(rect.X + 4f, rect.Y, Math.Max(1f, rect.Width - 8f), rect.Height),
             text,
             theme,
             InkOnBrush,

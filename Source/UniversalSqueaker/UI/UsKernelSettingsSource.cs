@@ -15,7 +15,7 @@ namespace UniversalSqueaker.UI;
 /// surface (<see cref="GameSettings"/> and the typed
 /// <see cref="VoicePacksPageModel"/> facade).
 /// </summary>
-public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource, IUsActivitySettingsSource
+public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IUsSettingsEntrySource, IUsActivitySettingsSource, IUsGlobalVolumeSettingsSource
 {
     private readonly GameSettings settings;
     private readonly VerseUiImages? images;
@@ -28,13 +28,21 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     private Authoring.DefinitionCatalog? cachedDefinitions;
     private UsResponsePolicy? cachedPolicy, observedPolicy;
     private bool uiCostActive;
+    private Action<Func<string>> uiCostTrace = SqueakLog.LayoutTrace;
     private long uiViewReads, uiViewBuilds, uiViewTicks, uiViewMaxTicks, uiCreateTicks;
+    private long uiCostStarted, uiVolumeRequests, uiVolumeChanges, uiVolumeTicks, uiVolumeMaxTicks, uiExpansions;
+    private double uiLastVolumeMs, uiLastExpansionMs;
 
     // Armed only by an explicitly requested, per-window diagnostic sample. No object labels/values.
-    internal void BeginUiCostSample(long creationTicks)
+    internal void BeginUiCostSample(long creationTicks, Action<Func<string>>? output = null)
     {
+        uiViewReads = uiViewBuilds = uiViewTicks = uiViewMaxTicks = 0;
         uiCostActive = true;
+        uiCostTrace = output ?? SqueakLog.LayoutTrace;
         uiCreateTicks = creationTicks;
+        uiCostStarted = Stopwatch.GetTimestamp();
+        uiVolumeRequests = uiVolumeChanges = uiVolumeTicks = uiVolumeMaxTicks = uiExpansions = 0;
+        uiLastVolumeMs = uiLastExpansionMs = -1;
     }
 
     internal void EndUiCostSample(int passes, bool partial)
@@ -42,10 +50,14 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         if (!uiCostActive) return;
         uiCostActive = false;
         double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-        SqueakLog.LayoutTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
-            "UI.cost passes={0} partial={1} create_ms={2:F3} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
-            passes, partial, Milliseconds(uiCreateTicks), uiViewReads, uiViewBuilds,
+        uiCostTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "UI.cost passes={0} partial={1} create_ms={2} view_reads={3} view_builds={4} view_total_ms={5:F3} view_max_ms={6:F3}",
+            passes, partial, uiCreateTicks < 0 ? "NotCaptured" : Milliseconds(uiCreateTicks).ToString("F3", System.Globalization.CultureInfo.InvariantCulture), uiViewReads, uiViewBuilds,
             Milliseconds(uiViewTicks), Milliseconds(uiViewMaxTicks)));
+        uiCostTrace(() => string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "UI.cost operations volume_requests={0} volume_changes={1} volume_write_total_ms={2:F3} volume_write_max_ms={3:F3} last_volume_ms={4:F3} expansions={5} last_expansion_ms={6:F3}",
+            uiVolumeRequests, uiVolumeChanges, Milliseconds(uiVolumeTicks), Milliseconds(uiVolumeMaxTicks), uiLastVolumeMs, uiExpansions, uiLastExpansionMs));
+        uiCostTrace = SqueakLog.LayoutTrace;
     }
 
     public UsKernelSettingsSource(GameSettings settings, VerseUiImages? images = null)
@@ -154,9 +166,22 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         settings.CommitVoicePackMode(mode);
     }
 
+    public float EffectiveGlobalVolume => settings.globalVolumeFactor;
+
     public void SetGlobalVolume(float value)
     {
-        settings.SetGlobalVolume(value);
+        if (!uiCostActive) { settings.SetGlobalVolume(value); return; }
+        long started = Stopwatch.GetTimestamp();
+        float before = settings.globalVolumeFactor;
+        uiVolumeRequests++;
+        uiLastVolumeMs = (started - uiCostStarted) * 1000.0 / Stopwatch.Frequency;
+        try { settings.SetGlobalVolume(value); }
+        finally
+        {
+            if (!before.Equals(settings.globalVolumeFactor)) uiVolumeChanges++;
+            long ticks = Stopwatch.GetTimestamp() - started;
+            uiVolumeTicks += ticks; uiVolumeMaxTicks = Math.Max(uiVolumeMaxTicks, ticks);
+        }
     }
 
     public double Activity => settings.activity;
@@ -211,6 +236,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     public void SetDevLoggingMode(SqueakDevLoggingMode mode)
     {
         settings.SetDevLoggingMode(mode);
+        UsTextFitAudit.SynchronizeWindowPolicies();
     }
 
     // === Developer layout diagnosis (R3-B) =====================================================
@@ -218,8 +244,6 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     // switches over this window's own diagnostic scope. The geometry instrument is per HOST, so enabling it
     // here cannot reach the diagnostics panel's host or any other window's.
     private UiHost? host;
-    private bool layoutCaptureOn;
-    private bool layoutOutlineOn;
 
     /// <summary>
     /// A report was asked for and has not been produced yet. The window consumes this after a real draw pass
@@ -227,6 +251,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     /// cleared in the same call that produces it, so the next pass reports nothing new.
     /// </summary>
     private bool layoutReportPending;
+    private int requestedAfterReportPass = -1;
 
     /// <summary>
     /// What this window's Report control is currently saying (RPT1.1). It is written ONLY where one of the
@@ -268,6 +293,31 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     {
         this.host = host;
         observedPolicy = SqueakerRuntime.CurrentPolicy;
+        // Also pairs the legal direct Host factory path, where no WindowStack raises HostDetached.
+        host.CreateContext(1).State("us/settings-source-borrow", () => this, value => value.DetachHost(host));
+    }
+
+    // Paired with the window's Host lifetime, not with the business settings lifetime.
+    internal void DetachHost(UiHost released)
+    {
+        if (!ReferenceEquals(host, released)) return;
+        behaviorDisplayAttachment?.Dispose();
+        behaviorDisplayAttachment = null;
+        displayRows = Array.Empty<ActionTuningRecord>();
+        displayDefinitions = displayPolicy = displayCatalog = displayRoster = displayDirectory = null;
+        displayConfiguration = -1;
+        host = null;
+        revisionSource = null;
+        uiCostActive = false;
+        uiCostTrace = SqueakLog.LayoutTrace;
+        cachedView = null;
+        cachedRevision = -1;
+        effectiveFields.Clear();
+        effectiveFieldsView = null;
+        imageRefs.Clear();
+        layoutReportPending = false;
+        requestedAfterReportPass = -1;
+        reportOutcome = LayoutReportOutcome.None;
     }
 
     // A process-only Dev choice is not a settings edit. Refresh the existing view/layout clocks
@@ -281,10 +331,12 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     }
 
     /// <summary>The switch's own checked state: what the instrument actually honoured, never the request.</summary>
-    public bool LayoutCaptureOn => layoutCaptureOn;
+    public bool LayoutCaptureOn => UsTextFitAudit.GetDevGeometryStatus(host)
+        is UsTextFitAudit.DevGeometryStatus.Active or UsTextFitAudit.DevGeometryStatus.Overlay;
 
-    /// <summary>Whether the captured-rect outline is on for this window (blanked when capture is off).</summary>
-    public bool LayoutOutlineOn => layoutOutlineOn;
+    /// <summary>Actual independent outline state, including changes made by the companion panel.</summary>
+    public bool LayoutOutlineOn => UsTextFitAudit.GetDevGeometryStatus(host)
+        is UsTextFitAudit.DevGeometryStatus.OutlineOnly or UsTextFitAudit.DevGeometryStatus.Overlay;
 
     /// <summary>
     /// The status sentence for the developer. The "unavailable" state is derived from the CARRIER, not from a
@@ -394,11 +446,8 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public void SetLayoutCapture(bool on)
     {
-        bool honoured = UsTextFitAudit.SetGeometryCapture(host, on);
-        // A refusal is a status, not a silent no-op: the switch stays where the instrument actually is, and a
-        // refused capture cannot leave an outline switched on over nothing.
-        layoutCaptureOn = honoured && on;
-        if (!honoured && on) layoutOutlineOn = false;
+        UsTextFitAudit.SetGeometryCapture(host, on);
+        // Readback comes from the one audit owner, not a second copy of the two switch states.
         // The instrument moved, so a sentence that described the OLD instrument state ("capture is off") must
         // not stay up: drop back to "nothing asked yet" and let the sentence follow the instrument (RPT1.2).
         if (reportOutcome != LayoutReportOutcome.Waiting
@@ -411,8 +460,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
 
     public void SetLayoutOutline(bool on)
     {
-        bool honoured = UsTextFitAudit.SetGeometryOverlay(host, on);
-        layoutOutlineOn = honoured && on;
+        UsTextFitAudit.SetGeometryOverlay(host, on);
     }
 
     public void OpenDeveloperPanel() => UniversalSqueaker.UI.Dev.UsDevPanelWindow.OpenOrFocus();
@@ -427,6 +475,7 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         layoutReportPending = UsTextFitAudit.RequestGeometryReport(host);
         if (layoutReportPending)
         {
+            requestedAfterReportPass = UsTextFitAudit.FindOpenScope(host)?.LastGeometryReportPass ?? -1;
             // Accepted: the line now says what happens next, not that it already succeeded (RPT1.1).
             reportOutcome = LayoutReportOutcome.Waiting;
             return;
@@ -451,6 +500,11 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         if (!layoutReportPending || host == null) return -1;
 
         int pass = UsTextFitAudit.PublishGeometryReport(host);
+        var scope = UsTextFitAudit.FindOpenScope(host);
+        // The window's audit may already have published during this BeforeDraw. Adopt that
+        // actual newer receipt, never an old report merely because one exists (RPT1 D1).
+        if (pass < 0 && scope != null && scope.LastGeometryReportPass > requestedAfterReportPass)
+            pass = scope.LastGeometryReportPass;
         if (pass >= 0)
         {
             layoutReportPending = false;
@@ -613,13 +667,17 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
     public SqueakResetOutcome ResetActionTuningRow(string actionKey)
     {
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
-        return settings.ResetActionTuningRow(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName);
+        VoicePacksPageModel.GetTuningWriteDomain(state, out string race, out string child);
+        var result = settings.ResetActionTuningRow(actionKey, race, child);
+        SetRowResult(actionKey, race, child, "US.B.Restore." + result);
+        return result;
     }
 
     public SqueakResetOutcome ResetActionTuningArea()
     {
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
-        return settings.ResetActionTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
+        VoicePacksPageModel.GetTuningWriteDomain(state, out string race, out string child);
+        return settings.ResetActionTuningArea(race, child);
     }
 
 
@@ -638,10 +696,32 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
         VoicePacksPageModel.ResetActionTuningToPreset(settings, state, actionKey);
     }
 
+    internal bool TryResetActionToPreset(string actionKey, out IReadOnlyCollection<string> affectedFields)
+        => VoicePacksPageModel.TryResetActionTuningToPreset(settings, state, actionKey, out affectedFields);
+
     // VF1定稿: the area/selection commands are page-state writes; the table commands go through the
     // model facade onto the store (the single authority for per-race final tables).
     public void SetTuningArea(int area) => VoicePacksPageModel.SetTuningArea(state, area);
     public void SetTuningSelectedAction(string actionKey) => VoicePacksPageModel.SetTuningSelectedAction(state, actionKey);
+    internal void SetActionExpansion(string actionKey, Action invalidate)
+    {
+        if (uiCostActive)
+        {
+            uiExpansions++;
+            uiLastExpansionMs = (Stopwatch.GetTimestamp() - uiCostStarted) * 1000.0 / Stopwatch.Frequency;
+        }
+        // This command changes only the selected drawer in page state. Its visibility still needs
+        // an arrangement, but the full catalog/action projection has no selected-drawer input.
+        // Preserve only an already-current view across this one owned invalidation. Every ordinary
+        // setter/direct bump and configuration/definition/policy change keeps BuildView's old checks.
+        int before = revisionSource?.Invoke() ?? -1;
+        var prior = cachedView;
+        bool current = revisionSource != null && prior != null && cachedRevision == before;
+        SetTuningSelectedAction(actionKey);
+        invalidate();
+        if (current && ReferenceEquals(prior, cachedView) && revisionSource?.Invoke() == unchecked(before + 1))
+            cachedRevision = unchecked(before + 1);
+    }
     public void SetFallbackSelection(string? race, string? entryAction) => VoicePacksPageModel.SetFallbackSelection(state, race, entryAction);
     public void SetFallbackQueries(string? soundQuery, string? newRaceQuery) => VoicePacksPageModel.SetFallbackQueries(state, soundQuery, newRaceQuery);
     public void SetFallbackEntry(string actionKey, string? soundDefName) => VoicePacksPageModel.SetFallbackEntry(settings, state, actionKey, soundDefName);

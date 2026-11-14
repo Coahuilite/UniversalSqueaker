@@ -44,11 +44,21 @@ Xenotype 图像由窗口的 `Execution.Images` 注册为 `UiImage`。无图像�
 
 XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / WidthKey / SelectedKey / PayloadKey / ActiveTabKey` 改为相应 `*Bind`；`TextKey / LabelKey` 仍是翻译 key，不机械更名。
 
-当前页头或字段说明打开底栏时显式固定该页／字段的 topic，不取之前的 `Session.CurrentHelpRef`，随后不被 hover 替换；未固定的帮助控件直接读该 session 值，不依赖 `HoveredOptionHelpOutputBind`。`PublishHelp(ref)` 归于当前实际发布节点，`CurrentHelpSource` 保留该归属；后发布覆盖先发布。首 gap reset 后保留 15 个 pass，再过期回到 section 概述，不是秒数，也不是每个原生渲染帧。
+当前B页头帮助toggle首次打开给本页总览，随后跟真实字段hover；进入阅读区保最近内容，新有效hover替换，关闭后不自动打开。同语境重开保适用位置，新对象重置。普通Settings Host的Session grace为0，US Follow状态承担reading-hold；独立显式pin消费者仍优先，独立help消费者可保15-pass grace。这些是不同消费者的合同，不用普通打开冒充pin。`PublishHelp(ref)` 归于实际节点，`CurrentHelpSource` 保留归属；后发布覆盖先发布，不依赖 `HoveredOptionHelpOutputBind`。pass不是秒数或每个原生显示帧。
 
 四个 mode 明确给各自的 `UiChoice<T>.HelpRef`。空／省略的选项 ref 不发布，不猜 Value、Text、标签或 index；元素一般帮助仍在。未知条目回 section 概述，无 section 时保持原空面板规则。目录 ref 和译文 key 分开，同一译文入口用于测量与绘制。底部帮助与业务页各自保留 scroll 节点，关闭零占位、打开最多三分之一正文预算；收起恢复空间，见[当前 UI 合同](openspec/specs/ui-consumption/spec.md)。
 
 ## 页面更新，保存与业务身份保留
+
+设置页 `UI/Layout.Schema2.xml` 显式声明 `TieredEvents="true"`，须选择包含
+`fl08-tiering-compat` 的 FL0.8 载荷。Schema 仍为 2，API 范围仍为 [0.8.0,0.9.0)。
+分层只改变展示执行：周期首个 pass、Repaint 和已宣告变化后的下一个 pass 同步布局／上下文／命中几何；
+内置展示 wrapper 的普通展示读取在 Repaint 执行。控件调用、Live 请求、资格、原生编辑／IME、
+Cancel、帮助和命中层仍逐 pass 执行；普通 getter 静默变化在下一同步点采用，Repaint 读取当前值。
+保存仍由原 owner 按 0.35 秒 debounce 处理。自定义 widget 不参与 T3 省略，翻译调用次数不作保证。
+需要依赖旧的逐 pass 展示调用时，将根属性改为 `false` 或省略；包含该属性的 manifest 不能搭配尚未支持它的旧载荷。
+Overlay／DiagnosticsMark 不是设置页，RemixConfirm 是独立确认流程，三者本次保留原执行方式。
+`DeferClippedDisplay` 保持显式 Overlay 策略，不因启用分层而默认开启。
 
 三个嵌入 Manifest 和一份命名角色 Palettes.xml 数据、准确音频包启用／选择身份、Remix 两步确认、fallback 独立 Cancel 层保持；当前 UIUX 将五工作区重组为语音管理首页与二级工具。三套配色通过一个同源 Dropdown 选择，使用 30 个显式语义角色，只更新颜色；`SelectedBorder` 明确为原 Accent，不恢复未声明 fallback。主题不改几何、scroll、焦点或草稿。
 
@@ -59,6 +69,8 @@ XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / W
 现有 manifest 场景保留原调用序列与断言，用于真实 US Host／嵌入页面的固定输入对照。各次运行证据保留实际载荷身份；旧 `704c4c1` 日志不重标为 `833c14f4` 通过。未观察到的 sparse 候选不以库内小例子代签 US 稀疏修改收益。旧 `36fa` 没有新 `work-total` 字段，不能伪造其 full／copy 前值；该限制与原生日志／FPS 边界分别保留。
 
 ## 当前验证入口与边界
+
+2026-11-05 WO r7收口B两组导航与真实动态field-topic来源，完整UiLogic、Workspace及受影响帮助检查通过；必要source pin和locator保原断言意图迁移，漏anchor修产品，不删技术解释。r6的scope两例仍为当前B物化 `b-action-scope` 的真实点击及公开owner事实，18／20证据复用。作者两旧popup没有采用相同半窗口截断合同的当前入口，原断言和失败保留；当前来源列表搜索／选择／长来源可读性未被它们证明。历史结果和准确source/check保留在delivery-r5，该Release已撤回推荐。新Dev WO r2下，A009实际编译A008目标／报告修复并消费固定producer-r5-dev，形成delivery-r6-dev；现行Host亦编入US_DEV，诊断575含独立outline／隔离分支、shell13、Remix11及UiLogic通过，不签整套roots。A007的Settings32-pass仍沿原HostAttached／Detached能力，旧factory无需新参数，Remix无采样能力时不可用。Report新连续pending、原位采样动态与native仍未覆盖，具体功能／目标／门／预算及准确source/check见[当前实施检查点](development/ui-diagnostics-20261105.md)。
 
 `tools/UniversalSqueakerKernelHostTests` 当前入口为 `--fixed-fl`，或 `--lane=<分组关键词>`，例如 `--lane=preservation`、`--lane=confirmation`、`--lane=proxy`。原有检查迁回的入口为 `--lane=existing`（诊断与R4-B预设）、`--lane=existing-GroupFold`（按原诊断方法筛选）、`--lane=roots`（受改旧根反例）、`--lane=old-v4`（原双语真实页面尺寸检查）。调用时同时显式选择 `FerriteLibArtifactPath` 与已构建的 `UsProductArtifactPath`；`UsProductAlreadyBuilt=true` 避免覆写候选。
 

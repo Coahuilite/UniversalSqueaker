@@ -7,7 +7,7 @@ using Verse;
 namespace UniversalSqueaker;
 
 /// <summary>
-/// Draws the S4 diagnostics head marks in the IMGUI pass.
+/// Draws the cached S4 diagnostics head marks through the shared US screen control in the IMGUI pass.
 ///
 /// Why this hook: <c>GenMapUI.DrawText</c> goes through the game's IMGUI text path, so it may only be
 /// called from OnGUI. The previous call site was <see cref="CompSqueaker.PostDraw"/> (reached through

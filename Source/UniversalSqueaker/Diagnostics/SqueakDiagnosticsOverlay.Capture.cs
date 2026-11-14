@@ -14,6 +14,7 @@ public static partial class SqueakDiagnosticsOverlay
     private static Pawn? recordingPawn;
     private static readonly List<SqueakResponseEvidence> captureRecords = new();
     private static SqueakResponseEvidence? captureInitial;
+    private static SqueakResponseEvidence? captureMaintenance;
     private static long captureId, nextCaptureId, gameGeneration, captureGeneration, observed, overwritten, captureFailed;
     private static string captureSubject = "", captureDisplay = "", captureMap = "", stopReason = "", captureFailure = "", captureLogStatus = "Unavailable";
     private static long captureFieldsTruncated;
@@ -26,12 +27,15 @@ public static partial class SqueakDiagnosticsOverlay
     internal static bool HasCapture => captureId != 0;
     internal static bool IsRecording(Pawn pawn) => ReferenceEquals(recordingPawn, pawn);
     internal static bool Recording => recordingPawn != null;
+    internal static IReadOnlyList<SqueakResponseEvidence> CapturedRecords => captureRecords;
+    internal static string CaptureIdentity => HasCapture ? "US.Diagnostics.Capture.Target".Translate(captureDisplay) : "";
     internal static bool CanStartCapture(Pawn? pawn) => sessionActive && !Recording && pawn != null && IsTrackableNow(pawn);
 
-    internal static string CaptureStatus => string.Format(CultureInfo.CurrentCulture,
+    internal static string CaptureStatus => !HasCapture ? "US.Diagnostics.Capture.Idle".Translate() + (copyStatus == "" ? "" : "\n" + copyStatus)
+        : string.Format(CultureInfo.CurrentCulture,
         "US.Diagnostics.Capture.Status".Translate(),
         (Recording ? "US.Diagnostics.Capture.Recording" : HasCapture ? "US.Diagnostics.Capture.Stopped" : "US.Diagnostics.Capture.Idle").Translate(),
-        HasCapture ? captureDisplay : "—", captureRecords.Count, observed, overwritten, captureFailed)
+        HasCapture ? captureDisplay : "", captureRecords.Count, observed, overwritten, captureFailed)
         + " · " + "US.Diagnostics.Capture.Fields".Translate(captureFieldsTruncated)
         + (stopReason == "" ? "" : " · " + stopReason) + (copyStatus == "" ? "" : "\n" + copyStatus);
 
@@ -39,6 +43,15 @@ public static partial class SqueakDiagnosticsOverlay
         "US.Diagnostics.Capture.Target".Translate(captureDisplay),
         (Recording ? "US.Diagnostics.Capture.Recording" : "US.Diagnostics.Capture.Stopped").Translate(),
         "", "US.Diagnostics.Capture.Counts".Translate(captureRecords.Count, overwritten), UI.UsDiagDotTone.Pending);
+
+    internal static UI.UsDiagBarModel? CaptureBarFor(string browsing, bool paused)
+        => !HasCapture ? null : new UI.UsDiagBarModel(
+            browsing.Length == 0 ? "US.Diagnostics.Capture.Target".Translate(captureDisplay)
+                : "US.Diagnostics.Viewing".Translate() + " · " + browsing,
+            (Recording ? "US.Diagnostics.Capture.Recording" : "US.Diagnostics.Capture.Stopped").Translate().ToString()
+                + (paused ? " · " + "US.Diagnostics.Bar.Paused".Translate().ToString() : ""),
+            "US.Diagnostics.Capture.Counts".Translate(captureRecords.Count, overwritten),
+            "US.Diagnostics.Capture.Target".Translate(captureDisplay), UI.UsDiagDotTone.Pending);
 
     internal static void StartCapture(Pawn? pawn)
     {
@@ -80,7 +93,7 @@ public static partial class SqueakDiagnosticsOverlay
     internal static void ClearCapture()
     {
         if (Recording) return;
-        captureRecords.Clear(); captureInitial = null; captureId = 0;
+        captureRecords.Clear(); captureInitial = captureMaintenance = null; captureId = 0;
         captureSubject = captureDisplay = captureMap = stopReason = captureFailure = copyStatus = "";
         captureFieldsTruncated = 0;
         captureLogStatus = "Unavailable";
@@ -104,6 +117,22 @@ public static partial class SqueakDiagnosticsOverlay
         catch (Exception error) when (SqueakLog.IsOrdinary(error)) { CaptureFailure(error); }
     }
 
+    // One replaceable detached maintenance snapshot, not another history ring or a fake decision.
+    // Called only after a real review/slot transition/stop, before a released adapter disappears.
+    internal static void RecordMaintenance(Pawn pawn, PawnResponseAdapter adapter)
+    {
+        // Game construction may release old adapters on a LongEvent worker. The pending
+        // Game-change path clears that capture on the UI thread; never touch its model here.
+        if (!UnityData.IsInMainThread || !IsRecording(pawn)) return;
+        try
+        {
+            captureMaintenance = adapter.CaptureDiagnosticEvidence();
+            captureFieldsTruncated += captureMaintenance.Truncated;
+            model.BumpRevision();
+        }
+        catch (Exception error) when (SqueakLog.IsOrdinary(error)) { CaptureFailure(error); }
+    }
+
     private static void CaptureFailure(Exception error)
     {
         captureFailed++; captureFailure = error.GetType().Name;
@@ -114,6 +143,28 @@ public static partial class SqueakDiagnosticsOverlay
     internal static void NotifyTargetUnavailable(Pawn pawn)
     {
         if (IsRecording(pawn)) StopCapture("TargetUnavailable");
+    }
+
+    /// <summary>Detached saved facts for full reading, including the original capture identity when browsing another Pawn.</summary>
+    internal static string TechnicalCaptureText()
+    {
+        var text = new StringBuilder();
+        text.AppendLine(CaptureStatus);
+        text.Append("capture_id=").Append(captureId).Append(" game_generation=").Append(HasCapture ? captureGeneration : gameGeneration)
+            .Append(" map=").Append(HasCapture ? captureMap : "NotCaptured").AppendLine();
+        text.Append("subject=").Append(HasCapture ? captureSubject : "NotCaptured").Append(" stop_reason=").Append(stopReason).AppendLine();
+        text.Append("started_realtime_seconds=").Append(HasCapture ? captureStarted.ToString("R", CultureInfo.InvariantCulture) : "NotCaptured")
+            .Append(" stopped_realtime_seconds=").Append(HasCapture && !Recording ? captureStopped.ToString("R", CultureInfo.InvariantCulture) : "NotCaptured").AppendLine();
+        text.Append("capture_last_success_read_realtime_seconds=").Append(HasCapture && captureLastRead > 0 ? captureLastRead.ToString("R", CultureInfo.InvariantCulture) : "NotCaptured")
+            .Append(" read_failures=").Append(captureReadFailures).Append(" read_failure=").Append(captureReadFailure).AppendLine();
+        text.Append("fields_truncated_total=").Append(captureFieldsTruncated).Append(" capture_failure=").Append(captureFailure)
+            .Append(" log_status=").Append(captureLogStatus).AppendLine();
+        text.AppendLine("history_scope=SettledCallbacksForOneSubjectWhileRecording;NotAllGameActions");
+        if (captureMaintenance != null) text.AppendLine("\n[LatestMaintenance;NotDecisionHistory]").AppendLine(captureMaintenance.Text());
+        for (int i = captureRecords.Count - 1; i >= 0; i--)
+            text.Append("\n[Captured ").Append(captureRecords[i].Sequence).AppendLine("]").AppendLine(captureRecords[i].Text());
+        if (captureInitial != null) text.AppendLine("\n[PreRecording]").AppendLine(captureInitial.Text());
+        return text.ToString();
     }
 
     private static void RecordReadStatus(CachedPawn entry)
@@ -173,6 +224,7 @@ public static partial class SqueakDiagnosticsOverlay
             Header("capture_last_success_read_realtime_seconds", captureLastRead);
             Header("capture_read_failures", captureReadFailures); Header("capture_read_failure_type", captureReadFailure);
             Header("history_scope", "SettledCallbacksForOneSubjectWhileRecording;NotAllGameActions");
+            Header("maintenance_scope", "LatestMainThreadReviewSlotTransitionOrStopWhileRecording;NotDecisionHistory");
             Header("logging_mode", SqueakLog.Mode); Header("logging_effective", SqueakLog.ShouldEmitDev);
             Header("log_status", recordingPawn?.GetComp<CompSqueaker>()?.DiagnosticLogStatus ?? captureLogStatus);
             if (displayed != null && TryGetEntry(displayed, out var cached))
@@ -195,6 +247,7 @@ public static partial class SqueakDiagnosticsOverlay
                 bool sameTarget = displayed != null && SqueakerRuntime.SubjectKey(displayed) == captureSubject;
                 Header("current_target_snapshot", sameTarget && current != null ? "CachedViewCurrent" : "NotCaptured");
                 if (sameTarget) Block("CachedViewCurrent", current);
+                Block("LatestMaintenance;NotDecisionHistory", captureMaintenance);
                 for (int i = captureRecords.Count - 1; i >= 0; i--) Block("latest " + captureRecords[i].Sequence, captureRecords[i]);
                 Block("PreRecording", captureInitial);
             }

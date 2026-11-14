@@ -185,6 +185,9 @@ internal static partial class Program
     private static void WorkspaceAndResources()
     {
         var assembly = typeof(UsKernelSettingsHost).Assembly;
+        XDocument settingsManifest;
+        using (Stream stream = assembly.GetManifestResourceStream("UniversalSqueaker.UI.Layout.Schema2.xml")!)
+            settingsManifest = XDocument.Load(stream);
         foreach (string resource in new[] { "Layout.Schema2.xml", "Layout.Overlay.Schema2.xml", "Layout.RemixConfirm.Schema2.xml" })
         {
             using Stream stream = assembly.GetManifestResourceStream("UniversalSqueaker.UI." + resource)!;
@@ -205,22 +208,32 @@ internal static partial class Program
             var source = new RecordingSettingsSource { RichData = true };
             source.ViewState.WideLayout = width == 1216f;
             using var page = new Page(UsKernelSettingsHost.Create(source, Metrics));
-            Check(page.Host.Session.HelpGracePasses == 15, "US retains15 help passes " + language);
+            Check(page.Host.Session.HelpGracePasses == 0, "normal page-state help uses fresh claims and US reading-hold " + language);
             foreach ((string destination, bool definitions) in new[] { ("Voices", true), ("Voices", false), ("Behavior", false), ("Presets", false), ("Diagnostics", false) })
             foreach (bool help in new[] { false, true })
             {
                 var view = new UiLayoutRect(0, 0, width, height);
-                if (new[] { "Behavior", "Presets", "Diagnostics" }.Contains(destination)
-                    && new[] { "Behavior", "Presets", "Diagnostics" }.Contains(source.ViewState.Page))
+                // WO r7 retains B's two existing groups, not an obsolete seven-tab strip.
+                // Walk each group's actual buttons in the same scene, then return to its destination.
+                bool destinationsReached = true;
+                string groupId = destination == "Diagnostics" ? "system-nav" : "tuning-nav";
+                XElement group = settingsManifest.Descendants().Single(element => (string?)element.Attribute("Id") == groupId);
+                string[] destinations = group.Elements().Select(element => ((string)element.Attribute("Id")!).Substring(4)).ToArray();
+                if (destination != "Voices")
                 {
+                    Press(page, view, destination == "Diagnostics" ? "system-link" : "tools-link");
+                    foreach (string name in destinations)
+                    {
+                        Press(page, view, "nav-" + name);
+                        destinationsReached &= source.ViewState.Page == name;
+                    }
                     Press(page, view, "nav-" + destination);
                 }
-                else if (destination == "Behavior" && source.ViewState.Page == "Voices") Press(page, view, "tools-link");
-                else page.Host.Bindings.Invoke("go-page", destination);
+                else Press(page, view, "nav-Voices");
                 page.Host.Bindings.TryInvokeCommand(definitions ? "browse-definitions" : "browse-packs");
                 if (help)
                 {
-                    // Same help-open scenario, now the WO r4 explicit current-page entry.
+                    // Same help-open scenario, now the WO IMP-2 current-page follow entry.
                     // A prior real field hover cannot choose the page-help destination.
                     if (destination == "Voices")
                         page.Draw(view, EventType.Repaint, WindowRect(page, view, "global-volume-slider").Center);
@@ -251,41 +264,49 @@ internal static partial class Program
                     .All(id => layout.RectById.TryGetValue(id, out var rect) && rect.Width > 0 && rect.Height > 0);
                 if (destination != "Voices")
                 {
-                    // WO16, not a captured golden: seven equal columns wide; three equal columns
-                    // compact, with the final row's remaining item retaining that same width.
-                    int columns = source.ViewState.WideLayout ? 7 : 3;
-                    float expectedWidth = (width - 24 - 4 * (columns - 1)) / columns;
-                    var tabs = new[] { "Behavior", "Presets", "Output", "Fallback", "Appearance", "Diagnostics", "Restore" }
+                    // Derive equal cells and wrapping from the declared group, its cap/gap and
+                    // the current parent's available width, independently of the button output.
+                    int columns = (int)group.Attribute("Cols")!;
+                    float gap = (float)group.Attribute("Gap")!;
+                    float groupWidth = Math.Min((float)group.Attribute("MaxWidth")!, layout.RectById["tool-nav"].Width);
+                    float expectedWidth = (groupWidth - gap * (columns - 1)) / columns;
+                    var tabs = destinations
                         .Select(name => layout.RectById["nav-" + name]).ToArray();
-                    contentPresent &= tabs.All(rect => Math.Abs(rect.Width - expectedWidth) < .01f)
-                        && (columns == 7 ? tabs.All(rect => rect.Y == tabs[0].Y) : tabs[6].Y > tabs[3].Y && tabs[6].X == tabs[0].X);
+                    contentPresent &= destinationsReached && tabs.Select((rect, index) =>
+                        Math.Abs(rect.Width - expectedWidth) < .01f
+                        && Math.Abs(rect.X - tabs[0].X - index % columns * (expectedWidth + gap)) < .01f
+                        && Math.Abs(rect.Y - tabs[0].Y - index / columns * (tabs[0].Height + gap)) < .01f
+                        && rect.X >= layout.RectById[groupId].X - .01f
+                        && rect.X + rect.Width <= layout.RectById[groupId].X + groupWidth + .01f).All(value => value);
                 }
-                Check(contentPresent && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual equal-tab layout; help-height=" + (help ? layout.RectById["help-drawer"].Height : 0));
+                Check(contentPresent && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual grouped equal-cell layout and destinations; help-height=" + (help ? layout.RectById["help-drawer"].Height : 0));
                 page.Draw(view);
                 bool visible = layout.RectById.ContainsKey("help-panel") && layout.RectById.ContainsKey("help-scroll");
                 bool followsPage = source.ViewState.Page == destination;
                 if (help)
                 {
                     string pinned = page.Host.Bindings.Get<string>("pinned-help-ref");
+                    string displayed = page.Host.Bindings.Get<string>("help-display-ref");
                     string expected = destination switch { "Behavior" => "us/scope-tree", "Presets" => "us/preset-list",
-                        "Diagnostics" => "us/diagnostics", _ => definitions ? "us/race-board" : "us/pack-cards" };
-                    // Reuse the existing open/closed scenario: the fixed topic outlives the normal
-                    // hover grace, and Back returns to the originating page on the same Host.
+                        "Diagnostics" => "us/diagnostics", _ => "us/roster" };
+                    // The existing reading interval now retains the page overview/latest valid
+                    // topic without an implicit pin. Independent explicit-pin/grace lanes stay intact.
                     for (int pass = 0; pass <= 15; pass++) page.Draw(view);
-                    followsPage &= pinned == expected && page.Host.Bindings.Get<string>("pinned-help-ref") == expected;
+                    followsPage &= pinned == "" && page.Host.Bindings.Get<string>("pinned-help-ref") == ""
+                        && displayed == expected && page.Host.Bindings.Get<string>("help-display-ref") == displayed;
                     page.Host.Bindings.TryInvokeCommand("cancel-help"); page.Draw(view);
                     followsPage &= source.ViewState.Page == destination && !page.Host.MeasureAndArrange(view.Size).RectById.ContainsKey("help-panel");
                     if (destination == "Diagnostics")
                     {
-                        Press(page, view, "home-return");
+                        Press(page, view, "nav-Voices");
                         followsPage &= source.ViewState.Page == "Voices" && source.ViewState.PageHistory.Count == 0;
-                        Press(page, view, "tools-link");
+                        Press(page, view, "system-link");
                         followsPage &= source.ViewState.Page == "Diagnostics";
-                        Press(page, view, "home-return");
+                        Press(page, view, "nav-Voices");
                     }
                 }
                 followsPage &= source.ViewState.PageHistory.Count <= 1;
-                Check(visible == help && followsPage, "bottom help preserves the current business page, pins its topic beyond15 passes, and closes without changing the return trail");
+                Check(visible == help && followsPage, "bottom help preserves the business page, holds readable content without pinning, and closes without changing the return trail");
             }
             Check(page.Host.Manifest.Roots.Count > 0 && page.Host.Bindings.BindingOwner != null, "actual manifest and concrete registry retained");
             }
@@ -295,7 +316,7 @@ internal static partial class Program
     private static bool ParseText(string text, out string value) { value = text; return true; }
     private static void EditingAndProperties()
     {
-        var source = new RecordingSettingsSource { RichData = true };
+        var source = new RecordingSettingsSource { RichData = true, IncludeRosterPackCatalog = true };
         using var page = new Page(UsKernelSettingsHost.Create(source, Metrics));
         page.Draw(View);
         var field = page.Host.ElementProperties("global-volume-slider");
@@ -311,9 +332,48 @@ internal static partial class Program
         Check(metrics["RowHeight"].Value == 56, "remove reveals current ancestor");
         parent.Metric("RowHeight").Remove(); page.Draw(View);
         Check(metrics["RowHeight"].Value == original, "remove restores declaration geometry");
+        CurrentRosterEditing(page, source);
+        SupportedSearchTextEditing();
+    }
+    private static void CurrentRosterEditing(Page page, RecordingSettingsSource source)
+    {
+        Console.WriteLine("O5 current production manifest: packs-keyword / b-query");
         page.Host.Bindings.Invoke("set-tab", "Packs");
+        page.Host.Bindings.TryInvokeCommand("browse-packs");
+        // This offline source has pack pairs but no loaded native race catalog. Select the
+        // supported All scope explicitly; do not mistake an empty default scope for search output.
+        page.Host.Bindings.Set("b-range", "All");
+        page.Draw(View);
+        Check(!page.Host.Bindings.Get<bool>("b-no-results"), "current pack browse starts with actual results");
         Press(page, View, "packs-keyword");
         UiNode node = page.Host.Session.GetNodeByElementId("packs-keyword")!;
+        UiWidgetContext ctx = page.Host.CreateContext(View.Width).WithNode(node);
+        var editor = ctx.Controls.Editor<string>(ctx, "b-query", v => v, ParseText);
+        source.ViewState.RosterPackBrowse.Page = 2;
+        InjectText(page, View, " O5-no-such-pack ");
+        Check(source.ViewState.RosterPackBrowse.Query == " O5-no-such-pack "
+            && source.ViewState.RosterPackBrowse.Page == 0 && page.Host.Bindings.Get<bool>("b-no-results")
+            && source.ViewState.RosterBrowse.Query == "" && source.ViewState.SearchText == "" && source.SearchWriteCount == 0,
+            "current native Live input updates only the pack browse query, resets its page and filters its results");
+        int identity = page.Host.Session.Identity;
+        UsKernelSettingsHost.ApplySwatchLive(new GameSettings(), page.Host, UsTheme.ChromeTheme, "blackgold");
+        page.Draw(View);
+        Check(page.Host.Session.Identity == identity && editor.Draft == " O5-no-such-pack "
+            && ReferenceEquals(editor, ctx.Controls.Editor<string>(ctx, "b-query", v => v, ParseText)),
+            "current production query retains Host/editor and user draft across the US palette change");
+    }
+    private static void SupportedSearchTextEditing()
+    {
+        Console.WriteLine("O5 retained SearchText contract: fixture-authored field, not current production UI");
+        var source = new RecordingSettingsSource { RichData = true };
+        using var page = new Page(UsKernelSettingsHost.Create(source, Metrics));
+        page.Draw(View);
+        // No current production field binds search-text. Adopt a separate author definition BEFORE
+        // clicking; keep the actual US registry, source route and attached revision owner unchanged.
+        page.Host.UpdateDefinition(UiLayoutManifest.Parse("<UiPage Schema=\"2\" Source=\"" + Scope
+            + "\"><Widget Id=\"o5-search-text\" Kind=\"input/text-field\" Bind=\"search-text\" Live=\"true\" Height=\"28\" /></UiPage>"));
+        Press(page, View, "o5-search-text");
+        UiNode node = page.Host.Session.GetNodeByElementId("o5-search-text")!;
         UiWidgetContext ctx = page.Host.CreateContext(View.Width).WithNode(node);
         var editor = ctx.Controls.Editor<string>(ctx, "search-text", v => v, ParseText);
         InjectText(page, View, " LOCAL ");
@@ -327,10 +387,10 @@ internal static partial class Program
         page.Host.SetDisplayDemand(false); source.SetSearchText("external"); page.Host.Invalidate();
         page.Host.SetDisplayDemand(true); page.Draw(View);
         Check(editor.Draft == " LOCAL " && editor.Conflict && source.SearchWriteCount == 2, "hide/show retains conflict with actual changed model, no automatic write");
-        Press(page, View, "packs-keyword");
+        Press(page, View, "o5-search-text");
         Check(page.Host.TryHandleCancel(), "actual active editor handles Cancel"); page.Draw(View);
         Check(editor.Draft == "external" && source.SearchWriteCount == 2, "Cancel follows latest model and writes zero");
-        Press(page, View, "packs-keyword"); source.SearchTransform = value => value.Trim().ToLowerInvariant();
+        Press(page, View, "o5-search-text"); source.SearchTransform = value => value.Trim().ToLowerInvariant();
         InjectText(page, View, " NEXT ");
         Check(source.LastSearchRequest == " NEXT " && source.LastSearchText == "next" && source.SearchWriteCount == 3, "request text remains distinct from normalized business model");
         Check(page.Host.TryHandleAccept(), "actual Live confirmation handled"); page.Draw(View);

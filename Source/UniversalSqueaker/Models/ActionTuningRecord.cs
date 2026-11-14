@@ -100,6 +100,59 @@ public class ActionTuningRecord : IExposable
         layer = -1; return false;                                   // 非法
     }
 
+    // Compare the real mutable input, not a formatted/folded field projection. Clones are
+    // retained only by the opt-in production display observer; legacy readers stay fresh.
+    internal bool SameDisplayInputs(ActionTuningRecord other)
+    {
+        if (!(actionKey == other.actionKey
+            && raceDefName == other.raceDefName
+            && xenotypeDefName == other.xenotypeDefName
+            && serviceFamily == other.serviceFamily
+            && targetNamespace == other.targetNamespace
+            && objectTarget == other.objectTarget
+            && sourcePresetDefName == other.sourcePresetDefName
+            && hasScope == other.hasScope
+            && scope == other.scope
+            && hasEnabled == other.hasEnabled
+            && enabled == other.enabled
+            && hasSimulationIntervalTicks == other.hasSimulationIntervalTicks
+            && simulationIntervalTicks == other.simulationIntervalTicks
+            && unsupportedLegacyTicks == other.unsupportedLegacyTicks
+            && retainedLegacyTicks == other.retainedLegacyTicks
+            && hasInteractionIntervalSeconds == other.hasInteractionIntervalSeconds
+            && interactionIntervalSeconds.Equals(other.interactionIntervalSeconds)
+            && hasTalkingEnabled == other.hasTalkingEnabled
+            && talkingEnabled == other.talkingEnabled
+            && hasVolume == other.hasVolume
+            && volume.Equals(other.volume)
+            && hasPitch == other.hasPitch
+            && pitch.Equals(other.pitch)
+            && hasEatPhase == other.hasEatPhase
+            && eatPhase == other.eatPhase
+            && hasNutritionScope == other.hasNutritionScope
+            && nutritionScope == other.nutritionScope
+            && hasDrugScope == other.hasDrugScope
+            && drugScope == other.drugScope
+            && hasSelectRequirePlayerControlled == other.hasSelectRequirePlayerControlled
+            && selectRequirePlayerControlled == other.selectRequirePlayerControlled
+            && hasSelectRequireAwake == other.hasSelectRequireAwake
+            && selectRequireAwake == other.selectRequireAwake
+            && hasSelectRequireNotDowned == other.hasSelectRequireNotDowned
+            && selectRequireNotDowned == other.selectRequireNotDowned)
+            || responses.Count != other.responses.Count || responseParameters.Count != other.responseParameters.Count) return false;
+        for (int i = 0; i < responses.Count; i++)
+        {
+            var a = responses[i]; var b = other.responses[i];
+            if (a.key != b.key || a.hasEnabled != b.hasEnabled || a.enabled != b.enabled
+                || a.hasParticipation != b.hasParticipation || a.apply != b.apply) return false;
+        }
+        for (int i = 0; i < responseParameters.Count; i++)
+        {
+            var a = responseParameters[i]; var b = other.responseParameters[i];
+            if (a.key != b.key || !a.value.Equals(b.value)) return false;
+        }
+        return true;
+    }
     internal static ActionTuningRecord Clone(ActionTuningRecord value) => new()
     {
         actionKey = value.actionKey,

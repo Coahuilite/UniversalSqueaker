@@ -59,17 +59,17 @@ public sealed class UsResetEntryWidget : IUiWidget
             && float.TryParse(raw, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out float height)
             ? Math.Max(1f, height)
-            : DefaultHeight;
+            : UiTextFonts.RowHeight(ctx, minimum: DefaultHeight);
     }
 
     public void Draw(UiLayoutRect rect, UiWidgetContext ctx)
     {
         if (rect.Width <= 1f || rect.Height <= 1f) return;
 
-        if (UsKernelDraw.SelectionButton(
+        if (UsKernelDraw.StyledButton(
                 rect, ctx,
                 UsKernelDraw.Keyed(ctx, Attribute("TextKey")),
-                ctx.Theme, false))
+                false))
         {
             IUiBindingAccess editorBindings = ctx.Bindings;
             string effectKey = Attribute("EffectKey");

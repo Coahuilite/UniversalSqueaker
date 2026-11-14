@@ -92,7 +92,11 @@ namespace UniversalSqueaker
     }
     public static class SqueakerMod { public static readonly GameSettings Settings = new(); }
     // UI lifetime is outside this caller double; no recording behavior is simulated here.
-    internal static class SqueakDiagnosticsOverlay { internal static void NotifyGameChanged() { } }
+    internal static class SqueakDiagnosticsOverlay
+    {
+        internal static void NotifyGameChanged() { }
+        internal static void RecordMaintenance(Pawn pawn, PawnResponseAdapter adapter) { }
+    }
     // Only native persistence scheduling is doubled; source transactions and effective settings resolution are production.
     public partial class GameSettings
     {

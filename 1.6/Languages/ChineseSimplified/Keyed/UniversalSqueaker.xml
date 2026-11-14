@@ -2,7 +2,6 @@
 <LanguageData>
   <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
   <US.Settings.Save.Failed>语音设置保存失败。</US.Settings.Save.Failed>
-
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
   <DebugAction_DiagnosticsOpen>诊断：打开面板</DebugAction_DiagnosticsOpen>
   <US.Debug.CameraIndicator>相机：高度 {0}，视距 {1}</US.Debug.CameraIndicator>
@@ -13,7 +12,7 @@
   <US.Diagnostics.LockedTag>已锁定</US.Diagnostics.LockedTag>
   <US.Diagnostics.Bar>收起</US.Diagnostics.Bar>
   <US.Diagnostics.Page.Format>第 {0}/{1} 页 · 共 {2}</US.Diagnostics.Page.Format>
-  <US.Diagnostics.Search.Placeholder>搜索本地图 pawn…</US.Diagnostics.Search.Placeholder>
+  <US.Diagnostics.Search.Placeholder>搜索目标</US.Diagnostics.Search.Placeholder>
   <US.Diagnostics.Search.None>本地图无匹配</US.Diagnostics.Search.None>
   <US.Diagnostics.Monitor.Empty>等待首次更新…</US.Diagnostics.Monitor.Empty>
   <US.Diagnostics.Detail.Empty>选中一个 pawn 查看详情</US.Diagnostics.Detail.Empty>
@@ -74,9 +73,8 @@
   <US.Diagnostics.Geometry.Report.Unavailable>无法生成报告：当前版本不含布局工具。</US.Diagnostics.Geometry.Report.Unavailable>
   <US.Diagnostics.Geometry.Report.NoScope>无法生成报告：本页面没有诊断作用域。</US.Diagnostics.Geometry.Report.NoScope>
   <US.Diagnostics.Geometry.Report.Waiting>已请求报告：将在下一次绘制后写入。</US.Diagnostics.Geometry.Report.Waiting>
-  <US.Diagnostics.Geometry.Report.Written>报告已写入布局日志：pass {0}。</US.Diagnostics.Geometry.Report.Written>
+  <US.Diagnostics.Geometry.Report.Written>几何报告已生成：pass {0}。</US.Diagnostics.Geometry.Report.Written>
   <US.Diagnostics.Geometry.Report.NotProduced>未生成报告：采集内容为空。请在再次绘制后重试。</US.Diagnostics.Geometry.Report.NotProduced>
-
   <US.Action.Call>普通叫声</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
   <US.Action.Sleep>睡眠</US.Action.Sleep>
@@ -92,16 +90,13 @@
   <US.Action.Work>工作</US.Action.Work>
   <US.Action.Equip>装备</US.Action.Equip>
   <US.Action.MentalBreak>精神崩溃</US.Action.MentalBreak>
-
   <US.Mood.Good>良好</US.Mood.Good>
   <US.Mood.Neutral>中性</US.Mood.Neutral>
   <US.Mood.Bad>低落</US.Mood.Bad>
   <US.Mood.Break>崩溃</US.Mood.Break>
-
   <US.Notice.RaceDomain>种族域</US.Notice.RaceDomain>
   <US.Notice.TargetUnavailable>目标未加载</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>以下语音包域尚未启用任何语音包：</US.Notice.AudioPool.Body>
-
   <US.Settings.Shell.Title>Universal Squeaker 使用独立设置窗口。</US.Settings.Shell.Title>
   <US.Settings.Shell.Body>游戏内的 Mod Settings 面板不再承载 {0} 的设置。请打开专用窗口调整路由、调音与语音包。</US.Settings.Shell.Body>
   <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
@@ -111,7 +106,6 @@
   <US.Settings.Window.Close>关闭</US.Settings.Window.Close>
   <US.Settings.Prerequisite.Title>FerriteLib 前置版本不匹配</US.Settings.Prerequisite.Title>
   <US.Settings.Prerequisite.Body>已安装的 FerriteLib 模组旧于本 Universal Squeaker 构建编译时所针对的 API。请将 FerriteLib 更新到配套版本后重启游戏；完整契约诊断见 Player.log。</US.Settings.Prerequisite.Body>
-
   <!-- Schema=2 设置页标题（UsPageTitleWidget / UsNavWidget）与卡片标题（清单 TitleKey）。
        中文串按净宽预算收紧：nav 描述 ≤25 半角单位，中间列 Tiny 文案 ≤47 半角单位。 -->
   <US.Page.Overview.Title>语音包路由</US.Page.Overview.Title>
@@ -124,7 +118,6 @@
   <US.Page.Tuning.Caption>先选层与域，再设动作范围与心情值</US.Page.Tuning.Caption>
   <US.Page.Presets.Title>基线预设</US.Page.Presets.Title>
   <US.Page.Presets.Caption>可导入基线由已安装的 Def 提供</US.Page.Presets.Caption>
-
   <US.Nav.Overview.Label>总览</US.Nav.Overview.Label>
   <US.Nav.Overview.Description>路由与播放</US.Nav.Overview.Description>
   <US.Nav.Distance.Label>距离</US.Nav.Distance.Label>
@@ -135,21 +128,38 @@
   <US.Nav.Tuning.Description>分层动作与心情规则</US.Nav.Tuning.Description>
   <US.Nav.Presets.Label>预设</US.Nav.Presets.Label>
   <US.Nav.Presets.Description>Def 提供的基线</US.Nav.Presets.Description>
-
   <US.DevPanel.Title>US 开发面板</US.DevPanel.Title>
   <US.DevPanel.Target>目标</US.DevPanel.Target>
   <US.DevPanel.Target.Settings>设置页</US.DevPanel.Target.Settings>
-  <US.DevPanel.Target.Dialog>混音确认窗</US.DevPanel.Target.Dialog>
+  <US.DevPanel.Target.Dialog>确认对话框</US.DevPanel.Target.Dialog>
   <US.DevPanel.Target.Diagnostics>诊断面板</US.DevPanel.Target.Diagnostics>
   <US.DevPanel.Capture>采集</US.DevPanel.Capture>
   <US.DevPanel.Outline>描边</US.DevPanel.Outline>
   <US.DevPanel.Report>报告</US.DevPanel.Report>
+  <US.DevPanel.Sample>采样当前设置页</US.DevPanel.Sample>
+  <US.DevPanel.Sample.Operation>开始20秒操作采样</US.DevPanel.Sample.Operation>
+  <US.DevPanel.Sample.OperationReady>先定位目标控件，再开始操作采样；操作后停止输入并留出尾段。结果见日志 UI.cost。</US.DevPanel.Sample.OperationReady>
+  <US.DevPanel.Sample.End>结束并保全采样</US.DevPanel.Sample.End>
+  <US.DevPanel.Sample.OperationStatus>{0}：{1}/{2} Host pass，页 {3}，会话 {4}。20秒或达到上限后结束；可提前保全。结果见日志 UI.cost，采样不要求启用详细日志或 fit。</US.DevPanel.Sample.OperationStatus>
+  <US.DevPanel.Sample.Ready>可开始一次32个Host pass采样。结果见日志UI.cost。</US.DevPanel.Sample.Ready>
+  <US.DevPanel.Sample.NeedsEnabled>将日志模式设为“启用”后才可采样。</US.DevPanel.Sample.NeedsEnabled>
+  <US.DevPanel.Sample.Unavailable>仅支持本面板选中的有效设置页目标，不支持对话框。</US.DevPanel.Sample.Unavailable>
+  <US.DevPanel.Sample.Queued>设置页#{0}：已排队，等待它的下一pass。</US.DevPanel.Sample.Queued>
+  <US.DevPanel.Sample.Cancelled>设置页#{0}：采样开始前已结束。</US.DevPanel.Sample.Cancelled>
+  <US.DevPanel.Sample.Sampling>采样中</US.DevPanel.Sample.Sampling>
+  <US.DevPanel.Sample.Complete>已完成 · 结果见日志UI.cost</US.DevPanel.Sample.Complete>
+  <US.DevPanel.Sample.Partial>提前结束</US.DevPanel.Sample.Partial>
+  <US.DevPanel.Sample.Status>{0} · {1}/{2} Host pass
+{3} · 设置页#{4} · 起始{5} · {6}</US.DevPanel.Sample.Status>
+  <US.DevPanel.Sample.SceneChanged>采样期间场景有变化，应按混合工作解读。</US.DevPanel.Sample.SceneChanged>
+  <US.DevPanel.Sample.ModeEnded>日志模式变化，采样已结束。</US.DevPanel.Sample.ModeEnded>
+  <US.DevPanel.Sample.TargetEnded>目标已释放。</US.DevPanel.Sample.TargetEnded>
   <US.DevPanel.Status.Idle>就绪。</US.DevPanel.Status.Idle>
   <US.DevPanel.Status.Capture>采集</US.DevPanel.Status.Capture>
   <US.DevPanel.Status.Overlay>描边</US.DevPanel.Status.Overlay>
   <US.DevPanel.Status.Page>已切到</US.DevPanel.Status.Page>
   <US.DevPanel.Status.NoSettings>设置窗口未打开——页面按钮需要它打开。</US.DevPanel.Status.NoSettings>
-  <US.DevPanel.Status.ReportWritten>报告已写入</US.DevPanel.Status.ReportWritten>
+  <US.DevPanel.Status.ReportWritten>报告已生成</US.DevPanel.Status.ReportWritten>
   <US.DevPanel.Status.ReportWaiting>报告已请求，等待下一个 pass</US.DevPanel.Status.ReportWaiting>
   <US.DevPanel.Status.ReportUnavailable>该目标当前不可报告</US.DevPanel.Status.ReportUnavailable>
   <US.Diagnostics.DevPanel.Label>开发面板：在任意设置页对设置页及其确认弹窗执行采集、描边与报告。</US.Diagnostics.DevPanel.Label>
@@ -192,8 +202,6 @@
   <US.VF1.Status.SavedNotAdopted>文件已保存，但运行音频目录未能采用；当前回应保留最近可用目录。原因见日志，完整重启游戏会重新加载已保存文件。</US.VF1.Status.SavedNotAdopted>
   <US.VF1.Status.DeletedNotAdopted>文件已删除，但运行音频目录未能采用；当前回应保留最近可用目录。原因见日志，完整重启游戏会重新加载文件。</US.VF1.Status.DeletedNotAdopted>
   <US.VF1.Status.SaveFailed>保存失败——磁盘上的表未改动，原因见日志。</US.VF1.Status.SaveFailed>
-
-
   <US.Section.OutputLevel>输出音量</US.Section.OutputLevel>
   <US.Section.PlaybackBehaviour>发声规则</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
@@ -334,7 +342,7 @@
   <US.Help.PageTitle.Apply.Label>修改与保存</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>普通设置修改立即生效，并稍后自动保存。来源和逐动作字段会先尝试保存：未能保存时保留原配置；已保存但无法应用时可查看诊断，不必重复保存相同修改。关闭窗口会保存已生效的修改，放弃尚未确认的草稿。</US.Help.PageTitle.Apply.Text>
   <US.Help.PageTitle.HelpDrawer.Label>详细帮助与返回</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>本页帮助解释当前页；字段说明明确字段与打开时的目标。底部帮助保持该主题，正文独立滚动，标题和关闭始终可见。Esc 先取消内层弹出菜单或编辑，再收帮助，最后业务返回。切换工具会收起帮助。</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Text>“本页帮助”可展开或收起。打开后先给本页总览，悬浮字段会说明该字段和准确目标；移入帮助阅读时保留最近内容，下个有效悬浮才替换。关闭后悬浮不会弹开。同页同对象重开保适用位置，新对象回顶部。Esc 先取消内层菜单或编辑，再收帮助，最后业务返回。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>仅使用当前种族、当前动作的最终回退表，不路由语音包音频。有可用映射且满足正常回应条件时，US 才会派发；无可用映射时不派发。</US.Help.ModeRow.Vanilla.Text>
@@ -369,7 +377,7 @@
   <US.Help.Timing.Interval.Text>两次叫声之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。1.0x 使用当前默认节奏，人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
   <US.Help.Timing.Multiplier.Text>一次性缩放所有动作冷却与全局间隔：0.5 减半等待（更吵），2.0 加倍。1.0 即作者设定的原始节奏。</US.Help.Timing.Multiplier.Text>
-  <US.Help.Diagnostics.Overview>回应诊断无需开发者模式或详细日志。打开后正常关闭设置窗继续游戏，选中或锁定对象，开始记录，正常复现问题，再停止并复制反馈。保留最近 64 条结果，覆盖和缺失会标明。仅打开窗口只会查看，不会录制。诊断工具就是 US 诊断面板；内嵌的 FL.UiKit 几何报告仅用于独立 UI 调试，不替代回应反馈。</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.Overview>回应诊断无需开发模式或详细日志。打开后正常关闭设置窗继续游戏，在诊断面板内搜索、选择要查看的对象，再开始记录、正常复现、停止并复制反馈；没有成功快照也可开始。查看 B 不改变仍在录制的 A，停止作用于当前录制对象。保最近 64 条已结算决定，覆盖和缺失会标明。技术字段区分最近决定、当前持续槽和最近维护：Sequence 只数决定，维护可能在没有新决定时结束槽。LatestMaintenance 只保一份最近观察，不是决定历史；Audio 快照编号标采用输入，不是声音资源；结束时间是适配层观察时点，不是原生完成时间。详情和完整字段仍可滚动、选取；复制反馈仍有大小与白名单界限。仅打开窗口不会录制。FL.UiKit 几何报告另用于 UI 调试。</US.Help.Diagnostics.Overview>
   <US.Help.Diagnostics.LoggingAuto.Text>跟随构建版本：开发版详细记录，正式版保持安静。这是默认值。</US.Help.Diagnostics.LoggingAuto.Text>
   <US.Help.Diagnostics.LoggingEnabled.Text>强制开启详细日志，正式版同样生效。回应输出每对象每 60 真实秒最多尝试 64 条，自动续期；这不是声音次数限制。普通反馈记录不需要开启详细日志，仅在需要详细日志时使用。</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>强制关闭全部开发者日志，开发版同样生效。</US.Help.Diagnostics.LoggingDisabled.Text>
@@ -393,14 +401,14 @@
   <US.Help.PresetList.Import.Text>仅将模板中存在的字段应用到选中的准确玩家域；重复导入不重复建行，模板省略的字段保留玩家现值。</US.Help.PresetList.Import.Text>
   <US.Help.FilterBar.Overview>默认显示类人并优先排列 HAR；动物、其他与全部均可主动到达。搜索、作者、种族、异种和状态共同筛选准确包／域。折叠后保范围、有效条件、符合包数与本查询清除；搜索不改编辑或选用。</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>关键词</US.Help.FilterBar.Keyword.Label>
-  <US.Help.FilterBar.Keyword.Text>忽略大小写的子串匹配包名、DefName、Mod、作者、键及其提供的域。查看匹配包后逐一检查目标；搜索不改变选用状态。</US.Help.FilterBar.Keyword.Text>
+  <US.Help.FilterBar.Keyword.Text>忽略大小写的子串匹配：对象列表匹配名称与身份；语音包列表匹配包名、DefName、Mod、作者、键及其提供的域。查看匹配包后逐一检查目标。类别、来源和供给筛选仍共同生效；搜索不改变选用状态或编辑域。</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>已启用、冲突与失效选择条件可组合。“仅已启用”关闭行后立即更新开关，行留到刷新或更改条件。“默认筛选”清本页查询并回类人；当前查看包、编辑目标、选包及行为来源保留。</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.Author.Text>展开作者候选后可搜索、翻页，每页至多八项；输入不自动选择。明确点候选才筛选包，显示换行不改变完整作者值。未声明作者时沿用包来源名称，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
   <US.Help.FilterBar.Race.Text>明确选候选把结果限定为该种族及其真实异种供给。候选保无包种族并标明暂无包；独立搜索和翻页只浏览候选，不切当前编辑域。清候选搜索与清Race条件是不同操作。</US.Help.FilterBar.Race.Text>
   <US.Help.FilterBar.Xenotype.Text>未限定Race时同一异种Def只列一次，括号列真实供包父域；限定Race后按准确组合筛选。无包异种仍保留，无已知父域时不编智人。搜索不选首项，设定异种条件时种族域退出结果。</US.Help.FilterBar.Xenotype.Text>
   <US.Help.FilterBar.Summary.Label>条件回显</US.Help.FilterBar.Summary.Label>
-  <US.Help.FilterBar.Summary.Text>显示范围、有效的非默认条件和符合包数，与全局已选P／目录Q分开。关键词已在输入框显示，不重复为标签。清除只作用本查询，不清当前对象。</US.Help.FilterBar.Summary.Text>
+  <US.Help.FilterBar.Summary.Text>显示类别、来源和供给条件，以及分页前的匹配结果数／该类别内完整可用数，与全局已选包数／包目录总数分开。关键词已在输入框显示，不重复为标签。清除只重置本列表的查询和条件并回到类人范围，保留当前查看对象、选用状态及编辑域。</US.Help.FilterBar.Summary.Text>
   <US.Help.PackCards.Overview>按独立包浏览，查看准确种族或合法种族／异种目标。单目标有直接开关，多目标在详情逐域开关；选择一个目标不会启用全部目标。</US.Help.PackCards.Overview>
   <US.Help.PackCards.Card.Label>语音包卡片</US.Help.PackCards.Card.Label>
   <US.Help.PackCards.Card.Text>包名与查看内容相邻，准确目标与开关相邻。仅同名、异常或多目标补最少辨识；完整来源、作者、DefName和映射动作数放详情。目录映射不证明原生声音可用或实际听见。</US.Help.PackCards.Card.Text>
@@ -423,13 +431,13 @@
   <US.Diagnostics.Gate.Group.Game>游戏侧</US.Diagnostics.Gate.Group.Game>
   <US.Diagnostics.Gate.Group.Rules>规则侧</US.Diagnostics.Gate.Group.Rules>
   <US.Diagnostics.Gate.Group.Audio>音频侧</US.Diagnostics.Gate.Group.Audio>
-  <US.Diagnostics.Raw.Show>展开原始值</US.Diagnostics.Raw.Show>
+  <US.Diagnostics.Raw.Show>阅读完整技术信息</US.Diagnostics.Raw.Show>
   <US.Diagnostics.Raw.Hide>收起原始值</US.Diagnostics.Raw.Hide>
   <US.Diagnostics.Bar.Identity>发声记录</US.Diagnostics.Bar.Identity>
   <US.Diagnostics.Bar.IdentityLocked>发声记录（锁定：{0}）</US.Diagnostics.Bar.IdentityLocked>
   <US.Diagnostics.Bar.Scale>{0} 个目标</US.Diagnostics.Bar.Scale>
-  <US.Diagnostics.Bar.Recording>记录中</US.Diagnostics.Bar.Recording>
-  <US.Diagnostics.Bar.Paused>已暂停</US.Diagnostics.Bar.Paused>
+  <US.Diagnostics.Bar.Recording>正在查看</US.Diagnostics.Bar.Recording>
+  <US.Diagnostics.Bar.Paused>游戏已暂停</US.Diagnostics.Bar.Paused>
   <US.Diagnostics.Bar.Activity.Recent>最近一次 {0}  {1}  {2}</US.Diagnostics.Bar.Activity.Recent>
   <US.Diagnostics.Bar.Activity.Never>尚未收到发声</US.Diagnostics.Bar.Activity.Never>
   <US.Diagnostics.Bar.Activity.Stale>最近 {0} 分钟无发声 · 上次 {1}</US.Diagnostics.Bar.Activity.Stale>
@@ -470,30 +478,28 @@
   <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
   <US.Tuning.Source.Default>默认</US.Tuning.Source.Default>
-
-
   <US.Distance.AxisCaption>相机高度 {0}–{1}（游戏数值） · 音量 100%→0%</US.Distance.AxisCaption>
   <US.Preset.List.BaselineNote>此处是只读基线。应用会写入勾选的域；当前值可在调音页查看和修改。</US.Preset.List.BaselineNote>
   <!-- US-RESET1: 恢复默认条目。确认文案列出各恢复写入的字段(展示文案;字段集合由后端拥有,
        并由恢复 harness 钉住)。 -->
   <US.Section.RestoreDefaults>恢复默认</US.Section.RestoreDefaults>
   <US.Reset.RestoreAll>恢复所有 US 设置</US.Reset.RestoreAll>
-  <US.Reset.RestoreAll.Caption>把所有 Universal Squeaker 设置恢复为默认值。绝不触碰你的最终 fallback 玩家表及其声音映射。</US.Reset.RestoreAll.Caption>
-  <US.Reset.RestoreAll.Confirm>这将把所有 Universal Squeaker 设置恢复为默认值:普通设置(输出音量、播放行为、触发时机、诊断)、全部动作与心情调音覆盖(全局及各层域)、包选择、已应用预设记录及其来源锚点。保留:全部最终 fallback 玩家表及其声音映射、全部作者/Def 内容、设置 schema 与迁移诊断。此操作无法在本窗口内撤销。</US.Reset.RestoreAll.Confirm>
+  <US.Reset.RestoreAll.Caption>恢复玩家设置、声音包选择和全部动作覆盖。保留显式作者来源选择、其 last-good 快照及最终回退表。</US.Reset.RestoreAll.Caption>
+  <US.Reset.RestoreAll.Confirm>恢复玩家设置默认值：输出音量与距离、活跃度、说话缩放、彩蛋、相机指示器、外观与入口偏好、诊断、声音包选择，以及含预设锚点的全部动作覆盖。保留：显式作者来源选择及 last-good 快照、最终回退玩家表及声音映射、作者/Def 内容、schema/迁移诊断。此窗口无法撤销这次恢复。</US.Reset.RestoreAll.Confirm>
   <US.Reset.Area>恢复此区域默认</US.Reset.Area>
   <US.Reset.Row>恢复此行默认</US.Reset.Row>
   <US.Reset.DistanceDefaults>恢复听取距离默认</US.Reset.DistanceDefaults>
   <US.Reset.Confirm>确认恢复</US.Reset.Confirm>
   <US.Reset.Area.Distance.Confirm>这将把听取距离区域恢复为默认值:输出音量、距离预设与距离范围。动作/心情调音、包选择与 fallback 表保持不变。</US.Reset.Area.Distance.Confirm>
-  <US.Reset.Area.Basics.Confirm>恢复播放行为控制与 Pawn 服务对象级 Eat 参数。保留 Race/Xenotype 覆盖、作者来源及其他区域；域覆盖请用准确动作行或层恢复。</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Basics.Confirm>恢复活跃度、说话缩放、彩蛋、相机指示器，以及 Pawn 服务对象级 Select 资格与 Eat 参数。保留 Race/Xenotype 覆盖、作者来源选择和其他设置。</US.Reset.Area.Basics.Confirm>
   <US.Reset.Area.Timing.Confirm>这将把触发时机区域恢复为默认值:最小间隔与全局冷却乘数。其它区域与 fallback 表保持不变。</US.Reset.Area.Timing.Confirm>
   <US.Reset.Area.Diagnostics.Confirm>这将把诊断区域恢复为默认值:开发者日志模式与本地化调试动作菜单。每窗口的布局诊断开关不是设置,不受影响。</US.Reset.Area.Diagnostics.Confirm>
-  <US.Reset.Area.Action.Confirm>这将把下方所示当前层域的每一条动作行恢复为默认值(范围、间隔与概率覆盖,以及该行的预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Action.Confirm>
+  <US.Reset.Area.Action.Confirm>移除下方所示层域的每一条玩家动作覆盖，包括 response 参数、参与开关和行预设锚点。数值重新继承已采用作者来源与服务默认值。保留其他层域、作者来源选择和最终回退表。</US.Reset.Area.Action.Confirm>
   <US.Reset.Area.Mood.Confirm>这将把下方所示当前层域的每条心情行恢复为默认值(音高、音量与抖动及其预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Mood.Confirm>
-  <US.Help.ResetCenter.Overview>恢复默认集中了全局入口:一问一答,一次操作把所有 Universal Squeaker 设置回到默认。卡片同时写明保留项——首先是你的最终 fallback 玩家表及其声音映射,这里的任何恢复都不会触碰。</US.Help.ResetCenter.Overview>
-  <US.Help.ResetCenter.RestoreAll.Text>全局恢复覆盖普通设置、全部动作/心情调音覆盖(全局及各层域)、包选择,以及已应用预设记录与其来源锚点。它和任何普通改动走同一条发布与保存通道,且只走一次。取消不写入任何数据;fallback 表、作者/Def 内容与 schema/迁移诊断均保留。</US.Help.ResetCenter.RestoreAll.Text>
+  <US.Help.ResetCenter.Overview>全局恢复可一起重置玩家设置、声音包选择与动作覆盖。显式作者来源选择、其 last-good 快照及最终回退玩家表保持不变。</US.Help.ResetCenter.Overview>
+  <US.Help.ResetCenter.RestoreAll.Text>全局恢复重置普通玩家设置，移除每条动作覆盖及其预设锚点。保留显式作者来源选择与 last-good 快照、最终回退表、作者/Def 内容及 schema/迁移诊断。沿用现有 owner 发布并排队持久化；取消不写入。</US.Help.ResetCenter.RestoreAll.Text>
   <US.Help.ResetArea.Overview>每个区域自带恢复入口:确认窗口逐条列出该区域将写入的字段,并说明哪些保持不变。简单恢复(距离预设与范围、单条动作行)直接执行,不再提问。</US.Help.ResetArea.Overview>
-  <US.Help.ResetArea.Button.Text>区域恢复只写当前可见区域的字段——不碰其它区域、其它层域的调音值,也不碰 fallback 表。动作/心情区域按钮在提问中写明当前层与域;目标为空或失效时不提供任何恢复。"恢复此区域默认"(含输出音量)与"恢复听取距离默认"(仅预设与范围)是两个入口,范围不同。</US.Help.ResetArea.Button.Text>
+  <US.Help.ResetArea.Button.Text>每个确认窗口说明现有 owner 实际恢复的字段。播放行为还包含相机指示器和 Pawn 服务对象级 Select/Eat 字段。动作区域恢复移除指定层域的全部玩家动作覆盖，不移除显式作者来源选择。距离默认仅恢复预设与范围；距离区域恢复还包含输出音量。最终回退表保留。</US.Help.ResetArea.Button.Text>
   <!-- UIR-001/002/003/006(WO-US-UI-REFACTOR-20261014):五页导航、总览教学与全部已加载种族看板、
        主题选择器与 fallback 编辑器独立分区。看板词组由 UsRaceBoardWidget 用这些条目拼装;
        {0}/{1}/{2} 只是机器槽位。调色板名称是 US 消费者内容,不是库默认值。 -->
@@ -681,7 +687,7 @@
   <US.UI.Field.talking>谈话调制参与</US.UI.Field.talking>
   <US.UI.Field.age>年龄响应</US.UI.Field.age>
   <US.UI.Field.mood>心情响应</US.UI.Field.mood>
-  <US.UI.EditContext>当前 Eat／Select 编辑域</US.UI.EditContext>
+  <US.UI.EditContext>当前编辑层／目标</US.UI.EditContext>
   <US.UI.OutputContext>更改作用域／逐动作音量与音调…</US.UI.OutputContext>
   <US.UI.ExplainSelect>选择回应说明</US.UI.ExplainSelect>
   <US.UI.PawnProfile>全部 Pawn 的通用配置</US.UI.PawnProfile>
@@ -708,7 +714,6 @@
   <US.UI.SourceBound>已指定</US.UI.SourceBound>
   <US.UI.ExplainEatDrug>药物筛选说明</US.UI.ExplainEatDrug>
   <US.UI.ExplainEatPhase>进食阶段说明</US.UI.ExplainEatPhase>
-  <US.UI.BackToVoices>返回语音管理</US.UI.BackToVoices>
   <US.UI.Nav.Output>输出</US.UI.Nav.Output>
   <US.UI.Nav.Restore>恢复</US.UI.Nav.Restore>
   <US.UI.Nav.Presets>预设</US.UI.Nav.Presets>
@@ -723,7 +728,7 @@
   <US.Kernel.ExplicitDevelopmentCandidate>当前使用显式选定的开发方案，实际发声仍取决于回应条件。</US.Kernel.ExplicitDevelopmentCandidate>
   <US.Kernel.OrdinaryActive>普通回应已接通；能否发声仍由当前模式、所选音频包与回应条件决定。</US.Kernel.OrdinaryActive>
   <US.Kernel.PolicySelectionRequired>回应运行时尚未就绪。包选择仍保留，请在诊断中查看缺失的前置条件。</US.Kernel.PolicySelectionRequired>
-  <US.UI.CloseHelp>关闭帮助</US.UI.CloseHelp>
+  <US.UI.CloseHelp>收起帮助</US.UI.CloseHelp>
   <US.Theme.BlackGold.Note>近黑底与清楚浅色正文，金色只强调动作和选中。绿色成功、琥珀警告与红色错误保持区分。</US.Theme.BlackGold.Note>
   <US.Theme.BlackGold.Label>黑金</US.Theme.BlackGold.Label>
   <US.Browse.Group.PlayerRaces>类人与异种</US.Browse.Group.PlayerRaces>
@@ -747,11 +752,11 @@
   <US.Diagnostics.Capture.Open>打开回应诊断</US.Diagnostics.Capture.Open>
   <US.Diagnostics.Capture.NoMap>进入地图后可观察回应。</US.Diagnostics.Capture.NoMap>
   <US.Diagnostics.Capture.EntryHint>打开后正常关闭设置窗，留下诊断条继续游戏；打开窗口不会开始录制。</US.Diagnostics.Capture.EntryHint>
-  <US.Diagnostics.Capture.Start>开始新记录（替换上次）</US.Diagnostics.Capture.Start>
-  <US.Diagnostics.Capture.Stop>停止记录</US.Diagnostics.Capture.Stop>
-  <US.Diagnostics.Capture.Clear>清空已停止记录</US.Diagnostics.Capture.Clear>
+  <US.Diagnostics.Capture.Start>开始新录制</US.Diagnostics.Capture.Start>
+  <US.Diagnostics.Capture.Stop>停止录制</US.Diagnostics.Capture.Stop>
+  <US.Diagnostics.Capture.Clear>清空</US.Diagnostics.Capture.Clear>
   <US.Diagnostics.Capture.Copy>复制反馈</US.Diagnostics.Capture.Copy>
-  <US.Diagnostics.Capture.Idle>正在查看 · 未录制</US.Diagnostics.Capture.Idle>
+  <US.Diagnostics.Capture.Idle>未录制</US.Diagnostics.Capture.Idle>
   <US.Diagnostics.Capture.Recording>正在录制</US.Diagnostics.Capture.Recording>
   <US.Diagnostics.Capture.Stopped>已停止</US.Diagnostics.Capture.Stopped>
   <US.Diagnostics.Capture.Status>{0} · {1}
@@ -794,4 +799,157 @@
   <US.Diagnostics.Search.Map>当前地图搜索（最多返回 64 个匹配）</US.Diagnostics.Search.Map>
   <US.Diagnostics.Search.Returned>返回 {0} 个对象</US.Diagnostics.Search.Returned>
   <US.Packs.Checklist.RaceUnavailableBanner>该种族定义未加载。已保存选择保留，待目标恢复。</US.Packs.Checklist.RaceUnavailableBanner>
+  <US.B.Variant>B／种族名册版</US.B.Variant>
+  <US.B.Voices>语音</US.B.Voices>
+  <US.B.Tuning>调音</US.B.Tuning>
+  <US.B.System>系统</US.B.System>
+  <US.B.Targets>目标</US.B.Targets>
+  <US.B.Search>搜索名称、标识、语音包或来源…</US.B.Search>
+  <US.B.SearchSources>搜索来源（不会自动选择）…</US.B.SearchSources>
+  <US.B.AllSources>全部来源</US.B.AllSources>
+  <US.B.Source>来源</US.B.Source>
+  <US.B.Coverage>覆盖条件</US.B.Coverage>
+  <US.B.Coverage.any>不限覆盖</US.B.Coverage.any>
+  <US.B.Coverage.has>有语音包</US.B.Coverage.has>
+  <US.B.Coverage.enabled>已启用（保留行）</US.B.Coverage.enabled>
+  <US.B.Coverage.none>无语音包</US.B.Coverage.none>
+  <US.B.Coverage.issues>需要关注</US.B.Coverage.issues>
+  <US.B.Page>页</US.B.Page>
+  <US.B.PacksOn>个包已选</US.B.PacksOn>
+  <US.B.Missing>项选择缺失</US.B.Missing>
+  <US.B.NoPack>暂无语音包</US.B.NoPack>
+  <US.B.Kept>保留至刷新或更改筛选</US.B.Kept>
+  <US.B.Loose>异种已加载，尚无合法种族配对。仅供浏览，不假定父种族。</US.B.Loose>
+  <US.B.UnloadedRace>种族未加载；保留已存选择</US.B.UnloadedRace>
+  <US.B.Dormant>Biotech 未启用；域休眠</US.B.Dormant>
+  <US.B.Unavailable>目标不可用</US.B.Unavailable>
+  <US.B.Conflict>规范身份冲突；路由关闭</US.B.Conflict>
+  <US.B.Orphan>已存选择缺失</US.B.Orphan>
+  <US.B.Unknown>未知（尚未观察）</US.B.Unknown>
+  <US.B.NotSupplied>未提供</US.B.NotSupplied>
+  <US.B.Outside>不在当前结果中；保留目标</US.B.Outside>
+  <US.B.NativeHuman>原生 Human 身份</US.B.NativeHuman>
+  <US.B.ChooseTarget>选择目标，或查看语音包内容。</US.B.ChooseTarget>
+  <US.B.NoResults>没有匹配结果。请清除条件或扩大范围。</US.B.NoResults>
+  <US.B.VoicesForTarget>此目标的语音</US.B.VoicesForTarget>
+  <US.B.NoPackHelp>没有包声明此准确目标。</US.B.NoPackHelp>
+  <US.B.RaceDomain>种族层</US.B.RaceDomain>
+  <US.B.XenoDomain>种族＋异种层</US.B.XenoDomain>
+  <US.B.ReadOnlyTarget>只读目标</US.B.ReadOnlyTarget>
+  <US.B.ConfiguredSupply>已配置供给</US.B.ConfiguredSupply>
+  <US.B.SupplyCounts>{0} 个声明包 · {1} 个已选 · {2} 个已选动作映射</US.B.SupplyCounts>
+  <US.B.SupplyRoute.Fallback>使用首个可用层：准确常规 → 同种族常规 → 准确域包后备 → 最终表。</US.B.SupplyRoute.Fallback>
+  <US.B.SupplyRoute.Remix>在下列非空供给层间等权混合。</US.B.SupplyRoute.Remix>
+  <US.B.SupplyRoute.Vanilla>仅路由最终表；保留语音包选择。</US.B.SupplyRoute.Vanilla>
+  <US.B.SupplyRoute.Disabled>不派发；保留选择。</US.B.SupplyRoute.Disabled>
+  <US.B.NoDeclarations>未声明</US.B.NoDeclarations>
+  <US.B.Selected>已选用</US.B.Selected>
+  <US.B.NotSelected>未选用</US.B.NotSelected>
+  <US.B.OpenCreateTable>打开／创建最终表…</US.B.OpenCreateTable>
+  <US.B.Forget>清除失效选择</US.B.Forget>
+  <US.B.ViewPack>查看语音包</US.B.ViewPack>
+  <US.B.EditTarget>编辑此目标</US.B.EditTarget>
+  <US.B.SearchTargets>筛选此包的目标…</US.B.SearchTargets>
+  <US.B.XenoFold>展开／收起异种域</US.B.XenoFold>
+  <US.B.NoTarget>尚无编辑目标</US.B.NoTarget>
+  <US.B.Exact>准确异种常规供给</US.B.Exact>
+  <US.B.RaceRegular>同种族常规供给</US.B.RaceRegular>
+  <US.B.PackFallback>准确域包后备</US.B.PackFallback>
+  <US.B.FinalTable>种族最终表</US.B.FinalTable>
+  <US.B.NoTable>尚无表</US.B.NoTable>
+  <US.B.Mapped>个已映射声音</US.B.Mapped>
+  <US.B.NoneDeclared>未选用／未声明</US.B.NoneDeclared>
+  <US.B.ConfiguredOnly>仅显示配置与映射；回应资格及原生声音就绪状态在使用时判定。</US.B.ConfiguredOnly>
+  <US.B.DisabledPath>不派发；保留选择。</US.B.DisabledPath>
+  <US.B.VanillaPath>只路由最终表；保留语音包选择。</US.B.VanillaPath>
+  <US.B.RaceRegularOnly>合法异种只能借用同种族常规供给，不能借用种族包的 PackFallback。</US.B.RaceRegularOnly>
+  <US.B.Info>i</US.B.Info>
+  <US.B.BackActions>返回动作列表</US.B.BackActions>
+  <US.B.ChooseAction>选择动作</US.B.ChooseAction>
+  <US.B.InvalidTarget>请在语音页选择已加载种族，或合法且无歧义的种族＋异种。编辑不会被重定向至其他目标。</US.B.InvalidTarget>
+  <US.B.RestoreRow>恢复此行</US.B.RestoreRow>
+  <US.B.PresetAnchor>预设恢复锚点</US.B.PresetAnchor>
+  <US.B.NoAnchor>此动作和层没有预设锚点</US.B.NoAnchor>
+  <US.B.RulesOutput>选中／进食选项 → 输出</US.B.RulesOutput>
+  <US.B.Custom>已注册自定义动作</US.B.Custom>
+  <US.B.LastGood>最后有效快照</US.B.LastGood>
+  <US.B.SourceCandidates>个候选；不会自动采用</US.B.SourceCandidates>
+  <US.B.PublicationPending>已保存，等待运行时发布。现有所有者会自动重试；请勿重复保存同一更改。</US.B.PublicationPending>
+  <US.B.PublicationPendingShort>已保存 · 应用中…</US.B.PublicationPendingShort>
+  <US.B.ExistingTables>已有表</US.B.ExistingTables>
+  <US.B.NewTable>新建表</US.B.NewTable>
+  <US.B.CreateExplicit>先选择候选，再点击创建。搜索与选择不会写入表。</US.B.CreateExplicit>
+  <US.B.AdmissionNote>仅由新表准入的种族需完整重启游戏。已准入种族在下一次合法选择时使用已提交映射。</US.B.AdmissionNote>
+  <US.B.ClosePicker>关闭声音选择</US.B.ClosePicker>
+  <US.B.DeveloperTools>开发者工具 · 展开／收起</US.B.DeveloperTools>
+  <US.B.Imported>已导入 {0} 个动作行／{1} 个字段。现已应用，磁盘保存已排队。来源与语音包选择未变。</US.B.Imported>
+  <US.B.Tier.0>HAR 种族</US.B.Tier.0>
+  <US.B.Tier.1>原生类人</US.B.Tier.1>
+  <US.B.Tier.2>其他类人</US.B.Tier.2>
+  <US.B.Tier.3>动物</US.B.Tier.3>
+  <US.B.Tier.4>机械体</US.B.Tier.4>
+  <US.B.Tier.5>实体</US.B.Tier.5>
+  <US.B.Tier.6>其他种族</US.B.Tier.6>
+  <US.B.Tier.7>准确异种域</US.B.Tier.7>
+  <US.B.Tier.8>未配对异种</US.B.Tier.8>
+  <US.B.Tier.9>已声明／已存，但未加载</US.B.Tier.9>
+  <US.B.NoLegalDomain>未授权此准确域；仅供浏览</US.B.NoLegalDomain>
+  <US.B.Coverage.idle>未启用</US.B.Coverage.idle>
+  <US.B.Restore.Applied>此行已恢复，常规保存已排队。</US.B.Restore.Applied>
+  <US.B.Restore.NoChange>此层没有设置。</US.B.Restore.NoChange>
+  <US.B.Restore.Rejected>恢复被拒绝；保留原值。</US.B.Restore.Rejected>
+  <US.B.Help>目标名册列出全部已加载身份，默认优先显示 HAR 类人。展开种族可查看它的实际异种域。单包行有准确目标开关；多包行打开后独立选择。包镜头用于浏览，“内容”不会改变编辑目标。查询不会自动选择结果。已启用行保留至刷新或更改查询。调音编辑已点名的层；系统包含外观、诊断和恢复。已配置路径读取声明，不表示播放结果。</US.B.Help>
+  <US.B.ImportNoChange>没有导入动作行；未排队保存。</US.B.ImportNoChange>
+  <US.B.Advanced>展开参数</US.B.Advanced>
+  <US.B.CollapseAdvanced>收起参数</US.B.CollapseAdvanced>
+  <US.B.CurrentAction>当前动作</US.B.CurrentAction>
+  <US.B.ActionFields>动作设置</US.B.ActionFields>
+  <US.B.TechnicalDetails>技术详情</US.B.TechnicalDetails>
+  <US.B.LayerControls>编辑层与恢复</US.B.LayerControls>
+  <US.B.Contributions>响应贡献</US.B.Contributions>
+  <US.B.ContributionsHelp>仅修改已标明的动作与目标。留空继承，“否”和 0 是明确值。响应启用与参与分别保存。参数保持原单位；技术详情显示准确键，作者参数按作者约定填写。</US.B.ContributionsHelp>
+  <US.B.FieldGroup.Age>年龄调制</US.B.FieldGroup.Age>
+  <US.B.FieldGroup.Mood>心情调制</US.B.FieldGroup.Mood>
+  <US.B.FieldGroup.Jitter>音调随机变化</US.B.FieldGroup.Jitter>
+  <US.B.FieldGroup.Author>作者响应设置</US.B.FieldGroup.Author>
+  <US.B.Field.AgePitch>年龄音调倍数</US.B.Field.AgePitch>
+  <US.B.Field.AgeVolume>年龄音量倍数</US.B.Field.AgeVolume>
+  <US.B.Field.AgeParticipation>参与年龄调制</US.B.Field.AgeParticipation>
+  <US.B.Field.MoodLow>低心情分界</US.B.Field.MoodLow>
+  <US.B.Field.MoodHigh>高心情分界</US.B.Field.MoodHigh>
+  <US.B.Field.MoodLowPitch>低心情音调倍数</US.B.Field.MoodLowPitch>
+  <US.B.Field.MoodLowVolume>低心情音量倍数</US.B.Field.MoodLowVolume>
+  <US.B.Field.MoodNeutralPitch>平稳心情音调倍数</US.B.Field.MoodNeutralPitch>
+  <US.B.Field.MoodNeutralVolume>平稳心情音量倍数</US.B.Field.MoodNeutralVolume>
+  <US.B.Field.MoodHighPitch>高心情音调倍数</US.B.Field.MoodHighPitch>
+  <US.B.Field.MoodHighVolume>高心情音量倍数</US.B.Field.MoodHighVolume>
+  <US.B.Field.MoodParticipation>参与心情调制</US.B.Field.MoodParticipation>
+  <US.B.Field.JitterMin>音调随机倍数下限</US.B.Field.JitterMin>
+  <US.B.Field.JitterMax>音调随机倍数上限</US.B.Field.JitterMax>
+  <US.B.Field.AuthorResponse>启用作者响应：{0}</US.B.Field.AuthorResponse>
+  <US.B.Field.AuthorParticipation>参与作者响应：{0}</US.B.Field.AuthorParticipation>
+  <US.B.Field.AuthorParameter>作者参数：{0}</US.B.Field.AuthorParameter>
+  <US.B.FieldNote.Pitch>倍数：1 不变，须大于 0；留空继承。</US.B.FieldNote.Pitch>
+  <US.B.FieldNote.Volume>倍数：1 不变，0 为静音；留空继承。</US.B.FieldNote.Volume>
+  <US.B.FieldNote.MoodThreshold>填写 0 到 1 的数值，不换算为百分数；低分界须小于高分界。留空继承。</US.B.FieldNote.MoodThreshold>
+  <US.B.FieldNote.Jitter>正的音调倍数，上限不得低于下限；留空继承。</US.B.FieldNote.Jitter>
+  <US.B.FieldNote.Participation>“是”参与此响应，“否”跳过；继承沿用上层选择。</US.B.FieldNote.Participation>
+  <US.B.FieldNote.Response>启用此已声明响应，与是否参与分别设置；继承沿用上层选择。</US.B.FieldNote.Response>
+  <US.B.FieldNote.AuthorParameter>按作者约定的单位与范围填写；留空继承，0 是明确值。</US.B.FieldNote.AuthorParameter>
+  <US.B.FieldInherit>继承</US.B.FieldInherit>
+  <US.Diagnostics.Technical.Back>返回诊断</US.Diagnostics.Technical.Back>
+  <US.Diagnostics.Technical.Seconds>模拟时间按 60 tick 换算秒（不改变交互真实秒）</US.Diagnostics.Technical.Seconds>
+  <US.Diagnostics.Basis.Dispatch>上次派发</US.Diagnostics.Basis.Dispatch>
+  <US.Diagnostics.Basis.Unknown>依据未提供</US.Diagnostics.Basis.Unknown>
+  <US.B.FieldGroup.Opportunity>机会与间隔</US.B.FieldGroup.Opportunity>
+  <US.B.FieldGroup.Output>输出倍数</US.B.FieldGroup.Output>
+  <US.B.FieldGroup.Responses>响应参与</US.B.FieldGroup.Responses>
+  <US.B.FieldInherited>继承</US.B.FieldInherited>
+  <US.B.FieldOwn>本层覆盖</US.B.FieldOwn>
+<US.Diagnostics.Viewing>正在查看</US.Diagnostics.Viewing>
+  <US.B.SourceSnapshotAvailable>可用</US.B.SourceSnapshotAvailable>
+  <US.Diagnostics.Technical.Open>技术全文</US.Diagnostics.Technical.Open>
+  <US.B.Help.RosterSearch>按名称或身份搜索当前对象／语音包列表，类别、来源和供给筛选仍共同生效。搜索不会选择对象、启用语音包或改变编辑域。</US.B.Help.RosterSearch>
+  <US.B.Help.RosterTargets>浏览已加载的对象，包括没有语音包的对象。打开对象查看其配置供给；只有明确点击开关才修改该准确域。编辑仍受 Biotech 与合法 Race／Xenotype 身份约束。</US.B.Help.RosterTargets>
+  <US.B.Help.RosterPacks>先浏览语音包并查看内容，再按准确域开关。查看包不选择编辑目标，不批量启用内容，也不改变路由模式。</US.B.Help.RosterPacks>
 </LanguageData>

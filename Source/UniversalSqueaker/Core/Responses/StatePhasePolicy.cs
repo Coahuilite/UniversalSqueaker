@@ -4,6 +4,21 @@ namespace UniversalSqueaker.Responses;
 
 internal enum StateScheduleKind { Initial, Success, Retry, SharedRaise }
 
+/// <summary>Values actually adopted at scheduling, not recomputed from a later policy.</summary>
+internal readonly struct StateScheduleObservation
+{
+    internal readonly StateScheduleKind Kind;
+    internal readonly long LowerBound, NextTick, Window, RaisedWindow;
+    internal readonly long? EffectiveWait;
+    internal readonly uint? Pattern;
+    internal StateScheduleObservation(StateScheduleKind kind, long lowerBound, long nextTick,
+        long? effectiveWait, long window, long raisedWindow, uint? pattern)
+    {
+        Kind = kind; LowerBound = lowerBound; NextTick = nextTick; EffectiveWait = effectiveWait;
+        Window = window; RaisedWindow = raisedWindow; Pattern = pattern;
+    }
+}
+
 /// <summary>Optional neutral identity, never a claim that a scheduling policy has been adopted.
 /// Signed values are consumed as their exact 32-bit patterns; zero is a valid world seed.</summary>
 public readonly struct StatePhaseInput

@@ -519,8 +519,14 @@ internal static class DiagnosticsPanelLaneTests
         host.Bindings.Set(UsDiagnosticsHost.KeyRawOpen, true);
         Assert(fake.RawOpen, "the fold write routes to the source");
         UiLayoutSnapshot open = host.MeasureAndArrange(VerseUiExecution.Point(new Vector2(680f, 560f)));
-        Assert(open.RectById["diag-detail"].Height > folded.RectById["diag-detail"].Height,
-            "unfolding the raw block adds its two rows to the detail column");
+        string technical = host.Bindings.Get<string>("diag-technical-text");
+        UsDiagDetail detail = fake.Detail!;
+        Assert(!folded.RectById.ContainsKey("diag-technical-scroll")
+                && Height(open, "diag-technical-scroll") > 0 && Height(open, "diag-technical-text") > 0
+                && !open.RectById.ContainsKey("diag-detail")
+                && technical.Contains(detail.ActionText) && technical.Contains(detail.AudioText)
+                && detail.Gates.All(gate => technical.Contains(gate.Name) && technical.Contains(gate.Value)),
+            "opening raw enters its independent full technical reader with the original action, audio and gate fields reachable");
     }
 
     private static void CloseRoutes()
@@ -860,9 +866,9 @@ internal static class DiagnosticsPanelLaneTests
         Assert(fake.NavigationView == UsDiagNavView.Detail, "the view switch routes");
         Assert(host.Session.ContentRevision == revBefore + 1, "and bumps the layout clock once");
         UiLayoutSnapshot detailView = Arrange(narrowWidth, 560f);
-        Assert(Height(detailView, "diag-nav-body") > Height(narrow, "diag-nav-body"),
-            "narrow detail: the same body element now measures the taller detail content, got "
-            + Height(detailView, "diag-nav-body") + " vs " + Height(narrow, "diag-nav-body") + " for the list");
+        Assert(Height(detailView, "diag-nav-detail") > 0 && Height(detailView, "diag-nav-detail-scroll") > 0
+                && !detailView.RectById.ContainsKey("diag-nav-scroll") && !detailView.RectById.ContainsKey("diag-nav-body"),
+            "narrow detail owns its retained body/scroll while the list body/scroll is not arranged");
 
         IList texts = RecordedStub("LabelTexts");
         int textStart = texts.Count;
@@ -1108,7 +1114,7 @@ internal static class DiagnosticsPanelLaneTests
         int clickStart = texts.Count;
         host.DrawChecked(viewport);
         Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), clickStart,
-                "[-] US.Diagnostics.Gate.Group.Audio · US.Diagnostics.Basis.Current", out Rect openHeading),
+                "− US.Diagnostics.Gate.Group.Audio", out Rect openHeading),
             "the open Audio heading is drawn as a control and names its group");
         int revBefore = host.Session.ContentRevision;
         ClickRect(host, viewport, openHeading, "diag-detail");
@@ -1121,7 +1127,7 @@ internal static class DiagnosticsPanelLaneTests
 
         int start2 = texts.Count;
         host.DrawChecked(viewport);
-        Assert(DrawnContains(texts, start2, "[+] US.Diagnostics.Gate.Group.Audio"),
+        Assert(DrawnContains(texts, start2, "+ US.Diagnostics.Gate.Group.Audio"),
             "the folded group keeps one heading that says so");
         foreach (string audioName in new[] { "US.Diagnostics.Gate.VocalOrgan", "US.Diagnostics.Gate.AudioPool", "US.Diagnostics.Gate.Playability", "US.Diagnostics.Gate.Dispatch" })
         {
@@ -1144,7 +1150,7 @@ internal static class DiagnosticsPanelLaneTests
         // And the same control opens it again.
         int reopenStart = texts.Count;
         host.DrawChecked(viewport);
-        Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), reopenStart, "[+] US.Diagnostics.Gate.Group.Audio", out Rect closedHeading),
+        Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), reopenStart, "+ US.Diagnostics.Gate.Group.Audio", out Rect closedHeading),
             "the folded heading is drawn as a control");
         ClickRect(host, viewport, closedHeading, "diag-detail");
         Assert(fake.IsGroupOpen(UsDiagGateGroup.Audio), "clicking it again expands the group");

@@ -185,17 +185,23 @@ public sealed class BehaviorSourceDirectory
 {
     private readonly BehaviorSource[] sources;
     private readonly HashSet<Kernel.AudioDomain> domains;
+    private readonly Dictionary<Kernel.AudioDomain, BehaviorSource[]> candidates;
     public BehaviorSourceDirectory(IEnumerable<BehaviorSource> sources)
     {
         this.sources = sources.Distinct().Select(x => x.Copy()).ToArray();
         domains = new HashSet<Kernel.AudioDomain>(this.sources.Select(x => x.Domain.Identity));
+        candidates = this.sources.GroupBy(x => x.Domain.Identity).ToDictionary(g => g.Key, g => g
+            .GroupBy(x => x.Id, StringComparer.Ordinal).Where(x => x.Count() == 1).Select(x => x.Single())
+            .Where(x => !x.Contributions.GroupBy(c => c.Action).Any(a => a.Count() > 1))
+            .OrderBy(x => x.Id, StringComparer.Ordinal).ToArray());
     }
     public bool HasDomain(Kernel.AudioDomain domain) => domains.Contains(domain);
-    public BehaviorSource[] Candidates(BehaviorDomain domain) => sources.Where(x => x.Domain.Equals(domain))
-        .GroupBy(x => x.Id, StringComparer.Ordinal).Where(x => x.Count() == 1)
-        .Select(x => x.Single()).Where(x => !x.Contributions.GroupBy(c => c.Action).Any(g => g.Count() > 1))
-        .Select(x => x.Copy()).OrderBy(x => x.Id, StringComparer.Ordinal).ToArray();
-    public BehaviorSource? Find(BehaviorDomain domain, string id) => Candidates(domain).SingleOrDefault(x => x.Id == id);
+    public BehaviorSource[] Candidates(BehaviorDomain domain) => domain != null && candidates.TryGetValue(domain.Identity, out var values)
+        ? values.Select(x => x.Copy()).ToArray() : Array.Empty<BehaviorSource>();
+    public BehaviorSource? Find(BehaviorDomain domain, string id) => FindCaptured(domain, id)?.Copy();
+    // Only the resolver borrows this frozen directory entry. Public readers keep copy isolation.
+    internal BehaviorSource? FindCaptured(BehaviorDomain domain, string id) => domain != null && candidates.TryGetValue(domain.Identity, out var values)
+        ? values.SingleOrDefault(x => x.Id == id) : null;
 }
 
 /// <summary>Only author contributions are retained here. Player settings stay in their existing records.</summary>
@@ -294,7 +300,7 @@ public sealed class BehaviorSourceState
                 reportPause?.Invoke(binding.RejectedTimingReason);
                 continue;
             }
-            var current = directory.Find(layer, binding.SourceId);
+            var current = directory.FindCaptured(layer, binding.SourceId);
             bool hasCompatibleSnapshot = binding.Snapshot?.Semantics == 1;
             if (current?.Semantics != 1 && !hasCompatibleSnapshot)
             {

@@ -28,5 +28,9 @@ public static class WindowChromeLayout
 
     /// <summary>Call with the actual FL content rectangle BEFORE the common page header is allocated.</summary>
     public static bool UsesWideLayout(float contentWidth, float contentHeight)
-        => contentWidth - 24 >= 1100 && contentHeight - 24 >= 640;
+        => contentWidth - 24 >= 780 && contentHeight - 24 >= 440;
+
+    /// <summary>The roster needs a 300-unit list, a 12-unit gap and readable detail beside it.
+    /// This is the actual logical content box, not the display resolution or opening-size policy.</summary>
+    public static bool UsesWideRoster(float contentWidth) => contentWidth - 24 >= 900;
 }

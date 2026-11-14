@@ -25,11 +25,15 @@ jobs:
   release:
     runs-on: windows-latest
     env:
-      NUGET_PACKAGES: ${{ runner.temp }}/us-nuget
       DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
     timeout-minutes: 15
     steps:
+      - name: Select the runner-local NuGet download cache
+        shell: pwsh
+        run: |
+          "NUGET_PACKAGES=$env:RUNNER_TEMP/us-nuget" >> $env:GITHUB_ENV
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # the ancestry check below needs origin/main, not a depth-1 clone

@@ -32,12 +32,14 @@ public sealed class SqueakerMod : Mod
     internal static void NotifySettingsWindowClosing(Window window) => Instance?.windows.NotifyClosing(window);
     internal static string BuildIdentity() => SettingsWindowOwner.BuildIdentity();
     internal void QueueSettingsSave() => persistence.Queue();
+    // Retained explicit maintenance entry for existing callers; window drawing no longer calls it.
     internal void TickSettingsSaveForWindow() => persistence.Tick();
     internal void FlushQueuedSettingsSave(bool force = false, bool allowFailedGenerationRetry = false) => persistence.Flush(force, allowFailedGenerationRetry);
     internal void RetrySettingsSave() => persistence.Retry();
     internal SettingsSaveState SaveState => persistence.Owner.State;
     internal bool SaveStatusVisible => persistence.Owner.StatusVisible(Time.realtimeSinceStartup);
     internal bool IsSettingsDirty => persistence.Owner.Dirty;
+    internal bool SettingsPublicationPending => persistence.Owner.PublicationPending;
     public long SaveQueueRequestCount => persistence.Owner.RequestCount;
     public long PhysicalSaveCount => persistence.Owner.PhysicalSaveCount;
     /// <summary>Persist source intent before adopting and publishing it.</summary>

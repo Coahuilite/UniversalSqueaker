@@ -405,8 +405,14 @@ public sealed class SqueakResponseLogData
 /// Failures are daily in every logging mode; response is detailed and bounded by its Comp owner.</summary>
 internal static class SqueakProductionProtocol
 {
+    private const int FailureCapacity = 1024;
     private static readonly HashSet<string> failures = new(StringComparer.Ordinal);
-    internal static void Reset() { lock (failures) failures.Clear(); }
+    private static readonly Queue<string> failureOrder = new();
+    private static long failureEvictions, suppressedFailures;
+    internal static void Reset()
+    {
+        lock (failures) { failures.Clear(); failureOrder.Clear(); failureEvictions = suppressedFailures = 0; }
+    }
     internal static bool Claim(SqueakProductionEvent evt, SqueakLogData data)
     {
         // Author facts are lossless; free details distinguish claims before output-only redaction/truncation.
@@ -417,8 +423,15 @@ internal static class SqueakProductionProtocol
                 + "|" + SqueakLogText.SanitizeExceptionMessage(data.Reason) + "|" + data.Exception?.GetType().FullName;
         lock (failures)
         {
-            if (failures.Contains(key) || failures.Count >= 1024) return false;
-            return failures.Add(key);
+            if (failures.Contains(key)) { suppressedFailures++; return false; }
+            // Retain the existing capacity, but never let an old full ledger permanently hide a new fault kind.
+            if (failures.Count == FailureCapacity)
+            {
+                failures.Remove(failureOrder.Dequeue());
+                failureEvictions++;
+            }
+            failures.Add(key); failureOrder.Enqueue(key);
+            return true;
         }
     }
     private static string ClaimPart(string? value) => value == null ? "-:" : value.Length.ToString(CultureInfo.InvariantCulture) + ":" + value;
@@ -476,7 +489,14 @@ internal static class SqueakProductionProtocol
             Add(text, "ex_msg", SqueakLogText.SanitizeExceptionMessage(data.Exception.Message));
         }
         lock (failures)
-            if (failures.Count == 1024) Add(text, "once_budget", "exhausted_until_reset");
+        {
+            if (failureEvictions > 0)
+            {
+                Add(text, "once_budget", "rolling_recent");
+                Add(text, "once_keys_evicted", failureEvictions);
+                Add(text, "once_repeats_suppressed", suppressedFailures);
+            }
+        }
         return text.ToString();
     }
     internal static string Response(SqueakResponseLogData data, string build, string buildId, bool exhausted)

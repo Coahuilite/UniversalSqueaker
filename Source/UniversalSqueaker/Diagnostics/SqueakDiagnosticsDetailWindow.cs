@@ -82,12 +82,13 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         // Per-HOST audit (FL-20). The detail windows are the multi-INSTANCE case, so the routing gain is at
         // its clearest here: two open detail windows used to share one sink, and with one window per
         // subscription their findings cannot overwrite each other.
-        audit = UniversalSqueaker.UI.UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        audit = UniversalSqueaker.UI.UsTextFitAudit.OpenForWindow(host);
         return host;
     }
 
     protected override void BeforeDraw(Rect contentRect)
     {
+        audit?.SynchronizePolicy(SqueakLog.ShouldEmitDev);
         // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
         audit?.Publish();
         if (Host != null && lastDataRevision != SqueakDiagnosticsOverlay.Revision)

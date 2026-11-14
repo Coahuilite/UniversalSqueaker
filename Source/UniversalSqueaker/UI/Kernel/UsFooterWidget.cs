@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using Verse;
+
+
 
 using FerriteLib.UiKit.Kernel;
 
@@ -49,10 +49,10 @@ public sealed class UsKernelFooterWidget : IUiWidget
         ctx.Bindings.TryGet("build-identity", out string buildIdentity);
         ctx.Bindings.TryGet("save-status", out string saveStatus);
         float half = Math.Max(1f, ctx.ViewWidth * 0.5f - Padding);
-        float left = ctx.Metrics.MeasureText(buildIdentity ?? "", UiFont.Tiny, half);
+        float left = UsKernelDraw.Text(ctx, UiFont.Tiny).MeasureText(buildIdentity ?? "", half);
         bool visible = StatusVisible(ctx);
         bool dirty = ctx.Bindings.Get<bool>("is-dirty");
-        float right = visible ? ctx.Metrics.MeasureText(StatusLabel(ctx, saveStatus, dirty), UiFont.Tiny, half) : 0f;
+        float right = visible ? UsKernelDraw.Text(ctx, UiFont.Tiny).MeasureText(StatusLabel(ctx, saveStatus, dirty), half) : 0f;
         return Math.Max(FooterHeight, Math.Max(left, right) + 6f);
     }
 
@@ -66,39 +66,23 @@ public sealed class UsKernelFooterWidget : IUiWidget
 
         UiThemeDraw.Surface(ctx.Drawing, new UiLayoutRect(rect.X, rect.Y, rect.Width, 1f), ctx.Theme, ctx.Theme[UiPaletteRole.Divider], ctx.Theme[UiPaletteRole.Divider]);
 
-        UsKernelDraw.Label(ctx.Drawing,
-            new UiLayoutRect(rect.X + Padding, rect.Y, Math.Max(1f, rect.Width * 0.5f - Padding), rect.Height),
-            buildIdentity,
-            ctx.Theme,
-            ctx.Theme[UiPaletteRole.DisabledForeground],
-            UiFont.Tiny,
-            UiTextAnchor.MiddleLeft);
+        UsKernelDraw.StyledLabel(ctx,
+            new UiLayoutRect(rect.X + Padding, rect.Y, Math.Max(1f, rect.Width * 0.5f - Padding),
+            rect.Height),
+            buildIdentity, UiFont.Tiny, UiTextAnchor.MiddleLeft, emphasis: UiEmphasis.Muted);
 
         if (!StatusVisible(ctx)) return;
 
         // Accent discipline (05 §3.1): "saving" and "dirty" are activity, not "currently in effect" -
         // the ● prefix and the text already carry that, so the color only steps up from secondary to
         // primary. The destructive/handling failure keeps its status color (Danger).
-        UiColour statusColor = saveStatus switch
-        {
-            "Failed" => ctx.Theme[UiPaletteRole.DangerSurface],
-            "Saving" => ctx.Theme[UiPaletteRole.Foreground],
-            _ => ctx.Theme[UiPaletteRole.SecondaryForeground],
-        };
-        if (isDirty && saveStatus != "Failed")
-        {
-            statusColor = ctx.Theme[UiPaletteRole.Foreground];
-        }
+        UiStatusTone tone = saveStatus == "Failed" ? UiStatusTone.Danger : UiStatusTone.Neutral;
+        UiEmphasis emphasis = isDirty || saveStatus == "Saving" || saveStatus == "Failed" ? UiEmphasis.Normal : UiEmphasis.Muted;
 
         UiLayoutRect statusRect = new(rect.X + rect.Width * 0.5f, rect.Y, Math.Max(1f, rect.Width * 0.5f - Padding), rect.Height);
         UsKernelDraw.HelpHover(statusRect, ctx, "us/page-title/apply");
-        UsKernelDraw.Label(ctx.Drawing,
-            statusRect,
-            StatusLabel(ctx, saveStatus, isDirty),
-            ctx.Theme,
-            statusColor,
-            UiFont.Tiny,
-            UiTextAnchor.MiddleRight);
+        UsKernelDraw.StyledLabel(ctx, statusRect, StatusLabel(ctx, saveStatus, isDirty), UiFont.Tiny,
+            UiTextAnchor.MiddleRight, tone: tone, emphasis: emphasis);
     }
 
     // A pending edit is necessary state even after the transient save sentence has expired.
@@ -130,7 +114,9 @@ public sealed class UsKernelFooterWidget : IUiWidget
         {
             if (ReportedStatusTokens.Add(token ?? ""))
             {
+#if !US_PREVIEW_NEUTRAL
                 SqueakLog.SaveStatusUnknown(token ?? "");
+#endif
             }
             return token ?? "";
         }

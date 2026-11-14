@@ -3,7 +3,6 @@ using System.Reflection;
 
 namespace UniversalSqueaker;
 
-public enum SqueakDevLoggingMode { Auto = 0, Enabled = 1, Disabled = 2 }
 internal enum SqueakDiagnosticLogResult { NotCaptured, ModeOff, FormatFailed, SinkFailed, SinkReturned }
 
 /// <summary>Session settings-source fact (usdiag v2, 0.3.1): FreshCreated = no settings file was
@@ -14,7 +13,7 @@ public enum SqueakSettingsOrigin { FreshCreated, LoadedFromFile }
 /// <summary>Closed logging facade. Event schema, human text, and protocol emission are not writable by business code.</summary>
 public static class SqueakLog
 {
-    private const string Prefix = "[UniversalSqueaker] ";
+    private const string Prefix = "[UniversalSqueaker.Kernel] ";
     private static SqueakDevLoggingMode mode;
     private static string build = "dev", buildId = "unknown";
 
@@ -153,6 +152,14 @@ public static class SqueakLog
         catch (Exception error) when (IsOrdinary(error)) { }
     }
     public static void LayoutTrace(string message) => LayoutTrace(() => message);
+
+    // Only the settings window's explicit, bounded cost observation calls this. It must remain
+    // usable with detail/fit off and after the ordinary trace budget was exhausted.
+    internal static void SettingsCostSample(Func<string> message)
+    {
+        try { SqueakLogSink.Emit(SqueakLogLevel.Info, Prefix + "ltrace: " + message()); }
+        catch (Exception error) when (IsOrdinary(error)) { }
+    }
 
     // Production callers choose a named result, never raw text, level or an arbitrary event ID.
     public static void DiagnosticPublicationFailed(string subject, Exception error) => Production(SqueakProductionEvent.DiagnosticPublicationFailed, new(target: subject, exception: error));

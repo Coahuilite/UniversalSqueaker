@@ -23,6 +23,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// harness exercises the real dynamic-list widget draw paths instead of the empty projections.
     /// </summary>
     public bool RichData;
+    // O5's current Roster field needs the complete pack catalog, not just the retired PackCards
+    // projection. Opt in so unrelated existing fixtures retain their original sample inputs.
+    public bool IncludeRosterPackCatalog;
     public bool ReversePackOrder { get; set; }
     public int PackWriteCount { get; private set; }
     public bool RichScaleFrequencyWithTalking = true;
@@ -340,7 +343,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             selectedRaceCount: 1,
             selectedXenotypeCount: 0);
 
-        return new VoicePacksViewState(
+        var view = new VoicePacksViewState(
             SqueakVoicePackMode.Remix,
             allowEasterEggs: true,
             SqueakDistancePreset.Strong,
@@ -414,6 +417,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 SeedRaceBoard.Count, SeedXenoBoard.Count,
                 ViewState.BoardGroup, ViewState.BoardFilter,
                 SeedRaceBoard.Count, CountSeededWithPacks(), CountSeededEnabled()));
+        if (IncludeRosterPackCatalog)
+            // Populate the sample's internal projection property, not a product field/binding. The
+            // existing unfiltered pack pairs supply facts; production Roster filtering stays real.
+            typeof(VoicePacksViewState).GetProperty(nameof(VoicePacksViewState.AllPackCards))!
+                .SetValue(view, view.PackCards);
+        return view;
     }
 
     /// <summary>
