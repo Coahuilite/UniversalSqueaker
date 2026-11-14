@@ -1,5 +1,7 @@
 # Universal Squeaker
 
+> **当前开发线（0.6.x）：** 采用FL0.9，分别构建RW1.6/net472与RW1.7/net10，见[现行构建入口](docs/build-and-debug.md)。下文已发布0.8配对与历史1.6证据保原范围；1.7真实游戏验收待完成。
+
 [English](./README.md) | **中文**
 
 Universal Squeaker（US）让 RimWorld 的角色按**准确的种族与异种**，说出第三方语音包里的声音。

@@ -1,25 +1,46 @@
 # Build and debug
 
-## Current0.6.x integration: adopted, blocked before dual-target delivery
+## Current0.6.x: separate native1.6 and1.7 inputs, one shared source
 
-The current scope is [FL0.9 dual-target adoption](openspec/changes/us06-fl09-dual-target/proposal.md).
-The clean integration retains0.6.x `97aafd3` and the complete r5 `2b1a215` history. Its engineering tree
-still equals r5: the current csproj, LoadFolders and stager are **RW1.6-only**, so it is not yet a
-complete0.6.x push candidate. The occupied0.6.x and native1.7 worktrees are not integration inputs.
+The adopted [dual-target scope](openspec/changes/us06-fl09-dual-target/proposal.md) uses FL API
+**[0.9.0,0.10.0)**. The original project entry remains RW1.6/net472/Krafs1.6.4871; explicitly select
+`UsRimWorldTarget=RimWorld17` for net10 with the exact1.7 `Assembly-CSharp`, `UnityStubs`, `RimWorld`
+and `Waylith` references. Its restore graph and output are separate. Neither game DLLs, Harmony nor
+FL are copied into US. The target/reference seam is adapted from remote `48b8fab`, not its separate
+UI/diagnostics design or the occupied1.7 tree's work.
 
-The already-remote `48b8fab` provides a reusable native1.7/net10 project, four explicit compiler
-references (`Assembly-CSharp`, `UnityStubs`, `RimWorld`, `Waylith`), Private=false, and a stager that
-re-roots shared source1.6 content into package1.7. Reuse only those target/build seams as needed;
-its unrelated UI/diagnostics redesign and occupied-tree changes are not implicitly adopted. Keep
-one shared production source and the original r5 no-attach fallback; close both selected compiler
-references and real1.6/1.7 LoadFolders/payloads before delivery.
+```powershell
+$fl16 = '<fixed-FL09-net472>/FerriteLib.UiKit.dll'
+$fl17 = '<fixed-FL09-native17-net10>/FerriteLib.UiKit.dll'
+$rw17 = '<exact-1.7-reference-directory>'
+dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental "-p:FerriteLibArtifactPath=$fl16"
+dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental -p:UsRimWorldTarget=RimWorld17 "-p:RimWorld17Dir=$rw17" "-p:FerriteLibArtifactPath=$fl17"
+pwsh -NoProfile -File scripts/stage-package.ps1 -StageDir dist/<fresh-pair>/UniversalSqueaker -VersionLabel 0.6.0 -BuildFlavor release -CommitLabel <source-commit> -FerriteLibArtifactPath $fl16 -FerriteLib17ArtifactPath $fl17 -RequireReleaseIdentity
+```
 
-Required next inputs: FL owner's fixed ordinary0.9 RW1.7/net10 DLL and its exact1.7 reference directory,
-plus an approved immutable0.9 carrier acquisition source usable by CI. The current CI helper requires
-published0.8 repo/tag/full-commit coordinates; that cannot validate0.9. At the2026-11-14 read, FL0.9
-had only privacy-workflow runs and no published0.9 Release carrier. Do not create a tag/Release to
-work around the dependency or point CI at a moving branch. Normal0.6.x push triggers CI/privacy
-checks, caches and log artifacts; Release is tag-only (`v*`), not a branch-push action.
+The combined package routes1.6 to `1.6/Assemblies/UniversalSqueaker.dll` and1.7 to its distinct
+`1.7/Assemblies/UniversalSqueaker.dll`; shared author content is staged under each selected version.
+The stager checks both frameworks, configurations and actual compiler-reference receipts before
+publication of the folder. No FL payload is bundled. Optional `PayloadDllPath` and
+`RimWorld17PayloadDllPath` select isolated builds. With no1.7 carrier argument, the existing stager
+and build-dev callers still produce an honest **1.6-only** package (including About/LoadFolders),
+not a package that claims1.7 with a missing or mislabelled DLL.
+
+For a dual Dev rehearsal, use existing `scripts/build-dev.ps1` with the same two carrier arguments,
+`-RimWorld17Dir $rw17` and a fresh `-OutputRoot dist/<attempt>`. The original one-carrier command
+still works. Do not install either rehearsal into the formal environment without authorization.
+
+### Development CI is not the release acquisition path
+
+`ci.yml` pins a full public FL0.9 commit, checks it out and runs its existing ordinary net472 Release
+build. The existing `verify-local.ps1` groups consume those bytes with clean matching source; receipts
+and logs identify the exact input. CI stages a1.6-only package. Proprietary native1.7 references are
+not provided to GitHub, so1.7 compiler/payload evidence is local, not a CI or native-game claim.
+
+`release.yml`, `require-ferritelib-ci-input.ps1` and release-asset acquisition retain their original
+published-carrier/version/digest/source pairing gates. A development build does not authorize or
+satisfy formal publication. Branch push runs CI/privacy, cache and log-artifact steps; only `v*` tags
+trigger the separate Release workflow. Never add a tag/Release to obtain a development compiler input.
 
 ### Preserved r5 RW1.6 engineering route
 

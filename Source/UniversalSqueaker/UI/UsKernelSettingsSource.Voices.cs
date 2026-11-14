@@ -17,7 +17,7 @@ public sealed partial class UsKernelSettingsSource
         string number = interaction ? (values.InteractionIntervalSeconds ?? 0).ToString("R", CultureInfo.InvariantCulture)
             : (values.SimulationIntervalTicks ?? 0).ToString(CultureInfo.InvariantCulture);
         return t.Translate(interaction ? "US.UI.Field.interaction-seconds" : "US.UI.Field.interval") + ": " + number
-            + " · " + (effective.Origins.TryGetValue(field, out string origin) ? origin : "package:" + action)
+            + " · " + (effective.Origins.TryGetValue(field, out string? origin) ? origin : "package:" + action)
             + (effective.Paused ? "\n" + effective.Failure : "");
     }
     public string ReadActionField(string field, string action, string race, string child)

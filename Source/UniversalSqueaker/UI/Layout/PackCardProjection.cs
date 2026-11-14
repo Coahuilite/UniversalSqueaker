@@ -148,7 +148,7 @@ public static class PackCardProjection
             bool autoTrigger = pair.Scope == SqueakVoicePackScope.Xenotype
                 && (domainHit || xenoFilterActive);
 
-            if (!rowsByKey.TryGetValue(pair.PackKey, out List<PackCardDomainRowView> rows))
+            if (!rowsByKey.TryGetValue(pair.PackKey, out List<PackCardDomainRowView>? rows))
             {
                 rows = new List<PackCardDomainRowView>();
                 rowsByKey[pair.PackKey] = rows;

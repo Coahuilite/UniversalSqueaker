@@ -1484,14 +1484,14 @@ public static partial class VoicePacksPageModel
             FallbackDelta? playerDelta = SqueakFallbackProfileStore.LoadPlayerDelta(raceKey);
             foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
             {
-                string sound = "";
+                string? sound = "";
                 if (resolved != null)
                 {
                     resolved.SoundKeys.TryGetValue(key, out sound);
                     sound ??= "";
                 }
 
-                string sourceValue = "";
+                string? sourceValue = "";
                 bool fromMaintainer = false;
                 if (maintainer != null)
                 {

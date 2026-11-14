@@ -52,7 +52,7 @@ internal static class Patch_USOptionsEntry
     private static void Postfix(Dialog_Options __instance, Rect inRect)
     {
         if (SqueakerMod.Instance == null || !SqueakerMod.Settings.showOptionsEntry || HasModSettings == null) return;
-        bool hasMods = (bool)HasModSettings.GetValue(__instance);
+        bool hasMods = (bool)HasModSettings.GetValue(__instance)!;
         int rows = DefDatabase<OptionCategoryDef>.AllDefs.Count(category =>
             (Prefs.DevMode || !category.isDev) && category.modContentPack.IsOfficialMod
             && (category != OptionCategoryDefOf.Mods || hasMods));

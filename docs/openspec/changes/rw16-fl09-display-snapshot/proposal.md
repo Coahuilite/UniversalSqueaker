@@ -27,6 +27,8 @@ r3核实FL `8f02776`／US `3e32a57`均先于源码独立采用，现已放行实
 
 ## 分支及兼容范围
 
-仅 `feat/rw16-fl09-display-snapshot-20261111` 采用 **FL API [0.9.0,0.10.0)／RW1.6 net472**。原 `perf/tiering-20261111`、0.8维护合同／固定DLL与另一net10工程均不迁移。
+原独立采用阶段仅 `feat/rw16-fl09-display-snapshot-20261111` 采用 **FL API [0.9.0,0.10.0)／RW1.6 net472**。原 `perf/tiering-20261111`、0.8维护合同／固定DLL与另一net10工程均不迁移。
 
 原 source、direct `ReadActionField`／提交入口、未采用页面、外来 `IUsKernelSettingsSource`／preview／自定义 widget 保原合法调用条件。无能力时回到同代0.9完整路径，不伪造产品开关、菜单或绕 guard。r3实现候选已迁移本分支实际guard／resolver／readiness；可运行性仍由准确载体的工程／原生证据分别建立。后续源码、工程验证、原生性能和发布按 [tasks](tasks.md) 分别记账。
+
+2026-11-14：原r5分支及其1.6证据保持原貌；当前0.6.x范围由[双目标采用](../us06-fl09-dual-target/proposal.md)接续，UI-10仍以上述唯一正文为准。本历史分支限制不作为当前双目标的新限制。

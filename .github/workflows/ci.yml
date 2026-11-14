@@ -1,11 +1,9 @@
 name: CI
 
-# Push/PR check for Universal Squeaker on a clean checkout. US compiles against the FerriteLib
-# carrier (coahuilite.ferritelib) by a sibling relative path and never ships its copy, so the
-# runner must reproduce that sibling layout before the gates run. A green run here means US is
-# internally sound against the selected published carrier, not that the carrier itself is sound (that is
-# the carrier repo's own CI).
-
+# Development evidence: ordinary RW1.6/net472 against immutable public FL0.9 source.
+# Native1.7 also builds locally against explicitly supplied proprietary references; those
+# references are not available to GitHub and must never be uploaded to make this job green.
+# release.yml keeps the separate published-carrier acquisition and release-pairing gates.
 on:
   push:
     branches: [main, '0.6.x']
@@ -15,8 +13,6 @@ on:
 permissions:
   contents: read
 
-# A new push cancels the in-flight check of the same branch instead of spending Windows minutes on
-# a superseded commit.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -24,113 +20,65 @@ concurrency:
 jobs:
   gates:
     runs-on: windows-latest
+    timeout-minutes: 10
     env:
       DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-    # Keep the complete current gate entry point bounded; a hung runner must not use the default 360 minutes.
-    timeout-minutes: 10
+      # Full public commit, never a branch or tag lookup. Updated only with the actual pair.
+      FL_CARRIER_COMMIT: 5d12091c8a0a74059b050cdc434e4360b8974543
     steps:
-      - name: Select the runner-local NuGet download cache
-        shell: pwsh
-        run: |
-          "NUGET_PACKAGES=$env:RUNNER_TEMP/us-nuget" >> $env:GITHUB_ENV
-
       - uses: actions/checkout@v4
-
-      - name: Require approved FerriteLib 0.8 release coordinates
-        shell: pwsh
-        env:
-          FL_CARRIER_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
-          FL_CARRIER_TAG: ${{ vars.FERRITELIB_CARRIER_TAG }}
-          FL_CARRIER_COMMIT: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
-        run: ./scripts/require-ferritelib-ci-input.ps1
-
-      # The carrier source checkout, pinned at the approved full commit - NEVER the default branch. It provides
-      # the harness support the sibling tree must carry (the stub-coverage scanner and the licence) and
-      # the commit gate 6 pairs the payload against. The repository name is a build contract: it must
-      # equal the carrier repo's real GitHub name, which the maintainer fixes when creating it.
-      - name: Checkout the approved FerriteLib carrier commit
+      - name: Checkout the exact public FL0.9 source
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
-          ref: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
+          repository: Coahuilite/FerriteLib
+          ref: ${{ env.FL_CARRIER_COMMIT }}
           path: ci-ferritelib
-
-      - name: Cache NuGet downloads (not build outputs)
-        uses: actions/cache@v4
+      - name: Select the runner-local NuGet download cache
+        shell: pwsh
+        run: '"NUGET_PACKAGES=$env:RUNNER_TEMP/us-nuget" >> $env:GITHUB_ENV'
+      - uses: actions/cache@v4
         with:
           path: ${{ env.NUGET_PACKAGES }}
           key: ${{ runner.os }}-us-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.*') }}
           restore-keys: ${{ runner.os }}-us-nuget-
-
-      - name: Cache the exact carrier download
-        uses: actions/cache@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          path: dist/carrier-download-cache
-          key: ${{ runner.os }}-us-carrier-${{ vars.FERRITELIB_CARRIER_REPOSITORY }}-${{ vars.FERRITELIB_CARRIER_TAG }}-${{ vars.FERRITELIB_CARRIER_COMMIT }}
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          # Self-measured, not copied: the local default SDK (no global.json) is 10.0.204 and every
-          # gate's evidence was produced on it, so the runner reproduces that machine. US also builds
-          # green under 8.0.424 on a clean restore (measured), but an obj/ restored by one SDK major
-          # fails NETSDK1047 when the other builds it, so pinning to the proven major keeps CI and the
-          # local evidence identical. net472 targeting resolves from NuGet (Krafs.Rimworld.Ref) either way.
           dotnet-version: |
             8.0.x
             10.0.x
-
-      # Dependency chain (decision recorded in MEMORY.md "First cloud upload: durable decisions" and the
-      # 2026-10-09 carrier-acquisition route). actions/checkout resolves `path` INSIDE GITHUB_WORKSPACE and
-      # rejects anything outside it, so the carrier SOURCE lands in a workspace subdir and a run step - not
-      # bound by the checkout guard - stages it at the sibling path the csproj HintPath and verify-local
-      # gate 6 both expect:
-      #   US root = <run>/UniversalSqueaker/UniversalSqueaker ; sibling = <run>/UniversalSqueaker/ferritelib
-      # The WHOLE source tree (minus .git) is staged because the sibling contract needs more than the
-      # payload: verify-local's licence gate compares ferritelib/LICENSE byte-for-byte and gate 15 runs the
-      # carrier's reference-driven scanner (ferritelib/scripts/stub-coverage-scan.ps1). The COMPILE PAYLOAD,
-      # however, is never built here: coahuilite.ferritelib is the single carrier and this workflow consumes
-      # the AUTHORITATIVE CI-built release asset (explicit repo+tag, digest-verified, closed payload set,
-      # commit paired against the pinned checkout) - a second FerriteLib runtime build would be a second
-      # carrier that binds by load order through the game's global AssemblyResolve with no detector for the
-      # loser. The helper stages the verified DLL exactly where HintPath looks.
-      - name: Acquire the FerriteLib release carrier (approved 0.8 coordinates) and stage the sibling tree
+      - name: Build the ordinary FL0.9 compiler input from that commit
         shell: pwsh
-        env:
-          FL_CARRIER_REPOSITORY: ${{ vars.FERRITELIB_CARRIER_REPOSITORY }}
-          FL_CARRIER_TAG: ${{ vars.FERRITELIB_CARRIER_TAG }}
-          FL_CARRIER_COMMIT: ${{ vars.FERRITELIB_CARRIER_COMMIT }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
-          New-Item -ItemType Directory -Path $sibling -Force | Out-Null
-          Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
-            Where-Object { $_.Name -ne '.git' } |
-            Copy-Item -Destination $sibling -Recurse -Force
           $head = (git -C ci-ferritelib rev-parse HEAD).Trim()
-          if ($LASTEXITCODE -ne 0 -or $head -cne $env:FL_CARRIER_COMMIT) { throw 'Pinned FerriteLib checkout identity differs.' }
-          ./scripts/acquire-ferritelib-carrier.ps1 -Repo $env:FL_CARRIER_REPOSITORY -Tag $env:FL_CARRIER_TAG -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling -DownloadCacheDirectory dist/carrier-download-cache
-          # US never authors or builds the carrier: nothing in this workflow writes into ci-ferritelib/.
-
-      - name: Verify current groups (stable gate IDs; archived gate16 separate)
+          if ($LASTEXITCODE -ne 0 -or $head -cne $env:FL_CARRIER_COMMIT -or $head -notmatch '^[0-9a-f]{40}$') { throw 'FL source is not the selected immutable public commit.' }
+          if (@(git -C ci-ferritelib status --porcelain).Count) { throw 'FL source must be clean before compilation.' }
+          dotnet build ci-ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental -p:FerriteTestHooks=false --nologo -v minimal
+          if ($LASTEXITCODE -ne 0) { throw 'Ordinary FL0.9 net472 Release failed.' }
+          $carrier = 'ci-ferritelib/dist/build/Release/FerriteLib.UiKit.dll'
+          $info = ./scripts/read-assembly-stamp.ps1 -Path $carrier -AttributeName AssemblyInformationalVersionAttribute
+          $config = ./scripts/read-assembly-stamp.ps1 -Path $carrier
+          $framework = ./scripts/read-assembly-stamp.ps1 -Path $carrier -AttributeName TargetFrameworkAttribute
+          if ($config -ne 'Release' -or $framework -ne '.NETFramework,Version=v4.7.2' -or $info -notmatch ('^0\.9\.[^+]+\+' + $head + '$')) { throw 'FL compiler input identity differs from the selected ordinary0.9/net472 source.' }
+          New-Item -ItemType Directory -Path dist/verify-input -Force | Out-Null
+          @{ repository='Coahuilite/FerriteLib'; commit=$head; configuration=$config; framework=$framework; informationalVersion=$info; sha256=(Get-FileHash $carrier).Hash } | ConvertTo-Json | Set-Content dist/verify-input/fl09.json
+      - name: Verify existing US groups against the ordinary FL0.9 input
         shell: pwsh
-        # The carrier is SELECTED, never defaulted: resolve-carrier refuses an empty path since 2026-09-24
-        # (a silent pick of the repository-root Release payload was the wrong artifact for a Dev rehearsal).
-        # The acquisition step above staged the verified release-asset DLL exactly here - the sibling path
-        # the csproj HintPath also resolves - and gate 6 pairs its embedded commit against the pinned
-        # ci-ferritelib checkout.
-        run: ./scripts/verify-local.ps1 -FerriteLibSourceRoot ci-ferritelib -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
-
-      - name: Preserve complete verification logs, including failures
+        run: ./scripts/verify-local.ps1 -FerriteLibSourceRoot ci-ferritelib -FerriteLibArtifactPath ci-ferritelib/dist/build/Release/FerriteLib.UiKit.dll
+      - name: Stage the verified RW1.6 payload (native1.7 remains local evidence)
+        shell: pwsh
+        run: |
+          ./scripts/stage-package.ps1 -StageDir dist/ci/UniversalSqueaker -VersionLabel 0.6.0 -BuildFlavor release -CommitLabel $env:GITHUB_SHA -FerriteLibArtifactPath ci-ferritelib/dist/build/Release/FerriteLib.UiKit.dll -RequireReleaseIdentity
+      - name: Preserve verification and source-input receipts, including failures
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: us-verification-${{ github.run_id }}-${{ github.run_attempt }}
-          path: dist/verify/**
+          path: |
+            dist/verify/**
+            dist/verify-input/**
           if-no-files-found: ignore
-      # The privacy gate is a first-upload concern and cheap; run it on every CI pass so a personal
-      # path or credential can never ride a commit to main. Full-history mode is reserved for the
-      # pre-push manual check (the runner clone is shallow and would not carry the history to scan).
-      - name: Privacy audit (working tree + commit messages + identity)
+      - name: Privacy audit
         shell: pwsh
         run: ./scripts/privacy-audit.ps1

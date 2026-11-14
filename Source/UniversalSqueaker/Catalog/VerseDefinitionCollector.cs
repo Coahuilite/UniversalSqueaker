@@ -122,7 +122,7 @@ public static class VerseDefinitionCollector
         }
 
         bool isHar = false;
-        for (Type current = type; current != null && current != typeof(ThingDef); current = current.BaseType)
+        for (Type? current = type; current != null && current != typeof(ThingDef); current = current.BaseType)
         {
             if (string.Equals(current.FullName, HarBaseTypeName, StringComparison.Ordinal))
             {

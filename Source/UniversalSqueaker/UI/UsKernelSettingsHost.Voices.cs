@@ -69,7 +69,7 @@ public static partial class UsKernelSettingsHost
         .Replace("Id=\"tool-nav\" Cols=\"7\"", "Id=\"tool-nav\" Cols=\"" + (wide ? "7" : "3") + "\"")
         .Replace("Id=\"help-drawer\" Height=\"128\"", "Id=\"help-drawer\" Height=\"" + helpHeight.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "\""));
 
-    internal static bool UsesDeferredRoster(UiHost host) => host.Manifest.Templates.TryGetValue("b-roster-row", out UiElementSpec row)
+    internal static bool UsesDeferredRoster(UiHost host) => host.Manifest.Templates.TryGetValue("b-roster-row", out UiElementSpec? row)
         && row.Children.Any(child => child.Id == "b-roster-plate" && child.TryGetBoolean("DeferClippedDisplay", out bool enabled) && enabled);
 
     /// <summary>Use the public arranged page, not copied window-chrome constants, for the optional
