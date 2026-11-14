@@ -32,8 +32,8 @@ still works. Do not install either rehearsal into the formal environment without
 
 ### Development CI is not the release acquisition path
 
-`ci.yml` pins a full public FL0.9 commit, checks it out and runs its existing ordinary net472 Release
-build. The existing `verify-local.ps1` groups consume those bytes with clean matching source; receipts
+`ci.yml` pins public FL0.9 `6d7533212096dd7bfad3fe253330838149f4e210`, checks it out and runs its existing ordinary net472 Release
+build. Its product source/project/configuration exactly match local producer5d12091; the latter adds only adopted specification documents. CI and local binaries retain their own producer/receipt identities. The existing `verify-local.ps1` groups consume those bytes with clean matching source; receipts
 and logs identify the exact input. CI stages a1.6-only package. Proprietary native1.7 references are
 not provided to GitHub, so1.7 compiler/payload evidence is local, not a CI or native-game claim.
 

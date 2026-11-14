@@ -24,8 +24,9 @@ jobs:
     env:
       DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-      # Full public commit, never a branch or tag lookup. Updated only with the actual pair.
-      FL_CARRIER_COMMIT: 5d12091c8a0a74059b050cdc434e4360b8974543
+      # Public product-equivalent base of local5d12091 (the latter adds only adopted docs).
+      # Full commit, never a branch or tag lookup; each CI build records its own actual input.
+      FL_CARRIER_COMMIT: 6d7533212096dd7bfad3fe253330838149f4e210
     steps:
       - uses: actions/checkout@v4
       - name: Checkout the exact public FL0.9 source
