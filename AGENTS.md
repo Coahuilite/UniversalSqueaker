@@ -32,14 +32,17 @@ entry only when responsibilities or structure change, not for each task.
 
 Current product contracts start at `docs/specification.md`; source/status mappings are under `docs/development/specification/`. Replaced full texts are retained in `docs/archive/specs-before-20261029/`.
 
-## Maintenance-line boundary
+## Development-line boundary
 
-This is the US0.6/FL0.8 maintenance line for RimWorld 1.6/net472. Select an explicit compatible FL0.8
-carrier and preserve its Dev pairing. The existing LoadFolders mapping of 1.7 to the 1.6 payload is a
-basic compatibility candidate, not native 1.7 acceptance or permission to replace this line with FL0.9.
-Keep the maintenance line's existing embedded UiKit Dev entry until a compatible replacement is accepted;
-the separate 0.9 migration alone does not make it dead code. US Kernel diagnostics are a different product
-responsibility. Actual build inputs and accepted outputs are in [the build guide](docs/build-and-debug.md).
+The adopted current `0.6.x` scope is FL API [0.9.0,0.10.0), with separate RW1.6/net472 and
+RW1.7/net10 compiler inputs and payload routes. Scope adoption is not proof that both targets are
+implemented or accepted: use the current status in [the build guide](docs/build-and-debug.md) and
+[the adopted integration change](docs/openspec/changes/us06-fl09-dual-target/proposal.md).
+The r5 branch preserves its exact RW1.6 candidate and native evidence; do not transfer those claims
+to RW1.7. Keep old0.8 branches, payloads and existing caller contracts intact. US never builds or
+bundles FL. Never substitute a1.6 assembly for a1.7/native payload or import another occupied tree's
+uncommitted work. Dependency selection, local engineering, native acceptance and publication remain
+separate authorities.
 
 ## Project philosophy
 

@@ -1,6 +1,27 @@
 # Build and debug
 
-## This branch: RW1.6 / FL0.9 retained-display consumer
+## Current0.6.x integration: adopted, blocked before dual-target delivery
+
+The current scope is [FL0.9 dual-target adoption](openspec/changes/us06-fl09-dual-target/proposal.md).
+The clean integration retains0.6.x `97aafd3` and the complete r5 `2b1a215` history. Its engineering tree
+still equals r5: the current csproj, LoadFolders and stager are **RW1.6-only**, so it is not yet a
+complete0.6.x push candidate. The occupied0.6.x and native1.7 worktrees are not integration inputs.
+
+The already-remote `48b8fab` provides a reusable native1.7/net10 project, four explicit compiler
+references (`Assembly-CSharp`, `UnityStubs`, `RimWorld`, `Waylith`), Private=false, and a stager that
+re-roots shared source1.6 content into package1.7. Reuse only those target/build seams as needed;
+its unrelated UI/diagnostics redesign and occupied-tree changes are not implicitly adopted. Keep
+one shared production source and the original r5 no-attach fallback; close both selected compiler
+references and real1.6/1.7 LoadFolders/payloads before delivery.
+
+Required next inputs: FL owner's fixed ordinary0.9 RW1.7/net10 DLL and its exact1.7 reference directory,
+plus an approved immutable0.9 carrier acquisition source usable by CI. The current CI helper requires
+published0.8 repo/tag/full-commit coordinates; that cannot validate0.9. At the2026-11-14 read, FL0.9
+had only privacy-workflow runs and no published0.9 Release carrier. Do not create a tag/Release to
+work around the dependency or point CI at a moving branch. Normal0.6.x push triggers CI/privacy
+checks, caches and log artifacts; Release is tag-only (`v*`), not a branch-push action.
+
+### Preserved r5 RW1.6 engineering route
 
 The independent `feat/rw16-fl09-display-snapshot-20261111` branch consumes **FL API [0.9.0,0.10.0)**,
 net472/x64 against RimWorld1.6.4871. Select the FL owner's fixed ordinary RW1.6 Release DLL explicitly;
