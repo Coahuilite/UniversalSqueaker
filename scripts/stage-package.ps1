@@ -15,6 +15,9 @@ param(
     [string]$FerriteLibArtifactPath,
     # Optional isolated build input. Existing channel callers retain their original default.
     [string]$PayloadDllPath,
+    # Opt into the complete dual-target package. Omission keeps the original1.6-only caller.
+    [string]$FerriteLib17ArtifactPath,
+    [string]$RimWorld17PayloadDllPath,
     # The release channel publishes to strangers: its payload must not carry a dev suffix, its base
     # version must equal the label on the box, and it must have linked a Release carrier. The dev
     # rehearsal skips this - by definition it is an unnamed build.
@@ -42,8 +45,15 @@ $payloadDll = if ([string]::IsNullOrWhiteSpace($PayloadDllPath)) {
 } elseif ([IO.Path]::IsPathRooted($PayloadDllPath)) {
     Resolve-NormalizedPath $PayloadDllPath
 } else { Resolve-NormalizedPath (Join-Path $root $PayloadDllPath) }
-$payloadHash = if (Test-Path -LiteralPath $payloadDll) { (Get-FileHash -LiteralPath $payloadDll).Hash } else { '' }
+
 $carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
+$pairs = @([pscustomobject]@{ Version='1.6'; Framework='.NETFramework,Version=v4.7.2'; Payload=$payloadDll; Carrier=$carrierDll })
+if ($FerriteLib17ArtifactPath) {
+    $carrier17 = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLib17ArtifactPath
+    $payload17 = if ($RimWorld17PayloadDllPath) { [IO.Path]::GetFullPath($RimWorld17PayloadDllPath, $root) }
+        else { Join-Path $root "dist/build/$configuration/RimWorld17/UniversalSqueaker.dll" }
+    $pairs += [pscustomobject]@{ Version='1.7'; Framework='.NETCoreApp,Version=v10.0'; Payload=$payload17; Carrier=$carrier17 }
+} elseif ($RimWorld17PayloadDllPath) { throw 'RimWorld17PayloadDllPath requires the matching FerriteLib17ArtifactPath.' }
 $aboutXml = Join-Path $root 'About\About.xml'
 $loadFolders = Join-Path $root 'LoadFolders.xml'
 $license = Join-Path $root 'LICENSE'
@@ -69,17 +79,16 @@ $stableFiles = @(
     'About/About.xml',
     'LoadFolders.xml',
     'LICENSE',
-    'version.txt',
-    '1.6/Assemblies/UniversalSqueaker.dll'
-)
+    'version.txt'
+) + @($pairs | ForEach-Object { "$($_.Version)/Assemblies/UniversalSqueaker.dll" })
 $forbiddenNames = @('*.pdb', '*.gitkeep', 'codemap.md', 'PublishedFileId.txt')
-$forbiddenDirs = @('Extras', '1.6/Sounds')
+$forbiddenDirs = @('Extras') + @($pairs | ForEach-Object { "$($_.Version)/Sounds" })
 # Build debris that is legitimately in the repo and illegitimately in a package: excluded on the way in,
 # asserted absent on the way out.
 $copyExclude = @('*.pdb', '*.gitkeep')
 
 # --- inputs, before anything is deleted -----------------------------------------------------------
-foreach ($required in @($projectFile, $payloadDll, $aboutXml, $loadFolders, $license)) {
+foreach ($required in (@($projectFile, $aboutXml, $loadFolders, $license) + @($pairs | ForEach-Object { $_.Payload; $_.Carrier }))) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Missing packaging input: $required"
     }
@@ -118,50 +127,45 @@ function Get-AssemblyInformationalVersion([string]$Path) {
     return [System.Diagnostics.FileVersionInfo]::GetVersionInfo($Path).ProductVersion
 }
 
-$stamp = Get-AssemblyConfiguration -Path $payloadDll
-$expectedStamp = if ($BuildFlavor -eq 'dev') { 'Dev' } else { 'Release' }
-if ([string]::IsNullOrWhiteSpace($stamp)) {
-    throw "The payload carries no AssemblyConfigurationAttribute; it cannot be attributed to the $expectedStamp configuration."
-}
-if ($stamp -ne $expectedStamp) {
-    throw "Channel '$BuildFlavor' requires a $expectedStamp-configured payload, but $payloadDll reports '$stamp'. Build the matching configuration: pack-dev forces -c Dev --no-incremental, the release channel builds -c Release."
-}
-
-# The carrier this package was compiled against is part of its identity, not an assumption: US pins its
-# prerequisite range to that API and a player installs the pair. Recorded on every channel; required to
-# be Release on the release channel (S5: the carrier gate used to check existence, not bytes).
-$carrierHash = (Get-FileHash -LiteralPath $carrierDll -Algorithm SHA256).Hash
-$compiledHash = & (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $payloadDll -MetadataKey 'FerriteLib.SHA256'
-if ($compiledHash -ne $carrierHash) {
-    throw "Selected carrier does not match the compiler reference: compiled=$compiledHash selected=$carrierHash. Rebuild against the selected artifact."
-}
-$carrierStamp = 'absent'
-$carrierInfo = 'absent'
-if (Test-Path -LiteralPath $carrierDll -PathType Leaf) {
+function Measure-Pair($Pair) {
+    $payloadDll = $Pair.Payload
+    $carrierDll = $Pair.Carrier
+    $stamp = Get-AssemblyConfiguration -Path $payloadDll
+    $expectedStamp = if ($BuildFlavor -eq 'dev') { 'Dev' } else { 'Release' }
+    if ($stamp -ne $expectedStamp) {
+        throw "Channel '$BuildFlavor' requires a $expectedStamp-configured payload, but $payloadDll reports '$stamp'."
+    }
+    foreach ($assembly in @($payloadDll, $carrierDll)) {
+        $framework = & (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $assembly -AttributeName 'TargetFrameworkAttribute'
+        if ($framework -ne $Pair.Framework) { throw "RW$($Pair.Version) requires $($Pair.Framework), not '$framework': $assembly" }
+    }
+    $carrierHash = (Get-FileHash -LiteralPath $carrierDll -Algorithm SHA256).Hash
+    $compiledHash = & (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $payloadDll -MetadataKey 'FerriteLib.SHA256'
+    if ($compiledHash -ne $carrierHash) {
+        throw "Selected carrier does not match the compiler reference: compiled=$compiledHash selected=$carrierHash. Rebuild against the selected artifact."
+    }
     $carrierStamp = Get-AssemblyConfiguration -Path $carrierDll
     $carrierInfo = Get-AssemblyInformationalVersion -Path $carrierDll
-    if ([string]::IsNullOrWhiteSpace($carrierStamp)) { $carrierStamp = 'unreadable' }
-    if ([string]::IsNullOrWhiteSpace($carrierInfo)) { $carrierInfo = 'unreadable' }
+    if ($RequireReleaseIdentity) {
+        if ($carrierStamp -ne 'Release') { throw "The release channel requires a Release FerriteLib carrier, not '$carrierStamp'." }
+        $informational = Get-AssemblyInformationalVersion -Path $payloadDll
+        if ([string]::IsNullOrWhiteSpace($informational)) { throw 'The payload carries no ProductVersion; it cannot be attributed to a source commit.' }
+        if ($informational -match '-dev') { throw "Payload identity is '$informational'; a published asset must not carry the dev suffix." }
+        $infoBase = $informational -replace '[-+].*$', ''
+        $releaseBase = ($VersionLabel -replace '^v', '') -replace '[-+].*$', ''
+        if ($infoBase -ne $releaseBase) { throw "Payload identity '$informational' does not match package label '$VersionLabel'." }
+    }
+    $Pair | Add-Member NoteProperty PayloadHash (Get-FileHash -LiteralPath $payloadDll).Hash
+    $Pair | Add-Member NoteProperty CarrierHash $carrierHash
+    $Pair | Add-Member NoteProperty CarrierStamp $carrierStamp
+    $Pair | Add-Member NoteProperty CarrierInfo $carrierInfo
 }
-
-if ($RequireReleaseIdentity) {
-    if ($carrierStamp -ne 'Release') {
-        throw "The release channel links a '$carrierStamp' carrier at $carrierDll; a published US asset must be built against the Release FerriteLib payload. Select one with -FerriteLibArtifactPath. Rebuilding the payload is NOT a packaging step: it is the CARRIER OWNER's DELIVERY STEP, it REPLACES the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash AND mtime as a pair. This repository never builds ../ferritelib."
-    }
-    $informational = Get-AssemblyInformationalVersion -Path $payloadDll
-    if ([string]::IsNullOrWhiteSpace($informational)) {
-        throw 'The payload carries no ProductVersion; it cannot be attributed to a source commit.'
-    }
-    if ($informational -match '-dev') {
-        throw "Payload identity is '$informational'; a published asset must not carry the dev suffix."
-    }
-    $infoBase = $informational -replace '[-+].*$', ''
-    $releaseBase = ($VersionLabel -replace '^v', '') -replace '[-+].*$', ''
-    if ($infoBase -ne $releaseBase) {
-        throw "Payload identity is '$informational' (base $infoBase) but this channel is packing '$VersionLabel' (base $releaseBase). The build is stale or the label is wrong."
-    }
-}
-
+foreach ($pair in $pairs) { Measure-Pair $pair }
+# Keep the original version.txt identity fields for existing one-target consumers.
+$stamp = Get-AssemblyConfiguration -Path $payloadDll
+$carrierStamp = $pairs[0].CarrierStamp
+$carrierInfo = $pairs[0].CarrierInfo
+$carrierHash = $pairs[0].CarrierHash
 $distPrefix = [IO.Path]::GetFullPath((Join-Path $root 'dist')) + [IO.Path]::DirectorySeparatorChar
 if (-not $deliveryDir.StartsWith($distPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw 'StageDir must be a child of this repository''s dist directory.'
@@ -169,7 +173,7 @@ if (-not $deliveryDir.StartsWith($distPrefix, [StringComparison]::OrdinalIgnoreC
 
 # --- stage from scratch ---------------------------------------------------------------------------
 if (Test-Path -LiteralPath $stageDir) { Remove-Item -LiteralPath $stageDir -Recurse -Force }
-$null = New-Item -ItemType Directory -Path (Join-Path $stageDir '1.6\Assemblies') -Force
+foreach ($pair in $pairs) { $null = New-Item -ItemType Directory -Path (Join-Path $stageDir "$($pair.Version)/Assemblies") -Force }
 $null = New-Item -ItemType Directory -Path (Join-Path $stageDir 'About') -Force
 
 # About.xml is copied as ONE file, never as the About directory (S3). A locally generated
@@ -177,11 +181,26 @@ $null = New-Item -ItemType Directory -Path (Join-Path $stageDir 'About') -Force
 # from any channel and a strip step cleaned up afterwards. Construction beats cleanup: there is now no
 # path by which it can enter.
 Copy-Item -LiteralPath $aboutXml -Destination (Join-Path $stageDir 'About\About.xml') -Force
-Copy-Item -LiteralPath $loadFolders -Destination (Join-Path $stageDir 'LoadFolders.xml') -Force
+# A legacy1.6 caller keeps its original honest single-target metadata, not an empty1.7 promise.
+[xml]$loadDoc = Get-Content -LiteralPath $loadFolders -Raw
+$versions = @($pairs.Version)
+foreach ($node in @($aboutXmlDoc.SelectNodes('/ModMetaData/supportedVersions/li'))) {
+    if ($node.InnerText -notin $versions) { $null = $node.ParentNode.RemoveChild($node) }
+}
+foreach ($node in @($loadDoc.loadFolders.ChildNodes)) {
+    if ($node.Name -notin @($versions | ForEach-Object { 'v' + $_ })) { $null = $node.ParentNode.RemoveChild($node) }
+}
+foreach ($version in $versions) {
+    if ($null -eq $aboutXmlDoc.SelectSingleNode("/ModMetaData/supportedVersions/li[text()='$version']")) { throw "About.xml does not support selected RW$version." }
+    $folders = @($loadDoc.SelectNodes("/loadFolders/v$version/li") | ForEach-Object InnerText)
+    if (($folders -join ',') -ne "/,$version") { throw "LoadFolders must select only root and real$version payload." }
+}
+$aboutXmlDoc.Save((Join-Path $stageDir 'About/About.xml'))
+$loadDoc.Save((Join-Path $stageDir 'LoadFolders.xml'))
 # MPL-2.0 section 3.2: a distributed Executable Form must say how to obtain the Source Code Form, so the
 # licence text travels inside the package instead of living only in the repository.
 Copy-Item -LiteralPath $license -Destination (Join-Path $stageDir 'LICENSE') -Force
-Copy-Item -LiteralPath $payloadDll -Destination (Join-Path $stageDir '1.6\Assemblies\UniversalSqueaker.dll') -Force
+foreach ($pair in $pairs) { Copy-Item -LiteralPath $pair.Payload -Destination (Join-Path $stageDir "$($pair.Version)/Assemblies/UniversalSqueaker.dll") -Force }
 
 # The content root (`1.6/`) is legitimately open - Languages today, Defs/Patches whenever a package
 # needs them - so it is not allowlisted. Build debris is excluded on the way in and the assertion below
@@ -198,12 +217,14 @@ foreach ($source in @(Get-ChildItem -LiteralPath $contentRoot -Recurse -File)) {
     }
     if ($skip) { continue }
     $rel = $source.FullName.Substring($contentRoot.Length + 1)
-    $target = Join-Path (Join-Path $stageDir '1.6') $rel
-    $parent = Split-Path -Parent $target
-    if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
-        $null = New-Item -ItemType Directory -Path $parent -Force
+    foreach ($pair in $pairs) {
+        $target = Join-Path (Join-Path $stageDir $pair.Version) $rel
+        $parent = Split-Path -Parent $target
+        if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
+            $null = New-Item -ItemType Directory -Path $parent -Force
+        }
+        Copy-Item -LiteralPath $source.FullName -Destination $target -Force
     }
-    Copy-Item -LiteralPath $source.FullName -Destination $target -Force
 }
 
 # Package identity, written after the last structural copy so nothing can filter it out. It answers "how
@@ -213,12 +234,18 @@ $sourceUrl = if ($env:GITHUB_REPOSITORY) { "$($env:GITHUB_SERVER_URL)/$env:GITHU
     (Join-Path $stageDir 'version.txt'),
     "UniversalSqueaker $VersionLabel`r`nbuild=$BuildFlavor`r`ncommit=$CommitLabel`r`ncarrier=$carrierStamp $carrierInfo`r`ncarrier-sha256=$carrierHash`r`nsource $sourceUrl`r`n")
 
-# --- assertions on the finished tree --------------------------------------------------------------
-if ((Get-FileHash -LiteralPath (Join-Path $stageDir '1.6/Assemblies/UniversalSqueaker.dll')).Hash -ne $payloadHash) {
-    throw 'Staged payload differs from the selected build input.'
+foreach ($pair in $pairs) {
+    Add-Content -LiteralPath (Join-Path $stageDir 'version.txt') -Value "rw$($pair.Version)-carrier=$($pair.CarrierStamp) $($pair.CarrierInfo)`nrw$($pair.Version)-carrier-sha256=$($pair.CarrierHash)"
 }
-if ((Get-FileHash -LiteralPath $carrierDll).Hash -ne $carrierHash) {
-    throw 'Selected carrier changed while staging. Rebuild and pack against a stable artifact.'
+
+# --- assertions on the finished tree --------------------------------------------------------------
+foreach ($pair in $pairs) {
+    if ((Get-FileHash -LiteralPath (Join-Path $stageDir "$($pair.Version)/Assemblies/UniversalSqueaker.dll")).Hash -ne $pair.PayloadHash) {
+        throw 'Staged payload differs from the selected build input.'
+    }
+    if ((Get-FileHash -LiteralPath $pair.Carrier).Hash -ne $pair.CarrierHash) {
+        throw 'Selected carrier changed while staging. Rebuild and pack against a stable artifact.'
+    }
 }
 foreach ($directory in $forbiddenDirs) {
     if (Test-Path -LiteralPath (Join-Path $stageDir $directory)) {
@@ -243,7 +270,7 @@ $allowed = @($stableFiles | ForEach-Object { $_.ToLowerInvariant() })
 $intruders = @()
 foreach ($file in $stagedFiles) {
     if ($allowed -contains $file) { continue }
-    if (-not $file.StartsWith('1.6/')) { $intruders += $file; continue }
+    if (-not @($pairs | Where-Object { $file.StartsWith($_.Version + '/') }).Count) { $intruders += $file; continue }
     $name = Split-Path -Leaf $file
     foreach ($pattern in $forbiddenNames) {
         if ($name -like $pattern) { $intruders += $file; break }
@@ -254,8 +281,8 @@ if ($intruders.Count -gt 0) {
 }
 
 $assemblyCount = @($stagedFiles | Where-Object { $_ -like '*.dll' }).Count
-if ($assemblyCount -ne 1) {
-    throw "The payload must be exactly one assembly; found $assemblyCount."
+if ($assemblyCount -ne $pairs.Count) {
+    throw "The payload must be exactly one assembly per target ($($pairs.Count)); found $assemblyCount."
 }
 
 # --- commit: every assertion above passed, so replace the delivered folder now ---------------------

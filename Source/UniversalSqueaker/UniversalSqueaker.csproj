@@ -1,7 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <!-- Target-isolated restore graph; empty preserves the original RW1.6 entry and output. -->
+  <PropertyGroup Condition="'$(UsRimWorldTarget)' == 'RimWorld17'">
+    <BaseIntermediateOutputPath>obj/RimWorld17/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFramework Condition="'$(UsRimWorldTarget)' == ''">net472</TargetFramework>
+    <TargetFramework Condition="'$(UsRimWorldTarget)' == 'RimWorld17'">net10.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -18,7 +24,7 @@
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>..\..\dist\build\$(Configuration)\</OutputPath>
+    <OutputPath>..\..\dist\build\$(Configuration)\$(UsRimWorldTarget)\</OutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免 NU1900 在无网时被提升为错误。 -->
     <NuGetAudit>false</NuGetAudit>
@@ -35,7 +41,7 @@
 
   <ItemGroup>
     <!-- 与本地 NuGet 缓存/SR 参考项目解析结果一致的固定版本；离线可还原。 -->
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
+    <PackageReference Condition="'$(UsRimWorldTarget)' == ''" Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
     <PackageReference Include="Lib.Harmony" Version="2.4.2" ExcludeAssets="runtime" />
   </ItemGroup>
 
@@ -54,10 +60,22 @@
     </Reference>
   </ItemGroup>
 
+  <!-- Native1.7 uses the exact installed/snapshotted four-reference set, as in 48b8fab.
+       These are compile inputs only: no game or FL DLL enters the US package. -->
+  <ItemGroup Condition="'$(UsRimWorldTarget)' == 'RimWorld17'">
+    <Reference Include="Assembly-CSharp"><HintPath>$(RimWorld17Dir)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityStubs"><HintPath>$(RimWorld17Dir)/UnityStubs.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="RimWorld"><HintPath>$(RimWorld17Dir)/RimWorld.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Waylith"><HintPath>$(RimWorld17Dir)/Waylith.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="RequireNativeTargetInputs" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(UsRimWorldTarget)' != '' And '$(UsRimWorldTarget)' != 'RimWorld17'" Text="UsRimWorldTarget must be empty (RW1.6/net472) or RimWorld17 (RW1.7/net10)." />
+    <Error Condition="'$(UsRimWorldTarget)' == 'RimWorld17' And (!Exists('$(RimWorld17Dir)/Assembly-CSharp.dll') Or !Exists('$(RimWorld17Dir)/UnityStubs.dll') Or !Exists('$(RimWorld17Dir)/RimWorld.dll') Or !Exists('$(RimWorld17Dir)/Waylith.dll'))" Text="Select the four exact native1.7 compiler references with RimWorld17Dir. No1.6 fallback or game download is used." />
+  </Target>
   <!-- Include the actual compiler reference in the assembly identity. A changed hash changes this
        generated source, so an incremental build cannot retain a receipt for a different carrier. -->
   <Target Name="RequireFerriteLibSelection" BeforeTargets="ResolveReferences">
-    <Error Condition="'$(FerriteLibArtifactPath)' == ''" Text="Select a fixed FerriteLib 0.9 net472 package with -p:FerriteLibArtifactPath; no implicit carrier is used." />
+    <Error Condition="'$(FerriteLibArtifactPath)' == ''" Text="Select a fixed FerriteLib 0.9 package matching the selected game target with -p:FerriteLibArtifactPath; no implicit carrier is used." />
   </Target>
   <Target Name="RecordFerriteLibReference" BeforeTargets="CoreCompile" DependsOnTargets="ResolveReferences">
     <PropertyGroup>
@@ -98,4 +116,5 @@
   </ItemGroup>
 
   <ItemGroup><EmbeddedResource Include="Themes/Palettes.xml" LogicalName="UniversalSqueaker.Themes.Palettes.xml" /></ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>
